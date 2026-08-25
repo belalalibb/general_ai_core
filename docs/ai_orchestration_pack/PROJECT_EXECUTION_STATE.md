@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R024
+STATE_REVISION: R025
 
 RESUME_TOKEN:
-PROJECT|R024|PHASE_2_IMPLEMENTATION|T-IMPL-007|VERIFIED_MVP_PHASE1_EXIT_ALL_CONTRACTS_DONE|VERIFY_HEAD_WITH_GIT
+PROJECT|R025|PHASE_2_IMPLEMENTATION|T-IMPL-008|VERIFIED_MVP_PHASE2_IDENTITY_TENANCY_CONTRACTS|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-007 content commit: b95af2d. WARNING: older short hashes recorded in prior revisions (dab4216, 0a07f3d, fcb8aae) are INVALID after an auto-uploader history rewrite observed this session — the uploader re-synced the repo as per-file commits with new hashes. Trust HEAD + filesystem + gates, not old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-008 content commit: 25ba3ab. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-007
+T-IMPL-008
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,43 +126,36 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-007
+T-IMPL-008
 
 TASK_OBJECTIVE:
-Complete MVP Phase 1 — Contracts: implement the execution contract as Pydantic models per 03_DOMAIN_MODEL.md §5 with contract tests validating documented shapes verbatim and rejecting invalid payloads; then evaluate the 41 §40 Phase 1 exit criteria and record the result.
+Start MVP Phase 2 — Identity / Tenant / Security (41 §41): implement the identity/tenancy contracts as Pydantic models per 03_DOMAIN_MODEL.md §2 (User / Tenant / Workspace / Project and their closed sets) with contract tests validating documented shapes verbatim and rejecting invalid payloads. Contracts only — the identity service skeleton and RBAC/entitlement/firewall types are the next slices (T-IMPL-009/010).
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create core/contracts/execution.py; export via core/contracts/__init__.py
-- create tests/contract/test_execution_contract.py
-- minor hygiene: untrack cache dirs the auto-uploader re-synced; gitignore .import_linter_cache
-- update this state file at the verified checkpoint (record Phase 1 exit)
+- create core/contracts/identity.py; export via core/contracts/__init__.py
+- create tests/contract/test_identity_contract.py
+- update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- provider/network/secrets work; execution-graph runtime schema (12 §3–§7 — later Execution Graph task)
-- MVP Phase 2 (Identity/Security) code in the T-IMPL-007 commit
+- provider/network/secrets work; real email delivery; password/session implementation (belongs to the service-skeleton slice)
+- MVP Phase 3+ (Storage/Observability) code
 
 TASK_COMPLETION_CRITERIA:
 - pytest PASS; mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
-- 03 §5 entities carried field-for-field; every closed set matches spec 1:1; invalid payloads rejected.
+- 03 §2 entities carried field-for-field; every closed set matches spec 1:1; invalid payloads rejected; no secret-bearing fields on identity contracts (20 §5).
 - check_repo.sh single entry point runs all gates => RESULT: PASS.
-- Focused local commit; worktree clean; state updated with Phase 1 exit evaluation.
+- Focused local commit; worktree clean; state updated.
 
-VERIFICATION_EVIDENCE (T-IMPL-007, this session):
-- Session opened after interruption + sandbox reset + auto-uploader history rewrite (old commit hashes invalid; 39 cache files re-tracked by sync commits). Recovery rule followed: facts verified from filesystem — state file R023 intact, all 6 prior contract modules + 5 test files present, dev tooling reinstalled (mypy/ruff/import-linter were missing after reset), full check_repo.sh re-run on pre-task tree: RESULT PASS (94 tests) — T-IMPL-006 reality reconfirmed before starting new work.
-- SPEC CORRECTION (facts from filesystem beat prior guess): R023's objective text guessed "ExecutionStep / ExecutionArtifact" entity names; 03 §5 actually defines Execution + ExecutionNode. Spec carried verbatim; objective wording corrected, no decision reopened.
-- core/contracts/execution.py: ExecutionStrategy 8 values (03 §5, identical to 12 §2); ExecutionNodeType 7 values (03 §5 domain set — 12 §5's 11-type graph-runtime list incl. approval_gate/human_input/finalizer/provider_agent_call deliberately out of scope for the domain entity, documented in the module docstring); ExecutionNodeStatus 6 values; Execution + ExecutionNode field-for-field (status reuses the shared 6-state ExecutionStatus from execute.py — single source of truth; input_ref/output_ref accept string-or-JSON per spec's "string/json"; retry_count >= 0).
-- 18 new contract tests (112 total pass): closed sets 1:1; documented shapes validate incl. the 11 §10 cost_snapshot example {"estimated_units": 2}; 12 §5-only node types (approval_gate) and 12 §6-only states (ready) correctly rejected at the domain entity; unknown fields rejected; frozen value objects; JSON Schema additionalProperties=false.
-- mypy --strict: clean. ruff check + format: clean (one import-sort autofix). lint-imports: 4 kept, 0 broken. check_repo.sh full run: RESULT: PASS.
-- T-IMPL-007 content commit: b95af2d (also re-untracked cache dirs incl. .import_linter_cache — maintenance per precedent).
-
-MVP_PHASE_1_EXIT_EVALUATION (41 §40):
-- Deliverables: API schemas (execute.py: T-IMPL-005) DONE; core domain types (domain.py: T-IMPL-006) DONE; provider contract (provider.py: T-IMPL-006) DONE; model contract (Model in domain.py: T-IMPL-006) DONE; execution contract (execution.py: T-IMPL-007) DONE; error contract (errors.py: T-IMPL-004) DONE.
-- Exit criteria: contract tests pass — YES (112 contract tests green); schemas validated — YES (every closed set spec-matched 1:1, documented examples validate verbatim, JSON Schema exports closed, deny-by-default enforced).
-- Rule "no Contract imports a specific Implementation" — KEPT (import-linter contract enforced in CI-equivalent gate).
-MVP_PHASE_1_STATUS: EXIT_CRITERIA_MET — VERIFIED (this revision)
+VERIFICATION_EVIDENCE (T-IMPL-008, this session):
+- New session (satisfies R024's NO_UNTIL_NEW_SESSION lock for MVP Phase 2). Recovery-first: R024 checkpoint re-verified from filesystem + git (state file intact at R025-predecessor R024; all 7 contract modules + 6 contract test files present; worktree clean; dev tooling reinstalled after sandbox reset; full check_repo.sh re-run on the pre-task tree: RESULT PASS, 112 tests — Phase 1 exit reality reconfirmed before new work).
+- Slice re-scoped from specs at session start per R024 instruction: 41 §41 deliverables reviewed; the contracts-first order of Phase 1 is applied to Phase 2 — T-IMPL-008 = identity/tenancy contracts (03 §2) only; RBAC/entitlement/capability-firewall types = T-IMPL-009; in-memory identity service skeleton (registration/verification/session ports + fakes) = T-IMPL-010.
+- core/contracts/identity.py: UserStatus 3 (active|disabled|pending), TenantType 2 (personal|organization), TenantStatus 2 (active|suspended) — all closed, verbatim from 03 §2; User/Tenant/Workspace/Project field-for-field (Project.workspace_id uuid|null; Workspace/Project carried now as "optional future scopes" per spec so tenant-scoped references stay typed); email_verified defaults False (41 §41 explicit verification step, deny-by-default); no password/hash/token/secret fields on any identity contract (20 §5).
+- 20 new contract tests (132 total pass): closed sets 1:1; shapes validate; email_verified default False; tenant_id required on every tenant-scoped entity (20 §6); no secret-bearing field names present; unknown fields/values rejected; empty email rejected; non-UUID ids rejected; frozen value objects; JSON Schema additionalProperties=false.
+- mypy --strict: clean. ruff check + format: clean. lint-imports: 4 kept, 0 broken. check_repo.sh full run: RESULT: PASS.
+- T-IMPL-008 content commit: 25ba3ab.
 ```
 
 ---
@@ -171,27 +164,27 @@ MVP_PHASE_1_STATUS: EXIT_CRITERIA_MET — VERIFIED (this revision)
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-007
-
-LAST_VERIFIED_TASK_COMMIT:
-b95af2d (content) + the state-checkpoint commit at HEAD after this update
-
-CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP_PHASE_1_CONTRACTS_COMPLETE (all six 41 §40 deliverables done and exit criteria VERIFIED this revision). Next workstream: MVP Phase 2 — Identity / Tenant / Security (41 §41).
-
-NEXT_TASK:
 T-IMPL-008
 
+LAST_VERIFIED_TASK_COMMIT:
+25ba3ab (content) + the state-checkpoint commit at HEAD after this update
+
+CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
+MVP_PHASE_2_IDENTITY_SECURITY_IN_PROGRESS (identity/tenancy contracts done; remaining 41 §41 slices: RBAC/entitlement/capability-firewall types, then identity service skeleton with auth + tenant-isolation tests)
+
+NEXT_TASK:
+T-IMPL-009
+
 NEXT_TASK_OBJECTIVE:
-Start MVP Phase 2 — Identity / Tenant / Security (41 §41): implement the identity/tenant domain contracts + in-memory identity service skeleton per 03_DOMAIN_MODEL.md §2–§3 (Tenant/User/etc.) and 20_SECURITY_THREAT_MODEL.md — scoped to the first deliverable slice (user registration + personal tenant model + basic RBAC/entitlement types), with auth/tenant-isolation tests. Exact slice must be re-scoped from the specs at session start; no network, no real email delivery (port + fake), no secrets in code.
+Continue MVP Phase 2: implement the authorization/security contracts — basic RBAC/entitlement types and the capability-firewall decision contract per 20_SECURITY_THREAT_MODEL.md §4 (decision inputs shape verbatim incl. actor/tenant_id/permission/resource/scope/entitlement/approval_state/risk_level; closed decision output set ALLOW|DENY|ALLOW_WITH_LIMIT|REQUIRE_APPROVAL) with contract tests validating the documented §4 example verbatim and rejecting invalid payloads. Contracts only — no enforcement engine yet.
 
 NEXT_TASK_AUTHORIZED:
-NO_UNTIL_NEW_SESSION (MVP-phase boundary rule, same discipline as PHASE_2_START_RULE: the session that verifies a phase's exit must not start the next phase; T-IMPL-008 requires a fresh session that first re-verifies this checkpoint from filesystem + git)
+YES (same-session continuation allowed by the USER DIRECTIVE; same MVP phase, no phase boundary crossed)
 
 DO_NOT_START:
-- any provider/network/secrets work
+- any provider/network/secrets work; real email delivery; enforcement/engine logic beyond contracts until T-IMPL-010
 - MVP Phase 3+ work
-- do not re-open any Phase 1 contract decisions; extensions to contracts require a new task with explicit justification
+- do not re-open Phase 1 contract decisions
 ```
 
 ---
@@ -265,6 +258,7 @@ DO_NOT_START:
 - T-IMPL-007 completed the execution contract (core/contracts/execution.py: Execution + ExecutionNode per 03 §5 verbatim; strategy set 8, node types 7, node states 6; status reuses shared ExecutionStatus; 12 §5/§6 graph-runtime supersets deliberately deferred to the Execution Graph task). 18 new tests; 112 total green; all gates PASS. MVP Phase 1 exit criteria (41 §40) evaluated and VERIFIED at R024. Content commit: b95af2d.
 - R024 environment note: this session recovered from a sandbox reset + auto-uploader history rewrite. All previously recorded short commit hashes are invalid in the rewritten history; the trusted progress anchor is HEAD + filesystem + green gates, per the state file's own proof rule. Dev tooling (mypy/ruff/import-linter) had to be reinstalled; pre-task gates re-run PASS before new work began.
 - MVP-PHASE BOUNDARY DECISION (R024): applying the same discipline as the documentation PHASE_2_START_RULE and the USER DIRECTIVE's phase-boundary clause, MVP Phase 2 (T-IMPL-008) must start in a NEW session that first re-verifies the R024 checkpoint from filesystem + git. This session verified Phase 1 exit and therefore stops here.
+- MVP PHASE 2 SLICING DECISION (R025): 41 §41 deliverables are executed contracts-first, mirroring Phase 1 discipline: T-IMPL-008 identity/tenancy contracts (03 §2) → T-IMPL-009 RBAC/entitlement + capability-firewall decision contracts (20 §4) → T-IMPL-010 in-memory identity service skeleton (registration + personal tenant + email-verification port with fake + session) with auth/tenant-isolation tests. No network, no real email, no secrets in code anywhere in Phase 2.
 ```
 
 ---
