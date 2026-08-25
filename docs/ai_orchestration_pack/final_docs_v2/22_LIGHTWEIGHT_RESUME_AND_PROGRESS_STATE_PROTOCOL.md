@@ -374,3 +374,113 @@ State guides.
 Evidence closes.
 Commit confirms.
 ```
+
+---
+
+## 18. Project Execution State Control Point
+
+The project-level state file is:
+
+```text
+docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+```
+
+This file defines where the project is now:
+
+```text
+current phase
+phase lock/unlock status
+current task
+task status
+last verified task
+next authorized task
+resume token
+local progress checkpoint
+```
+
+The protocol in this document defines **how to resume**.
+`PROJECT_EXECUTION_STATE.md` defines **where to resume from**.
+
+---
+
+## 19. Local-Only Progress / Auto-Uploader Boundary
+
+The Agent is responsible for local execution only unless explicitly instructed otherwise.
+
+The Agent may:
+
+```text
+edit files required by the current authorized task
+update PROJECT_EXECUTION_STATE.md
+update compact resume/handoff metadata
+run verification
+review git diff
+create a local commit
+```
+
+The Agent must not:
+
+```text
+git push
+upload files to GitHub
+trigger remote synchronization
+spend context on push/upload mechanics
+```
+
+Remote synchronization is handled externally by the project's auto-uploader.
+
+A task may become VERIFIED after:
+
+```text
+local verification
++
+successful local commit
+```
+
+even if remote upload has not occurred yet.
+
+---
+
+## 20. Current Progress State vs Resume Checkpoint
+
+Do not write long narratives into the state file.
+
+At a verified checkpoint, update only compact state such as:
+
+```text
+CURRENT_TASK
+TASK_STATUS
+LAST_VERIFIED_TASK
+NEXT_TASK
+NEXT_TASK_AUTHORIZED
+LAST_TRUSTED_COMMIT_RULE
+RESUME_TOKEN
+```
+
+If interruption happens during a task:
+
+```text
+CURRENT_TASK = active task
+TASK_STATUS = IN_PROGRESS or recovery-needed
+LAST_VERIFIED_TASK = previous verified task
+NEXT_TASK = current task or last authorized task
+```
+
+The next Agent must not advance to a later task until the current task is verified.
+
+---
+
+## 21. Static Document Resume Pointer
+
+Individual specification documents should not store live progress state.
+
+They may contain a static pointer like:
+
+```text
+Resume / Handoff:
+Project execution state is controlled by docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md.
+Do not infer project progress from this document.
+Resume only from the authorized task recorded in the project state file.
+```
+
+This avoids duplicating progress state across many documents and saves tokens.

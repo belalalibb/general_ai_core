@@ -137,3 +137,30 @@ Moderation
 Multimodal
 Provider-native agent
 ```
+
+
+---
+
+## D10. Project-level execution state and local-only boundary
+
+تمت إضافة:
+
+```text
+docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+```
+
+لتكون نقطة التحكم المركزية في تقدم المشروع والمرحلة والمهمة التالية المصرح بها.
+
+القرار المثبت:
+
+```text
+Agent = local edits + state update + verification + local commit + stop
+Auto-uploader = remote synchronization
+PROJECT_EXECUTION_STATE.md = project progress control
+22_LIGHTWEIGHT_RESUME... = resume procedure
+Documents = specifications + static resume pointer only
+```
+
+Phase 2 product implementation remains LOCKED until Phase 1 documentation is VERIFIED.
+
+الـAgent لا يعمل `git push` أو remote upload إلا بتفويض صريح من المستخدم.

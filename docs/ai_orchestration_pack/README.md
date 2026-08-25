@@ -34,6 +34,7 @@ docs/ai_orchestration_pack/
 
 ```text
 ../../README.md
+PROJECT_EXECUTION_STATE.md
 final_docs_v2/00_INDEX.md
 ```
 
@@ -146,3 +147,17 @@ After editing:
 ## ملاحظة مهمة
 
 المحادثة الأصلية محفوظة كـHTML خام وكتفريغ نصي best-effort. الوثائق النهائية في `final_docs_v2` هي النسخة التنفيذية المنظمة، وليست مجرد نسخ حرفي للحوار.
+
+
+---
+
+## Project Execution State
+
+حالة التقدم المركزية للمشروع موجودة في:
+
+```text
+docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+```
+
+هذا الملف يحدد المرحلة الحالية، المهمة الحالية، آخر مهمة موثقة، والمهمة التالية المصرح بها.
+الـAgent لا يعمل push ولا يرفع ملفات إلا إذا طلب المستخدم صراحة؛ الرفع مسؤولية auto-uploader خارجي.

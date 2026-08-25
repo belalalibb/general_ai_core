@@ -21,6 +21,7 @@ docs/ai_orchestration_pack/
 ```text
 docs/ai_orchestration_pack/README.md
 docs/ai_orchestration_pack/final_docs_v2/00_INDEX.md
+docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
 ```
 
 أهم ملفات القراءة السريعة:
@@ -177,10 +178,31 @@ docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STAT
 Everywhere else use a 3–5 line pointer and link to the protocol.
 Do not duplicate long prose.
 
-## UPLOAD / PUSH ASSUMPTION
-If the surrounding platform handles upload/push automatically, the Agent must not waste context on push mechanics.
-The Agent's job is to keep local verified progress state accurate and compact.
-Only push when explicitly instructed.
+## LOCAL-ONLY PROGRESS / AUTO-UPLOAD BOUNDARY
+The Agent is responsible for local work only.
+
+The Agent may:
+- edit only files required by the current authorized task
+- update docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+- update required resume/handoff metadata
+- run verification
+- review git diff
+- create a local commit
+
+The Agent must not:
+- git push
+- upload files to GitHub
+- manually trigger remote synchronization
+- spend context on upload/push mechanics
+
+Remote synchronization is handled externally by the project's auto-uploader unless the user explicitly instructs otherwise.
+
+Progress continuity relies on:
+1. docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+2. local Git committed state
+3. verified filesystem reality
+
+A task may become VERIFIED after local verification + successful local commit, even if remote upload has not yet occurred.
 
 ## LOW-TOKEN RESUME REQUIREMENT
 The resume prompt must stay short enough to avoid wasting tokens, but strict enough to prevent drift.
@@ -492,7 +514,7 @@ Deliver:
 7. Git status.
 8. Commit hash.
 9. QA scorecard with evidence.
-10. Remote push status: skipped unless explicitly requested / performed by explicit instruction.
+10. Remote push status: skipped unless explicitly requested. Local commit is sufficient for task verification.
 11. Next recommended micro-task: one, concrete, small.
 
 ## STOP CONDITION
@@ -524,9 +546,10 @@ Steps:
 3. git log --oneline -5
 4. git diff --stat
 5. read README.md
-6. read docs/ai_orchestration_pack/final_docs_v2/00_INDEX.md
-7. read docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
-8. inspect uncommitted/new files
+6. read docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+7. read docs/ai_orchestration_pack/final_docs_v2/00_INDEX.md
+8. read docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+9. inspect uncommitted/new files
 9. classify recovery work
 10. continue one smallest docs task only
 ```
