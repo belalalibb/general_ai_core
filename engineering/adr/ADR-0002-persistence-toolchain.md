@@ -1,7 +1,7 @@
 # ADR-0002 — Persistence Toolchain (PostgreSQL Driver, ORM Layer, Migrations)
 
 ```text
-STATUS: PROPOSED
+STATUS: ACCEPTED (explicit operator decision, 2026-08-25: "ADR-0002 = ACCEPTED")
 DATE: 2026-08-25
 TASK: T-IMPL-015
 SUPERSEDES: NONE
@@ -168,8 +168,11 @@ replaces infrastructure/db/ only — contracts and core services untouched.
 
 ## Status
 
-PROPOSED (T-IMPL-015, 2026-08-25). Awaiting explicit operator sign-off.
-Until ACCEPTED: no sqlalchemy/alembic/asyncpg/pgvector dependency may be
-added, and no migration code may land. If the operator prefers a different
-toolchain, this ADR is rewritten at the decision point before acceptance
-(same flow as ADR-0001).
+ACCEPTED (T-IMPL-015, 2026-08-25) by explicit operator decision recorded in
+PROJECT_EXECUTION_STATE.md: "Continue from the current checkpoint with the
+operator authorization already granted: ADR-0002 = ACCEPTED". Alternative A
+is confirmed as proposed, with no amendments. The persistence dependency
+(sqlalchemy>=2, alembic, asyncpg, pgvector), the 5th import-linter
+contract, and the first identity/tenancy migration are now unblocked. From
+this point this file is append-only per ADR rules (40 §8.1); changes
+require a superseding ADR.
