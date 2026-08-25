@@ -3,7 +3,7 @@
 ```text
 STATUS: V3_BLUEPRINT_APPROVED — MIGRATION_IN_PROGRESS
 AUTHORED_BY_TASK: T-DOC-002
-LAST_MIGRATION_TASK: T-DOC-005 (doc 12 authoritative)
+LAST_MIGRATION_TASK: T-DOC-006 (docs 01, 02, 03 authoritative)
 ```
 
 ## Purpose
@@ -57,9 +57,9 @@ Layer prefixes: `0x` Product/Architecture, `1x` Core Contracts, `2x` Security/Go
 | V3 Document | Sources (V2) | Structural Change | Migration Status |
 |---|---|---|---|
 | `00_INDEX.md` (this file) | v2 `00_INDEX.md` | REBUILT as blueprint + live authority switch | ACTIVE (structure only; v2 index stays valid for v2 content) |
-| `01_PRODUCT_REQUIREMENTS.md` | v2 `01` | CARRY (surgical cleanup only) | PENDING |
-| `02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md` | v2 `02` | CARRY (invariants unchanged) | PENDING |
-| `03_DOMAIN_MODEL.md` | v2 `03` | CARRY | PENDING |
+| `01_PRODUCT_REQUIREMENTS.md` | v2 `01` | CARRY (surgical cleanup only) | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `01` SUPERSEDED with pointer banner) |
+| `02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md` | v2 `02` | CARRY (invariants unchanged) | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `02` SUPERSEDED with pointer banner) |
+| `03_DOMAIN_MODEL.md` | v2 `03` | CARRY | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `03` SUPERSEDED with pointer banner) |
 | `10_API_CONTRACTS.md` | v2 `04` | CARRY | PENDING |
 | `11_MODEL_ROUTING_AND_MODEL_CONTROL.md` | v2 `06` | CARRY (keep all modes: AUTO / TIER / EXPLICIT_MODEL / EXPLICIT_MODELS / AGENT_NODE_MAPPING) | PENDING |
 | `12_EXECUTION_GRAPH_AND_AGENT_MODE.md` | v2 `07` + v2 `21` | MERGE (provider-agent orchestration is execution-graph behavior; one authority for Agent Mode) | COMPLETE_AUTHORITATIVE (T-DOC-005; v2 `07` + `21` SUPERSEDED with pointer banners) |
