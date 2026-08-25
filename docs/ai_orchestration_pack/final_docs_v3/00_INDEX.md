@@ -3,7 +3,7 @@
 ```text
 STATUS: V3_BLUEPRINT_APPROVED — MIGRATION_IN_PROGRESS
 AUTHORED_BY_TASK: T-DOC-002
-LAST_MIGRATION_TASK: T-DOC-004 (doc 31 authoritative)
+LAST_MIGRATION_TASK: T-DOC-005 (doc 12 authoritative)
 ```
 
 ## Purpose
@@ -62,7 +62,7 @@ Layer prefixes: `0x` Product/Architecture, `1x` Core Contracts, `2x` Security/Go
 | `03_DOMAIN_MODEL.md` | v2 `03` | CARRY | PENDING |
 | `10_API_CONTRACTS.md` | v2 `04` | CARRY | PENDING |
 | `11_MODEL_ROUTING_AND_MODEL_CONTROL.md` | v2 `06` | CARRY (keep all modes: AUTO / TIER / EXPLICIT_MODEL / EXPLICIT_MODELS / AGENT_NODE_MAPPING) | PENDING |
-| `12_EXECUTION_GRAPH_AND_AGENT_MODE.md` | v2 `07` + v2 `21` | MERGE (provider-agent orchestration is execution-graph behavior; one authority for Agent Mode) | PENDING |
+| `12_EXECUTION_GRAPH_AND_AGENT_MODE.md` | v2 `07` + v2 `21` | MERGE (provider-agent orchestration is execution-graph behavior; one authority for Agent Mode) | COMPLETE_AUTHORITATIVE (T-DOC-005; v2 `07` + `21` SUPERSEDED with pointer banners) |
 | `13_MEMORY_AND_CONTEXT.md` | v2 `08` | CARRY | PENDING |
 | `14_SKILLS_AND_TOOLS.md` | v2 `09` | CARRY | PENDING |
 | `20_SECURITY_THREAT_MODEL.md` | v2 `10` | CARRY (Capability Firewall + deny-by-default unchanged) | PENDING |
