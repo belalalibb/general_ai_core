@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R028
+STATE_REVISION: R029
 
 RESUME_TOKEN:
-PROJECT|R028|PHASE_2_IMPLEMENTATION|T-IMPL-011|VERIFIED_MVP_PHASE2_EXIT_FIREWALL_SKELETON|VERIFY_HEAD_WITH_GIT
+PROJECT|R029|PHASE_2_IMPLEMENTATION|T-IMPL-012|VERIFIED_MVP_PHASE3_OBJECT_STORAGE_PORT|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-011 content commit: ad806b1 pre-rewrite; T-IMPL-010: 9bd5491 pre-rewrite. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-012 content commit: c79b4bc; recovery maintenance: fe3f762. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-011
+T-IMPL-012
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,45 +126,38 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-011
+T-IMPL-012
 
 TASK_OBJECTIVE:
-Finish MVP Phase 2: implement the capability-firewall skeleton in core/security/ — a deterministic deny-by-default evaluator over FirewallDecisionInput returning FirewallDecision (20 §1/§3/§4/§8), with injected in-memory tenant policy state (no persistence) and tests for deny-by-default, explicit-grant ALLOW, REQUIRE_APPROVAL, ALLOW_WITH_LIMIT, and tenant policy isolation. Then evaluate the 41 §41 exit criteria.
+Start MVP Phase 3 (41 §42) ports-first: object-storage abstraction — tenant-scoped ObjectStoragePort (put/get/head/delete/list_keys, 40 §5.1 blob role), StoredObject metadata value object, closed error set with anti-enumeration (foreign-tenant probe indistinguishable from absent key, 20 §6), and an in-memory binding with port + tenant-isolation tests. No real S3/network bindings.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create core/security/ (firewall.py, __init__.py)
-- create tests/security/test_capability_firewall.py
-- update this state file at the verified checkpoint (incl. Phase 2 exit evaluation)
+- create core/storage/ (ports.py, errors.py, memory.py, __init__.py)
+- create tests/storage/test_object_storage.py
+- update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- persistence; provider/network/secrets work; audit emission (Phase 3); admin-configurable catalogs
-- MVP Phase 3+ code
+- real S3/object-store bindings; network; new dependencies
+- real secret material anywhere (20 §5)
 
 TASK_COMPLETION_CRITERIA:
 - pytest PASS; mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
-- Evaluator returns only the closed 20 §4 set; deny-by-default on every ungranted path; approval never bypasses grants; approval gate evaluated before limit; tenant grants never leak (20 §6).
+- Every port operation tenant-scoped; foreign-tenant read/delete raises the same ObjectNotFound as absent keys; listing never crosses tenants.
 - check_repo.sh => RESULT: PASS. Focused local commit; worktree clean; state updated.
 
-VERIFICATION_EVIDENCE (T-IMPL-011, this session):
-- core/security/firewall.py: TenantPolicy (frozen: granted_permissions/granted_entitlements/approval_gated_permissions/limited_permissions) + CapabilityFirewall.decide() — pure, deterministic, most-restrictive-first: no tenant policy -> DENY; permission not granted -> DENY; entitlement not held -> DENY; approval-gated + not approved -> REQUIRE_APPROVAL (20 §8); limited -> ALLOW_WITH_LIMIT; else ALLOW. approval_state==approved never bypasses grant checks (asserted by test). Policy state injected in-memory; catalogs/persistence/audit are later phases (documented in module docstring).
-- tests/security/test_capability_firewall.py: 13 tests (180 total pass) — unknown tenant denied; empty policy denied; permission-without-entitlement and entitlement-without-permission denied; approved-but-ungranted denied; full grant allows; deterministic over repeats; system actor follows same policy (20 §1); unapproved gated (PR-merge class) -> REQUIRE_APPROVAL, approved -> ALLOW; limited -> ALLOW_WITH_LIMIT; gated+limited unapproved -> REQUIRE_APPROVAL then approved -> ALLOW_WITH_LIMIT (ordering); tenant A grants never authorize tenant B (20 §6).
-- mypy --strict: clean. ruff: clean. lint-imports: 4 kept (core.security imports only core.contracts). check_repo.sh: RESULT: PASS.
-- RECOVERY NOTE (R028): the R028 state update was interrupted mid-write in the prior turn; on resume the sandbox had been reset (mypy/ruff/import-linter uninstalled) and the uploader had re-tracked tool caches and rewritten history (ad806b1 absent from log, but all T-IMPL-011 files tracked at HEAD with green gates). Recovery: verified filesystem + git tracking first, reinstalled toolchain (python3 -m pip install mypy ruff pytest pydantic import-linter pytest-asyncio), untracked caches again, re-ran all gates to RESULT: PASS, then redid ONLY the missing state-file update.
-- T-IMPL-011 content commit: ad806b1 (pre-rewrite; superseded by uploader sync commits).
+VERIFICATION_EVIDENCE (T-IMPL-012, this session):
+- SESSION RECOVERY FIRST (R029): sandbox had been reset again (toolchain missing) and the uploader had re-tracked 39 cache files. Reinstalled toolchain, untracked caches, ran full gates to RESULT: PASS at resumed HEAD before any new work; maintenance commit fe3f762.
+- core/storage/ports.py: ObjectStoragePort Protocol — tenant_id explicit on every method (isolation at the boundary, never ambient); bytes payloads; StoredObject frozen dataclass (tenant_id/key/size_bytes/content_type/created_at); no cross-tenant or global read operation exists on the port by design.
+- core/storage/errors.py: StorageError + ObjectNotFound; ObjectNotFound deliberately covers both absent and foreign-tenant keys (anti-enumeration, 20 §6).
+- core/storage/memory.py: InMemoryObjectStorage keyed by (tenant_id, key); empty keys rejected; sorted prefix listing; skeleton discipline identical to Phase 2 identity service.
+- tests/storage/test_object_storage.py: 15 tests (195 total pass) — protocol satisfaction, round-trip, metadata, head-without-payload, overwrite, delete, absent-key errors, empty-key rejection, sorted prefix listing; TenantIsolation: same key independent per tenant, foreign read raises NotFound, foreign probe indistinguishable from absent, foreign delete cannot remove data, listing never crosses tenants.
+- mypy --strict: clean. ruff: clean. lint-imports: 4 kept (core.storage imports only core.contracts.base). check_repo.sh: RESULT: PASS.
+- Content commit: c79b4bc.
 
-MVP_PHASE_2_EXIT_EVALUATION (41 §41, evaluated this session):
-- Deliver "user registration": PASS (T-IMPL-010 register()).
-- Deliver "email verification": PASS (T-IMPL-010 verify_email(), single-use token via port/fake).
-- Deliver "login/session": PASS (T-IMPL-010 login/resolve_session/logout, opaque tokens).
-- Deliver "personal tenant": PASS (registration creates ACTIVE PERSONAL tenant).
-- Deliver "basic RBAC/entitlements": PASS at the documented level — permission/entitlement identifier grants per tenant (specs define no richer RBAC entity; recorded at T-IMPL-009).
-- Deliver "capability firewall skeleton": PASS (T-IMPL-009 contracts + T-IMPL-011 evaluator).
-- Exit "auth tests pass": PASS (tests/identity — registration/verification/login/session suites green).
-- Exit "tenant isolation tests pass": PASS (tests/identity TestTenantIsolation + tests/security TestTenantIsolation green).
-MVP_PHASE_2_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED.
+MVP_PHASE_2_EXIT (recorded R028, unchanged): MVP_PHASE_2_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED — full 41 §41 evaluation preserved in git history at the R028 checkpoint commit (d88a876 pre-rewrite).
 ```
 
 ---
@@ -173,26 +166,25 @@ MVP_PHASE_2_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED.
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-011
-
-LAST_VERIFIED_TASK_COMMIT:
-ad806b1 (content, pre-rewrite) + the state-checkpoint commit at HEAD after this update
-
-CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP_PHASE_2_COMPLETE_AND_VERIFIED (41 §41 exit criteria met — see MVP_PHASE_2_EXIT_EVALUATION above). Next workstream: MVP Phase 3 — Storage / Observability (41 §42): PostgreSQL migrations, Redis setup, object storage abstraction, secret manager abstraction, basic audit logs, OpenTelemetry setup.
-
-NEXT_TASK:
 T-IMPL-012
 
+LAST_VERIFIED_TASK_COMMIT:
+c79b4bc (content) + the state-checkpoint commit at HEAD after this update
+
+CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
+MVP Phase 3 — Storage / Observability (41 §42) IN PROGRESS, ports-first slicing (R029 plan): T-IMPL-012 object-storage port DONE → T-IMPL-013 secret-manager port (credential_ref only, 20 §5) → T-IMPL-014 audit contract + port (20 §9 event set + 21 §8 admin fields). Real PostgreSQL/Redis/OTel bindings in infrastructure/ come after the ports and may need new dependencies (confirm against 40).
+
+NEXT_TASK:
+T-IMPL-013
+
 NEXT_TASK_OBJECTIVE:
-Start MVP Phase 3 — Storage / Observability (41 §42). At session start, re-scope from specs (41 §42 deliverables + 20 §5 secrets rules + 20 §9 audit events + storage/observability authority docs) and slice ports-first, mirroring Phase 2: begin with the abstraction ports + in-memory fakes that keep core pure (object storage port, secret manager port — credential_ref only per 20 §5, audit log port with the 20 §9 event set), before any real PostgreSQL/Redis/OTel infrastructure bindings. Real infrastructure bindings belong in infrastructure/ and may require new dependencies — confirm dependency additions against 40 engineering protocol when reached. SANDBOX NOTE: the sandbox resets between sessions; reinstall the toolchain first (python3 -m pip install mypy ruff pytest pydantic import-linter pytest-asyncio) and re-untrack tool caches if the uploader re-added them, before trusting gate results.
+Secret-manager abstraction (41 §42): a SecretManagerPort where core stores/retrieves secrets ONLY via opaque credential_ref handles (20 §5: DB stores credential_ref only; no secrets in logs; secret values never appear in metadata, listings, errors, or reprs), plus an in-memory binding and tests covering ref opacity, tenant isolation, revocation, and no-leak-via-repr/str. No real KMS/vault bindings, no real secret material in code or fixtures beyond obviously-fake placeholders.
 
 NEXT_TASK_AUTHORIZED:
-NO_UNTIL_NEW_SESSION (MVP phase boundary: mirroring the R024 precedent, the next MVP phase must not start in the same session that records the previous phase's exit. A new session must resume from this state, re-verify this checkpoint recovery-first, then begin T-IMPL-012.)
+YES_SAME_SESSION (same MVP phase; USER DIRECTIVE allows multiple tasks per session within a phase, each with its own commit + verification + checkpoint)
 
 DO_NOT_START:
-- MVP Phase 3 code in this session (phase boundary lock above)
-- real network/provider work; real secret material anywhere (20 §5: credential_ref only)
+- MVP Phase 4+ code; real KMS/vault/network bindings; real secret material anywhere (20 §5)
 - do not re-open Phase 1/2 contract or service decisions
 ```
 
