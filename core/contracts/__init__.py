@@ -4,6 +4,12 @@ Authority: docs/ai_orchestration_pack/final_docs_v3/10_API_CONTRACTS.md
 Rule (41 Phase 1): no Contract imports a specific Implementation.
 """
 
+from core.contracts.audit import (
+    ADMIN_CHANGE_EVENT_TYPES,
+    AdminChangeRecord,
+    AuditEvent,
+    AuditEventType,
+)
 from core.contracts.base import ContractModel
 from core.contracts.domain import (
     AccountHealthState,
@@ -81,14 +87,18 @@ from core.contracts.security import (
 )
 
 __all__ = [
+    "ADMIN_CHANGE_EVENT_TYPES",
     "AccountHealthCheckState",
     "AccountHealthState",
     "AccountLifecycleState",
     "ActorKind",
+    "AdminChangeRecord",
     "AgentCapability",
     "AgentCapabilityType",
     "AgentPolicy",
     "AgentRuntimeBinding",
+    "AuditEvent",
+    "AuditEventType",
     "AuthType",
     "BindingAvailability",
     "ContractModel",
