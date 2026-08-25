@@ -1,5 +1,12 @@
 # 03 — Domain Model
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-006)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/03_DOMAIN_MODEL.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Core Entities
