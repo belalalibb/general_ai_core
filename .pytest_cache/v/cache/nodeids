@@ -1,0 +1,11 @@
+[
+  "tests/contract/test_error_contract.py::test_contract_instances_are_immutable",
+  "tests/contract/test_error_contract.py::test_documented_example_validates",
+  "tests/contract/test_error_contract.py::test_empty_message_rejected",
+  "tests/contract/test_error_contract.py::test_error_categories_match_spec_exactly",
+  "tests/contract/test_error_contract.py::test_json_schema_export",
+  "tests/contract/test_error_contract.py::test_minimal_error_defaults",
+  "tests/contract/test_error_contract.py::test_missing_required_fields_rejected",
+  "tests/contract/test_error_contract.py::test_unknown_error_code_rejected",
+  "tests/contract/test_error_contract.py::test_unknown_fields_rejected"
+]
