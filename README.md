@@ -40,6 +40,12 @@ docs/ai_orchestration_pack/final_docs_v2/21_PROVIDER_AGENT_ORCHESTRATION_SPEC.md
 docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
 ```
 
+بروتوكول إنشاء بنية Providers عند عدم وجود مزودين حقيقيين:
+
+```text
+docs/ai_orchestration_pack/final_docs_v2/23_AI_PROVIDERS_SCAFFOLDING_POLICY.md
+```
+
 أرشيف المحادثة الأصلية:
 
 ```text

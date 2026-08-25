@@ -323,3 +323,41 @@ final response
 
 ### Ref
 `21_PROVIDER_AGENT_ORCHESTRATION_SPEC.md`, `07_EXECUTION_GRAPH_SPEC.md`, `06_MODEL_ROUTING_SPEC.md`, `05_PROVIDER_PLUGIN_SPEC.md`, `11_ADMIN_CONTROL_PLANE_SPEC.md`
+
+
+---
+
+## Q24. ماذا يحدث لو لا يوجد `ai_providers` أو مزودين حقيقيين بعد؟
+
+### Decision
+لا يتم تعطيل المشروع ولا يتم اختراع مزودين وهميين. يتم إنشاء بنية Providers فقط مع Templates متنوعة ومعطلة، والمزودين الحقيقيين يضافون لاحقًا.
+
+### Rules
+
+```text
+Create scaffold only.
+Represent diversity.
+Keep templates disabled.
+Do not claim execution works.
+Do not contaminate Core with provider-specific shortcuts.
+```
+
+### Required Diversity
+
+```text
+chat/text
+reasoning
+coding
+vision
+image generation
+audio STT
+audio TTS
+embeddings
+rerank
+moderation/safety
+multimodal
+provider-native agent
+```
+
+### Ref
+`23_AI_PROVIDERS_SCAFFOLDING_POLICY.md`, `05_PROVIDER_PLUGIN_SPEC.md`, `15_MVP_ROADMAP.md`, `14_MASTER_IMPLEMENTATION_PLAN.md`

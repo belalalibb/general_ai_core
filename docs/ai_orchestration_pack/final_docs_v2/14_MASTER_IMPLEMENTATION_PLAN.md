@@ -318,6 +318,22 @@ No hardcoded Provider assumptions
 
 ---
 
+
+
+### If no real Providers exist yet
+
+If `ai_providers` or real provider implementations are missing, Phase 4/5 should create provider framework scaffolding and disabled diverse templates only.
+
+Do not block the project and do not fake provider functionality.
+
+Reference:
+
+```text
+23_AI_PROVIDERS_SCAFFOLDING_POLICY.md
+```
+
+---
+
 # 8. Phase 5 — Provider Migration
 
 كل Provider على حدة.

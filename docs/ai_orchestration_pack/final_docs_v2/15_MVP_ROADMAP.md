@@ -228,3 +228,39 @@ Tenant isolation tests pass.
 No secrets in logs.
 Every phase committed and documented.
 ```
+
+---
+
+## 13. If No Real AI Providers Exist Yet
+
+The MVP may begin with provider scaffolding only if real provider details are not ready.
+
+Allowed:
+
+```text
+Provider contracts
+Provider registry
+Manifest schema
+Common provider errors/capabilities
+Disabled diverse provider templates
+Scaffold validation tests
+Pending real providers list
+```
+
+Forbidden:
+
+```text
+Fake working providers
+Invented credentials
+Invented live model names
+Templates marked active
+Provider-specific shortcuts inside Core
+```
+
+Use:
+
+```text
+23_AI_PROVIDERS_SCAFFOLDING_POLICY.md
+```
+
+End-to-end AI execution is not considered complete until at least one real provider is implemented and verified.

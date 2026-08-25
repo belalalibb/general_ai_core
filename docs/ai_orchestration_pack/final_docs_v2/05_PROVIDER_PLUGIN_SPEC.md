@@ -410,3 +410,17 @@ required controls
 The platform Agent may orchestrate several provider agents from one or many providers inside one Execution Graph.
 
 Provider modules must expose enough metadata for routing, safety, evaluation, and usage accounting.
+
+---
+
+## 14. No Real Providers Yet
+
+If no real `ai_providers` or provider implementations exist yet, the Agent must create only the provider framework and disabled diverse templates.
+
+It must not invent working providers, fake model names, fake credentials, or provider-specific Core shortcuts.
+
+See:
+
+```text
+23_AI_PROVIDERS_SCAFFOLDING_POLICY.md
+```
