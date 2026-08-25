@@ -28,8 +28,8 @@ health, error normalization, provider-native agents, tests, and activation.
 - Account pool, lease, health, rate-limit, and error-normalization contracts.
 - Provider-native agent rules.
 - Scaffold-only state rules. Onboarding steps by provider type live in
-  `31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md` (until created:
-  `final_docs_v2/23_AI_PROVIDERS_SCAFFOLDING_POLICY.md` + `25_REAL_PROVIDER_ONBOARDING_GUIDE.md`).
+  `31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md` (authoritative since T-DOC-004;
+  successor of `final_docs_v2/23_AI_PROVIDERS_SCAFFOLDING_POLICY.md` + `25_REAL_PROVIDER_ONBOARDING_GUIDE.md`).
 
 ---
 
@@ -945,8 +945,8 @@ Unsupported modules must be marked
 not as mandatory TODOs.
 
 Scaffolding policy and real onboarding steps by provider type:
-`31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md` (until created, use
-`final_docs_v2/23_AI_PROVIDERS_SCAFFOLDING_POLICY.md` and
+`31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md` (authoritative since T-DOC-004;
+successor of `final_docs_v2/23_AI_PROVIDERS_SCAFFOLDING_POLICY.md` and
 `final_docs_v2/25_REAL_PROVIDER_ONBOARDING_GUIDE.md`).
 
 ---
@@ -1098,5 +1098,5 @@ Provider functionality must never be faked.
 ```text
 Git committed state is the only trusted progress.
 Authorized task: docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
-Full protocol: final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+Full protocol: final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md
 ```
