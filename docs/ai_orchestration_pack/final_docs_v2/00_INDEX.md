@@ -10,12 +10,12 @@
 ## V2 Baseline / V3 Target Notice
 
 ```text
-Current Baseline: V2
-Target Baseline: V3
-V2 structure is reference material, not a final-architecture constraint.
-V3 blueprint + live migration index: ../final_docs_v3/00_INDEX.md
-Authority rule: each V2 document remains authoritative until the V3 index
-marks its successor MIGRATED/ACTIVE. Do not treat partial V3 files as authoritative.
+PACK STATUS: ARCHIVED_BASELINE — NOT AUTHORITATIVE (T-DOC-013)
+Current Baseline: V3 (../final_docs_v3/ — all 20 documents COMPLETE_AUTHORITATIVE)
+Authority index: ../final_docs_v3/00_INDEX.md (single authority switch)
+Every V2 document (01–25) carries a SUPERSEDED banner pointing to its V3
+successor. This pack is read-only historical source material, kept for
+traceability audits only. Never cite a V2 document as authority.
 ```
 
 This index describes the current V2 documentation pack.
