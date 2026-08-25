@@ -1,6 +1,15 @@
 # 19 — Agent Cognitive Operating Protocol
 ## For Maximum Reasoning, Decision Quality, and Execution Discipline
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-012)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/51_AGENT_COGNITIVE_PROTOCOL.md
+(CARRY: all tiers, modes, checklists, rules, and output contracts carried
+verbatim; §1 narrative normalized to English)
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Purpose
