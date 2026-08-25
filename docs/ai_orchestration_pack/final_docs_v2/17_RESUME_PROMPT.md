@@ -1,5 +1,19 @@
 # STATIC RESUME PROMPT
 
+```text
+STATUS: SUPERSEDED / RETIRED — NOT AUTHORITATIVE (T-DOC-012)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md
++ docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+NOTE: This document is stale: it references non-existent final_docs/ paths
+(01/02/03_*) and engineering/state/*, and the legacy STATE.md / PROGRESS.md /
+HANDOFF.md / NEXT_PLAN scheme forbidden by D10/D11. Its still-valid rules
+(Git commit = only trusted proof; smallest micro-task; no scope expansion;
+ADR stop rule; session-end discipline) are preserved in the successor
+(see 52 §17 and its traceability ledger).
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 استخدم هذا النص في بداية كل جلسة جديدة لاستكمال المشروع بعد انقطاع أو انتقال إلى Agent/مهندس آخر.
 
 ```text
