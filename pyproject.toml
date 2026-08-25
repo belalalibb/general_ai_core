@@ -14,6 +14,8 @@ dependencies = [
     "alembic>=1.13",
     "asyncpg>=0.29",
     "pgvector>=0.2",
+    # Redis binding — ADR-0003 (ACCEPTED 2026-08-25)
+    "redis>=5",
 ]
 
 [project.optional-dependencies]
@@ -77,3 +79,10 @@ name = "Core must not import the persistence toolchain (ADR-0002)"
 type = "forbidden"
 source_modules = ["core"]
 forbidden_modules = ["sqlalchemy", "alembic", "asyncpg", "pgvector"]
+
+# ADR-0003: Redis client confined to infrastructure/ — core keeps port fakes.
+[[tool.importlinter.contracts]]
+name = "Core must not import the Redis client (ADR-0003)"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["redis"]
