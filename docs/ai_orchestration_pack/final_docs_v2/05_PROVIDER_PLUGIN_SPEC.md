@@ -1,16 +1,23 @@
 # 05 — Provider Plugin Specification
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-003)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 0. Final Focused Provider Reference
 
-For the consolidated final understanding of the Provider subsystem, use:
+The consolidated, authoritative Provider subsystem specification is now:
 
 ```text
-24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md
+final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md
 ```
 
-This file remains the detailed plugin specification, while document 24 is the focused final provider architecture summary.
+This file and 24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md were merged into it.
 
 
 ---
