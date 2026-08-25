@@ -20,7 +20,7 @@ docs/ai_orchestration_pack/
 
 ```text
 docs/ai_orchestration_pack/README.md
-docs/ai_orchestration_pack/final_docs_v2/00_INDEX.md
+docs/ai_orchestration_pack/final_docs_v3/00_INDEX.md
 docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
 ```
 
@@ -29,11 +29,11 @@ docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
 ```text
 docs/ai_orchestration_pack/CURRENT_SESSION_DECISIONS.md
 docs/ai_orchestration_pack/DESIGN_OPINIONS_AND_SUGGESTIONS.md
-docs/ai_orchestration_pack/final_docs_v2/19_AGENT_COGNITIVE_OPERATING_PROTOCOL.md
-docs/ai_orchestration_pack/final_docs_v2/20_ULTRA_EXECUTION_PROMPT.md
-docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
-docs/ai_orchestration_pack/final_docs_v2/24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md
-docs/ai_orchestration_pack/final_docs_v2/25_REAL_PROVIDER_ONBOARDING_GUIDE.md
+docs/ai_orchestration_pack/final_docs_v3/51_AGENT_COGNITIVE_PROTOCOL.md
+docs/ai_orchestration_pack/final_docs_v3/50_AGENT_EXECUTION_PROMPT.md
+docs/ai_orchestration_pack/final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md
+docs/ai_orchestration_pack/final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md
+docs/ai_orchestration_pack/final_docs_v3/31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md
 ```
 
 أرشيف المحادثة الأصلية:
@@ -86,7 +86,8 @@ Responsibility split:
 Resume Prompt = how to restart cheaply
 README / Permanent Contract = how the Agent must operate
 PROJECT_EXECUTION_STATE.md = where the project is and what is authorized next
-final_docs_v2/* = specifications and decisions
+final_docs_v3/* = specifications and decisions
+(final_docs_v2/* = ARCHIVED_BASELINE since T-DOC-013 — historical source only)
 ```
 
 A future Agent should not need the old chat conversation to understand how to proceed.
@@ -132,7 +133,8 @@ Read and reconcile:
 - docs/ai_orchestration_pack/FINAL_PACKAGE_OVERVIEW.md
 - docs/ai_orchestration_pack/DESIGN_OPINIONS_AND_SUGGESTIONS.md
 - docs/ai_orchestration_pack/CURRENT_SESSION_DECISIONS.md
-- docs/ai_orchestration_pack/final_docs_v2/*
+- docs/ai_orchestration_pack/final_docs_v3/*
+- docs/ai_orchestration_pack/final_docs_v2/* (ARCHIVED_BASELINE — historical source only)
 - docs/ai_orchestration_pack/conversation_archive/original_shared_conversation_extracted.md
 - docs/ai_orchestration_pack/source_materials/rev_prompt_original.txt
 
@@ -143,10 +145,11 @@ record it, do not fabricate its content, and proceed from the remaining sources.
 When sources conflict, higher wins:
 1. Explicit ADRs if present.
 2. CURRENT_SESSION_DECISIONS.md.
-3. final_docs_v2/* current baseline.
+3. final_docs_v3/* authoritative baseline (since T-DOC-013).
 4. DESIGN_OPINIONS_AND_SUGGESTIONS.md.
-5. conversation_archive as raw material only.
-6. rev_prompt_original.txt as historical input only.
+5. final_docs_v2/* archived baseline — historical source only, never authority.
+6. conversation_archive as raw material only.
+7. rev_prompt_original.txt as historical input only.
 
 Newer explicit decisions beat older ones at the same level.
 Every conflict resolved must be recorded in the Q&A Decision Log with the losing position noted.
@@ -170,7 +173,7 @@ Do not edit conversation_archive raw files unless explicitly instructed for secu
 If raw archive files are edited:
 - record why in CURRENT_SESSION_DECISIONS.md
 - mention it in the final report
-- keep final_docs_v2 as the main place for refined decisions
+- keep final_docs_v3 as the main place for refined decisions
 
 
 ---
@@ -260,7 +263,7 @@ This rule must appear as a short pointer in:
 - Handoff / Next-Plan Protocol
 
 State it fully once in:
-docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+docs/ai_orchestration_pack/final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md
 
 Everywhere else use a 3–5 line pointer and link to the protocol.
 Do not duplicate long prose.
@@ -315,7 +318,7 @@ A missing state file is a recovery condition, not permission to continue.
 The resume prompt must stay short enough to avoid wasting tokens, but strict enough to prevent drift.
 
 Use:
-docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+docs/ai_orchestration_pack/final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md
 
 If progress state was not updated before interruption, the next Agent must reconstruct reality from Git + filesystem + targeted verification, then update state.
 
@@ -415,7 +418,12 @@ Never add architecture that does not change a real execution outcome.
 
 ## PHASE 4 — RE-ARCHITECT DOCUMENTATION TOWARD V3
 
-`final_docs_v2` is the current baseline/source material. Its file count, file names, order, and boundaries are not authoritative.
+> STATUS NOTE (T-DOC-013): This phase is COMPLETE. `final_docs_v3/` is the
+> authoritative pack (all 20 documents COMPLETE_AUTHORITATIVE); `final_docs_v2/`
+> is ARCHIVED_BASELINE. The text below is preserved as the permanent contract
+> for how any future documentation re-architecture must be conducted.
+
+`final_docs_v2` was the baseline/source material for this phase. Its file count, file names, order, and boundaries are not authoritative.
 
 The following list is a **capability coverage reference**, not a mandatory final file structure.
 
@@ -662,8 +670,8 @@ Steps:
 4. git diff --stat
 5. read README.md
 6. read docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
-7. read docs/ai_orchestration_pack/final_docs_v2/00_INDEX.md
-8. read docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+7. read docs/ai_orchestration_pack/final_docs_v3/00_INDEX.md
+8. read docs/ai_orchestration_pack/final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md
 9. inspect uncommitted/new files
 9. classify recovery work
 10. continue one smallest docs task only
