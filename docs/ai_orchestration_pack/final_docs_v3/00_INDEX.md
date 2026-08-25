@@ -3,7 +3,7 @@
 ```text
 STATUS: V3_BLUEPRINT_APPROVED — MIGRATION_IN_PROGRESS
 AUTHORED_BY_TASK: T-DOC-002
-LAST_MIGRATION_TASK: T-DOC-003 (doc 30 authoritative)
+LAST_MIGRATION_TASK: T-DOC-004 (doc 31 authoritative)
 ```
 
 ## Purpose
@@ -69,7 +69,7 @@ Layer prefixes: `0x` Product/Architecture, `1x` Core Contracts, `2x` Security/Go
 | `21_ADMIN_CONTROL_PLANE.md` | v2 `11` | CARRY | PENDING |
 | `22_EVALUATION_AND_LEARNING.md` | v2 `12` | CARRY | PENDING |
 | `30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md` | v2 `24` + v2 `05` | MERGE (v2 `24` is already declared the final provider reference; v2 `05` detail folds under it — removes dual authority) | COMPLETE_AUTHORITATIVE (T-DOC-003; v2 `24` + `05` SUPERSEDED with pointer banners) |
-| `31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md` | v2 `23` + v2 `25` | MERGE (both cover the "no real providers yet" state and the path to real providers, by type) | PENDING |
+| `31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md` | v2 `23` + v2 `25` | MERGE (both cover the "no real providers yet" state and the path to real providers, by type) | COMPLETE_AUTHORITATIVE (T-DOC-004; v2 `23` + `25` SUPERSEDED with pointer banners) |
 | `40_ENGINEERING_PROTOCOL.md` | v2 `13` | REWRITE-COMPRESS (defect-justified: 2385 lines; legacy STATE.md/PROGRESS.md scheme conflicts with single-state decision D10/D11) | PENDING |
 | `41_IMPLEMENTATION_PLAN_AND_MVP.md` | v2 `14` + v2 `15` | MERGE (one plan with explicit FINAL vs MVP vs FUTURE separation; removes duplicated phase lists and legacy state-file references) | PENDING |
 | `50_AGENT_EXECUTION_PROMPT.md` | v2 `20` + v2 `16` | MERGE (v2 `20` is the base; v2 `16` becomes its short standard-mode profile — one build prompt authority) | PENDING |
