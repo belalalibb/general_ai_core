@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R006
+STATE_REVISION: R007
 
 RESUME_TOKEN:
-PROJECT|R006|PHASE_1_DOCUMENTATION|T-DOC-003|VERIFIED|VERIFY_HEAD_WITH_GIT
+PROJECT|R007|PHASE_1_DOCUMENTATION|T-DOC-004|VERIFIED|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-003 commit; prior anchor f10ea536 verified as ancestor of HEAD during R006 reconciliation)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-004 commit; prior T-DOC-003 work verified during R007 reconciliation as present in HEAD via external uploader sync commits ending at 26c83ad4)
 
 LAST_VERIFIED_STATE_TASK:
-T-DOC-003
+T-DOC-004
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -117,37 +117,37 @@ CURRENT_WORKSTREAM:
 DOCUMENTATION_REARCHITECTURE
 
 CURRENT_TASK:
-T-DOC-003
+T-DOC-004
 
 TASK_OBJECTIVE:
-Create final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md by merging v2 24 (authoritative base) with v2 05 (detail), preserving all provider decisions, mark both V2 sources SUPERSEDED with pointers, and flip their MIGRATION STATUS in final_docs_v3/00_INDEX.md in the same commit.
+Create final_docs_v3/31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md by merging v2 23_AI_PROVIDERS_SCAFFOLDING_POLICY.md with v2 25_REAL_PROVIDER_ONBOARDING_GUIDE.md, preserving the scaffold-only state rules (templates disabled, no fake functionality, pending providers file) and the onboarding-by-provider-type guide, mark both V2 sources SUPERSEDED with pointers, and flip their MIGRATION STATUS in final_docs_v3/00_INDEX.md in the same commit.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md (merge of v2 24 + 05)
-- add SUPERSEDED pointer banners to v2 24 and v2 05 (no content deletion)
-- flip MIGRATION STATUS for doc 30 in final_docs_v3/00_INDEX.md
+- create final_docs_v3/31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md (merge of v2 23 + 25)
+- add SUPERSEDED pointer banners to v2 23 and v2 25 (no content deletion)
+- flip MIGRATION STATUS for doc 31 in final_docs_v3/00_INDEX.md
 - update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- change any provider decision, contract, or invariant
+- change any scaffolding/onboarding decision, contract, or invariant
 - migrate any other document
 - implement product code
 - create additional mutable state files
 
 TASK_COMPLETION_CRITERIA:
-- final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md exists, content-complete, no stub.
-- All decisions from v2 24 and v2 05 preserved (capability-driven, no forced lifecycle, Model!=Provider!=Account!=Credential, Core isolation, Provider Agent != Platform Agent Runtime, error normalization, lease/pool optionality, no real providers yet, templates disabled).
-- v2 24 and v2 05 carry SUPERSEDED banners pointing to the successor; their content otherwise untouched.
-- final_docs_v3/00_INDEX.md row for doc 30 = COMPLETE_AUTHORITATIVE in the same commit.
+- final_docs_v3/31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md exists, content-complete, no stub.
+- All decisions from v2 23 and v2 25 preserved (scaffold-only core rule, forbidden list, 12 template categories, template manifest fields incl. template_disabled/is_functional=false/real_provider_required, provider-agent template, pending providers file, registry exclusion rules, scaffold tests, capability-driven no-forced-shape rule, MVP interaction, what-must-not-be-claimed list, template vs real provider, universal onboarding checklist, all 12 provider type patterns A-L incl. VERIFICATION_REQUIRED/no CAPTCHA bypass, activation requirements + activation checklist, final rules).
+- v2 23 and v2 25 carry SUPERSEDED banners pointing to the successor; their content otherwise untouched.
+- final_docs_v3/00_INDEX.md row for doc 31 = COMPLETE_AUTHORITATIVE in the same commit.
 - Git diff reviewed; single local commit created and verified.
 
 VERIFICATION_EVIDENCE:
-- Successor file exists on filesystem and in commit; covers all 26 sections of v2 24 and all 15 sections of v2 05 (merged, deduplicated).
-- unsupported_capability error category (v2 24) and error JSON shape (v2 05) both present in successor.
-- V3 index authority switch flipped for doc 30 only.
+- Successor file exists on filesystem and in commit; covers all 17 sections of v2 23 and all 10 sections (incl. Types A-L) of v2 25 (merged, deduplicated) with a V2->V3 traceability section.
+- Decision-preservation grep passed (template_disabled, real_provider_required, VERIFICATION_REQUIRED, CAPTCHA, no real providers, all 12 types, capability-driven).
+- V3 index authority switch flipped for doc 31 only.
 - Secret scan of changed files passed (no tokens/keys).
 - Local commit created and verified; use `git rev-parse HEAD` for the exact trusted commit.
 ```
@@ -158,7 +158,7 @@ VERIFICATION_EVIDENCE:
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-003
+T-DOC-004
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
@@ -167,13 +167,13 @@ CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
 DOCUMENTATION_REARCHITECTURE_V3_MIGRATION
 
 NEXT_TASK:
-T-DOC-004
+T-DOC-005
 
 NEXT_TASK_OBJECTIVE:
-Create final_docs_v3/31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md by merging v2 23_AI_PROVIDERS_SCAFFOLDING_POLICY.md with v2 25_REAL_PROVIDER_ONBOARDING_GUIDE.md, preserving the scaffold-only state rules (templates disabled, no fake functionality, pending providers file) and the onboarding-by-provider-type guide, mark both V2 sources SUPERSEDED with pointers, and flip their MIGRATION STATUS in final_docs_v3/00_INDEX.md in the same commit.
+Create final_docs_v3/12_EXECUTION_GRAPH_AND_AGENT_MODE.md by merging v2 07_EXECUTION_GRAPH_AND_AGENT_MODE (base) with v2 21_PROVIDER_AGENT_ORCHESTRATION_SPEC (provider-agent orchestration folded in as execution-graph behavior), preserving the critical rule Provider Agent Capability != Platform Agent Runtime and platform authority, mark both V2 sources SUPERSEDED with pointers, and flip their MIGRATION STATUS in final_docs_v3/00_INDEX.md in the same commit.
 
 NEXT_TASK_AUTHORIZED:
-YES_AFTER_T_DOC_003_COMMIT_VERIFIED
+YES_AFTER_T_DOC_004_COMMIT_VERIFIED
 
 DO_NOT_START:
 PHASE_2_PRODUCT_IMPLEMENTATION
@@ -207,6 +207,8 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - Migration proceeds one cluster per session (T-DOC-003 … T-DOC-013); a V2 doc stays authoritative until its V3 successor is verified and marked in the V3 index.
 - T-DOC-003 completed the first content migration: final_docs_v3/30 is authoritative for the Provider subsystem; v2 24 and v2 05 are SUPERSEDED baseline material.
 - R006 reconciliation: external auto-uploader commits after f10ea536 (scaffold file removals, README carry) were verified as unrelated to documentation tasks; f10ea536 confirmed as ancestor of HEAD.
+- R007 reconciliation: the T-DOC-003 local commit (a43b7281) was re-synchronized by the external auto-uploader as per-file sync commits ending at 26c83ad4; filesystem verification confirmed all T-DOC-003 artifacts intact (v3 doc 30 present, banners present, index flipped). Facts from filesystem, not commit hashes.
+- T-DOC-004 completed the second content migration: final_docs_v3/31 is authoritative for provider scaffolding + real provider onboarding; v2 23 and v2 25 are SUPERSEDED baseline material.
 ```
 
 ---
