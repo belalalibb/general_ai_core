@@ -172,6 +172,44 @@ If raw archive files are edited:
 - mention it in the final report
 - keep final_docs_v2 as the main place for refined decisions
 
+
+---
+
+## V2 BASELINE / V3 TARGET RULE
+
+```text
+V2 = current documentation baseline / source material.
+V2 structure is NOT authoritative.
+
+V3 = independently re-architected documentation system.
+
+The Agent MAY:
+- merge
+- split
+- rename
+- reorder
+- move
+- create
+- remove documents
+
+when this improves execution value.
+
+The Agent MUST preserve:
+- product decisions
+- ADR decisions
+- requirements
+- contracts
+- architecture invariants
+- security constraints
+- critical decisions
+
+Documentation structure may change freely.
+Product decisions may not change silently.
+```
+
+V2 is a baseline and source set, not an architecture contract for documentation shape.
+The goal of documentation re-architecture is a real V3, not a polished V2.
+
 ## PROJECT GOAL — IMMUTABLE
 The project remains:
 Model-Agnostic AI Orchestration Platform / General AI Core.
@@ -375,8 +413,15 @@ Prefer:
 
 Never add architecture that does not change a real execution outcome.
 
-## PHASE 4 — REBUILD final_docs_v2
-The pack must cover these capability areas. File count is not sacred; coverage and clarity are mandatory:
+## PHASE 4 — RE-ARCHITECT DOCUMENTATION TOWARD V3
+
+`final_docs_v2` is the current baseline/source material. Its file count, file names, order, and boundaries are not authoritative.
+
+The following list is a **capability coverage reference**, not a mandatory final file structure.
+
+The Agent may merge, split, rename, reorder, move, create, or remove documents when that improves execution value, as long as accepted decisions and required coverage are preserved and traceable.
+
+V3 must cover these capability areas:
 
 1. Product Requirements
 2. Final Architecture Baseline
@@ -404,13 +449,14 @@ The pack must cover these capability areas. File count is not sacred; coverage a
 24. Final Provider Architecture Spec
 25. Real Provider Onboarding Guide
 
-Merging, splitting, or renaming files is allowed only when it reduces confusion.
+Merging, splitting, renaming, reordering, creating, or removing documents is allowed when it improves execution value.
 No critical decision may silently disappear.
+V2 document structure has no authority by itself.
 
 ## HARD CONSTRAINTS ON REBUILD
 
 ### A. Traceability Map
-Any merge/split/rename/delete must be recorded in an index-level mapping:
+V3 output structure may differ from V2. Any merge/split/rename/reorder/move/create/delete must be recorded in an index-level mapping:
 old location → new location
 or
 old location → decision preserved in <doc/section>

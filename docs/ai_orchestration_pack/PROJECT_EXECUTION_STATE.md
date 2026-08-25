@@ -38,6 +38,37 @@ CLEAN_AFTER_COMMIT_REQUIRED
 
 ---
 
+## DOCUMENTATION BASELINE / TARGET
+
+```text
+DOCUMENTATION_BASELINE:
+V2
+
+DOCUMENTATION_TARGET:
+V3
+
+V2_STATUS:
+SOURCE_BASELINE_ONLY
+
+V2_STRUCTURE_AUTHORITY:
+NONE
+
+V3_STATUS:
+NOT_STARTED
+
+V3_OBJECTIVE:
+Create the best verified documentation architecture for the project, independent of the V2 file structure.
+
+V3_SUCCESS:
+The final documentation architecture is authoritative, traceable, internally consistent, implementation-ready, recoverable, and verified. Its file count and document boundaries may differ from V2.
+```
+
+V2 documents are source material and current baseline. They are not a mandatory final structure for V3.
+V3 may merge, split, rename, reorder, move, create, or remove documents when this improves execution value.
+Product decisions, ADR decisions, requirements, contracts, architecture invariants, security constraints, and critical decisions must be preserved unless explicitly changed through the proper decision process.
+
+---
+
 ## PROJECT PHASE CONTROL
 
 ```text
@@ -175,6 +206,8 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - T-DOC-001 is resume/state governance preparation only, not actual documentation rewrite.
 - Actual documentation re-architecture begins at T-DOC-002 after T-DOC-001 is VERIFIED.
 - T-DOC-001 cleaned legacy resume/state instructions and centralized them on PROJECT_EXECUTION_STATE.md.
+- V2 structure is not authoritative; V3 documentation architecture may differ from V2.
+- V3 must preserve decisions/contracts/invariants, not V2 file boundaries.
 ```
 
 ---

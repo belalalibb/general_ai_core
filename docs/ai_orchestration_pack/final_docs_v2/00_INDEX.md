@@ -5,6 +5,25 @@
 
 ---
 
+---
+
+## V2 Baseline / V3 Target Notice
+
+```text
+Current Baseline: V2
+Target Baseline: V3
+V2 structure is reference material, not a final-architecture constraint.
+The V3 index will be produced as part of the documentation re-architecture.
+```
+
+This index describes the current V2 documentation pack.
+It is not a mandatory final file structure for V3.
+
+During V3 re-architecture, an Agent may merge, split, rename, reorder, move, create, or remove documents when this improves execution value.
+Accepted product decisions, requirements, contracts, architecture invariants, security constraints, and critical decisions must remain preserved and traceable.
+
+---
+
 ## لماذا V2؟
 
 النسخة السابقة كانت قوية كـ Architecture + Engineering Governance، لكنها ناقصة في مواصفات التنفيذ المباشر مثل:
