@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R031
+STATE_REVISION: R033
 
 RESUME_TOKEN:
-PROJECT|R031|PHASE_2_IMPLEMENTATION|T-IMPL-014|VERIFIED_MVP_PHASE3_AUDIT_CONTRACT_AND_PORT|VERIFY_HEAD_WITH_GIT
+PROJECT|R033|PHASE_2_IMPLEMENTATION|T-IMPL-017|VERIFIED_ADRS_0002_0003_0004_PROPOSED_AWAITING_SIGNOFF|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-014 content commit: 9cb4a4d; recovery maintenance this session: 1f885a1. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (this session: ADR-0002 commit 229d0e2; cache-untrack maintenance ced1e20; ADR-0003+0004 commit at HEAD after this update. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-014
+T-IMPL-017 (ADR document part; T-IMPL-015/016/017 ADR parts all done — implementations of all three BLOCKED on user sign-off)
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,36 +126,37 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-014
+T-IMPL-015/016/017 ADR parts (persistence / Redis / observability). All three ADRs written and PROPOSED; all three implementations BLOCKED on user sign-off.
 
 TASK_OBJECTIVE:
-Basic audit logs (41 §42): AuditEvent contract in core/contracts (03 §1 entity; 20 §9 must-audit set as closed AuditEventType enum + 21 §8 admin-change fields; tenant-scoped; details JsonObject carries credential_refs only, never secret values per 20 §5), an append-only tenant-scoped AuditLogPort, an in-memory binding, and tests.
+PostgreSQL migrations groundwork (41 §42, 40 §5.1): write ADR-0002 selecting the persistence toolchain BEFORE any DB dependency lands. Proposal: SQLAlchemy 2.x async + asyncpg + Alembic + pgvector, all confined to infrastructure/ with a new import-linter contract keeping core free of persistence imports. Dependency pins, alembic environment under infrastructure/db/, and the first identity/tenancy migration follow ONLY after the ADR is ACCEPTED by the operator.
 
 TASK_STATUS:
-VERIFIED_AFTER_LOCAL_COMMIT
+PART_1_VERIFIED_AFTER_LOCAL_COMMIT — ADR-0002 exists with STATUS: PROPOSED; part 2 NOT STARTED (correctly blocked).
 
-ALLOWED_SCOPE:
-- create core/contracts/audit.py; export from core/contracts/__init__.py
-- create core/audit/ (ports.py, errors.py, memory.py, __init__.py)
-- create tests/audit/test_audit_log.py
+ALLOWED_SCOPE (part 1):
+- create engineering/adr/ADR-0002-persistence-toolchain.md (full §8.1 format)
+- register it in engineering/adr/README.md index
 - update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- real DB/network bindings; new dependencies; real secret material anywhere (20 §5)
+- adding sqlalchemy/alembic/asyncpg/pgvector to pyproject.toml before ADR-0002 is ACCEPTED
+- any migration code, any real DB/network binding, any secret material (20 §5)
 
-TASK_COMPLETION_CRITERIA:
-- pytest PASS; mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
-- Event set closed and verbatim from 20 §9; admin publish/rollback events MUST carry the 21 §8 record (and only they may); port surface is append + tenant-scoped read/count ONLY (no update/delete); reads chronological.
-- check_repo.sh => RESULT: PASS. Focused local commit; worktree clean; state updated.
+TASK_COMPLETION_CRITERIA (part 1):
+- ADR-0002 has all §8.1 sections (Context/Alternatives/Decision/Reason/Consequences/Status), >=2 alternatives analyzed, STATUS: PROPOSED, explicit no-dependency-until-accepted gate stated inside the ADR.
+- ADR index updated. check_repo.sh => RESULT: PASS. Focused local commit; state updated.
 
-VERIFICATION_EVIDENCE (T-IMPL-014, this session):
-- core/contracts/audit.py: AuditEventType closed enum — 13 values, the 20 §9 list carried verbatim with compound lines expanded (login/logout; credential create/revoke; admin config publish/rollback); AdminChangeRecord field-for-field from 21 §8 (who->actor_id and timestamp->occurred_at live on the event; what/previous_version/new_version/validation_result/impact_preview/rollback_target on the record); AuditEvent frozen contract (id, tenant_id, event_type, actor_id|None=system, occurred_at, details JsonObject, admin_change|None); 20 §5 no-secret-in-details rule documented in the docstring and regression-guarded (schema-level enforcement of an open JSON object is impossible — recorded, not hidden). ADMIN_CHANGE_EVENT_TYPES frozenset exported.
-- core/audit/ports.py: AuditLogPort Protocol — append + tenant-scoped read(event_type filter, newest-N limit) + count ONLY; no update/delete/truncate surface by design (tamper-resistance); retention is an infra policy of the later real binding, not a core API.
-- core/audit/errors.py: AuditError + InvalidAuditEvent (21 §8 integrity rule).
-- core/audit/memory.py: InMemoryAuditLog — enforces admin-record-required/forbidden at append; chronological stable-sorted reads; strict tenant filtering; repr shows counts only.
-- tests/audit/test_audit_log.py: 20 tests (231 total pass) — Contract: closed set verbatim, admin subset, immutability, extra-fields rejected, defaults, 21 §8 fields, credential_ref-only details discipline; AppendOnly: protocol satisfaction, round-trip, no mutation surface, admin-record required/forbidden both directions; Reads: chronological, type filter, newest-N limit, count; TenantIsolation: reads/count tenant-scoped, cross_tenant_access_denied recorded in probed tenant only.
-- mypy --strict clean (30 files); ruff clean; lint-imports 4 kept (core.audit imports only core.contracts); check_repo.sh RESULT: PASS.
-- Content commit: 9cb4a4d.
+VERIFICATION_EVIDENCE (T-IMPL-016/017 ADR parts, this session, R033):
+- engineering/adr/ADR-0003-redis-binding.md: PROPOSED. 3 alternatives (A: redis-py asyncio under core ports — chosen; B: task frameworks arq/taskiq/celery — rejected: impose competing job/retry semantics vs 40 §4's outbox/retry-taxonomy/DLQ/leases-with-fencing design; C: aioredis deprecated / valkey-glide immature). Decision: infrastructure/redis/ implements queue (Streams consumer groups), lock/lease (SET NX PX + fencing token + Lua release), cache, rate-limit ports; DLQ terminal record in PostgreSQL (Redis never truth, 40 §5.1); 6th import-linter contract lands with the dep; hermetic gates keep fakes.
+- engineering/adr/ADR-0004-observability-setup.md: PROPOSED. 3 alternatives (A: opentelemetry-python API/SDK split + OTLP + structlog — chosen; B: vendor SDK first — rejected: violates 40 §5.3 standard=OTel; C: DIY-then-retrofit — rejected: retrofit cost on execution/provider tracing). Decision: SDK wiring ONLY at apps/ composition root; dev/test = console/no-op exporters (hermetic); custom AdaptiveSampler per 40 §5.3; structlog JSON w/ trace-id correlation + secret-scrubbing processor (20 §5); audit port (T-IMPL-014) untouched — telemetry references audit ids only; core must not import opentelemetry/structlog (contract lands with dep).
+- engineering/adr/README.md index rows added for both. check_repo.sh RESULT: PASS.
+- Session maintenance: sandbox reset had wiped dev tools — reinstalled (pydantic/pytest/mypy/ruff/import-linter); tracked tool caches untracked (ced1e20), .gitignore already covered them.
+
+VERIFICATION_EVIDENCE (T-IMPL-015 part 1, this session):
+- engineering/adr/ADR-0002-persistence-toolchain.md: 3 alternatives (A: SQLAlchemy 2.x async + asyncpg + Alembic + pgvector — chosen; B: raw asyncpg + hand-rolled migration runner — rejected: owning a migration runner on the source of truth, stringly-typed rows vs mypy --strict; C: SQLModel/Tortoise/Piccolo — rejected: SQLModel pushes table defs into contracts, breaking the core-purity import-linter contract; others lack Alembic-grade migrations). Decision confines ALL persistence to infrastructure/, mandates a 5th import-linter contract (core must not import sqlalchemy/alembic/asyncpg) landing WITH the dependency, requires downgrade paths per 40 §8.2, treats autogenerate output as reviewed draft. Consistent with the ACCEPTED ADR-0001 stack sketch (confirmation-with-analysis, not reversal).
+- engineering/adr/README.md index row added (PROPOSED; no DB dependency until ACCEPTED).
+- check_repo.sh RESULT: PASS after edits.
 
 MVP_PHASE_2_EXIT (recorded R028, unchanged): MVP_PHASE_2_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED — full 41 §41 evaluation preserved in git history at the R028 checkpoint commit (d88a876 pre-rewrite).
 ```
@@ -175,16 +176,16 @@ CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
 MVP Phase 3 — Storage / Observability (41 §42): the three portable abstractions are DONE (T-IMPL-012 object storage, T-IMPL-013 secret manager, T-IMPL-014 audit logs). Remaining Phase 3 deliverables — PostgreSQL migrations, Redis setup, OpenTelemetry setup — are real infrastructure bindings that require NEW DEPENDENCIES and stack decisions (40 §5.1 fixes PostgreSQL/Redis roles; driver/migration-tool choice e.g. SQLAlchemy/Alembic vs raw asyncpg is a significant architecture choice → needs an ADR per PHASE_2_GOVERNANCE, and new deps must be confirmed against 40).
 
 NEXT_TASK:
-T-IMPL-015
+OPERATOR DECISION GATE — sign-off (or rejection/amendment) of ADR-0002, ADR-0003, ADR-0004. This is the hard stop for MVP Phase 3's remaining deliverables (PostgreSQL migrations, Redis setup, OTel setup): ALL are dependency-adding infrastructure bindings and ALL now have their PROPOSED ADR waiting.
 
 NEXT_TASK_OBJECTIVE:
-PostgreSQL migrations groundwork (41 §42, 40 §5.1): FIRST write the ADR selecting the persistence toolchain (proposal: SQLAlchemy 2.x + Alembic — async-capable, migration-native, mypy-strict-friendly; alternatives considered: raw asyncpg + hand-rolled SQL migrations), THEN — only after the ADR is recorded — add the dependency pins, an initial alembic environment under infrastructure/db/, and a first migration covering the already-contracted core entities (identity/tenancy tables minimally). Import-linter boundaries must keep core free of any SQLAlchemy import (infrastructure only). If the operator wants a different stack, the ADR is the stopping point for that conversation.
+On acceptance of each ADR (independently accepted is fine, in migration order 0002 -> 0003 -> 0004): flip its STATUS to ACCEPTED recording the user decision verbatim (ADR-0001 flow), pin its deps in pyproject.toml, land its import-linter contract in the same commit as the dep, then implement (0002: infrastructure/db/ alembic env + first identity/tenancy migration with offline/metadata tests; 0003: infrastructure/redis/ port bindings with fakes in gates; 0004: apps/ composition-root wiring with console/no-op exporters in dev/test).
 
 NEXT_TASK_NOTE:
-ADR requirement comes from PHASE_2_GOVERNANCE ("Significant architecture choices ... require an ADR"). The prior stack-selection user-approval rule was satisfied for Python before Phase 1 code; the persistence toolchain is a new significant choice inside the approved stack — ADR required, explicit user sign-off recommended before the dependency lands.
+Each ADR states the stopping rule: silence is not acceptance; if the operator prefers different choices, the ADR is rewritten at the decision point before acceptance. Phase 4+ (41 §43) must not be pulled forward to bypass this gate.
 
 NEXT_TASK_AUTHORIZED:
-YES_SAME_SESSION for the ADR document itself (same MVP phase; USER DIRECTIVE). Landing the actual dependency + migrations SHOULD wait for user sign-off on the ADR unless the user has explicitly pre-authorized dependency additions.
+NO further implementation without ADR acceptance. Remaining dependency-free work in this phase is exhausted (all Phase 3 abstractions done T-IMPL-012/013/014; all Phase 3 binding ADRs written T-IMPL-015/016/017). If the operator directs other dependency-free work (docs/tests hardening), that may proceed under normal governance.
 
 DO_NOT_START:
 - MVP Phase 4+ code; real KMS/vault/network bindings; real secret material anywhere (20 §5)
