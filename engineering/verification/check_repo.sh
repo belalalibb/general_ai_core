@@ -46,7 +46,36 @@ for field in STATE_REVISION RESUME_TOKEN CURRENT_TASK NEXT_TASK PHASE_2_STATUS; 
     || fail "state field missing: $field"
 done
 
-# 4. Secret scan (obvious patterns only; case-sensitive prefixes)
+# 4. Python stack gates (ADR-0001: pytest / mypy / ruff / import-linter)
+# Run only when the Python workspace exists (Phase 1+) and tools are installed.
+if [ -f pyproject.toml ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    if python3 -m pytest tests/ -q >/dev/null 2>&1; then
+      pass "pytest: all tests pass"
+    else
+      fail "pytest failed (run: python3 -m pytest tests/)"
+    fi
+    if python3 -m mypy >/dev/null 2>&1; then
+      pass "mypy --strict (core/): clean"
+    else
+      fail "mypy failed (run: python3 -m mypy)"
+    fi
+    if python3 -m ruff check . >/dev/null 2>&1; then
+      pass "ruff: clean"
+    else
+      fail "ruff failed (run: python3 -m ruff check .)"
+    fi
+    if lint-imports >/dev/null 2>&1; then
+      pass "import-linter: architecture boundaries kept (40 §6.2)"
+    else
+      fail "import-linter failed (run: lint-imports)"
+    fi
+  else
+    fail "python3 not available but pyproject.toml exists"
+  fi
+fi
+
+# 5. Secret scan (obvious patterns only; case-sensitive prefixes)
 if grep -rEn 'AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|xox[bap]-[0-9A-Za-z-]{10,}|ghp_[0-9A-Za-z]{36}|sk-[A-Za-z0-9]{40,}' \
      --include='*.md' --include='*.sh' --include='*.yml' --include='*.yaml' \
      --include='*.json' --include='*.txt' . --exclude-dir=.git >/dev/null 2>&1; then
