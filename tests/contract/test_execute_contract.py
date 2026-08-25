@@ -66,7 +66,7 @@ def test_documented_request_round_trip_wire_shape() -> None:
     # Serialization by alias reproduces the documented wire keys
     # ("async", "schema") — not the Python-safe attribute names.
     req = ExecuteRequest.model_validate(DOCUMENTED_REQUEST)
-    wire = req.model_dump(mode="json", by_alias=True)
+    wire = req.model_dump(mode="json", by_alias=True, exclude_unset=True)
     assert wire == DOCUMENTED_REQUEST
 
 
