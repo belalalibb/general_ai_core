@@ -3,7 +3,7 @@
 ```text
 STATUS: V3_BLUEPRINT_APPROVED — MIGRATION_IN_PROGRESS
 AUTHORED_BY_TASK: T-DOC-002
-LAST_MIGRATION_TASK: T-DOC-010 (doc 40 authoritative)
+LAST_MIGRATION_TASK: T-DOC-011 (doc 41 authoritative)
 ```
 
 ## Purpose
@@ -71,7 +71,7 @@ Layer prefixes: `0x` Product/Architecture, `1x` Core Contracts, `2x` Security/Go
 | `30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md` | v2 `24` + v2 `05` | MERGE (v2 `24` is already declared the final provider reference; v2 `05` detail folds under it — removes dual authority) | COMPLETE_AUTHORITATIVE (T-DOC-003; v2 `24` + `05` SUPERSEDED with pointer banners) |
 | `31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md` | v2 `23` + v2 `25` | MERGE (both cover the "no real providers yet" state and the path to real providers, by type) | COMPLETE_AUTHORITATIVE (T-DOC-004; v2 `23` + `25` SUPERSEDED with pointer banners) |
 | `40_ENGINEERING_PROTOCOL.md` | v2 `13` | REWRITE-COMPRESS (defect-justified: 2385 lines; legacy STATE.md/PROGRESS.md scheme conflicts with single-state decision D10/D11) | COMPLETE_AUTHORITATIVE (T-DOC-010; v2 `13` SUPERSEDED with pointer banner; §39/§40/§41/§50 explicitly superseded by D10/D11) |
-| `41_IMPLEMENTATION_PLAN_AND_MVP.md` | v2 `14` + v2 `15` | MERGE (one plan with explicit FINAL vs MVP vs FUTURE separation; removes duplicated phase lists and legacy state-file references) | PENDING |
+| `41_IMPLEMENTATION_PLAN_AND_MVP.md` | v2 `14` + v2 `15` | MERGE (one plan with explicit FINAL vs MVP vs FUTURE separation; removes duplicated phase lists and legacy state-file references) | COMPLETE_AUTHORITATIVE (T-DOC-011; v2 `14` + `15` SUPERSEDED with pointer banners; v2 14 §32/§33/§35/§37/§39/§42 explicitly superseded by D10/D11) |
 | `50_AGENT_EXECUTION_PROMPT.md` | v2 `20` + v2 `16` | MERGE (v2 `20` is the base; v2 `16` becomes its short standard-mode profile — one build prompt authority) | PENDING |
 | `51_AGENT_COGNITIVE_PROTOCOL.md` | v2 `19` | CARRY | PENDING |
 | `52_RESUME_AND_PROGRESS_PROTOCOL.md` | v2 `22` (supersedes v2 `17`) | CARRY + ABSORB (v2 `17` is stale: dead `final_docs/` paths, forbidden STATE.md/PROGRESS.md/HANDOFF.md scheme) | PENDING |
@@ -141,5 +141,8 @@ Only `PROJECT_EXECUTION_STATE.md` authorizes the next task. This list is a plan,
 Git committed state is the only trusted progress.
 Read PROJECT_EXECUTION_STATE.md for the authorized task.
 Full protocol: final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+(after T-DOC-012: final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md)
+```
+ocol: final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
 (after T-DOC-012: final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md)
 ```
