@@ -1,6 +1,13 @@
 # 21 — Provider Agent Orchestration Specification
 ## Using Multiple Provider-Native Agents Inside the Platform Agent
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-005)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/12_EXECUTION_GRAPH_AND_AGENT_MODE.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Purpose
