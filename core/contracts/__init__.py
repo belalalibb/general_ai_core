@@ -36,6 +36,13 @@ from core.contracts.execute import (
     WebhookEventType,
     WebhookPayload,
 )
+from core.contracts.execution import (
+    Execution,
+    ExecutionNode,
+    ExecutionNodeStatus,
+    ExecutionNodeType,
+    ExecutionStrategy,
+)
 from core.contracts.model_policy import (
     AgentPolicy,
     FallbackScope,
@@ -74,8 +81,13 @@ __all__ = [
     "ExecuteAsyncAccepted",
     "ExecuteRequest",
     "ExecuteSyncResponse",
+    "Execution",
+    "ExecutionNode",
+    "ExecutionNodeStatus",
+    "ExecutionNodeType",
     "ExecutionStatus",
     "ExecutionStatusResponse",
+    "ExecutionStrategy",
     "FallbackScope",
     "Modality",
     "Model",
