@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R019
+STATE_REVISION: R021
 
 RESUME_TOKEN:
-PROJECT|R019|PHASE_2_IMPLEMENTATION|T-IMPL-002|VERIFIED_PROPOSED_AWAITING_USER_APPROVAL|VERIFY_HEAD_WITH_GIT
+PROJECT|R021|PHASE_2_IMPLEMENTATION|T-IMPL-004|VERIFIED_MVP_PHASE1_STARTED_ERROR_CONTRACT|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-002 commit; earlier this session: T-IMPL-000 unlock c7f070a, T-IMPL-001 governance fe1910b — same-session continuation within Phase 2 per the USER DIRECTIVE)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-004 commit; earlier this session: T-IMPL-003 f60aa5c)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-002
+T-IMPL-004
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,36 +126,35 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-002
+T-IMPL-004
 
 TASK_OBJECTIVE:
-Write ADR-0001 (implementation language/stack) per 40 §8.1 as PROPOSED. Present alternatives (TypeScript/Node, Python, Go) against the fixed constraints (02 §5 tech shape, 40 §5 baselines, 41 §38 MVP scope). Proposed decision: TypeScript/Node LTS monorepo (zod contracts, Fastify, Postgres+drizzle, Redis Streams, outbox-first workflows, OTel, vitest, dependency-cruiser boundary tests). ADR remains PROPOSED until explicit user approval.
+MVP Phase 1 (Contracts) start on the accepted Python stack: (1) workspace layout per 41 §2 as Python packages (apps/, core/contracts/, providers/{registry,common}/, infrastructure/, tests/{unit,integration,contract,security,regression}); (2) pyproject.toml with pytest/mypy-strict/ruff/import-linter config incl. 4 import-linter boundary contracts (Core pure; Contracts import no implementation; Providers↔Infrastructure isolation); (3) first contracts: core/contracts/base.py (ContractModel: extra=forbid+frozen; shared ID/scalar aliases) and core/contracts/errors.py (unified error contract per 10 §9 — ErrorCode closed set of 11 categories verbatim, ErrorDetail, ErrorEnvelope); (4) 9 contract tests (spec-exact category set, documented example round-trip, accept/reject, immutability, JSON Schema export); (5) Python gates wired into check_repo.sh (single entry point) and CI workflow recreated for the Python stack.
 
 TASK_STATUS:
-VERIFIED_AFTER_LOCAL_COMMIT (ADR committed as PROPOSED; ACCEPTANCE PENDING USER APPROVAL)
+VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create engineering/adr/ADR-0001-implementation-stack.md (PROPOSED)
-- update engineering/adr/README.md index row
+- create pyproject.toml, package skeleton per 41 §2, core/contracts/{base,errors}.py, tests/contract/test_error_contract.py
+- extend engineering/verification/check_repo.sh with Python gates; recreate .github/workflows/ci.yml
 - update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- flipping ADR-0001 to ACCEPTED without explicit user approval
-- any MVP Phase 1 (Contracts) code
 - provider/network/secrets work
+- MVP Phase 2 (Identity/Security) code
 
 TASK_COMPLETION_CRITERIA:
-- ADR-0001 contains all six 40 §8.1 fields (Context/Alternatives/Decision/Reason/Consequences/Status).
-- >= 3 alternatives analyzed against documented constraints.
-- ADR indexed in engineering/adr/README.md as PROPOSED.
-- check_repo.sh still passes.
+- pytest PASS; mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
+- Boundary gate negative-tested (deliberate violation detected, then removed).
+- check_repo.sh single entry point runs all gates => RESULT: PASS.
 - Focused local commit; worktree clean; state updated.
 
-VERIFICATION_EVIDENCE (T-IMPL-002, this session):
-- Field check: all six §8.1 fields present (grep-verified: Context, Alternatives, Decision, Reason, Consequences, Status).
-- 3 alternatives analyzed (TS/Node, Python, Go) with pros/cons tied to 02/40/41 constraints.
-- check_repo.sh => RESULT: PASS after changes.
-- ADR status = PROPOSED; no acceptance recorded; no contracts code written.
+VERIFICATION_EVIDENCE (T-IMPL-004, this session):
+- pytest: 9 passed. mypy: no issues in 4 source files (strict, core). ruff: all checks passed. lint-imports: 4 kept, 0 broken.
+- Negative test: temporary core/_tmp_violation.py importing infrastructure => contract BROKEN detected; removed => 4 kept again.
+- check_repo.sh full run: 22 PASS lines, RESULT: PASS.
+- Error categories grep-matched 1:1 against 10 §9 (11 categories, verbatim).
+- Toolchain fact: sandbox runs Python 3.13.13 (pyproject requires >=3.12; CI pins 3.12).
 ```
 
 ---
@@ -164,26 +163,26 @@ VERIFICATION_EVIDENCE (T-IMPL-002, this session):
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-002
+T-IMPL-004
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-AWAITING_USER_DECISION_ON_ADR_0001 (hard block — no further implementation tasks are authorized until the user approves or amends ADR-0001)
+MVP_PHASE_1_CONTRACTS_IN_PROGRESS (error contract + base types done; remaining 41 §40 deliverables: API schemas incl. execute request/response, provider contract, model contract, execution contract, core domain types)
 
 NEXT_TASK:
-T-IMPL-003 (BLOCKED_ON_USER_APPROVAL_OF_ADR_0001)
+T-IMPL-005
 
 NEXT_TASK_OBJECTIVE:
-Only after the user explicitly approves ADR-0001 (or selects a different alternative): (1) flip ADR-0001 STATUS to ACCEPTED (rewriting Decision/Reason first if the user chose differently), record the approval in this state file with a focused commit; (2) then begin MVP Phase 1 — Contracts (41 §40): initialize the workspace layout per 41 §2 and ADR-0001, and create the first contract micro-task (core domain types + error contract schemas with contract tests). Dependencies: user approval. Verification: check_repo.sh + the new stack's test runner passing an initial contract test.
+Continue MVP Phase 1 — Contracts: implement the /v1/execute API contract as Pydantic models per 10 §2–§5 (ExecuteRequest incl. model_policy per 10 §13 all 5 policy types, sync success response, async accepted response, execution status response) plus the streaming event and webhook event contracts (10 §11–§12), with contract tests validating every documented example verbatim and rejecting invalid payloads. Verification: check_repo.sh single entry point PASS (pytest + mypy + ruff + import-linter).
 
 NEXT_TASK_AUTHORIZED:
-NO_UNTIL_USER_APPROVES_ADR_0001 (this is a user-decision gate, not an agent gate; the agent must stop after committing T-IMPL-002 and ask the user)
+YES (same-session continuation allowed by the USER DIRECTIVE)
 
 DO_NOT_START:
-- MVP Phase 1 (Contracts) code before ADR-0001 is user-approved
 - any provider/network/secrets work
+- MVP Phase 2 (Identity/Security) before Phase 1 contract exit criteria (41 §40: contract tests pass, schemas validated)
 ```
 
 ---
@@ -244,6 +243,12 @@ DO_NOT_START:
 - Stack ADR flow decided: T-IMPL-002 writes ADR-0001 as PROPOSED; it becomes ACCEPTED only on explicit user approval recorded in this state file; contracts code stays blocked until then.
 - T-IMPL-002 committed ADR-0001 (PROPOSED): TypeScript/Node LTS monorepo (zod contracts, Fastify, Postgres+drizzle, Redis Streams, outbox-first workflows — Temporal deferred to its own ADR, OTel+pino, vitest, dependency-cruiser boundary tests). 3 alternatives analyzed. USER DECISION PENDING: approve / amend / reject. While PROPOSED, the ADR file may be edited freely; once ACCEPTED it becomes append-only per ADR rules.
 - Session R017-R019 note: T-IMPL-000, T-IMPL-001, T-IMPL-002 were executed in the same session (allowed within Phase 2 by the USER DIRECTIVE; the PHASE_2_START_RULE only separated Phase-1-verification from Phase-2-start, which was honored).
+- R020 reconciliation: the T-IMPL-002 checkpoint local commit was re-synchronized by the external auto-uploader as per-file sync commits ending at debde5f; filesystem verification in this new session confirmed all T-IMPL-002 artifacts intact (ADR-0001 present as PROPOSED, index row present, check_repo.sh PASS 18/18). Facts from filesystem, not commit hashes.
+- USER DECISION (2026-08-25, T-IMPL-003): implementation stack = Python / FastAPI / Pydantic (user selected Alternative B, superseding the proposed TypeScript stack before acceptance). ADR-0001 Decision/Reason rewritten to the Python stack and flipped to ACCEPTED; recorded as IMPL-001 in 60_DECISION_LOG.md. ADR-0001 is append-only from this point; stack changes require a superseding ADR.
+- Stack facts now binding (ADR-0001): Python 3.12+, Pydantic v2 contracts with JSON Schema export, FastAPI, SQLAlchemy 2.x async + Alembic + pgvector, redis-py Streams, outbox-first workflows (Temporal Python via future ADR), OTel + structlog, pytest, mypy --strict on core/, ruff, import-linter boundary tests, single pyproject monorepo per 41 §2. Admin UI / client-runtime stack deferred to a future ADR.
+- T-IMPL-004 started MVP Phase 1 (Contracts): workspace layout per 41 §2 created as Python packages; pyproject.toml is the single tool-config source; contract layer posture fixed in core/contracts/base.py (ContractModel = extra:forbid + frozen — deny-by-default at the contract boundary, immutable value objects); unified error contract implemented verbatim from 10 §9 (11 categories, closed StrEnum); 9 contract tests pass; import-linter enforces the 4 boundary contracts and was negative-tested.
+- check_repo.sh remains the single verification entry point: it now additionally runs pytest/mypy/ruff/import-linter when pyproject.toml exists (CI-mirrors-local preserved).
+- R021 note: .github/workflows/ci.yml (created at T-IMPL-001) was found missing from the worktree — evidently dropped during the external auto-uploader's history re-sync of dot-directories. Recreated at T-IMPL-004, upgraded for the Python stack (setup-python 3.12 + dev deps + same check_repo.sh entry point). If the uploader drops it again, restoring it is maintenance, not a decision change.
 ```
 
 ---
