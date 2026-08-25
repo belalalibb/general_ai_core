@@ -1,6 +1,13 @@
 # 25 — Real Provider Onboarding Guide
 ## Current State, Examples, and How to Add Real Providers Later
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-004)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Current State — Important
