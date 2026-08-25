@@ -1,6 +1,16 @@
 # 22 — Lightweight Resume & Progress State Protocol
 ## Low-Token Resume With Strict Recovery Guarantees
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-012)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md
+(CARRY: all recovery guarantees, prompts, and boundaries carried verbatim;
+v2 17's still-valid session-discipline rules absorbed as successor §17;
+resume prompts repointed to the v3 index)
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Purpose
