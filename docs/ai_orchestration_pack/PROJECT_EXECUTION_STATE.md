@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R013
+STATE_REVISION: R014
 
 RESUME_TOKEN:
-PROJECT|R013|PHASE_1_DOCUMENTATION|T-DOC-010|VERIFIED|VERIFY_HEAD_WITH_GIT
+PROJECT|R014|PHASE_1_DOCUMENTATION|T-DOC-011|VERIFIED|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-010 commit; prior T-DOC-009 local commit 62b02fb was re-synchronized by the external auto-uploader as per-file sync commits ending at aa2c0bd — facts verified from filesystem)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-011 commit; prior T-DOC-010 local commit 71484af was re-synchronized by the external auto-uploader as per-file sync commits ending at da22183 — facts verified from filesystem)
 
 LAST_VERIFIED_STATE_TASK:
-T-DOC-010
+T-DOC-011
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -117,40 +117,41 @@ CURRENT_WORKSTREAM:
 DOCUMENTATION_REARCHITECTURE
 
 CURRENT_TASK:
-T-DOC-010
+T-DOC-011
 
 TASK_OBJECTIVE:
-Rewrite-compress: create final_docs_v3/40_ENGINEERING_PROTOCOL.md from v2 13 (2385 lines). Defect-justified rewrite: remove the legacy STATE.md/PROGRESS.md/HANDOFF.md scheme (conflicts with single-state decision D10/D11; single mutable state = PROJECT_EXECUTION_STATE.md), remove duplication, keep every engineering rule that still has execution value (quality gates, testing rules, definition of done, commit discipline, security engineering rules). Decisions must be preserved or explicitly superseded by D10/D11; no silent decision changes. Mark v2 13 SUPERSEDED with pointer and flip its MIGRATION STATUS row in the same commit.
+Merge: create final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md from v2 14 + v2 15 as one plan with explicit FINAL vs MVP vs FUTURE separation; remove duplicated phase lists and legacy state-file references (superseded by D10/D11); preserve all phase content, MVP scope decisions, and roadmap decisions (preserved or explicitly superseded, never silent). Mark v2 14 and v2 15 SUPERSEDED with pointers and flip the MIGRATION STATUS row for doc 41 in final_docs_v3/00_INDEX.md in the same commit.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create final_docs_v3/40_ENGINEERING_PROTOCOL.md (rewrite-compress of v2 13)
-- add SUPERSEDED pointer banner to v2 13 (no content deletion)
-- flip MIGRATION STATUS for doc 40 in final_docs_v3/00_INDEX.md
+- create final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md (merge of v2 14 + 15)
+- add SUPERSEDED pointer banners to v2 14 and v2 15 (no content deletion)
+- flip MIGRATION STATUS for doc 41 in final_docs_v3/00_INDEX.md
 - update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- change any engineering rule, invariant, gate, or decision silently
+- change any phase content, MVP scope decision, or roadmap decision silently
 - migrate any other document
 - implement product code
 - create additional mutable state files
 
 TASK_COMPLETION_CRITERIA:
-- v3 40 exists, content-complete, no stubs.
-- Preserved: all 10 core engineering principles; async fabric rules (outbox, idempotency, leases/fencing, backpressure, error-aware retry, DLQ); storage roles (PostgreSQL SoT, Redis never SoT, credential_ref rule); authentication baseline (Argon2id, sessions, verification codes, upgrade path); observability (OTel, adaptive sampling, append-only security audit); production architecture (single region multi-AZ, HA DB + PITR, DR not active/active); deployment philosophy (modular monolith, no full microservices); Kafka-not-default policy; all 17 test types; all 6 architecture boundary tests; engineering governance; Definition of Done; ADR protocol incl. Supersedes ADR-X; Git safety incl. forbidden operations; phase gates G0-G21 + gate contract; implementation order; change management flow; recovery-from-failure flow; Reality-beats-documentation rule; all 22 final architecture invariants verbatim; project philosophy; 10-question pre-change checklist.
-- Deduplicated architecture content replaced by an explicit authority map to owning v3 docs (no restatement).
-- v2 13 SS39/SS40/SS41/SS50 (legacy state files, resume, handoff, resume command) explicitly recorded as SUPERSEDED by D10/D11 in the successor's SS11 and traceability ledger; no silent decision change.
-- v2 13 carries SUPERSEDED banner pointing to successor and noting the D10/D11 supersession; content otherwise untouched.
-- final_docs_v3/00_INDEX.md row for doc 40 = COMPLETE_AUTHORITATIVE in the same commit.
+- v3 41 exists, content-complete, no stubs, with Part I (FINAL plan), Part II (MVP roadmap), Part III (FINAL/MVP/FUTURE map + traceability ledger).
+- Preserved verbatim: 15 non-breakable rules; repo layout (minus engineering/state/ per D10/D11, explicit); all 24 FINAL phases with tasks/exit criteria; micro-task protocol; task output contract; scope-control rule; architecture change protocol; gate system; Definition of Done; success criteria; build prompt requirement; MVP philosophy; MVP include/exclude scope; MVP phases 0-8; MVP DoD; scaffold-only start rules (allowed/forbidden).
+- Explicit supersessions (D10/D11 only, never silent): v2 14 SS32 (multi-file resume), SS33 (NEXT_PLAN.md), SS35/SS37 (FUTURE_IMPROVEMENTS.md/ARCHITECTURE_GAPS.md ledgers), SS39 (handoff files), SS42 (static resume prompt); v2 15 legacy state-files wording. All recorded in the successor ledger + v2 banners.
+- Commit/interrupt/recovery detail deduplicated to a summary + pointer to 40 SS9-SS10 (owning authority); no rule changed.
+- Provider references repointed to v3 successors 30/31 (same targets post-migration).
+- v2 14 + 15 carry SUPERSEDED banners pointing to successor; content otherwise untouched.
+- final_docs_v3/00_INDEX.md row for doc 41 = COMPLETE_AUTHORITATIVE in the same commit.
 - Git diff reviewed; single local commit created and verified.
 
 VERIFICATION_EVIDENCE:
-- Successor file exists on filesystem and in commit (659 lines from 2385), with full section-by-section V2->V3 traceability and decision ledger.
-- Mechanical grep verification passed: 22/22 invariants, 17/17 test types, 6/6 boundary tests, 10/10 principles, 10/10 checklist questions, all key rules (Argon2id, OTel, Kafka policy, PITR, credential_ref, G21, Supersedes ADR-X, blind overwrite, Reality beats documentation).
-- Supersessions limited to SS39/SS40/SS41/SS50 under D10/D11, recorded in doc SS11 + ledger + v2 banner.
-- V3 index authority switch flipped for doc 40 only.
+- Successor file exists on filesystem and in commit (1631 lines), with full section-by-section V2->V3 traceability and decision ledger (SS51).
+- Mechanical grep verification passed: 15/15 rules, 25/25 FINAL phase markers, all key decisions (credential policies, account lifecycle, bootstrap router, strategies, async fabric, memory rules, skill sources, evaluation levels, usage flow, learning pipeline, API surface, admin invariants, production topology, micro-task protocol, success criteria), all MVP markers (scope include/exclude, DoD, scaffold rules).
+- No legacy state-file scheme reintroduced as authority (all mentions are explicit negations/supersessions).
+- V3 index authority switch flipped for doc 41 only.
 - Secret scan of changed files passed (no tokens/keys).
 - Local commit created and verified; use `git rev-parse HEAD` for the exact trusted commit.
 ```
@@ -161,7 +162,7 @@ VERIFICATION_EVIDENCE:
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-010
+T-DOC-011
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
@@ -170,13 +171,13 @@ CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
 DOCUMENTATION_REARCHITECTURE_V3_MIGRATION
 
 NEXT_TASK:
-T-DOC-011
+T-DOC-012
 
 NEXT_TASK_OBJECTIVE:
-Merge: create final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md from v2 14 + v2 15 as one plan with explicit FINAL vs MVP vs FUTURE separation; remove duplicated phase lists and legacy state-file references (superseded by D10/D11); preserve all phase content, MVP scope decisions, and roadmap decisions (preserved or explicitly superseded, never silent). Mark v2 14 and v2 15 SUPERSEDED with pointers and flip the MIGRATION STATUS row for doc 41 in final_docs_v3/00_INDEX.md in the same commit.
+Agent-operation cluster: create final_docs_v3/50_AGENT_EXECUTION_PROMPT.md (MERGE v2 20 base + v2 16 as its short standard-mode profile — one build prompt authority), final_docs_v3/51_AGENT_COGNITIVE_PROTOCOL.md (CARRY of v2 19), final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md (CARRY of v2 22 + ABSORB/retire v2 17 which is stale: dead final_docs/ paths and forbidden legacy state-file scheme), and final_docs_v3/60_DECISION_LOG.md (CARRY of v2 18; migration conflict resolutions appended). Mark v2 16/17/18/19/20/22 SUPERSEDED with pointers and flip MIGRATION STATUS rows for docs 50/51/52/60 in the same commit. All decisions preserved or explicitly superseded by D10/D11; never silent.
 
 NEXT_TASK_AUTHORIZED:
-YES_AFTER_T_DOC_010_COMMIT_VERIFIED
+YES_AFTER_T_DOC_011_COMMIT_VERIFIED
 
 DO_NOT_START:
 PHASE_2_PRODUCT_IMPLEMENTATION
@@ -223,6 +224,9 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - T-DOC-009 completed the fourth carry cluster: final_docs_v3/20, 21, 22 are authoritative for security threat model, admin control plane, and evaluation/learning; v2 10/11/12 are SUPERSEDED baseline material. Capability Firewall, deny-by-default, tenant isolation, verification levels, and promotion gates carried verbatim; no decision changed.
 - R012 reconciliation: the T-DOC-009 local commit (62b02fb) was re-synchronized by the external auto-uploader as per-file sync commits ending at aa2c0bd; filesystem verification confirmed all T-DOC-009 artifacts intact (v3 docs 20/21/22 present, banners on v2 10/11/12 present, index flipped). Facts from filesystem, not commit hashes.
 - T-DOC-010 completed the rewrite-compress of v2 13 into final_docs_v3/40_ENGINEERING_PROTOCOL.md (2385 -> 659 lines). All engineering rules with execution value preserved (verified mechanically: 22 invariants, 17 test types, 6 boundary tests, 10 principles, phase gates, DoD, ADR, Git safety, recovery). Only v2 13 SS39/SS40/SS41/SS50 (legacy STATE.md/PROGRESS.md/HANDOFF scheme + resume command) are superseded — explicitly, by D10/D11, recorded in the successor's SS11, its traceability ledger, and the v2 banner. Architecture duplication replaced with an authority map to owning v3 docs.
+- R013 reconciliation: the T-DOC-010 local commit (71484af) was re-synchronized by the external auto-uploader as per-file sync commits ending at da22183; filesystem verification confirmed all T-DOC-010 artifacts intact. Facts from filesystem, not commit hashes.
+- T-DOC-011 completed the merge of v2 14 + 15 into final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md (Part I FINAL plan / Part II MVP roadmap / Part III FINAL-MVP-FUTURE map). All 24 FINAL phases, 15 rules, micro-task protocol, MVP scope and DoD preserved (verified mechanically). Explicit D10/D11 supersessions only: v2 14 SS32/SS33/SS35/SS37/SS39/SS42 (multi-file resume, NEXT_PLAN.md, FUTURE_IMPROVEMENTS/ARCHITECTURE_GAPS ledgers, handoff files, static resume prompt) and v2 15 legacy state-file wording — recorded in the successor SS51 ledger and both v2 banners. Commit/recovery detail now points to 40 SS9-SS10 (single authority). Arabic narrative normalized to English; decision blocks verbatim.
+- New rule made explicit in 41 SS31 (D10/D11 application, not a new decision): scope-control recording target = 60_DECISION_LOG.md once it exists (until then the state-file SESSION NOTES), replacing the superseded FUTURE_IMPROVEMENTS.md/ARCHITECTURE_GAPS.md ledger files.
 ```
 
 ---
