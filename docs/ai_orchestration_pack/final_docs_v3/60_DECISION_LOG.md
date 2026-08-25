@@ -555,3 +555,32 @@ Additions (recorded, not silent):
 
 No Q&A decision was dropped, reworded, or changed.
 ```
+
+---
+
+## Part C — Implementation-Phase Decisions (Phase 2, append-only)
+
+## IMPL-001. Implementation stack: Python / FastAPI / Pydantic (ADR-0001 ACCEPTED)
+
+### Question
+Which implementation language/stack does the platform use? (Blocked MVP
+Phase 1 — Contracts; required an ADR + explicit user approval.)
+
+### Decision (explicit user decision, 2026-08-25)
+Python 3.12+ / FastAPI / Pydantic v2. The user selected Alternative B over
+the proposed TypeScript/Node stack; ADR-0001 Decision/Reason were rewritten
+accordingly and the ADR flipped to ACCEPTED at T-IMPL-003.
+
+Stack summary: Pydantic v2 contracts (runtime validation + JSON Schema
+export), FastAPI (`POST /v1/execute`), PostgreSQL via SQLAlchemy 2.x async +
+Alembic (+ pgvector), Redis Streams (redis-py), outbox-first workflows
+(Temporal Python later via its own ADR), OpenTelemetry + structlog, pytest,
+mypy --strict on core/, ruff, import-linter boundary tests.
+
+### Consequences recorded
+Admin UI / client-runtime stack deferred to a future ADR (they consume the
+language-neutral JSON-Schema contract exports).
+
+### Ref
+engineering/adr/ADR-0001-implementation-stack.md (ACCEPTED, append-only from
+this point). Applied by T-IMPL-003.
