@@ -1,5 +1,12 @@
 # 06 — Model Routing Specification
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-007)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/11_MODEL_ROUTING_AND_MODEL_CONTROL.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Purpose
