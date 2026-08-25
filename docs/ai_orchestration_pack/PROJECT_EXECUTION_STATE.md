@@ -214,6 +214,33 @@ On a new session:
 
 ---
 
+## STATE FAILURE MODE
+
+If this file is missing, unreadable, empty, or invalid, the recovery state is:
+
+```text
+STATE_STATUS: RECOVERY_REQUIRED
+PROJECT_PROGRESS: UNKNOWN
+CURRENT_TASK: STATE_RECOVERY
+PHASE_2_STATUS: LOCKED
+NEXT_TASK_AUTHORIZED: NO_UNTIL_STATE_RECONSTRUCTED_AND_COMMITTED
+```
+
+Recovery must be reconstructed only from:
+
+```text
+local Git history
+filesystem reality
+existing repository documentation
+verified commits
+```
+
+Do not infer progress from chat history or previous AI claims.
+Do not create additional mutable state files.
+Recreate this file only after verified reconstruction, then commit before continuing.
+
+---
+
 ## STOP CONDITION
 
 ```text

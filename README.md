@@ -208,6 +208,22 @@ A task may become VERIFIED after local verification + successful local commit, e
 
 Do not create additional mutable state files unless explicitly approved. Reports are audit artifacts, not task-control state.
 
+## STATE-MISSING RECOVERY
+
+If docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md is missing,
+unreadable, empty, or invalid:
+
+- treat project progress as UNKNOWN
+- do not advance phases
+- do not start product implementation
+- do not invent task completion
+- reconstruct state only from Git + filesystem + existing repository documentation
+- recreate PROJECT_EXECUTION_STATE.md only after verified reconstruction
+- mark the reconstructed state explicitly as VERIFIED or RECOVERY_REQUIRED
+- commit the reconstructed state before continuing
+
+A missing state file is a recovery condition, not permission to continue.
+
 ## LOW-TOKEN RESUME REQUIREMENT
 The resume prompt must stay short enough to avoid wasting tokens, but strict enough to prevent drift.
 

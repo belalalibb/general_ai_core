@@ -540,3 +540,27 @@ It must not perform the actual documentation rewrite.
 
 T-DOC-002 is the first task allowed to begin actual documentation re-architecture, and only after T-DOC-001 is VERIFIED.
 ```
+
+---
+
+## 26. State-Missing Recovery
+
+If `docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md` is missing, unreadable, empty, or invalid:
+
+```text
+treat project progress as UNKNOWN
+do not advance phases
+do not start product implementation
+do not invent task completion
+reconstruct state only from Git + filesystem + existing repository documentation
+recreate PROJECT_EXECUTION_STATE.md only after verified reconstruction
+mark the reconstructed state explicitly as VERIFIED or RECOVERY_REQUIRED
+commit the reconstructed state before continuing
+```
+
+A missing state file is a recovery condition, not permission to continue.
+
+If `PROJECT_EXECUTION_STATE.md` is missing, do not create a new task plan.
+Enter `STATE_RECOVERY` first.
+
+Do not create `STATE_RECOVERY.md`, `DOC_REWRITE_STATE.md`, or any additional mutable state file unless explicitly instructed.
