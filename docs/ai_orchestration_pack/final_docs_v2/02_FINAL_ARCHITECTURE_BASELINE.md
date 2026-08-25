@@ -1,6 +1,13 @@
 # 02 — Final Architecture Baseline
 ## AI Orchestration Platform
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-006)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Architecture Statement
