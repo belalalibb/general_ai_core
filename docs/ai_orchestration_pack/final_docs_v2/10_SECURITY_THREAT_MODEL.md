@@ -1,5 +1,12 @@
 # 10 — Security Threat Model
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-009)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/20_SECURITY_THREAT_MODEL.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Security Position
