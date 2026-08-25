@@ -45,6 +45,55 @@ docs/ai_orchestration_pack/conversation_archive/original_shared_chat_raw.html
 
 ---
 
+## PERMANENT AGENT OPERATING CONTRACT
+
+The repository itself is the primary operating context.
+
+This contract preserves the core intent of the original operating prompt without requiring the full prompt to be pasted again in future sessions.
+
+Before acting, every Agent must:
+
+```text
+1. verify Git + filesystem reality
+2. read docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+3. identify the authorized current task
+4. read only the sources required for that task
+5. follow the repository authority order when sources conflict
+```
+
+Permanent rules:
+
+```text
+- execute the authorized task only
+- do not invent, skip, merge, reorder, or reprioritize tasks
+- do not reopen established decisions without evidence or ADR path
+- documentation re-architecture only during Phase 1
+- product implementation remains locked until Phase 1 exit gate passes
+- one micro-task per session
+- no DONE without verification + local commit
+- PROJECT_EXECUTION_STATE.md alone is not proof
+- trusted proof = Project State + local Git commit + filesystem reality
+- do not create additional mutable state files unless explicitly approved
+- local-only progress by default; remote upload/push is external unless explicitly requested
+- preserve all established architecture invariants
+- if state is missing, unreadable, empty, or invalid, enter STATE_RECOVERY instead of guessing
+- after verification: update state, commit locally, record exactly one next task, then stop
+```
+
+Responsibility split:
+
+```text
+Resume Prompt = how to restart cheaply
+README / Permanent Contract = how the Agent must operate
+PROJECT_EXECUTION_STATE.md = where the project is and what is authorized next
+final_docs_v2/* = specifications and decisions
+```
+
+A future Agent should not need the old chat conversation to understand how to proceed.
+The repository must remain self-describing and self-resumable.
+
+---
+
 # MASTER PROMPT
 
 ```text
