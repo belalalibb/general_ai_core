@@ -13,7 +13,9 @@
 Current Baseline: V2
 Target Baseline: V3
 V2 structure is reference material, not a final-architecture constraint.
-The V3 index will be produced as part of the documentation re-architecture.
+V3 blueprint + live migration index: ../final_docs_v3/00_INDEX.md
+Authority rule: each V2 document remains authoritative until the V3 index
+marks its successor MIGRATED/ACTIVE. Do not treat partial V3 files as authoritative.
 ```
 
 This index describes the current V2 documentation pack.
