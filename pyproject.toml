@@ -9,6 +9,11 @@ description = "General AI Core / AI Orchestration Platform (modular monolith)"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.7",
+    # Persistence toolchain — ADR-0002 (ACCEPTED 2026-08-25)
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "asyncpg>=0.29",
+    "pgvector>=0.2",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +44,8 @@ packages = ["core"]
 # Enforced by import-linter; CI runs the same entry point as local (check_repo.sh).
 [tool.importlinter]
 root_packages = ["apps", "core", "providers", "infrastructure"]
+# Required for forbidding EXTERNAL packages (ADR-0002+ toolchain contracts).
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Core is pure: core must not import apps, providers, or infrastructure"
@@ -63,3 +70,10 @@ name = "Infrastructure must not import apps or providers"
 type = "forbidden"
 source_modules = ["infrastructure"]
 forbidden_modules = ["apps", "providers"]
+
+# ADR-0002: persistence toolchain confined to infrastructure/ — core purity.
+[[tool.importlinter.contracts]]
+name = "Core must not import the persistence toolchain (ADR-0002)"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["sqlalchemy", "alembic", "asyncpg", "pgvector"]
