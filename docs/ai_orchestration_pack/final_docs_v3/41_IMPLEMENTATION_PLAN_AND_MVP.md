@@ -1136,8 +1136,8 @@ Record it — do not implement it
 unless it is a blocker for the current task.
 
 Recording target (per D10/D11 — no extra mutable ledger files): append the
-improvement/gap to `final_docs_v3/60_DECISION_LOG.md` (once it exists; until
-then, the SESSION NOTES block of `PROJECT_EXECUTION_STATE.md`). The v2 rule
+improvement/gap to `final_docs_v3/60_DECISION_LOG.md` (exists and live since
+T-DOC-012; before that, the SESSION NOTES block of `PROJECT_EXECUTION_STATE.md`). The v2 rule
 itself (record, don't implement, blocker exception) is unchanged.
 
 ---
