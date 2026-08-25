@@ -1,9 +1,10 @@
 # AI Orchestration Platform — Documentation Pack V3 (Blueprint + Live Index)
 
 ```text
-STATUS: V3_BLUEPRINT_APPROVED — MIGRATION_IN_PROGRESS
+STATUS: V3_AUTHORITATIVE — MIGRATION_COMPLETE (all 20 V3 documents COMPLETE_AUTHORITATIVE)
 AUTHORED_BY_TASK: T-DOC-002
-LAST_MIGRATION_TASK: T-DOC-012 (docs 50/51/52/60 authoritative — agent-operation cluster complete)
+LAST_MIGRATION_TASK: T-DOC-013 (QA gate passed; V2 pack marked ARCHIVED_BASELINE)
+V2_PACK_STATUS: ARCHIVED_BASELINE — read-only historical source material; no V2 document is authoritative
 ```
 
 ## Purpose
@@ -38,6 +39,11 @@ target structure, V2→V3 traceability map, per-document migration status, and t
 6. Every migration commit updates this index in the same commit.
 ```
 
+MIGRATION COMPLETE (T-DOC-013): all 20 V3 documents are COMPLETE_AUTHORITATIVE
+and all 25 V2 documents carry SUPERSEDED banners. The V2 pack
+(`../final_docs_v2/`) is ARCHIVED_BASELINE: read-only historical source
+material for traceability audits only. Never cite a V2 document as authority.
+
 Pack-level files stay outside `final_docs_v3/` and are unaffected by migration:
 
 ```text
@@ -56,7 +62,7 @@ Layer prefixes: `0x` Product/Architecture, `1x` Core Contracts, `2x` Security/Go
 
 | V3 Document | Sources (V2) | Structural Change | Migration Status |
 |---|---|---|---|
-| `00_INDEX.md` (this file) | v2 `00_INDEX.md` | REBUILT as blueprint + live authority switch | ACTIVE (structure only; v2 index stays valid for v2 content) |
+| `00_INDEX.md` (this file) | v2 `00_INDEX.md` | REBUILT as blueprint + live authority switch | ACTIVE (v2 index is ARCHIVED_BASELINE since T-DOC-013) |
 | `01_PRODUCT_REQUIREMENTS.md` | v2 `01` | CARRY (surgical cleanup only) | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `01` SUPERSEDED with pointer banner) |
 | `02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md` | v2 `02` | CARRY (invariants unchanged) | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `02` SUPERSEDED with pointer banner) |
 | `03_DOMAIN_MODEL.md` | v2 `03` | CARRY | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `03` SUPERSEDED with pointer banner) |
