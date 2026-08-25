@@ -754,3 +754,22 @@ Provider features must not be assumed.
 Provider absence must not block architecture progress.
 Provider functionality must never be faked.
 ```
+
+---
+
+## 26. Real Provider Onboarding Guide
+
+This architecture spec explains how Providers should be designed.
+
+For concrete examples of adding real providers by type, use:
+
+```text
+25_REAL_PROVIDER_ONBOARDING_GUIDE.md
+```
+
+Current state remains:
+
+```text
+No real providers are implemented yet.
+Templates and examples are non-functional until replaced by real implementations and contract tests.
+```

@@ -422,3 +422,17 @@ generation_operations:
 ```
 
 The Core should depend on declared capabilities, not on a fixed provider lifecycle.
+
+---
+
+## 17. Real Provider Onboarding Reference
+
+This document defines what to do when no real providers exist.
+
+For the practical guide to adding real providers later by provider type, use:
+
+```text
+25_REAL_PROVIDER_ONBOARDING_GUIDE.md
+```
+
+That guide explicitly states that the current repository has no real providers yet and that all examples/templates are non-functional until implemented and tested.

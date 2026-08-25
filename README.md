@@ -52,6 +52,12 @@ docs/ai_orchestration_pack/final_docs_v2/23_AI_PROVIDERS_SCAFFOLDING_POLICY.md
 docs/ai_orchestration_pack/final_docs_v2/24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md
 ```
 
+دليل إضافة المزودين الحقيقيين لاحقًا حسب كل نوع، مع توضيح أن لا يوجد مزودين حقيقيين حاليًا:
+
+```text
+docs/ai_orchestration_pack/final_docs_v2/25_REAL_PROVIDER_ONBOARDING_GUIDE.md
+```
+
 أرشيف المحادثة الأصلية:
 
 ```text
