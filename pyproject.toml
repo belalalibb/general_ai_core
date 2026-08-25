@@ -1,0 +1,65 @@
+# AI Orchestration Platform — monorepo config
+# Stack authority: engineering/adr/ADR-0001-implementation-stack.md (ACCEPTED)
+# Layout authority: docs/ai_orchestration_pack/final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md §2
+
+[project]
+name = "ai-orchestration-platform"
+version = "0.1.0"
+description = "General AI Core / AI Orchestration Platform (modular monolith)"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "mypy>=1.10",
+    "ruff>=0.4",
+    "import-linter>=2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["core"]
+
+# Architecture boundary tests (40 §6.2): Core / Infrastructure / Providers never mix.
+# Enforced by import-linter; CI runs the same entry point as local (check_repo.sh).
+[tool.importlinter]
+root_packages = ["apps", "core", "providers", "infrastructure"]
+
+[[tool.importlinter.contracts]]
+name = "Core is pure: core must not import apps, providers, or infrastructure"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["apps", "providers", "infrastructure"]
+
+[[tool.importlinter.contracts]]
+name = "Contracts import no implementation (41 Phase 1 rule)"
+type = "forbidden"
+source_modules = ["core.contracts"]
+forbidden_modules = ["apps", "providers", "infrastructure"]
+
+[[tool.importlinter.contracts]]
+name = "Providers must not import apps or infrastructure"
+type = "forbidden"
+source_modules = ["providers"]
+forbidden_modules = ["apps", "infrastructure"]
+
+[[tool.importlinter.contracts]]
+name = "Infrastructure must not import apps or providers"
+type = "forbidden"
+source_modules = ["infrastructure"]
+forbidden_modules = ["apps", "providers"]
