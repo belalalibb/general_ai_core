@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R008
+STATE_REVISION: R009
 
 RESUME_TOKEN:
-PROJECT|R008|PHASE_1_DOCUMENTATION|T-DOC-005|VERIFIED|VERIFY_HEAD_WITH_GIT
+PROJECT|R009|PHASE_1_DOCUMENTATION|T-DOC-006|VERIFIED|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-005 commit; prior T-DOC-004 work verified during R008 reconciliation as present in HEAD via external uploader sync commits ending at 1c26bda)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-006 commit; prior T-DOC-005 work verified during R009 reconciliation as present in HEAD via external uploader sync commits ending at bf421c8)
 
 LAST_VERIFIED_STATE_TASK:
-T-DOC-005
+T-DOC-006
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -117,37 +117,41 @@ CURRENT_WORKSTREAM:
 DOCUMENTATION_REARCHITECTURE
 
 CURRENT_TASK:
-T-DOC-005
+T-DOC-006
 
 TASK_OBJECTIVE:
-Create final_docs_v3/12_EXECUTION_GRAPH_AND_AGENT_MODE.md by merging v2 07_EXECUTION_GRAPH_SPEC.md (base) with v2 21_PROVIDER_AGENT_ORCHESTRATION_SPEC.md (provider-agent orchestration folded in as execution-graph behavior), preserving the critical rule Provider Agent Capability != Platform Agent Runtime and platform authority, mark both V2 sources SUPERSEDED with pointers, and flip their MIGRATION STATUS in final_docs_v3/00_INDEX.md in the same commit.
+Carry cluster: create final_docs_v3/01_PRODUCT_REQUIREMENTS.md (from v2 01), final_docs_v3/02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md (from v2 02), and final_docs_v3/03_DOMAIN_MODEL.md (from v2 03) as CARRY migrations (surgical cleanup only; invariants unchanged; no decision changes), mark v2 01/02/03 SUPERSEDED with pointers, and flip their MIGRATION STATUS rows in final_docs_v3/00_INDEX.md in the same commit.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create final_docs_v3/12_EXECUTION_GRAPH_AND_AGENT_MODE.md (merge of v2 07 + 21)
-- add SUPERSEDED pointer banners to v2 07 and v2 21 (no content deletion)
-- flip MIGRATION STATUS for doc 12 in final_docs_v3/00_INDEX.md
+- create final_docs_v3/01_PRODUCT_REQUIREMENTS.md (carry of v2 01)
+- create final_docs_v3/02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md (carry of v2 02)
+- create final_docs_v3/03_DOMAIN_MODEL.md (carry of v2 03)
+- add SUPERSEDED pointer banners to v2 01, 02, 03 (no content deletion)
+- flip MIGRATION STATUS for docs 01/02/03 in final_docs_v3/00_INDEX.md
 - update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- change any execution-graph/agent-mode/orchestration decision, contract, or invariant
+- change any requirement, invariant, entity schema, or decision
 - migrate any other document
 - implement product code
 - create additional mutable state files
 
 TASK_COMPLETION_CRITERIA:
-- final_docs_v3/12_EXECUTION_GRAPH_AND_AGENT_MODE.md exists, content-complete, no stub.
-- All decisions from v2 07 and v2 21 preserved (8 strategies, graph/node/edge schemas, 10+1 node types incl. provider_agent_call, node lifecycle, edge conditions, durable runtime rule, idempotency keys, approval gate list, all execution tests, per-node model policy, multi-model subnode expansion, judge/aggregator requirement, cost/limit controls, provider-agent node forms + lifecycle normalization + when-to-use + control rule, critical rule Provider Agent Capability != Platform Agent Runtime, platform ownership list, provider agent registry schema, orchestration patterns 7.1-7.5, orchestration policy schema, routing rules, control and safety incl. provider-side tools disabled by default, traceability record list, evaluation/aggregation, failure handling, admin controls, all required tests, final rule).
-- v2 07 and v2 21 carry SUPERSEDED banners pointing to the successor; their content otherwise untouched.
-- final_docs_v3/00_INDEX.md row for doc 12 = COMPLETE_AUTHORITATIVE in the same commit.
+- All three v3 files exist, content-complete, no stubs (CARRY: content preserved verbatim; only V3 authority header + traceability footer added).
+- v3 01 preserves: vision, 4 use-case groups, primary users table, FR-001..FR-015, NFR table, MVP out-of-scope list, success criteria list.
+- v3 02 preserves: architecture statement + flow diagram, all 15 non-breakable invariants verbatim, module layout, core may/must-not lists, technology shape, production baseline, quality bar.
+- v3 03 preserves: all entities, all schemas incl. ProviderAccount lifecycle_state, Execution strategies/statuses, relationship rules, section 9 agent-capability model incl. rule Provider Agent Capability != Platform Agent Runtime + platform ownership list.
+- v2 01/02/03 carry SUPERSEDED banners pointing to successors; their content otherwise untouched.
+- final_docs_v3/00_INDEX.md rows for docs 01/02/03 = COMPLETE_AUTHORITATIVE in the same commit.
 - Git diff reviewed; single local commit created and verified.
 
 VERIFICATION_EVIDENCE:
-- Successor file exists on filesystem and in commit; covers all 19 sections of v2 07 and all 16 sections of v2 21 (merged, deduplicated) with a V2->V3 traceability section.
-- Decision-preservation grep passed (provider_agent_call, subordinate execution resources, capability firewall, provider-side tools default disabled, all 8 strategies, all node types, judge required, idempotency key, tenant-scoped state, platform remains the commander).
-- V3 index authority switch flipped for doc 12 only.
+- Three successor files exist on filesystem and in commit, each with a V2->V3 traceability section stating CARRY (verbatim).
+- Decision-preservation grep passed (all 15 FR ids, 15 invariants count, lifecycle states, strategies list, Provider Agent Capability != Platform Agent Runtime, deny-by-default, LLM never a security authority).
+- V3 index authority switch flipped for docs 01/02/03 only.
 - Secret scan of changed files passed (no tokens/keys).
 - Local commit created and verified; use `git rev-parse HEAD` for the exact trusted commit.
 ```
@@ -158,7 +162,7 @@ VERIFICATION_EVIDENCE:
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-005
+T-DOC-006
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
@@ -167,13 +171,13 @@ CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
 DOCUMENTATION_REARCHITECTURE_V3_MIGRATION
 
 NEXT_TASK:
-T-DOC-006
+T-DOC-007
 
 NEXT_TASK_OBJECTIVE:
-Carry cluster: create final_docs_v3/01_PRODUCT_REQUIREMENTS.md (from v2 01), final_docs_v3/02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md (from v2 02), and final_docs_v3/03_DOMAIN_MODEL.md (from v2 03) as CARRY migrations (surgical cleanup only; invariants unchanged; no decision changes), mark v2 01/02/03 SUPERSEDED with pointers, and flip their MIGRATION STATUS rows in final_docs_v3/00_INDEX.md in the same commit.
+Carry cluster: create final_docs_v3/10_API_CONTRACTS.md (from v2 04) and final_docs_v3/11_MODEL_ROUTING_AND_MODEL_CONTROL.md (from v2 06, keeping all modes AUTO / TIER / EXPLICIT_MODEL / EXPLICIT_MODELS / AGENT_NODE_MAPPING) as CARRY migrations (no decision changes), mark v2 04 and v2 06 SUPERSEDED with pointers, and flip their MIGRATION STATUS rows in final_docs_v3/00_INDEX.md in the same commit.
 
 NEXT_TASK_AUTHORIZED:
-YES_AFTER_T_DOC_005_COMMIT_VERIFIED
+YES_AFTER_T_DOC_006_COMMIT_VERIFIED
 
 DO_NOT_START:
 PHASE_2_PRODUCT_IMPLEMENTATION
@@ -211,6 +215,8 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - T-DOC-004 completed the second content migration: final_docs_v3/31 is authoritative for provider scaffolding + real provider onboarding; v2 23 and v2 25 are SUPERSEDED baseline material.
 - R008 reconciliation: the T-DOC-004 local commit (88965f5) was re-synchronized by the external auto-uploader as per-file sync commits ending at 1c26bda; filesystem verification confirmed all T-DOC-004 artifacts intact (v3 doc 31 present at 1304 lines, banners on v2 23/25 present, index flipped). Facts from filesystem, not commit hashes.
 - T-DOC-005 completed the third content migration: final_docs_v3/12 is authoritative for Execution Graph, Agent Mode, and provider-agent orchestration; v2 07 and v2 21 are SUPERSEDED baseline material. Critical rule preserved: Provider Agent Capability != Platform Agent Runtime; platform remains the commander.
+- R009 reconciliation: the T-DOC-005 local commit (2b08b04) was re-synchronized by the external auto-uploader as per-file sync commits ending at bf421c8; filesystem verification confirmed all T-DOC-005 artifacts intact (v3 doc 12 present at 887 lines, banners on v2 07/21 present, index flipped). Facts from filesystem, not commit hashes.
+- T-DOC-006 completed the first carry cluster: final_docs_v3/01, 02, 03 are authoritative for product requirements, architecture baseline/invariants, and domain model; v2 01/02/03 are SUPERSEDED baseline material. All 15 architecture invariants and FR-001..FR-015 carried verbatim; no decision changed.
 ```
 
 ---
