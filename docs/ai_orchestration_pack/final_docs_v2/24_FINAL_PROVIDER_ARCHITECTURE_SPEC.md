@@ -1,6 +1,13 @@
 # 24 — Final Provider Architecture Specification
 ## Capability-Driven Providers, Optional Account Pools, and Safe Scaffolding
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-003)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Purpose
