@@ -1,9 +1,9 @@
 # ADR-0003 — Redis Client and Binding Approach (Streams, Locks, Cache)
 
 ```text
-STATUS: PROPOSED
+STATUS: ACCEPTED (explicit operator decision, 2026-08-25: "ADR-0003 = ACCEPTED")
 DATE: 2026-08-25
-TASK: T-IMPL-016 (ADR document; implementation blocked until ACCEPTED)
+TASK: T-IMPL-016
 SUPERSEDES: NONE
 ```
 
@@ -135,6 +135,10 @@ managed streams) replaces infrastructure/redis/ only.
 
 ## Status
 
-PROPOSED (T-IMPL-016 ADR part, 2026-08-25). Awaiting explicit operator
-sign-off. Until ACCEPTED: no redis dependency, no Redis binding code.
-Silence is not acceptance.
+ACCEPTED (T-IMPL-016, 2026-08-25) by explicit operator decision recorded in
+PROJECT_EXECUTION_STATE.md: "Continue from the current checkpoint with the
+operator authorization already granted: ADR-0003 = ACCEPTED". Alternative A
+is confirmed as proposed, with no amendments. The redis>=5 dependency, the
+6th import-linter contract, and the infrastructure/redis/ port bindings are
+now unblocked. From this point this file is append-only per ADR rules
+(40 §8.1); changes require a superseding ADR.
