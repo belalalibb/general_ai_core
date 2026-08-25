@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R005
+STATE_REVISION: R006
 
 RESUME_TOKEN:
-PROJECT|R005|PHASE_1_DOCUMENTATION|T-DOC-002|VERIFIED|VERIFY_HEAD_WITH_GIT
+PROJECT|R006|PHASE_1_DOCUMENTATION|T-DOC-003|VERIFIED|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-f10ea536a9ff7049e26e16fea6b3a681561d5c09
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-003 commit; prior anchor f10ea536 verified as ancestor of HEAD during R006 reconciliation)
 
 LAST_VERIFIED_STATE_TASK:
-T-DOC-002
+T-DOC-003
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -117,40 +117,38 @@ CURRENT_WORKSTREAM:
 DOCUMENTATION_REARCHITECTURE
 
 CURRENT_TASK:
-T-DOC-002
+T-DOC-003
 
 TASK_OBJECTIVE:
-Design the real V3 documentation architecture: audit V2, produce the V3 blueprint index with full V2→V3 traceability map, structural decision-preservation ledger, migration order, and migration authority rule. Blueprint-first so each subsequent migration commit stays small and reviewable.
+Create final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md by merging v2 24 (authoritative base) with v2 05 (detail), preserving all provider decisions, mark both V2 sources SUPERSEDED with pointers, and flip their MIGRATION STATUS in final_docs_v3/00_INDEX.md in the same commit.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- audit final_docs_v2 for duplicates, contradictions, stale sections, authority overlaps
-- create final_docs_v3/00_INDEX.md as the V3 blueprint and live migration index
-- record traceability map and structural decision-preservation ledger
-- define migration order as future micro-tasks
-- add the V3 pointer + authority rule to final_docs_v2/00_INDEX.md
+- create final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md (merge of v2 24 + 05)
+- add SUPERSEDED pointer banners to v2 24 and v2 05 (no content deletion)
+- flip MIGRATION STATUS for doc 30 in final_docs_v3/00_INDEX.md
+- update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- change product requirements, contracts, or architecture decisions
-- migrate document content in this task (content migration starts at T-DOC-003)
+- change any provider decision, contract, or invariant
+- migrate any other document
 - implement product code
 - create additional mutable state files
 
 TASK_COMPLETION_CRITERIA:
-- final_docs_v3/00_INDEX.md exists with: authority rule, full traceability map covering all 26 V2 files (00–25), structural ledger, capability coverage check, migration order.
-- final_docs_v2/00_INDEX.md points to the V3 blueprint with the authority rule.
-- No V2 spec content was rewritten or deleted.
-- No decisions/invariants changed.
-- Git diff reviewed; local commit created and verified.
+- final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md exists, content-complete, no stub.
+- All decisions from v2 24 and v2 05 preserved (capability-driven, no forced lifecycle, Model!=Provider!=Account!=Credential, Core isolation, Provider Agent != Platform Agent Runtime, error normalization, lease/pool optionality, no real providers yet, templates disabled).
+- v2 24 and v2 05 carry SUPERSEDED banners pointing to the successor; their content otherwise untouched.
+- final_docs_v3/00_INDEX.md row for doc 30 = COMPLETE_AUTHORITATIVE in the same commit.
+- Git diff reviewed; single local commit created and verified.
 
 VERIFICATION_EVIDENCE:
-- final_docs_v3/00_INDEX.md exists on filesystem and in commit.
-- Traceability map covers all 26 V2 files (00–25); coverage check maps all 25 required capability areas.
-- Structural ledger classifies every merged/superseded V2 file with a one-line reason.
-- V2 documents untouched except the V3 pointer block in final_docs_v2/00_INDEX.md.
-- Secret scan of docs/ passed (no tokens/keys found).
+- Successor file exists on filesystem and in commit; covers all 26 sections of v2 24 and all 15 sections of v2 05 (merged, deduplicated).
+- unsupported_capability error category (v2 24) and error JSON shape (v2 05) both present in successor.
+- V3 index authority switch flipped for doc 30 only.
+- Secret scan of changed files passed (no tokens/keys).
 - Local commit created and verified; use `git rev-parse HEAD` for the exact trusted commit.
 ```
 
@@ -160,7 +158,7 @@ VERIFICATION_EVIDENCE:
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-002
+T-DOC-003
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
@@ -169,13 +167,13 @@ CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
 DOCUMENTATION_REARCHITECTURE_V3_MIGRATION
 
 NEXT_TASK:
-T-DOC-003
+T-DOC-004
 
 NEXT_TASK_OBJECTIVE:
-Create final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md by merging v2 24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md (authoritative base) with v2 05_PROVIDER_PLUGIN_SPEC.md (detail), preserving all provider decisions (capability-driven, no forced lifecycle, Core isolation, no real providers yet), mark both V2 sources SUPERSEDED with pointers, and flip their MIGRATION STATUS in final_docs_v3/00_INDEX.md in the same commit.
+Create final_docs_v3/31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md by merging v2 23_AI_PROVIDERS_SCAFFOLDING_POLICY.md with v2 25_REAL_PROVIDER_ONBOARDING_GUIDE.md, preserving the scaffold-only state rules (templates disabled, no fake functionality, pending providers file) and the onboarding-by-provider-type guide, mark both V2 sources SUPERSEDED with pointers, and flip their MIGRATION STATUS in final_docs_v3/00_INDEX.md in the same commit.
 
 NEXT_TASK_AUTHORIZED:
-YES_AFTER_T_DOC_002_COMMIT_VERIFIED
+YES_AFTER_T_DOC_003_COMMIT_VERIFIED
 
 DO_NOT_START:
 PHASE_2_PRODUCT_IMPLEMENTATION
@@ -207,6 +205,8 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - T-DOC-002 approved the V3 blueprint: final_docs_v3/00_INDEX.md is the live migration index and single authority switch.
 - V3 target = 20 documents in 7 layers; merges: 05+24, 23+25, 07+21, 14+15, 16+20; superseded: 17 (by 22 + project state).
 - Migration proceeds one cluster per session (T-DOC-003 … T-DOC-013); a V2 doc stays authoritative until its V3 successor is verified and marked in the V3 index.
+- T-DOC-003 completed the first content migration: final_docs_v3/30 is authoritative for the Provider subsystem; v2 24 and v2 05 are SUPERSEDED baseline material.
+- R006 reconciliation: external auto-uploader commits after f10ea536 (scaffold file removals, README carry) were verified as unrelated to documentation tasks; f10ea536 confirmed as ancestor of HEAD.
 ```
 
 ---
