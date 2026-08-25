@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R016
+STATE_REVISION: R019
 
 RESUME_TOKEN:
-PROJECT|R016|PHASE_1_DOCUMENTATION|T-DOC-013|VERIFIED|VERIFY_HEAD_WITH_GIT
+PROJECT|R019|PHASE_2_IMPLEMENTATION|T-IMPL-002|VERIFIED_PROPOSED_AWAITING_USER_APPROVAL|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-013 commit; the prior session's T-DOC-013 partial work — v3 index QA-gate marks, v2 00_INDEX ARCHIVED_BASELINE block, 41 authoritative header, README repointing — was synced by the external auto-uploader as per-file commits ending at 8967f06; this session verified those artifacts from the filesystem, completed the remaining exit checks, created DOC_REWRITE_REPORT.md, and committed this checkpoint — facts verified from filesystem, not commit hashes)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-002 commit; earlier this session: T-IMPL-000 unlock c7f070a, T-IMPL-001 governance fe1910b — same-session continuation within Phase 2 per the USER DIRECTIVE)
 
 LAST_VERIFIED_STATE_TASK:
-T-DOC-013
+T-IMPL-002
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -82,30 +82,39 @@ PROJECT:
 General AI Core / AI Orchestration Platform
 
 PROJECT_STATUS:
-PHASE_1_DOCUMENTATION_VERIFIED_PHASE_2_LOCKED
+PHASE_2_PRODUCT_IMPLEMENTATION_IN_PROGRESS
 
 CURRENT_PHASE:
-PHASE_1_DOCUMENTATION_REARCHITECTURE (COMPLETE)
+PHASE_2_PRODUCT_IMPLEMENTATION (MVP roadmap: final_docs_v3/41 Part II)
 
 PHASE_1_STATUS:
 VERIFIED (T-DOC-013: DOCUMENTATION_PHASE_EXIT_CHECKS = PASS, recorded in docs/ai_orchestration_pack/DOC_REWRITE_REPORT.md)
 
 PHASE_2_STATUS:
-LOCKED
+UNLOCKED (T-IMPL-000, this revision: unlock condition re-verified in a NEW session per PHASE_2_START_RULE — PHASE_1_STATUS = VERIFIED confirmed from filesystem; DOCUMENTATION_PHASE_EXIT_CHECKS = PASS per DOC_REWRITE_REPORT.md §7; FINAL_DOCUMENTATION_COMMIT_VERIFIED: T-DOC-013 checkpoint content committed at HEAD (synced as per-file commits ending fcb8aae) and worktree clean/matching)
 
 PHASE_2_NAME:
 PRODUCT_IMPLEMENTATION
 
-PHASE_2_UNLOCK_CONDITION:
+PHASE_2_UNLOCK_CONDITION (MET at T-IMPL-000):
 PHASE_1_STATUS = VERIFIED
 +
 DOCUMENTATION_PHASE_EXIT_CHECKS = PASS
 +
 FINAL_DOCUMENTATION_COMMIT_VERIFIED
 
-PHASE_2_START_RULE:
+PHASE_2_START_RULE (SATISFIED):
 Do not begin product implementation in the same cycle that verifies Phase 1.
 A new session must resume from this state after Phase 2 is explicitly unlocked.
+(Phase 1 was verified in the prior session; this unlock ran in a new session.)
+
+PHASE_2_GOVERNANCE:
+- Roadmap authority: final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md Part II (MVP Phases 0-8, in order).
+- Engineering rules: final_docs_v3/40_ENGINEERING_PROTOCOL.md.
+- Build prompt: final_docs_v3/50_AGENT_EXECUTION_PROMPT.md; cognition: 51; resume: 52.
+- Task IDs: T-IMPL-NNN, each mapped to a 41 Part II phase task; micro-task protocol per 41 §28; output contract per 41 §29.
+- Scope-control recording target: final_docs_v3/60_DECISION_LOG.md (append-only).
+- Significant architecture choices (e.g. language/stack) require an ADR; stack selection additionally requires explicit user approval before Phase 1 (Contracts) code is written.
 ```
 
 ---
@@ -114,44 +123,39 @@ A new session must resume from this state after Phase 2 is explicitly unlocked.
 
 ```text
 CURRENT_WORKSTREAM:
-DOCUMENTATION_REARCHITECTURE
+PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-DOC-013
+T-IMPL-002
 
 TASK_OBJECTIVE:
-V3 finalization: QA gate + Phase 1 exit checks. (1) Cross-reference audit of all 20 v3 docs: no reference to a v2 doc as authority, no dead paths, index table consistent with filesystem. (2) Verify every v2 doc (01-25) carries a SUPERSEDED banner pointing to its v3 successor. (3) Mark the v2 pack ARCHIVED_BASELINE in the v3 index and v2 00_INDEX.md. (4) Run the DOCUMENTATION_PHASE_EXIT_CHECKS and record results. (5) If all checks pass, set PHASE_1_STATUS = VERIFIED in this state file (Phase 2 stays LOCKED; per PHASE_2_START_RULE it must not start in the same session that verifies Phase 1).
+Write ADR-0001 (implementation language/stack) per 40 §8.1 as PROPOSED. Present alternatives (TypeScript/Node, Python, Go) against the fixed constraints (02 §5 tech shape, 40 §5 baselines, 41 §38 MVP scope). Proposed decision: TypeScript/Node LTS monorepo (zod contracts, Fastify, Postgres+drizzle, Redis Streams, outbox-first workflows, OTel, vitest, dependency-cruiser boundary tests). ADR remains PROPOSED until explicit user approval.
 
 TASK_STATUS:
-VERIFIED_AFTER_LOCAL_COMMIT
+VERIFIED_AFTER_LOCAL_COMMIT (ADR committed as PROPOSED; ACCEPTANCE PENDING USER APPROVAL)
 
 ALLOWED_SCOPE:
-- audit-only edits: QA-gate marks in final_docs_v3/00_INDEX.md, ARCHIVED_BASELINE block in final_docs_v2/00_INDEX.md, README repointing to v3
-- create DOC_REWRITE_REPORT.md (audit artifact, not task-control state)
-- update this state file at the verified checkpoint (PHASE_1_STATUS = VERIFIED)
+- create engineering/adr/ADR-0001-implementation-stack.md (PROPOSED)
+- update engineering/adr/README.md index row
+- update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- change any decision, rule, checklist, or output contract
-- migrate or rewrite any document content
-- implement product code (Phase 2 LOCKED)
-- create additional mutable state files
+- flipping ADR-0001 to ACCEPTED without explicit user approval
+- any MVP Phase 1 (Contracts) code
+- provider/network/secrets work
 
 TASK_COMPLETION_CRITERIA:
-- All 20 v3 docs audited: no v2 doc cited as authority; no dead paths; index table matches filesystem.
-- 26/26 v2 docs (00 index + 01-25) carry SUPERSEDED/ARCHIVED banners; every successor path exists.
-- v2 pack marked ARCHIVED_BASELINE in v3 index and v2 00_INDEX.md.
-- DOCUMENTATION_PHASE_EXIT_CHECKS run and recorded (DOC_REWRITE_REPORT.md).
-- PHASE_1_STATUS = VERIFIED in this state file; PHASE_2 stays LOCKED.
-- Git diff reviewed; focused local commit created and verified.
+- ADR-0001 contains all six 40 §8.1 fields (Context/Alternatives/Decision/Reason/Consequences/Status).
+- >= 3 alternatives analyzed against documented constraints.
+- ADR indexed in engineering/adr/README.md as PROPOSED.
+- check_repo.sh still passes.
+- Focused local commit; worktree clean; state updated.
 
-VERIFICATION_EVIDENCE (T-DOC-013, verified this session from filesystem):
-- Index-vs-filesystem: 20 files on disk = 20 rows in the v3 index table; the 4 extra names parsed from the index are the Removed/Superseded ledger (17/16/21/05), expected.
-- Banner audit: 26/26 v2 files carry SUPERSEDED/ARCHIVED banners; every final_docs_v3 successor path referenced by a banner exists on disk (0 dead successors).
-- Authority audit: every final_docs_v2/ mention inside v3 docs is a SOURCES/SUPERSEDES/historical block, never an authority citation.
-- Dead-path audit: all repo paths referenced from v3 docs + README exist (DOC_REWRITE_REPORT.md was the single missing referenced artifact; created by this task as an audit artifact).
-- ARCHIVED_BASELINE marks present: v3 index header + §2 row; v2 00_INDEX.md PACK STATUS block; README authority order updated.
-- Exit checks: all rows PASS — full scorecard in docs/ai_orchestration_pack/DOC_REWRITE_REPORT.md §7 (incl. secret scan pass and build-agent readiness test mapping).
-- Prior-session partial work (interrupted) reconciled: v3 index QA marks, v2 index block, README repointing, 41 header — all found intact on disk and in synced commits ending at 8967f06 before this session's completion work.
+VERIFICATION_EVIDENCE (T-IMPL-002, this session):
+- Field check: all six §8.1 fields present (grep-verified: Context, Alternatives, Decision, Reason, Consequences, Status).
+- 3 alternatives analyzed (TS/Node, Python, Go) with pros/cons tied to 02/40/41 constraints.
+- check_repo.sh => RESULT: PASS after changes.
+- ADR status = PROPOSED; no acceptance recorded; no contracts code written.
 ```
 
 ---
@@ -160,25 +164,26 @@ VERIFICATION_EVIDENCE (T-DOC-013, verified this session from filesystem):
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-013
+T-IMPL-002
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-PHASE_1_COMPLETE_AWAITING_PHASE_2_UNLOCK
+AWAITING_USER_DECISION_ON_ADR_0001 (hard block — no further implementation tasks are authorized until the user approves or amends ADR-0001)
 
 NEXT_TASK:
-T-IMPL-000 (PHASE_2_UNLOCK_GATE)
+T-IMPL-003 (BLOCKED_ON_USER_APPROVAL_OF_ADR_0001)
 
 NEXT_TASK_OBJECTIVE:
-Phase 2 unlock gate — must run in a NEW session (PHASE_2_START_RULE forbids starting Phase 2 in the session that verified Phase 1). In the new session: (1) re-verify PHASE_1_STATUS = VERIFIED against filesystem + Git; (2) confirm FINAL_DOCUMENTATION_COMMIT_VERIFIED (the T-DOC-013 checkpoint commit exists and worktree matches); (3) explicitly flip PHASE_2_STATUS from LOCKED to UNLOCKED in this state file with a focused commit; (4) then, and only then, authorize the first implementation micro-task from final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md (MVP Part II order), governed by 40_ENGINEERING_PROTOCOL.md and 50_AGENT_EXECUTION_PROMPT.md. No product code before the unlock commit.
+Only after the user explicitly approves ADR-0001 (or selects a different alternative): (1) flip ADR-0001 STATUS to ACCEPTED (rewriting Decision/Reason first if the user chose differently), record the approval in this state file with a focused commit; (2) then begin MVP Phase 1 — Contracts (41 §40): initialize the workspace layout per 41 §2 and ADR-0001, and create the first contract micro-task (core domain types + error contract schemas with contract tests). Dependencies: user approval. Verification: check_repo.sh + the new stack's test runner passing an initial contract test.
 
 NEXT_TASK_AUTHORIZED:
-YES_IN_A_NEW_SESSION_ONLY (per PHASE_2_START_RULE)
+NO_UNTIL_USER_APPROVES_ADR_0001 (this is a user-decision gate, not an agent gate; the agent must stop after committing T-IMPL-002 and ask the user)
 
 DO_NOT_START:
-PHASE_2_PRODUCT_IMPLEMENTATION_IN_THIS_SESSION
+- MVP Phase 1 (Contracts) code before ADR-0001 is user-approved
+- any provider/network/secrets work
 ```
 
 ---
@@ -231,6 +236,14 @@ PHASE_2_PRODUCT_IMPLEMENTATION_IN_THIS_SESSION
 - R016 reconciliation: a prior session began T-DOC-013 and was interrupted mid-audit; its partial artifacts (v3 index QA-gate marks, v2 00_INDEX ARCHIVED_BASELINE block, 41 authoritative header, README repointing to v3) were synced by the external auto-uploader as per-file commits ending at 8967f06. This session verified each artifact from the filesystem (facts from filesystem, not commit hashes), completed the remaining audit items, and recorded the checkpoint.
 - T-DOC-013 completed the V3 finalization QA gate: index/filesystem consistency (20/20), banner audit (26/26 v2 files, 0 dead successor paths), authority audit (no v2 doc cited as authority in v3), dead-path audit (0 after creating DOC_REWRITE_REPORT.md), ARCHIVED_BASELINE marks verified, secret scan pass, build-agent readiness mapping recorded. DOCUMENTATION_PHASE_EXIT_CHECKS = PASS (full scorecard in DOC_REWRITE_REPORT.md). PHASE_1_STATUS = VERIFIED. PHASE_2 remains LOCKED; unlock requires a new session (T-IMPL-000 gate).
 - DOC_REWRITE_REPORT.md is an audit artifact only (README DOC_REWRITE_REPORT rule); it carries no task-control authority.
+- R017 reconciliation: the T-DOC-013 checkpoint local commit (457ed3f) was re-synchronized by the external auto-uploader as per-file sync commits ending at fcb8aae; filesystem verification in this new session confirmed all checkpoint artifacts intact. Facts from filesystem, not commit hashes.
+- T-IMPL-000 (this new session) re-verified the full Phase 2 unlock condition and flipped PHASE_2_STATUS to UNLOCKED. PHASE_2_START_RULE satisfied: verification session (R016) and unlock session (R017) are distinct.
+- Phase 2 task numbering: T-IMPL-NNN; governance per PHASE_2_GOVERNANCE block above.
+- OPEN DECISION (blocks MVP Phase 1 code): implementation language/stack is not specified anywhere in the v3 pack. Stack selection is a significant architecture decision => requires an ADR and explicit user approval before contracts code is written. Governance scaffolding (T-IMPL-001) is stack-neutral and may proceed.
+- T-IMPL-001 completed MVP Phase 0 governance scaffolding: engineering/adr (template + index), engineering/gates (template), engineering/verification (conventions + check_repo.sh), engineering/decisions (pointer to 60_DECISION_LOG.md), .github/workflows/ci.yml (runs the same script as local). Verification: check_repo.sh => RESULT: PASS. Gate G0 exit criteria met (41 §39). CI-mirrors-local rule established: repo checks run via one entry point in both places.
+- Stack ADR flow decided: T-IMPL-002 writes ADR-0001 as PROPOSED; it becomes ACCEPTED only on explicit user approval recorded in this state file; contracts code stays blocked until then.
+- T-IMPL-002 committed ADR-0001 (PROPOSED): TypeScript/Node LTS monorepo (zod contracts, Fastify, Postgres+drizzle, Redis Streams, outbox-first workflows — Temporal deferred to its own ADR, OTel+pino, vitest, dependency-cruiser boundary tests). 3 alternatives analyzed. USER DECISION PENDING: approve / amend / reject. While PROPOSED, the ADR file may be edited freely; once ACCEPTED it becomes append-only per ADR rules.
+- Session R017-R019 note: T-IMPL-000, T-IMPL-001, T-IMPL-002 were executed in the same session (allowed within Phase 2 by the USER DIRECTIVE; the PHASE_2_START_RULE only separated Phase-1-verification from Phase-2-start, which was honored).
 ```
 
 ---
