@@ -1,9 +1,9 @@
 # ADR-0001 — Implementation Language / Stack Selection
 
 ```text
-STATUS: PROPOSED (requires explicit user approval before ACCEPTED)
-DATE: 2026-08-25
-TASK: T-IMPL-002
+STATUS: ACCEPTED (explicit user decision, 2026-08-25: "use Python — اعتمد Python / FastAPI / Pydantic")
+DATE: 2026-08-25 (proposed at T-IMPL-002; user decision + acceptance at T-IMPL-003)
+TASK: T-IMPL-002 (proposal) / T-IMPL-003 (acceptance)
 SUPERSEDES: NONE
 ```
 
@@ -91,41 +91,78 @@ Cons:
 - Two-language future guaranteed (UI); LLM provider SDK coverage thinner.
 ```
 
-## Decision (PROPOSED)
+## Decision (ACCEPTED — user selected Alternative B)
 
-**TypeScript / Node.js (LTS) monorepo** with:
+**Python 3.12+ / FastAPI / Pydantic v2 monorepo** with:
 
 ```text
-Runtime:        Node.js LTS
-Language:       TypeScript (strict)
-Contracts:      zod schemas as single source → inferred types + JSON Schema export
-API:            Fastify (schema-validated HTTP), POST /v1/execute per 10_API_CONTRACTS
-DB:             PostgreSQL via a typed query layer + migrations (drizzle-kit or equivalent)
-Queues/locks:   Redis Streams (ioredis)
+Runtime:        Python 3.12+ (CPython)
+Language:       Python with strict typing (mypy --strict on core/, contracts especially)
+Contracts:      Pydantic v2 models as single source → runtime validation +
+                JSON Schema export (model_json_schema); language-neutral
+                contract artifacts preserved
+API:            FastAPI (Pydantic-native, schema-validated HTTP, OpenAPI built-in),
+                POST /v1/execute per 10_API_CONTRACTS
+DB:             PostgreSQL via SQLAlchemy 2.x (typed, async) + Alembic migrations;
+                pgvector via the pgvector-sqlalchemy integration
+Queues/locks:   Redis Streams (redis-py asyncio)
 Workflows:      start with Postgres-backed outbox + workers (40 §4.2);
-                adopt Temporal when durable-workflow complexity justifies it (ADR then)
-Observability:  OpenTelemetry JS + pino structured logs
-Tests:          vitest (unit/contract/integration) + dependency-cruiser boundary tests
-Monorepo:       npm/pnpm workspaces mirroring the 41 §2 layout
-                (apps/, core/, providers/, infrastructure/)
+                adopt Temporal (Python SDK) when durable-workflow complexity
+                justifies it (separate ADR then)
+Observability:  OpenTelemetry Python + structlog structured logs
+Tests:          pytest (+ pytest-asyncio) for unit/contract/integration;
+                import-linter for architecture boundary tests (40 §6.2)
+Lint/format:    ruff (lint + format), mypy (type gate)
+Monorepo:       single Python package tree mirroring the 41 §2 layout
+                (apps/, core/, providers/, infrastructure/, tests/) managed
+                with uv/pip + pyproject.toml; admin UI / client runtime remain
+                thin consumers of the JSON-Schema contracts (their stack is a
+                future ADR when those apps start)
 ```
 
 ## Reason
 
-The workload is I/O-bound orchestration with heavy contract churn — exactly
-where TS excels. It is the only option keeping one language across every
-planned deliverable (API, workers, admin, client runtime), maximizing
-throughput for a single-agent build. Contract-first (the pack's #1
-engineering principle) has its best-in-class tooling in the TS ecosystem.
-Cons are mitigated: no CPU-heavy MVP workload; runtime validation enforced by
-the contract layer at every boundary.
+Explicit user decision (2026-08-25): the user selected Python / FastAPI /
+Pydantic over the proposed TypeScript stack. Grounds consistent with the
+analysis above:
+
+```text
+- Pydantic v2 satisfies the contract-first principle (40 §2.1): one model is
+  simultaneously the runtime validator, the type surface, and the JSON Schema
+  exporter — equivalent in role to zod in the rejected alternative.
+- FastAPI is Pydantic-native: request/response validation and OpenAPI are
+  derived from the same contract models, no duplication.
+- The AI/ML + LLM-provider ecosystem is strongest in Python (first-class SDKs
+  for essentially every provider), which serves the Providers subsystem —
+  the heart of this platform.
+- asyncio covers the I/O-bound orchestration workload (provider fan-out);
+  the GIL is irrelevant for I/O-bound work; CPU-bound futures get their own
+  service + ADR as already planned.
+- All fixed infrastructure has mature Python support: SQLAlchemy/Alembic
+  (Postgres + pgvector), redis-py (Streams), Temporal Python SDK, OTel Python.
+- Boundary enforcement (40 §6.2) is achievable with import-linter contracts
+  (layer + forbidden-import rules), mirroring dependency-cruiser's role.
+```
+
+Accepted trade-offs (from the Alternatives analysis, acknowledged):
+
+```text
+- Admin UI / client-runtime apps will likely need a second language (JS/TS)
+  later; mitigated because they consume the language-neutral JSON-Schema
+  contracts. Their stack is deferred to a future ADR.
+- Gradual typing is weaker than TS strict; mitigated by mypy --strict on
+  core/ + contracts, ruff, and runtime Pydantic validation at every boundary.
+```
 
 ## Consequences
 
 ```text
-+ One toolchain: one CI matrix, one test runner, one lint/boundary system.
-+ zod schemas become the literal contract artifacts required by MVP Phase 1.
-- Node LTS upgrade cadence must be tracked.
++ Pydantic models become the literal contract artifacts required by MVP Phase 1.
++ Best-in-class provider SDK access for the Providers subsystem.
++ FastAPI OpenAPI output gives the public API docs (10 §1) for free.
+- mypy --strict + import-linter must run in CI from Phase 1 onward (same
+  entry point as local, per the CI-mirrors-local rule).
+- A future ADR is required for the admin/client-runtime app stack.
 - If future CPU-bound subsystems appear (e.g. local inference), they get their
   own service + ADR; the provider-agnostic Core is unaffected (02 invariants).
 Rollback: contracts are exported as JSON Schema (language-neutral), so a stack
@@ -134,7 +171,9 @@ change later loses implementation code but not the contract layer's content.
 
 ## Status
 
-PROPOSED — awaiting explicit user approval. On approval: flip to ACCEPTED,
-record in PROJECT_EXECUTION_STATE.md, then MVP Phase 1 (Contracts) unblocks.
-If the user selects a different alternative, rewrite Decision/Reason
-accordingly before ACCEPTED (this file may be edited freely while PROPOSED).
+ACCEPTED (T-IMPL-003, 2026-08-25) by explicit user decision recorded in
+PROJECT_EXECUTION_STATE.md. The user selected Alternative B (Python /
+FastAPI / Pydantic); Decision and Reason were rewritten accordingly before
+acceptance, per the flow defined at proposal time. From this point this file
+is append-only per ADR rules (40 §8.1); changes require a superseding ADR.
+MVP Phase 1 (Contracts) is now unblocked.
