@@ -51,7 +51,7 @@ Provider-native sub-agents
 
 ```text
 OpenRouter / LiteLLM-like routing
-LangGraph-like execution
+graph-based workflow framework-like execution
 ChatGPT-like memory
 Evaluation/Learning platform
 Admin AI Control Plane

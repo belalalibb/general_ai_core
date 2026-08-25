@@ -93,7 +93,7 @@ Model-Agnostic AI Orchestration Platform / General AI Core.
 Do not transform it into:
 - a simple chatbot
 - a model proxy only
-- a LangChain wrapper only
+- a external orchestration framework wrapper only
 - a provider scraper only
 - a UI-only product
 - a training platform only

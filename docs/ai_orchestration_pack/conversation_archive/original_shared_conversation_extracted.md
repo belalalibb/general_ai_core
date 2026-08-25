@@ -2654,9 +2654,9 @@ Random Healthy Provider
 
 ## Entry 13 — source_index=12105 — length=3724
 
-أيوه، **LangChain ممكن تساعد جدًا في أجزاء من المشروع، لكن مش أنصح إننا نخليها هي المعمارية نفسها**.
+أيوه، **external orchestration framework ممكن تساعد جدًا في أجزاء من المشروع، لكن مش أنصح إننا نخليها هي المعمارية نفسها**.
 
-ببساطة، LangChain هي framework لبناء تطبيقات تعتمد على الـLLMs، خصوصًا لما التطبيق يبدأ يحتاج **models + tools + structured output + agents + workflows + memory/context** بدل مجرد استدعاء نموذج وإرجاع النص.
+ببساطة، external orchestration framework هي framework لبناء تطبيقات تعتمد على الـLLMs، خصوصًا لما التطبيق يبدأ يحتاج **models + tools + structured output + agents + workflows + memory/context** بدل مجرد استدعاء نموذج وإرجاع النص.
 
 في مشروعك تحديدًا، قيمتها الأساسية تظهر في **طبقة الـexecution/orchestration**، وليس في Model Registry أو نظام الـProviders نفسه.
 
@@ -2671,7 +2671,7 @@ Your Core
   ↓
 Task / Policy
   ↓
-LangChain Runtime
+external orchestration framework Runtime
   ├── Model
   ├── Tools
   ├── Structured Output
@@ -2689,18 +2689,18 @@ LangChain Runtime
 → راجع النتيجة
 ```
 
-LangChain توفر abstractions جاهزة للتعامل مع **النماذج والأدوات والـagents** بدل ما نبني كل orchestration من الصفر.
+external orchestration framework توفر abstractions جاهزة للتعامل مع **النماذج والأدوات والـagents** بدل ما نبني كل orchestration من الصفر.
 
 ### لكن هناك نقطة مهمة جدًا في مشروعنا
 
-أنا **لا أضع LangChain بين الـRouter والـProviders كطبقة إجبارية**.
+أنا **لا أضع external orchestration framework بين الـRouter والـProviders كطبقة إجبارية**.
 
 يعني لا أريد:
 
 ```text
 Your API
   ↓
-LangChain
+external orchestration framework
   ↓
 Provider
 ```
@@ -2720,7 +2720,7 @@ Provider
                         │
                 Execution Layer
                  │            │
-             Direct        LangChain
+             Direct        external orchestration framework
              Runtime       Runtime
 ```
 
@@ -2736,9 +2736,9 @@ Provider
 
 > خطط، استخدم tools، اختبر، راجع، ثم أرجع النتيجة.
 
-هنا LangChain ممكن تكون مفيدة.
+هنا external orchestration framework ممكن تكون مفيدة.
 
-### وهل LangChain تحل موضوع الـModel Routing اللي اتفقنا عليه؟
+### وهل external orchestration framework تحل موضوع الـModel Routing اللي اتفقنا عليه؟
 
 **لا، مش بالشكل الذي نريده.**
 
@@ -2758,7 +2758,7 @@ Explicit Model
 
 لأن ده business/infra logic خاص بمنصتك، ومش عايز تربطه بإطار خارجي.
 
-LangChain ممكن تستلم **النموذج الذي قرره الـCore** وتنفذ المهمة عليه.
+external orchestration framework ممكن تستلم **النموذج الذي قرره الـCore** وتنفذ المهمة عليه.
 
 يعني:
 
@@ -2769,7 +2769,7 @@ Your Router
     ↓
 Execution Adapter
     ↓
-LangChain (عند الحاجة)
+external orchestration framework (عند الحاجة)
     ↓
 Tools / Agent / Structured Output
 ```
@@ -2778,7 +2778,7 @@ Tools / Agent / Structured Output
 
 هنا أيضًا عندنا فرق مهم.
 
-LangChain عندها abstractions تساعد في إدارة **conversation context وagent state**، لكن أنا لا أنصح إننا نجعلها هي **مصدر الحقيقة الوحيد لذاكرة المستخدم**.
+external orchestration framework عندها abstractions تساعد في إدارة **conversation context وagent state**، لكن أنا لا أنصح إننا نجعلها هي **مصدر الحقيقة الوحيد لذاكرة المستخدم**.
 
 الـUser Memory اللي اتفقنا عليها:
 
@@ -2793,13 +2793,13 @@ User
 
 دي تكون في **Memory Service بتاعتنا**.
 
-ثم نعطي LangChain **الـrelevant context فقط** عند تشغيل Agent.
+ثم نعطي external orchestration framework **الـrelevant context فقط** عند تشغيل Agent.
 
 ---
 
 ## الخلاصة بالنسبة لمشروعك
 
-أنا شايف LangChain:
+أنا شايف external orchestration framework:
 
 **مفيدة جدًا كـ Execution/Agent Toolkit، وليست كـ Core Architecture.**
 
@@ -2823,11 +2823,11 @@ User
 ❌ ليست صاحبة الـMulti-tenant architecture
 ```
 
-والسبب إننا عايزين مشروعك يفضل **Framework-agnostic**. لو بعد سنة قررت تستبدل LangChain أو تستخدم مكتبة ثانية، الـCore كله ماينهارش.
+والسبب إننا عايزين مشروعك يفضل **Framework-agnostic**. لو بعد سنة قررت تستبدل external orchestration framework أو تستخدم مكتبة ثانية، الـCore كله ماينهارش.
 
-**اقتراحي الحالي:** نخلي LangChain **Plugin/Execution Adapter اختياري** داخل النظام، وليس dependency على قلب النظام.
+**اقتراحي الحالي:** نخلي external orchestration framework **Plugin/Execution Adapter اختياري** داخل النظام، وليس dependency على قلب النظام.
 
-والخطوة اللي تستحق النقاش الآن: **هل أصلًا نحتاج LangChain، ولا نعمل Agent Runtime الخاص بنا ونستخدم LangChain فقط في الأماكن التي توفر لنا قيمة واضحة؟** وده قرار معماري أكبر من مجرد "نستخدمها أو لا".
+والخطوة اللي تستحق النقاش الآن: **هل أصلًا نحتاج external orchestration framework، ولا نعمل Agent Runtime الخاص بنا ونستخدم external orchestration framework فقط في الأماكن التي توفر لنا قيمة واضحة؟** وده قرار معماري أكبر من مجرد "نستخدمها أو لا".
 
 ---
 
@@ -2857,7 +2857,7 @@ AI Core
 └── Policy Engine
 ```
 
-وأي مكتبة خارجية، سواء LangChain أو غيرها، لو استخدمنا منها حاجة تكون **مكوّن مساعد معزول Adapter**، وليس dependency على قلب النظام.
+وأي مكتبة خارجية، سواء external orchestration framework أو غيرها، لو استخدمنا منها حاجة تكون **مكوّن مساعد معزول Adapter**، وليس dependency على قلب النظام.
 
 يعني مثلًا:
 
@@ -2866,7 +2866,7 @@ Your Core
     │
     ├── Native Runtime        ← الأساس
     │
-    ├── LangChain Adapter     ← اختياري
+    ├── external orchestration framework Adapter     ← اختياري
     ├── Other Adapter         ← اختياري مستقبلًا
     └── Custom Runtime        ← ممكن
 ```
@@ -2879,7 +2879,7 @@ Your Core
 
 **الأداء:** الطلبات البسيطة مش هتعدي على طبقات Agent كبيرة بدون داعي.
 
-**التوسع:** بعدين تقدر تستخدم نفس الـCore مع IDE أو Marketing أو أي منتج جديد بدون ما المنتج يبقى مربوط بـLangChain.
+**التوسع:** بعدين تقدر تستخدم نفس الـCore مع IDE أو Marketing أو أي منتج جديد بدون ما المنتج يبقى مربوط بـexternal orchestration framework.
 
 ### وده ينضم لملخص القرارات السابقة
 
@@ -13402,7 +13402,7 @@ Training model
 
 مثلاً:
 
-### LangChain
+### external orchestration framework
 
 قررنا:
 
@@ -13410,10 +13410,10 @@ Training model
 Native Runtime
 ```
 
-ولو بعدين اكتشفنا إن LangChain ممتاز لجزء محدد:
+ولو بعدين اكتشفنا إن external orchestration framework ممتاز لجزء محدد:
 
 ```text
-LangChain Adapter
+external orchestration framework Adapter
 ```
 
 من غير إعادة بناء الـCore.
