@@ -1,5 +1,18 @@
 # 16 — Master Build Prompt
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-012)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/50_AGENT_EXECUTION_PROMPT.md
+(this prompt survives as its Part II — Standard Profile, subordinate to the
+Ultra Profile; one build-prompt authority)
+NOTE: References to "state/handoff files", FUTURE_IMPROVEMENTS.md, and
+"generate next micro-task plan" follow the legacy multi-state-file scheme
+and are explicitly superseded by D10/D11: the single mutable state is
+PROJECT_EXECUTION_STATE.md; scope-control items go to 60_DECISION_LOG.md.
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 Use this with the implementation Agent.
 
 ```text
