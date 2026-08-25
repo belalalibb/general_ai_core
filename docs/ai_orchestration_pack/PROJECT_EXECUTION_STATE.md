@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R023
+STATE_REVISION: R024
 
 RESUME_TOKEN:
-PROJECT|R023|PHASE_2_IMPLEMENTATION|T-IMPL-006|VERIFIED_MVP_PHASE1_PROVIDER_MODEL_DOMAIN_CONTRACTS|VERIFY_HEAD_WITH_GIT
+PROJECT|R024|PHASE_2_IMPLEMENTATION|T-IMPL-007|VERIFIED_MVP_PHASE1_EXIT_ALL_CONTRACTS_DONE|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-006 content commit: dab4216; earlier: T-IMPL-005 = 0a07f3d per R022)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-007 content commit: b95af2d. WARNING: older short hashes recorded in prior revisions (dab4216, 0a07f3d, fcb8aae) are INVALID after an auto-uploader history rewrite observed this session — the uploader re-synced the repo as per-file commits with new hashes. Trust HEAD + filesystem + gates, not old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-006
+T-IMPL-007
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,37 +126,43 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-006
+T-IMPL-007
 
 TASK_OBJECTIVE:
-Continue MVP Phase 1 — Contracts: implement the provider contract and model contract as Pydantic models per 30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md (provider manifest/capability declaration per §7, capability-specific operations §5, health §11, normalized rate-limit state §12, error normalization §14) plus core domain types per 03_DOMAIN_MODEL.md §4 (Model/Provider/ProviderModelBinding/Credential/ProviderAccount — the model registry entry doubles as the Router's model contract) and §9 (agent capability extensions), with contract tests validating every documented example verbatim and rejecting invalid payloads. Contracts only: no network, no provider implementations.
+Complete MVP Phase 1 — Contracts: implement the execution contract as Pydantic models per 03_DOMAIN_MODEL.md §5 with contract tests validating documented shapes verbatim and rejecting invalid payloads; then evaluate the 41 §40 Phase 1 exit criteria and record the result.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create core/contracts/domain.py, core/contracts/provider.py; export via core/contracts/__init__.py
-- create tests/contract/test_domain_contract.py, tests/contract/test_provider_contract.py
-- minor hygiene: untrack cache dirs the auto-uploader re-synced (already gitignored)
-- update this state file at the verified checkpoint
+- create core/contracts/execution.py; export via core/contracts/__init__.py
+- create tests/contract/test_execution_contract.py
+- minor hygiene: untrack cache dirs the auto-uploader re-synced; gitignore .import_linter_cache
+- update this state file at the verified checkpoint (record Phase 1 exit)
 
 FORBIDDEN_SCOPE:
-- provider/network/secrets work; ProviderAdapter behavioral interface (30 §8 — later port-layer task)
-- MVP Phase 2 (Identity/Security) code
+- provider/network/secrets work; execution-graph runtime schema (12 §3–§7 — later Execution Graph task)
+- MVP Phase 2 (Identity/Security) code in the T-IMPL-007 commit
 
 TASK_COMPLETION_CRITERIA:
 - pytest PASS; mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
-- Documented examples from 30 §7 (manifest) and 30 §14 (normalized error) validate verbatim; every closed set matches spec 1:1; invalid payloads rejected.
+- 03 §5 entities carried field-for-field; every closed set matches spec 1:1; invalid payloads rejected.
 - check_repo.sh single entry point runs all gates => RESULT: PASS.
-- Focused local commit; worktree clean; state updated.
+- Focused local commit; worktree clean; state updated with Phase 1 exit evaluation.
 
-VERIFICATION_EVIDENCE (T-IMPL-006, this session):
-- Session opened after an interruption mid-T-IMPL-006: domain.py + provider.py had been authored and synced by the auto-uploader; the __init__.py export edit had NOT applied; no tests existed. Facts verified from filesystem before continuing (recovery rule followed).
-- Content re-verified line-by-line against specs: 03 §4 entities and all closed sets 1:1 (tier 4, modalities 5, model/provider status 3+3, auth_types 4, availability 3, owner_type 3, credential status 4, lifecycle_state 7 uppercase, health_state 4); 03 §9.1–9.3 agent extensions (AgentCapabilityType 6, undeclared-by-default flags, binding-level AgentRuntimeBinding, state_model/tool_policy literals); 30 §5 operations 11, §7 manifest blocks incl. closed capability key set (deny-by-default False), §11 provider states 4 + account check states 4 (kept distinct from the 7-value domain lifecycle), §12 rate-limit states 4, §14 error categories 12 + documented error shape.
-- Exports applied; 53 new contract tests written (28 domain + 25 provider): 30 §7 manifest example and 30 §14 error example validate verbatim (error round-trips byte-for-byte); unknown fields/values/operations/capability-keys rejected; capabilities default to deny; frozen value objects enforced; JSON Schema exports closed (additionalProperties=false).
-- pytest: 94 passed total. mypy --strict (core + tests): no issues in 16 source files (one stale test type-ignore removed). ruff check: all checks passed; ruff format applied. lint-imports: 4 kept, 0 broken.
-- check_repo.sh full run: RESULT: PASS (all repo governance checks incl. secret scan).
-- T-IMPL-006 content commit: dab4216 (also re-untracked cache dirs the uploader had re-synced — maintenance per T-IMPL-005 precedent, not a decision change).
+VERIFICATION_EVIDENCE (T-IMPL-007, this session):
+- Session opened after interruption + sandbox reset + auto-uploader history rewrite (old commit hashes invalid; 39 cache files re-tracked by sync commits). Recovery rule followed: facts verified from filesystem — state file R023 intact, all 6 prior contract modules + 5 test files present, dev tooling reinstalled (mypy/ruff/import-linter were missing after reset), full check_repo.sh re-run on pre-task tree: RESULT PASS (94 tests) — T-IMPL-006 reality reconfirmed before starting new work.
+- SPEC CORRECTION (facts from filesystem beat prior guess): R023's objective text guessed "ExecutionStep / ExecutionArtifact" entity names; 03 §5 actually defines Execution + ExecutionNode. Spec carried verbatim; objective wording corrected, no decision reopened.
+- core/contracts/execution.py: ExecutionStrategy 8 values (03 §5, identical to 12 §2); ExecutionNodeType 7 values (03 §5 domain set — 12 §5's 11-type graph-runtime list incl. approval_gate/human_input/finalizer/provider_agent_call deliberately out of scope for the domain entity, documented in the module docstring); ExecutionNodeStatus 6 values; Execution + ExecutionNode field-for-field (status reuses the shared 6-state ExecutionStatus from execute.py — single source of truth; input_ref/output_ref accept string-or-JSON per spec's "string/json"; retry_count >= 0).
+- 18 new contract tests (112 total pass): closed sets 1:1; documented shapes validate incl. the 11 §10 cost_snapshot example {"estimated_units": 2}; 12 §5-only node types (approval_gate) and 12 §6-only states (ready) correctly rejected at the domain entity; unknown fields rejected; frozen value objects; JSON Schema additionalProperties=false.
+- mypy --strict: clean. ruff check + format: clean (one import-sort autofix). lint-imports: 4 kept, 0 broken. check_repo.sh full run: RESULT: PASS.
+- T-IMPL-007 content commit: b95af2d (also re-untracked cache dirs incl. .import_linter_cache — maintenance per precedent).
+
+MVP_PHASE_1_EXIT_EVALUATION (41 §40):
+- Deliverables: API schemas (execute.py: T-IMPL-005) DONE; core domain types (domain.py: T-IMPL-006) DONE; provider contract (provider.py: T-IMPL-006) DONE; model contract (Model in domain.py: T-IMPL-006) DONE; execution contract (execution.py: T-IMPL-007) DONE; error contract (errors.py: T-IMPL-004) DONE.
+- Exit criteria: contract tests pass — YES (112 contract tests green); schemas validated — YES (every closed set spec-matched 1:1, documented examples validate verbatim, JSON Schema exports closed, deny-by-default enforced).
+- Rule "no Contract imports a specific Implementation" — KEPT (import-linter contract enforced in CI-equivalent gate).
+MVP_PHASE_1_STATUS: EXIT_CRITERIA_MET — VERIFIED (this revision)
 ```
 
 ---
@@ -165,26 +171,27 @@ VERIFICATION_EVIDENCE (T-IMPL-006, this session):
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-006
-
-LAST_VERIFIED_TASK_COMMIT:
-dab4216 (content) + the state-checkpoint commit at HEAD after this update
-
-CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP_PHASE_1_CONTRACTS_IN_PROGRESS (error contract + base types + execute API contract + model policy contract + provider contract + model contract + core domain types done; remaining 41 §40 deliverable: execution contract)
-
-NEXT_TASK:
 T-IMPL-007
 
+LAST_VERIFIED_TASK_COMMIT:
+b95af2d (content) + the state-checkpoint commit at HEAD after this update
+
+CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
+MVP_PHASE_1_CONTRACTS_COMPLETE (all six 41 §40 deliverables done and exit criteria VERIFIED this revision). Next workstream: MVP Phase 2 — Identity / Tenant / Security (41 §41).
+
+NEXT_TASK:
+T-IMPL-008
+
 NEXT_TASK_OBJECTIVE:
-Complete MVP Phase 1 — Contracts: implement the execution contract as Pydantic models per 03_DOMAIN_MODEL.md §5 (Execution / ExecutionStep / ExecutionArtifact entities and their closed sets, reusing the existing 6-state ExecutionStatus) with contract tests validating documented shapes verbatim and rejecting invalid payloads. Then evaluate the 41 §40 Phase 1 exit criteria (contract tests pass, schemas validated); if met, record MVP Phase 1 exit at the checkpoint and set NEXT_TASK to the first MVP Phase 2 (Identity/Tenant/Security, 41 §41) task — but do not write Phase 2 code in the T-IMPL-007 commit.
+Start MVP Phase 2 — Identity / Tenant / Security (41 §41): implement the identity/tenant domain contracts + in-memory identity service skeleton per 03_DOMAIN_MODEL.md §2–§3 (Tenant/User/etc.) and 20_SECURITY_THREAT_MODEL.md — scoped to the first deliverable slice (user registration + personal tenant model + basic RBAC/entitlement types), with auth/tenant-isolation tests. Exact slice must be re-scoped from the specs at session start; no network, no real email delivery (port + fake), no secrets in code.
 
 NEXT_TASK_AUTHORIZED:
-YES (same-session continuation allowed by the USER DIRECTIVE)
+NO_UNTIL_NEW_SESSION (MVP-phase boundary rule, same discipline as PHASE_2_START_RULE: the session that verifies a phase's exit must not start the next phase; T-IMPL-008 requires a fresh session that first re-verifies this checkpoint from filesystem + git)
 
 DO_NOT_START:
 - any provider/network/secrets work
-- MVP Phase 2 (Identity/Security) code before Phase 1 exit criteria are recorded as met (41 §40: contract tests pass, schemas validated)
+- MVP Phase 3+ work
+- do not re-open any Phase 1 contract decisions; extensions to contracts require a new task with explicit justification
 ```
 
 ---
@@ -255,6 +262,9 @@ DO_NOT_START:
 - R022 session interruption note: T-IMPL-005 content work (contracts + tests) was authored in a prior interrupted session; this session verified all artifacts from the filesystem (facts from filesystem), fixed one test round-trip assertion (exclude_unset for the optional agent_policy field), removed one stale type-ignore, formatted 2 files, ran all gates green, and committed. Content commit: 0a07f3d.
 - T-IMPL-006 completed the provider contract + model contract + core domain types: core/contracts/domain.py (03 §4 entities verbatim — Model as the Router's model contract with tier/modalities/capabilities/scores, Provider, ProviderModelBinding, Credential with opaque credential_ref never raw secrets, ProviderAccount with 7-value lifecycle + 4-value health; 03 §9 agent extensions with undeclared-by-default capability flags) and core/contracts/provider.py (30 §5 operations closed set of 11; §7 manifest with deny-by-default closed capability keys; §11 provider health 4 states vs account check states 4 — provider health ≠ account health preserved; §12 normalized rate-limit states 4; §14 error normalization 12 categories + documented shape — Core sees normalized errors only). 53 new contract tests; 94 total pass; all gates green. ProviderAdapter behavioral interface (30 §8) deliberately deferred to the port-layer task. Content commit: dab4216.
 - R023 session interruption note: a prior session authored domain.py/provider.py for T-IMPL-006 and was interrupted before exports/tests; this session verified filesystem reality first (recovery rule), found the export edit unapplied and tests absent, completed them, verified content against 03/30 line-by-line, ran all gates green, and committed. Facts from filesystem, not chat history.
+- T-IMPL-007 completed the execution contract (core/contracts/execution.py: Execution + ExecutionNode per 03 §5 verbatim; strategy set 8, node types 7, node states 6; status reuses shared ExecutionStatus; 12 §5/§6 graph-runtime supersets deliberately deferred to the Execution Graph task). 18 new tests; 112 total green; all gates PASS. MVP Phase 1 exit criteria (41 §40) evaluated and VERIFIED at R024. Content commit: b95af2d.
+- R024 environment note: this session recovered from a sandbox reset + auto-uploader history rewrite. All previously recorded short commit hashes are invalid in the rewritten history; the trusted progress anchor is HEAD + filesystem + green gates, per the state file's own proof rule. Dev tooling (mypy/ruff/import-linter) had to be reinstalled; pre-task gates re-run PASS before new work began.
+- MVP-PHASE BOUNDARY DECISION (R024): applying the same discipline as the documentation PHASE_2_START_RULE and the USER DIRECTIVE's phase-boundary clause, MVP Phase 2 (T-IMPL-008) must start in a NEW session that first re-verifies the R024 checkpoint from filesystem + git. This session verified Phase 1 exit and therefore stops here.
 ```
 
 ---
