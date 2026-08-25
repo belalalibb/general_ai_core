@@ -43,6 +43,15 @@ from core.contracts.execution import (
     ExecutionNodeType,
     ExecutionStrategy,
 )
+from core.contracts.identity import (
+    Project,
+    Tenant,
+    TenantStatus,
+    TenantType,
+    User,
+    UserStatus,
+    Workspace,
+)
 from core.contracts.model_policy import (
     AgentPolicy,
     FallbackScope,
@@ -61,11 +70,21 @@ from core.contracts.provider import (
     RateLimitState,
     RateLimitStatus,
 )
+from core.contracts.security import (
+    ActorKind,
+    EntitlementKey,
+    FirewallDecision,
+    FirewallDecisionInput,
+    PermissionKey,
+    ResourceRef,
+    ScopeRef,
+)
 
 __all__ = [
     "AccountHealthCheckState",
     "AccountHealthState",
     "AccountLifecycleState",
+    "ActorKind",
     "AgentCapability",
     "AgentCapabilityType",
     "AgentPolicy",
@@ -75,6 +94,7 @@ __all__ = [
     "ContractModel",
     "Credential",
     "CredentialStatus",
+    "EntitlementKey",
     "ErrorCode",
     "ErrorDetail",
     "ErrorEnvelope",
@@ -89,6 +109,8 @@ __all__ = [
     "ExecutionStatusResponse",
     "ExecutionStrategy",
     "FallbackScope",
+    "FirewallDecision",
+    "FirewallDecisionInput",
     "Modality",
     "Model",
     "ModelPolicy",
@@ -96,6 +118,8 @@ __all__ = [
     "ModelTier",
     "NodeModelPolicy",
     "OwnerType",
+    "PermissionKey",
+    "Project",
     "Provider",
     "ProviderAccount",
     "ProviderError",
@@ -108,8 +132,16 @@ __all__ = [
     "ProviderStatus",
     "RateLimitState",
     "RateLimitStatus",
+    "ResourceRef",
+    "ScopeRef",
     "SelectionStrategy",
     "StreamEvent",
+    "Tenant",
+    "TenantStatus",
+    "TenantType",
+    "User",
+    "UserStatus",
     "WebhookEventType",
     "WebhookPayload",
+    "Workspace",
 ]
