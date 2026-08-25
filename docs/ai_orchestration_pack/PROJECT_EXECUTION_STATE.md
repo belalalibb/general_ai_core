@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R015
+STATE_REVISION: R016
 
 RESUME_TOKEN:
-PROJECT|R015|PHASE_1_DOCUMENTATION|T-DOC-012|VERIFIED|VERIFY_HEAD_WITH_GIT
+PROJECT|R016|PHASE_1_DOCUMENTATION|T-DOC-013|VERIFIED|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-012 commit; prior T-DOC-011 local commit was re-synchronized by the external auto-uploader as per-file sync commits; T-DOC-012 artifacts were themselves synced as per-file commits ending at 76d3415 — facts verified from filesystem: v3 docs 50/51/52/60 present and content-verified, banners on v2 16/17/18/19/20/22 present, index flipped)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-013 commit; the prior session's T-DOC-013 partial work — v3 index QA-gate marks, v2 00_INDEX ARCHIVED_BASELINE block, 41 authoritative header, README repointing — was synced by the external auto-uploader as per-file commits ending at 8967f06; this session verified those artifacts from the filesystem, completed the remaining exit checks, created DOC_REWRITE_REPORT.md, and committed this checkpoint — facts verified from filesystem, not commit hashes)
 
 LAST_VERIFIED_STATE_TASK:
-T-DOC-012
+T-DOC-013
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -48,13 +48,13 @@ DOCUMENTATION_TARGET:
 V3
 
 V2_STATUS:
-SOURCE_BASELINE_ONLY
+ARCHIVED_BASELINE (read-only historical source; never authority — T-DOC-013)
 
 V2_STRUCTURE_AUTHORITY:
 NONE
 
 V3_STATUS:
-BLUEPRINT_APPROVED_MIGRATION_IN_PROGRESS
+COMPLETE_AUTHORITATIVE (all 20 documents; QA gate passed at T-DOC-013)
 
 V3_BLUEPRINT:
 docs/ai_orchestration_pack/final_docs_v3/00_INDEX.md
@@ -82,13 +82,13 @@ PROJECT:
 General AI Core / AI Orchestration Platform
 
 PROJECT_STATUS:
-PHASE_1_DOCUMENTATION_IN_PROGRESS
+PHASE_1_DOCUMENTATION_VERIFIED_PHASE_2_LOCKED
 
 CURRENT_PHASE:
-PHASE_1_DOCUMENTATION_REARCHITECTURE
+PHASE_1_DOCUMENTATION_REARCHITECTURE (COMPLETE)
 
 PHASE_1_STATUS:
-IN_PROGRESS
+VERIFIED (T-DOC-013: DOCUMENTATION_PHASE_EXIT_CHECKS = PASS, recorded in docs/ai_orchestration_pack/DOC_REWRITE_REPORT.md)
 
 PHASE_2_STATUS:
 LOCKED
@@ -117,41 +117,41 @@ CURRENT_WORKSTREAM:
 DOCUMENTATION_REARCHITECTURE
 
 CURRENT_TASK:
-T-DOC-012
+T-DOC-013
 
 TASK_OBJECTIVE:
-Agent-operation cluster: create final_docs_v3/50_AGENT_EXECUTION_PROMPT.md (MERGE v2 20 base + v2 16 as its short standard-mode profile — one build prompt authority), final_docs_v3/51_AGENT_COGNITIVE_PROTOCOL.md (CARRY of v2 19), final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md (CARRY of v2 22 + ABSORB/retire v2 17), and final_docs_v3/60_DECISION_LOG.md (CARRY of v2 18; migration conflict resolutions appended). Mark v2 16/17/18/19/20/22 SUPERSEDED with pointers and flip MIGRATION STATUS rows for docs 50/51/52/60 in the same commit.
+V3 finalization: QA gate + Phase 1 exit checks. (1) Cross-reference audit of all 20 v3 docs: no reference to a v2 doc as authority, no dead paths, index table consistent with filesystem. (2) Verify every v2 doc (01-25) carries a SUPERSEDED banner pointing to its v3 successor. (3) Mark the v2 pack ARCHIVED_BASELINE in the v3 index and v2 00_INDEX.md. (4) Run the DOCUMENTATION_PHASE_EXIT_CHECKS and record results. (5) If all checks pass, set PHASE_1_STATUS = VERIFIED in this state file (Phase 2 stays LOCKED; per PHASE_2_START_RULE it must not start in the same session that verifies Phase 1).
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create final_docs_v3/50, 51, 52, 60
-- add SUPERSEDED pointer banners to v2 16/17/18/19/20/22 (no content deletion)
-- flip MIGRATION STATUS for docs 50/51/52/60 in final_docs_v3/00_INDEX.md
-- update this state file at the verified checkpoint
+- audit-only edits: QA-gate marks in final_docs_v3/00_INDEX.md, ARCHIVED_BASELINE block in final_docs_v2/00_INDEX.md, README repointing to v3
+- create DOC_REWRITE_REPORT.md (audit artifact, not task-control state)
+- update this state file at the verified checkpoint (PHASE_1_STATUS = VERIFIED)
 
 FORBIDDEN_SCOPE:
-- change any decision, rule, checklist, or output contract silently
-- migrate any other document
-- implement product code
+- change any decision, rule, checklist, or output contract
+- migrate or rewrite any document content
+- implement product code (Phase 2 LOCKED)
 - create additional mutable state files
 
 TASK_COMPLETION_CRITERIA:
-- v3 50 exists: Part I = v2 20 Ultra prompt verbatim (READ FIRST repointed to v3 pack; state/handoff refs -> single state file; FUTURE_IMPROVEMENTS -> 60_DECISION_LOG per D10/D11); Part II = v2 16 as subordinate Standard Profile; full repointing ledger.
-- v3 51 exists: v2 19 carried verbatim (SS2-SS15 byte-identical; SS1 Arabic narrative normalized to English, recorded); static resume pointer added.
-- v3 52 exists: v2 22 carried (SS1-SS12, SS14-SS16, final rule verbatim; SS2/SS3/SS5/SS13 modifications explicit and recorded); v2 17 retired, still-valid rules absorbed verbatim as SS17; full absorption accounting in ledger.
-- v3 60 exists: all 25 Q&A entries carried verbatim (Arabic untouched; one marked Note appended to Q20 per MR-003); V2->V3 reference map; append-only rules; migration records MR-001..MR-004.
-- v2 16/17/18/19/20/22 carry SUPERSEDED banners pointing to successors; content otherwise untouched.
-- final_docs_v3/00_INDEX.md rows for 50/51/52/60 = COMPLETE_AUTHORITATIVE in the same commit; resume rule pointer switched to v3 52.
-- Git diff reviewed; focused local commit(s) created and verified.
+- All 20 v3 docs audited: no v2 doc cited as authority; no dead paths; index table matches filesystem.
+- 26/26 v2 docs (00 index + 01-25) carry SUPERSEDED/ARCHIVED banners; every successor path exists.
+- v2 pack marked ARCHIVED_BASELINE in v3 index and v2 00_INDEX.md.
+- DOCUMENTATION_PHASE_EXIT_CHECKS run and recorded (DOC_REWRITE_REPORT.md).
+- PHASE_1_STATUS = VERIFIED in this state file; PHASE_2 stays LOCKED.
+- Git diff reviewed; focused local commit created and verified.
 
-VERIFICATION_EVIDENCE:
-- Mechanical verification passed: doc 50 — all v2 20 section markers + all v2 16 markers present; doc 51 — 0 missing verbatim sections (SS2-SS15 byte-identical to v2 19); doc 52 — 0 missing verbatim sections outside the 4 declared-modified ones, final-rule body byte-identical (renumbered SS17->SS18), all 6 absorbed v2 17 rules present verbatim; doc 60 — 0 missing Q&A sections (25/25), both Q20 original pieces intact, MR-001..MR-004 present.
-- No legacy state-file scheme reintroduced as authority (all mentions audited: supersession notes, ledgers, or preserved historical Q20 text only).
-- V3 index authority switch flipped for docs 50/51/52/60 only.
-- Secret scan of changed files passed (no tokens/keys).
-- Content committed (synced as per-file commits ending at 76d3415); this state update is committed at the verified checkpoint; use `git rev-parse HEAD` for the exact trusted commit.
+VERIFICATION_EVIDENCE (T-DOC-013, verified this session from filesystem):
+- Index-vs-filesystem: 20 files on disk = 20 rows in the v3 index table; the 4 extra names parsed from the index are the Removed/Superseded ledger (17/16/21/05), expected.
+- Banner audit: 26/26 v2 files carry SUPERSEDED/ARCHIVED banners; every final_docs_v3 successor path referenced by a banner exists on disk (0 dead successors).
+- Authority audit: every final_docs_v2/ mention inside v3 docs is a SOURCES/SUPERSEDES/historical block, never an authority citation.
+- Dead-path audit: all repo paths referenced from v3 docs + README exist (DOC_REWRITE_REPORT.md was the single missing referenced artifact; created by this task as an audit artifact).
+- ARCHIVED_BASELINE marks present: v3 index header + §2 row; v2 00_INDEX.md PACK STATUS block; README authority order updated.
+- Exit checks: all rows PASS — full scorecard in docs/ai_orchestration_pack/DOC_REWRITE_REPORT.md §7 (incl. secret scan pass and build-agent readiness test mapping).
+- Prior-session partial work (interrupted) reconciled: v3 index QA marks, v2 index block, README repointing, 41 header — all found intact on disk and in synced commits ending at 8967f06 before this session's completion work.
 ```
 
 ---
@@ -160,25 +160,25 @@ VERIFICATION_EVIDENCE:
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-012
+T-DOC-013
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-DOCUMENTATION_REARCHITECTURE_V3_MIGRATION
+PHASE_1_COMPLETE_AWAITING_PHASE_2_UNLOCK
 
 NEXT_TASK:
-T-DOC-013
+T-IMPL-000 (PHASE_2_UNLOCK_GATE)
 
 NEXT_TASK_OBJECTIVE:
-V3 finalization: QA gate + Phase 1 exit checks. (1) Cross-reference audit of all 20 v3 docs: no reference to a v2 doc as authority, no dead paths, index table consistent with filesystem. (2) Verify every v2 doc (01-25) carries a SUPERSEDED banner pointing to its v3 successor. (3) Mark the v2 pack ARCHIVED_BASELINE in the v3 index and v2 00_INDEX.md. (4) Run the DOCUMENTATION_PHASE_EXIT_CHECKS and record results. (5) If all checks pass, set PHASE_1_STATUS = VERIFIED in this state file (Phase 2 stays LOCKED; per PHASE_2_START_RULE it must not start in the same session that verifies Phase 1).
+Phase 2 unlock gate — must run in a NEW session (PHASE_2_START_RULE forbids starting Phase 2 in the session that verified Phase 1). In the new session: (1) re-verify PHASE_1_STATUS = VERIFIED against filesystem + Git; (2) confirm FINAL_DOCUMENTATION_COMMIT_VERIFIED (the T-DOC-013 checkpoint commit exists and worktree matches); (3) explicitly flip PHASE_2_STATUS from LOCKED to UNLOCKED in this state file with a focused commit; (4) then, and only then, authorize the first implementation micro-task from final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md (MVP Part II order), governed by 40_ENGINEERING_PROTOCOL.md and 50_AGENT_EXECUTION_PROMPT.md. No product code before the unlock commit.
 
 NEXT_TASK_AUTHORIZED:
-YES_AFTER_T_DOC_012_COMMIT_VERIFIED
+YES_IN_A_NEW_SESSION_ONLY (per PHASE_2_START_RULE)
 
 DO_NOT_START:
-PHASE_2_PRODUCT_IMPLEMENTATION
+PHASE_2_PRODUCT_IMPLEMENTATION_IN_THIS_SESSION
 ```
 
 ---
@@ -228,6 +228,9 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - R015 reconciliation: the T-DOC-012 content work was synced by the external auto-uploader as per-file commits ending at 76d3415 before this state checkpoint was written (an interrupted state update in the prior session did not apply). Filesystem verification confirmed all T-DOC-012 artifacts intact and content-verified; this checkpoint was then recorded and committed. Facts from filesystem, not commit hashes.
 - T-DOC-012 completed the agent-operation cluster: final_docs_v3/50 (build prompt: v2 20 Ultra base + v2 16 as subordinate Standard Profile — single build-prompt authority), 51 (cognitive protocol, carried verbatim), 52 (resume protocol: v2 22 carried + v2 17 retired/absorbed as SS17), 60 (decision log: all 25 Q&A carried verbatim + append-only rules + migration records MR-001..MR-004) are authoritative; v2 16/17/18/19/20/22 are SUPERSEDED baseline material. Explicit D10/D11 supersessions only (legacy state/handoff files, FUTURE_IMPROVEMENTS.md target, NEXT_PLAN scheme, v2 17 dead paths) — recorded in successor ledgers and v2 banners; never silent.
 - 60_DECISION_LOG.md is now the live scope-control recording target per 41 SS31. It is append-only: existing entries are never edited; superseded decisions get a new entry referencing the old one.
+- R016 reconciliation: a prior session began T-DOC-013 and was interrupted mid-audit; its partial artifacts (v3 index QA-gate marks, v2 00_INDEX ARCHIVED_BASELINE block, 41 authoritative header, README repointing to v3) were synced by the external auto-uploader as per-file commits ending at 8967f06. This session verified each artifact from the filesystem (facts from filesystem, not commit hashes), completed the remaining audit items, and recorded the checkpoint.
+- T-DOC-013 completed the V3 finalization QA gate: index/filesystem consistency (20/20), banner audit (26/26 v2 files, 0 dead successor paths), authority audit (no v2 doc cited as authority in v3), dead-path audit (0 after creating DOC_REWRITE_REPORT.md), ARCHIVED_BASELINE marks verified, secret scan pass, build-agent readiness mapping recorded. DOCUMENTATION_PHASE_EXIT_CHECKS = PASS (full scorecard in DOC_REWRITE_REPORT.md). PHASE_1_STATUS = VERIFIED. PHASE_2 remains LOCKED; unlock requires a new session (T-IMPL-000 gate).
+- DOC_REWRITE_REPORT.md is an audit artifact only (README DOC_REWRITE_REPORT rule); it carries no task-control authority.
 ```
 
 ---
