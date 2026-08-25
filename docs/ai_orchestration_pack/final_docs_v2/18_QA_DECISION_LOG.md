@@ -361,3 +361,36 @@ provider-native agent
 
 ### Ref
 `23_AI_PROVIDERS_SCAFFOLDING_POLICY.md`, `05_PROVIDER_PLUGIN_SPEC.md`, `15_MVP_ROADMAP.md`, `14_MASTER_IMPLEMENTATION_PLAN.md`
+
+---
+
+## Q25. هل كل مزود لازم يكون عنده تسجيل حساب وتحديث جلسة وحسابات وgenerate؟
+
+### Decision
+لا. تصميم المزودين يجب أن يكون capability-driven، وليس قالبًا واحدًا مفروضًا على كل المزودين.
+
+### Rule
+كل مزود يجب أن يعلن فقط ما يدعمه فعليًا:
+
+```text
+auth type
+capabilities
+modalities
+operations
+health behavior
+error mapping
+account/session needs if any
+```
+
+### Examples
+
+```text
+API-key text provider لا يحتاج تسجيل حساب أو session refresh.
+Embeddings-only provider لا يحتاج text generation.
+Image-only provider لا يحتاج chat.
+Session-based website provider قد يحتاج account/session/cooldown.
+Provider-native agent يحتاج provider_agent capability وليس generate عادي فقط.
+```
+
+### Ref
+`05_PROVIDER_PLUGIN_SPEC.md`, `23_AI_PROVIDERS_SCAFFOLDING_POLICY.md`

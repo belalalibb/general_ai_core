@@ -424,3 +424,152 @@ See:
 ```text
 23_AI_PROVIDERS_SCAFFOLDING_POLICY.md
 ```
+
+---
+
+## 15. Capability-Driven Provider Requirements
+
+Not every provider requires the same modules.
+
+A provider must not be forced to implement registration, session refresh, account pools, or text generation unless its real behavior requires them.
+
+---
+
+### 15.1 Mandatory For Every Provider
+
+Every provider must define only the common minimum:
+
+```text
+manifest
+provider identity
+capabilities declaration
+supported modalities
+status
+health contract
+error normalization
+credential/auth policy declaration
+contract tests for declared capabilities
+```
+
+This is required so the Core, Router, Admin, and Evaluation systems can reason about the provider safely.
+
+---
+
+### 15.2 Optional By Capability
+
+These modules are optional and capability-driven:
+
+| Module | Required When |
+|---|---|
+| account_registration | provider supports/needs creating accounts |
+| session_refresh | provider uses expiring sessions/cookies/tokens |
+| account_pool | platform manages multiple provider accounts |
+| api_key_validation | provider uses API keys |
+| oauth_flow | provider uses OAuth |
+| text_generation | provider supports chat/text output |
+| image_generation | provider supports image generation |
+| vision_input | provider supports image/file input |
+| audio_stt | provider supports speech-to-text |
+| audio_tts | provider supports text-to-speech |
+| embeddings | provider supports embeddings |
+| rerank | provider supports reranking |
+| moderation | provider supports safety/moderation |
+| provider_agent | provider exposes native agent/assistant/code-agent behavior |
+| file_upload | provider accepts files/assets |
+| streaming | provider supports streaming |
+
+---
+
+### 15.3 Generate Is Not One Universal Method
+
+The platform should not assume that every provider has one generic `generate()` behavior.
+
+Instead, generation/execution should be capability-specific:
+
+```text
+generate_text
+ generate_image
+transcribe_audio
+synthesize_speech
+create_embeddings
+rerank_documents
+moderate_content
+analyze_vision
+run_provider_agent
+```
+
+A provider implements only the operations it declares.
+
+If a requested operation is not declared:
+
+```text
+Provider is ineligible for that task.
+```
+
+---
+
+### 15.4 Provider Shape Examples
+
+#### API-key text provider
+
+```text
+needs api_key_validation
+needs text_generation
+may not need account_registration
+may not need session_refresh
+may not need account_pool
+```
+
+#### Session-based website provider
+
+```text
+may need login/session_refresh
+may need account_pool
+may need cooldown/rate-limit management
+may support text_generation or multimodal generation
+```
+
+#### Embeddings-only provider
+
+```text
+needs embeddings
+does not need chat/text generation
+does not need agent module
+```
+
+#### Image-only provider
+
+```text
+needs image_generation
+may need asset handling
+does not need text chat generation
+```
+
+#### Provider-native agent
+
+```text
+needs provider_agent capability
+may need provider-managed thread/run state
+may need files/tools policy
+must still pass platform Capability Firewall and evaluation
+```
+
+---
+
+### 15.5 Forbidden Assumption
+
+The Agent implementing providers must not assume:
+
+```text
+every provider needs registration
+every provider needs session refresh
+every provider needs account pool
+every provider can chat
+every provider can generate text
+every provider supports streaming
+every provider has models
+every provider is stateless
+every provider can be called the same way
+```
+
+Provider behavior must be discovered, declared, tested, and isolated.

@@ -365,3 +365,60 @@ Real providers later → implement via contracts.
 Never fake provider functionality.
 Never contaminate Core with provider-specific shortcuts.
 ```
+
+---
+
+## 16. Scaffold Must Not Force One Provider Shape
+
+When creating provider scaffolding, do not design templates as if every provider has:
+
+```text
+registration
+session refresh
+account pool
+generic generate
+chat model
+streaming
+files
+agent behavior
+```
+
+The scaffold must be capability-driven.
+
+Templates should show diversity of provider shapes:
+
+```text
+API-key provider
+OAuth provider
+session/cookie provider
+no-auth local/internal provider
+text-only provider
+image-only provider
+embeddings-only provider
+moderation-only provider
+multimodal provider
+provider-native agent provider
+```
+
+Each template must mark unsupported modules as not implemented or not applicable, not as TODOs that imply mandatory work.
+
+Example:
+
+```yaml
+account_registration:
+  required: false
+  supported: false
+  reason: api_key_provider
+
+session_refresh:
+  required: false
+  supported: false
+
+generation_operations:
+  text_generation: true
+  image_generation: false
+  embeddings: false
+  provider_agent: false
+```
+
+The Core should depend on declared capabilities, not on a fixed provider lifecycle.
