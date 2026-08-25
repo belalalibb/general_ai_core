@@ -188,3 +188,40 @@ T-DOC-001 = Audit/Authority Map
 لا يتم إنشاء state files إضافية بدون تفويض صريح. `DOC_REWRITE_REPORT.md` تقرير تدقيق، وليس ملف تحكم في تقدم المهمة.
 
 Read-only fetch/rebase مسموح فقط عند الحاجة للتزامن أو التعافي، لكنه ليس عملًا متكررًا في كل task.
+
+
+---
+
+## D12. T-DOC-001 scope corrected
+
+تم تصحيح معنى `T-DOC-001`.
+
+`T-DOC-001` لا يعني بدء إعادة كتابة الوثائق الفعلية.
+
+المهمة الحالية الصحيحة هي:
+
+```text
+T-DOC-001 = Resume/State Governance Preparation ONLY
+```
+
+المسموح:
+
+```text
+PROJECT_EXECUTION_STATE.md
+Resume/Handoff pointers
+Local-only progress / Auto-upload boundary
+Task/Phase verification gates
+Phase 2 lock
+Centralized state control
+```
+
+الممنوع:
+
+```text
+rewriting architecture/product docs
+changing requirements/contracts
+implementing product code
+starting actual documentation re-architecture
+```
+
+إعادة كتابة الوثائق الفعلية تبدأ في `T-DOC-002` فقط بعد أن تصبح `T-DOC-001` VERIFIED.

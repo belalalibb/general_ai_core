@@ -527,3 +527,16 @@ Fetching remote state for recovery or synchronization checks is allowed when use
 But it must not become repeated per-task overhead.
 
 The local-only boundary forbids push/upload by default; it does not forbid occasional read-only remote inspection when needed for recovery.
+
+
+---
+
+## 25. Current Documentation Phase Task Boundary
+
+```text
+T-DOC-001 is governance preparation only.
+It prepares PROJECT_EXECUTION_STATE.md, resume/handoff pointers, local-only progress boundary, and phase/task gates.
+It must not perform the actual documentation rewrite.
+
+T-DOC-002 is the first task allowed to begin actual documentation re-architecture, and only after T-DOC-001 is VERIFIED.
+```

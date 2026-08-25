@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R002
+STATE_REVISION: R003
 
 RESUME_TOKEN:
-PROJECT|R002|PHASE_1_DOCUMENTATION|T-DOC-001|PLANNED|fef5c81
+PROJECT|R003|PHASE_1_DOCUMENTATION|T-DOC-001|PLANNED|bd98595
 
 LAST_VERIFIED_LOCAL_COMMIT:
-fef5c8147dffa1b5efeeca17889dda744354935b
+bd98595e797bb4ce0eb9c62e0efa2d46fe6058ce
 
 LAST_VERIFIED_STATE_TASK:
-T-DOC-STATE-001
+T-DOC-STATE-002
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -77,26 +77,44 @@ A new session must resume from this state after Phase 2 is explicitly unlocked.
 
 ```text
 CURRENT_WORKSTREAM:
-DOCUMENTATION_REARCHITECTURE
+RESUME_GOVERNANCE_PREPARATION
 
 CURRENT_TASK:
 T-DOC-001
 
 TASK_OBJECTIVE:
-Audit final_docs_v2 and establish an authority/documentation map before rewriting any documentation cluster.
+Prepare the existing documentation pack for safe resumable execution before the actual documentation re-architecture begins.
 
 TASK_STATUS:
 PLANNED
 
+ALLOWED_SCOPE:
+- modify existing resume/handoff sections
+- add or align state-control pointers
+- align resume protocols with PROJECT_EXECUTION_STATE.md
+- establish local-only progress / auto-upload boundary
+- establish task and phase verification gates
+- keep Phase 2 implementation locked until Phase 1 completion
+- add/update centralized project state control
+- remove or reconcile conflicting resume instructions
+
+FORBIDDEN_SCOPE:
+- rewrite product or architecture documentation
+- change product requirements
+- change architecture decisions
+- redesign API/domain/provider/security/evaluation contracts
+- implement product code
+- perform the actual documentation re-architecture
+
 TASK_COMPLETION_CRITERIA:
-- DOC_REWRITE_REPORT.md is created or updated.
-- Every current documentation file is mapped to purpose/audience/authority.
-- Authority conflicts are listed.
-- Duplication and bloat risks are listed.
-- Exploit -> counter map is started.
-- Decision Preservation Ledger is started.
-- Traceability requirements for future edits are recorded.
-- No product code is modified.
+- PROJECT_EXECUTION_STATE.md accurately describes current project phase/task control.
+- README points Agents to PROJECT_EXECUTION_STATE.md and the lightweight resume protocol.
+- Resume/Handoff rules consistently use the single authoritative project state.
+- Local-only progress / auto-upload boundary is explicit.
+- Task/Phase completion gates are explicit.
+- Phase 2 implementation remains locked until Phase 1 documentation is verified.
+- The actual documentation rewrite is explicitly delegated to the next authorized task.
+- No product/architecture specs are rewritten except resume/governance references if needed.
 - Git diff is reviewed.
 - Local commit is created and verified.
 
@@ -110,16 +128,16 @@ To be recorded when T-DOC-001 is completed.
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-STATE-001
+T-DOC-STATE-002
 
 LAST_VERIFIED_TASK_COMMIT:
-fef5c8147dffa1b5efeeca17889dda744354935b
+bd98595e797bb4ce0eb9c62e0efa2d46fe6058ce
 
 NEXT_TASK:
 T-DOC-001
 
 NEXT_TASK_OBJECTIVE:
-Audit/Authority Map for documentation rewrite.
+Resume/State Governance Preparation.
 
 NEXT_TASK_AUTHORIZED:
 YES
@@ -128,7 +146,9 @@ AFTER_T_DOC_001_VERIFIED_SET:
 TASK_STATUS = VERIFIED
 LAST_VERIFIED_TASK = T-DOC-001
 LAST_TRUSTED_COMMIT = <local commit hash>
+CURRENT_WORKSTREAM = DOCUMENTATION_REARCHITECTURE
 NEXT_TASK = T-DOC-002
+NEXT_TASK_OBJECTIVE = Perform the actual documentation re-architecture according to the established governance, authority order, and project decisions.
 NEXT_TASK_AUTHORIZED = YES
 
 DO_NOT_START:
@@ -153,6 +173,8 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - Do not add more mutable state files unless explicitly approved.
 - Reports such as DOC_REWRITE_REPORT.md are audit artifacts, not task-control state.
 - Fetch/rebase may be used for recovery/synchronization checks, but it should not become repeated per-task overhead.
+- T-DOC-001 is resume/state governance preparation only, not actual documentation rewrite.
+- Actual documentation re-architecture begins at T-DOC-002 after T-DOC-001 is VERIFIED.
 ```
 
 ---

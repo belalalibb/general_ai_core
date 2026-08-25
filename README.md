@@ -564,7 +564,19 @@ Steps:
 
 ```text
 T-DOC-001
-Objective: Audit final_docs_v2 and establish the authoritative documentation map before rewriting any cluster.
-Output: DOC_REWRITE_REPORT.md with document map, defect list, authority conflicts, exploit→counter map, decision preservation ledger starter, and exactly one next micro-task.
-Do not rewrite the full pack in this task.
+Objective: Prepare resume/state governance only before the actual documentation rewrite begins.
+Allowed: align PROJECT_EXECUTION_STATE.md, resume/handoff pointers, local-only progress boundary, task/phase gates, and Phase 2 lock.
+Forbidden: rewrite product/architecture docs, change requirements/contracts, or start the actual documentation re-architecture.
+Output: verified local commit that authorizes T-DOC-002 as the first actual documentation re-architecture task.
+```
+
+
+---
+
+## Current Task Clarification
+
+```text
+T-DOC-001 is not the documentation rewrite itself.
+T-DOC-001 prepares resume/state governance so the next Agent can safely perform the actual rewrite.
+The actual documentation re-architecture starts at T-DOC-002 after T-DOC-001 is VERIFIED.
 ```
