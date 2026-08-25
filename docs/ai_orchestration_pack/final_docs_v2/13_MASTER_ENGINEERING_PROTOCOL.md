@@ -1,6 +1,16 @@
 # MASTER ENGINEERING PROTOCOL
 **Version: 1.0 — Architecture Baseline**
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-010)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTOCOL.md
+NOTE: The Project State System (§39), Resume Protocol (§40), Session Handoff
+(§41), and Final Resume Command (§50) in this file are explicitly superseded
+by D10/D11: the single mutable state is PROJECT_EXECUTION_STATE.md.
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 # 0. Purpose
