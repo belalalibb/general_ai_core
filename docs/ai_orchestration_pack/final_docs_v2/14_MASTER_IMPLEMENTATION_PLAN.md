@@ -286,6 +286,13 @@ backup configuration
 
 # 7. Phase 4 — Provider Framework
 
+Reference first:
+
+```text
+24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md
+```
+
+
 هنا يبدأ تحويل الـProvider Inventory إلى Architecture حقيقية.
 
 ### Contracts

@@ -51,6 +51,7 @@
 | 21 | `21_PROVIDER_AGENT_ORCHESTRATION_SPEC.md` | مواصفة استخدام أكثر من Agent من المزودين كـsub-agents داخل Agent المنتج الأساسي |
 | 22 | `22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md` | بروتوكول استئناف خفيف قليل التوكن مع قواعد صارمة لحفظ حالة التقدم والتعافي من الانقطاع |
 | 23 | `23_AI_PROVIDERS_SCAFFOLDING_POLICY.md` | سياسة إنشاء بنية Providers متنوعة وآمنة عند عدم وجود مزودين حقيقيين بعد |
+| 24 | `24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md` | المواصفة النهائية المركزة لجزء الـProviders بعد الفهم الجديد: capability-driven وبدون فرض lifecycle واحد |
 
 ---
 
@@ -69,6 +70,7 @@
 11. استخدم `21` لفهم وتنفيذ Orchestration لأكثر من Provider-native Agent داخل Agent Mode.
 12. استخدم `22` كبرومبت وبروتوكول الاستئناف الخفيف لكل جلسة تنفيذ أو إعادة كتابة وثائق.
 13. استخدم `23` عند عدم وجود `ai_providers` أو مزودين حقيقيين لإنشاء scaffold فقط بدون ادعاء وظائف مزيفة.
+14. استخدم `24` كمرجع نهائي مركز عند تنفيذ أو مراجعة جزء الـProviders فقط.
 
 ---
 

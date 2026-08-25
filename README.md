@@ -46,6 +46,12 @@ docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STAT
 docs/ai_orchestration_pack/final_docs_v2/23_AI_PROVIDERS_SCAFFOLDING_POLICY.md
 ```
 
+المواصفة النهائية المركزة لجزء الـProviders:
+
+```text
+docs/ai_orchestration_pack/final_docs_v2/24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md
+```
+
 أرشيف المحادثة الأصلية:
 
 ```text

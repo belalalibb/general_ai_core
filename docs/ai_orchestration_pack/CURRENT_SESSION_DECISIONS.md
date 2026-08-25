@@ -86,3 +86,24 @@ Provider Agent Capability ≠ Platform Agent Runtime
 ```
 
 لتثبيت أن Agent المنتج الأساسي يمكنه استخدام عدة provider-native agents كـsub-agents/specialist nodes داخل Execution Graph واحد.
+
+
+---
+
+## D8. Provider subsystem consolidated after latest clarification
+
+تمت إضافة:
+
+```text
+24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md
+```
+
+لتثبيت الفهم النهائي لجزء الـProviders:
+
+```text
+Provider مستقل داخليًا.
+Core يتعامل بعقد موحد.
+كل Provider capability-driven.
+لا نفرض registration/session/account pool/generate على كل المزودين.
+إذا لا يوجد ai_providers يتم إنشاء scaffold فقط بدون وظائف مزيفة.
+```

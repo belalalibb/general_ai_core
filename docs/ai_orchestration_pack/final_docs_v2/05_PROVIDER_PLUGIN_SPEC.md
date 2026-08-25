@@ -2,6 +2,19 @@
 
 ---
 
+## 0. Final Focused Provider Reference
+
+For the consolidated final understanding of the Provider subsystem, use:
+
+```text
+24_FINAL_PROVIDER_ARCHITECTURE_SPEC.md
+```
+
+This file remains the detailed plugin specification, while document 24 is the focused final provider architecture summary.
+
+
+---
+
 ## 1. Purpose
 
 Provider modules isolate all provider-specific behavior from the Core.
