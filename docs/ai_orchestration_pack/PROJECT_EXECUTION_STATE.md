@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R027
+STATE_REVISION: R028
 
 RESUME_TOKEN:
-PROJECT|R027|PHASE_2_IMPLEMENTATION|T-IMPL-010|VERIFIED_MVP_PHASE2_IDENTITY_SERVICE_SKELETON|VERIFY_HEAD_WITH_GIT
+PROJECT|R028|PHASE_2_IMPLEMENTATION|T-IMPL-011|VERIFIED_MVP_PHASE2_EXIT_FIREWALL_SKELETON|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-010 content commit: 9bd5491; T-IMPL-009: 52aaf09 pre-rewrite. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-011 content commit: ad806b1 pre-rewrite; T-IMPL-010: 9bd5491 pre-rewrite. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-010
+T-IMPL-011
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,36 +126,45 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-010
+T-IMPL-011
 
 TASK_OBJECTIVE:
-Continue MVP Phase 2: implement the in-memory identity service skeleton in core/identity/ — registration creating a personal tenant, email-verification port + recording fake, login/session with opaque tokens, password hashing behind a port (Argon2id binding deferred), deny-by-default + anti-enumeration — with auth tests and tenant-isolation tests per the 41 §41 exit criteria.
+Finish MVP Phase 2: implement the capability-firewall skeleton in core/security/ — a deterministic deny-by-default evaluator over FirewallDecisionInput returning FirewallDecision (20 §1/§3/§4/§8), with injected in-memory tenant policy state (no persistence) and tests for deny-by-default, explicit-grant ALLOW, REQUIRE_APPROVAL, ALLOW_WITH_LIMIT, and tenant policy isolation. Then evaluate the 41 §41 exit criteria.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create core/identity/ (ports.py, errors.py, service.py, __init__.py)
-- create tests/identity/test_identity_service.py
-- update this state file at the verified checkpoint
+- create core/security/ (firewall.py, __init__.py)
+- create tests/security/test_capability_firewall.py
+- update this state file at the verified checkpoint (incl. Phase 2 exit evaluation)
 
 FORBIDDEN_SCOPE:
-- provider/network work; real email delivery; real Argon2id/crypto dependencies (port + fake only)
+- persistence; provider/network/secrets work; audit emission (Phase 3); admin-configurable catalogs
 - MVP Phase 3+ code
 
 TASK_COMPLETION_CRITERIA:
-- pytest PASS (auth + tenant-isolation tests included); mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
-- Registration -> pending/unverified user + active personal tenant; verification single-use; login denied before verification (deny-by-default); anti-enumeration constant failure; opaque sessions bound to (user_id, tenant_id); cross-tenant reads denied (20 §6); no plaintext password retained (20 §5).
+- pytest PASS; mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
+- Evaluator returns only the closed 20 §4 set; deny-by-default on every ungranted path; approval never bypasses grants; approval gate evaluated before limit; tenant grants never leak (20 §6).
 - check_repo.sh => RESULT: PASS. Focused local commit; worktree clean; state updated.
 
-VERIFICATION_EVIDENCE (T-IMPL-010, this session):
-- core/identity/ports.py: PasswordHasherPort (Argon2id = production binding, deferred to infrastructure phase — documented) + EmailVerificationPort (no real delivery this phase).
-- core/identity/errors.py: AuthenticationFailed with single constant message (anti-enumeration, 41 Phase 2 security list); RegistrationError/VerificationFailed/SessionInvalid.
-- core/identity/service.py: InMemoryIdentityService — register() creates pending/unverified User + ACTIVE PERSONAL Tenant (contract objects from core.contracts.identity); verify_email() single-use token -> active/verified; login() refuses unverified/non-active user, non-active tenant, wrong password, unknown email — all as identical AuthenticationFailed, with dummy hash on unknown email to equalize timing; sessions are opaque secrets.token_urlsafe(32) bound to (user_id, tenant_id); resolve_session uses hmac.compare_digest; get_tenant enforces session.tenant_id == tenant_id (20 §6); only opaque hashes stored (20 §5); email normalized lowercase.
-- tests/identity/test_identity_service.py: 20 tests (167 total pass) — registration (pending/unverified, personal tenant active, verification sent, duplicate/empty rejected, no plaintext retained), verification (activates, single-use, unknown rejected, login denied pre-verification), login/session (opaque token, wrong pw fails, anti-enumeration message-set == {constant}, invalid token denied, logout revokes + idempotent), tenant isolation (distinct tenants per registration, cross-tenant get_tenant denied, own-tenant allowed, sessions tenant-bound).
-- mypy --strict: clean. ruff: clean. lint-imports: 4 kept (core.identity imports only core.contracts). check_repo.sh: RESULT: PASS.
-- Repo hygiene fix this session: tool caches (.mypy_cache/.ruff_cache/.import_linter_cache/.pytest_cache) had been re-tracked by uploader sync commits; untracked again (gitignore entries already existed).
-- T-IMPL-010 content commit: 9bd5491.
+VERIFICATION_EVIDENCE (T-IMPL-011, this session):
+- core/security/firewall.py: TenantPolicy (frozen: granted_permissions/granted_entitlements/approval_gated_permissions/limited_permissions) + CapabilityFirewall.decide() — pure, deterministic, most-restrictive-first: no tenant policy -> DENY; permission not granted -> DENY; entitlement not held -> DENY; approval-gated + not approved -> REQUIRE_APPROVAL (20 §8); limited -> ALLOW_WITH_LIMIT; else ALLOW. approval_state==approved never bypasses grant checks (asserted by test). Policy state injected in-memory; catalogs/persistence/audit are later phases (documented in module docstring).
+- tests/security/test_capability_firewall.py: 13 tests (180 total pass) — unknown tenant denied; empty policy denied; permission-without-entitlement and entitlement-without-permission denied; approved-but-ungranted denied; full grant allows; deterministic over repeats; system actor follows same policy (20 §1); unapproved gated (PR-merge class) -> REQUIRE_APPROVAL, approved -> ALLOW; limited -> ALLOW_WITH_LIMIT; gated+limited unapproved -> REQUIRE_APPROVAL then approved -> ALLOW_WITH_LIMIT (ordering); tenant A grants never authorize tenant B (20 §6).
+- mypy --strict: clean. ruff: clean. lint-imports: 4 kept (core.security imports only core.contracts). check_repo.sh: RESULT: PASS.
+- RECOVERY NOTE (R028): the R028 state update was interrupted mid-write in the prior turn; on resume the sandbox had been reset (mypy/ruff/import-linter uninstalled) and the uploader had re-tracked tool caches and rewritten history (ad806b1 absent from log, but all T-IMPL-011 files tracked at HEAD with green gates). Recovery: verified filesystem + git tracking first, reinstalled toolchain (python3 -m pip install mypy ruff pytest pydantic import-linter pytest-asyncio), untracked caches again, re-ran all gates to RESULT: PASS, then redid ONLY the missing state-file update.
+- T-IMPL-011 content commit: ad806b1 (pre-rewrite; superseded by uploader sync commits).
+
+MVP_PHASE_2_EXIT_EVALUATION (41 §41, evaluated this session):
+- Deliver "user registration": PASS (T-IMPL-010 register()).
+- Deliver "email verification": PASS (T-IMPL-010 verify_email(), single-use token via port/fake).
+- Deliver "login/session": PASS (T-IMPL-010 login/resolve_session/logout, opaque tokens).
+- Deliver "personal tenant": PASS (registration creates ACTIVE PERSONAL tenant).
+- Deliver "basic RBAC/entitlements": PASS at the documented level — permission/entitlement identifier grants per tenant (specs define no richer RBAC entity; recorded at T-IMPL-009).
+- Deliver "capability firewall skeleton": PASS (T-IMPL-009 contracts + T-IMPL-011 evaluator).
+- Exit "auth tests pass": PASS (tests/identity — registration/verification/login/session suites green).
+- Exit "tenant isolation tests pass": PASS (tests/identity TestTenantIsolation + tests/security TestTenantIsolation green).
+MVP_PHASE_2_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED.
 ```
 
 ---
@@ -164,27 +173,27 @@ VERIFICATION_EVIDENCE (T-IMPL-010, this session):
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-010
-
-LAST_VERIFIED_TASK_COMMIT:
-9bd5491 (content) + the state-checkpoint commit at HEAD after this update
-
-CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP_PHASE_2_IDENTITY_SECURITY_IN_PROGRESS (delivered so far: identity/tenancy contracts, firewall decision contracts, identity service skeleton with auth + tenant-isolation tests. Remaining 41 §41 deliverable before exit: "capability firewall skeleton" — T-IMPL-009 delivered decision CONTRACTS only; a minimal deny-by-default evaluator (the skeleton) is still owed. Exit evaluation happens after that slice.)
-
-NEXT_TASK:
 T-IMPL-011
 
+LAST_VERIFIED_TASK_COMMIT:
+ad806b1 (content, pre-rewrite) + the state-checkpoint commit at HEAD after this update
+
+CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
+MVP_PHASE_2_COMPLETE_AND_VERIFIED (41 §41 exit criteria met — see MVP_PHASE_2_EXIT_EVALUATION above). Next workstream: MVP Phase 3 — Storage / Observability (41 §42): PostgreSQL migrations, Redis setup, object storage abstraction, secret manager abstraction, basic audit logs, OpenTelemetry setup.
+
+NEXT_TASK:
+T-IMPL-012
+
 NEXT_TASK_OBJECTIVE:
-Finish MVP Phase 2: implement the capability-firewall skeleton in core/security/ — a deterministic deny-by-default evaluator over FirewallDecisionInput returning FirewallDecision, enforcing the documented posture (20 §1 boundaries in platform code, 20 §4 decision set, 20 §8 approval-required outcome REQUIRE_APPROVAL when approval_state is null for approval-gated permissions, DENY on missing entitlement/permission grant). Grant lookups go through injected in-memory policy state (no persistence). Tests: deny-by-default when nothing granted; ALLOW only with explicit grant; REQUIRE_APPROVAL path; DENY on cross-tenant input mismatch. Then evaluate 41 §41 exit criteria; if met, record MVP_PHASE_2 exit at the checkpoint and set NEXT_TASK to the first MVP Phase 3 (Storage/Observability, 41 §42) task — but do not write Phase 3 code.
+Start MVP Phase 3 — Storage / Observability (41 §42). At session start, re-scope from specs (41 §42 deliverables + 20 §5 secrets rules + 20 §9 audit events + storage/observability authority docs) and slice ports-first, mirroring Phase 2: begin with the abstraction ports + in-memory fakes that keep core pure (object storage port, secret manager port — credential_ref only per 20 §5, audit log port with the 20 §9 event set), before any real PostgreSQL/Redis/OTel infrastructure bindings. Real infrastructure bindings belong in infrastructure/ and may require new dependencies — confirm dependency additions against 40 engineering protocol when reached. SANDBOX NOTE: the sandbox resets between sessions; reinstall the toolchain first (python3 -m pip install mypy ruff pytest pydantic import-linter pytest-asyncio) and re-untrack tool caches if the uploader re-added them, before trusting gate results.
 
 NEXT_TASK_AUTHORIZED:
-YES (same-session continuation allowed by the USER DIRECTIVE; same MVP phase)
+NO_UNTIL_NEW_SESSION (MVP phase boundary: mirroring the R024 precedent, the next MVP phase must not start in the same session that records the previous phase's exit. A new session must resume from this state, re-verify this checkpoint recovery-first, then begin T-IMPL-012.)
 
 DO_NOT_START:
-- provider/network/secrets work; persistence; real email delivery; real crypto deps
-- MVP Phase 3+ work before Phase 2 exit criteria are recorded as met
-- do not re-open Phase 1/2 contract decisions
+- MVP Phase 3 code in this session (phase boundary lock above)
+- real network/provider work; real secret material anywhere (20 §5: credential_ref only)
+- do not re-open Phase 1/2 contract or service decisions
 ```
 
 ---
