@@ -219,5 +219,10 @@ def test_policy_json_schema_export() -> None:
     schema = POLICY_ADAPTER.json_schema()
     # Discriminated union over exactly the 5 documented policy types.
     mapping = schema["discriminator"]["mapping"]
-    assert set(mapping) == {"auto", "tier", "explicit_model", "explicit_models",
-                            "agent_node_mapping"}
+    assert set(mapping) == {
+        "auto",
+        "tier",
+        "explicit_model",
+        "explicit_models",
+        "agent_node_mapping",
+    }
