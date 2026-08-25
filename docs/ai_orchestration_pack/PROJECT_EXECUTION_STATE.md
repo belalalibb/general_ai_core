@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R009
+STATE_REVISION: R012
 
 RESUME_TOKEN:
-PROJECT|R009|PHASE_1_DOCUMENTATION|T-DOC-006|VERIFIED|VERIFY_HEAD_WITH_GIT
+PROJECT|R012|PHASE_1_DOCUMENTATION|T-DOC-009|VERIFIED|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-006 commit; prior T-DOC-005 work verified during R009 reconciliation as present in HEAD via external uploader sync commits ending at bf421c8)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-DOC-009 commit; same-session verified commits: T-DOC-007=41f5d96, T-DOC-008=94feef7)
 
 LAST_VERIFIED_STATE_TASK:
-T-DOC-006
+T-DOC-009
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -117,41 +117,42 @@ CURRENT_WORKSTREAM:
 DOCUMENTATION_REARCHITECTURE
 
 CURRENT_TASK:
-T-DOC-006
+T-DOC-009
 
 TASK_OBJECTIVE:
-Carry cluster: create final_docs_v3/01_PRODUCT_REQUIREMENTS.md (from v2 01), final_docs_v3/02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md (from v2 02), and final_docs_v3/03_DOMAIN_MODEL.md (from v2 03) as CARRY migrations (surgical cleanup only; invariants unchanged; no decision changes), mark v2 01/02/03 SUPERSEDED with pointers, and flip their MIGRATION STATUS rows in final_docs_v3/00_INDEX.md in the same commit.
+Carry cluster: create final_docs_v3/20_SECURITY_THREAT_MODEL.md (from v2 10, Capability Firewall + deny-by-default unchanged), final_docs_v3/21_ADMIN_CONTROL_PLANE.md (from v2 11), and final_docs_v3/22_EVALUATION_AND_LEARNING.md (from v2 12) as CARRY migrations (no decision changes), mark v2 10/11/12 SUPERSEDED with pointers, and flip their MIGRATION STATUS rows in final_docs_v3/00_INDEX.md in the same commit.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create final_docs_v3/01_PRODUCT_REQUIREMENTS.md (carry of v2 01)
-- create final_docs_v3/02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md (carry of v2 02)
-- create final_docs_v3/03_DOMAIN_MODEL.md (carry of v2 03)
-- add SUPERSEDED pointer banners to v2 01, 02, 03 (no content deletion)
-- flip MIGRATION STATUS for docs 01/02/03 in final_docs_v3/00_INDEX.md
+- create final_docs_v3/20_SECURITY_THREAT_MODEL.md (carry of v2 10)
+- create final_docs_v3/21_ADMIN_CONTROL_PLANE.md (carry of v2 11)
+- create final_docs_v3/22_EVALUATION_AND_LEARNING.md (carry of v2 12)
+- add SUPERSEDED pointer banners to v2 10, 11, 12 (no content deletion)
+- flip MIGRATION STATUS for docs 20/21/22 in final_docs_v3/00_INDEX.md
 - update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- change any requirement, invariant, entity schema, or decision
+- change any security rule, admin control, evaluation gate, or decision
 - migrate any other document
 - implement product code
 - create additional mutable state files
 
 TASK_COMPLETION_CRITERIA:
 - All three v3 files exist, content-complete, no stubs (CARRY: content preserved verbatim; only V3 authority header + traceability footer added).
-- v3 01 preserves: vision, 4 use-case groups, primary users table, FR-001..FR-015, NFR table, MVP out-of-scope list, success criteria list.
-- v3 02 preserves: architecture statement + flow diagram, all 15 non-breakable invariants verbatim, module layout, core may/must-not lists, technology shape, production baseline, quality bar.
-- v3 03 preserves: all entities, all schemas incl. ProviderAccount lifecycle_state, Execution strategies/statuses, relationship rules, section 9 agent-capability model incl. rule Provider Agent Capability != Platform Agent Runtime + platform ownership list.
-- v2 01/02/03 carry SUPERSEDED banners pointing to successors; their content otherwise untouched.
-- final_docs_v3/00_INDEX.md rows for docs 01/02/03 = COMPLETE_AUTHORITATIVE in the same commit.
+- v3 20 preserves: security position, trust boundaries, threats/mitigations, Capability Firewall + deny-by-default, secrets rules, tenant isolation, AI output validation, approvals, audit events, security tests, provider-agent security risks.
+- v3 21 preserves: admin modules, configuration lifecycle, control matrix, plan configuration, routing policy configuration, learning dashboard, admin audit, admin tests, model control administration, provider-agent (single + multi) administration.
+- v3 22 preserves: evaluation pipeline, verification levels RAW|EVALUATED|VALIDATED|VERIFIED|GOLD, score vs confidence, grader types, evaluation record, user visibility, learning lifecycle, training eligibility, teacher model policy, promotion gates, tests.
+- v2 10/11/12 carry SUPERSEDED banners pointing to successors; their content otherwise untouched.
+- final_docs_v3/00_INDEX.md rows for docs 20/21/22 = COMPLETE_AUTHORITATIVE in the same commit.
 - Git diff reviewed; single local commit created and verified.
 
 VERIFICATION_EVIDENCE:
 - Three successor files exist on filesystem and in commit, each with a V2->V3 traceability section stating CARRY (verbatim).
-- Decision-preservation grep passed (all 15 FR ids, 15 invariants count, lifecycle states, strategies list, Provider Agent Capability != Platform Agent Runtime, deny-by-default, LLM never a security authority).
-- V3 index authority switch flipped for docs 01/02/03 only.
+- Mechanical body-diff vs v2 sources confirms verbatim carry (only header/footer additions).
+- Decision-preservation grep passed (Capability Firewall, deny-by-default, tenant isolation, verification levels, promotion gates).
+- V3 index authority switch flipped for docs 20/21/22 only.
 - Secret scan of changed files passed (no tokens/keys).
 - Local commit created and verified; use `git rev-parse HEAD` for the exact trusted commit.
 ```
@@ -162,7 +163,7 @@ VERIFICATION_EVIDENCE:
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-006
+T-DOC-009
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
@@ -171,13 +172,13 @@ CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
 DOCUMENTATION_REARCHITECTURE_V3_MIGRATION
 
 NEXT_TASK:
-T-DOC-007
+T-DOC-010
 
 NEXT_TASK_OBJECTIVE:
-Carry cluster: create final_docs_v3/10_API_CONTRACTS.md (from v2 04) and final_docs_v3/11_MODEL_ROUTING_AND_MODEL_CONTROL.md (from v2 06, keeping all modes AUTO / TIER / EXPLICIT_MODEL / EXPLICIT_MODELS / AGENT_NODE_MAPPING) as CARRY migrations (no decision changes), mark v2 04 and v2 06 SUPERSEDED with pointers, and flip their MIGRATION STATUS rows in final_docs_v3/00_INDEX.md in the same commit.
+Rewrite-compress: create final_docs_v3/40_ENGINEERING_PROTOCOL.md from v2 13 (2385 lines). Defect-justified rewrite: remove the legacy STATE.md/PROGRESS.md/HANDOFF.md scheme (conflicts with single-state decision D10/D11; single mutable state = PROJECT_EXECUTION_STATE.md), remove duplication, keep every engineering rule that still has execution value (quality gates, testing rules, definition of done, commit discipline, security engineering rules). Decisions must be preserved or explicitly superseded by D10/D11; no silent decision changes. Mark v2 13 SUPERSEDED with pointer and flip its MIGRATION STATUS row in the same commit.
 
 NEXT_TASK_AUTHORIZED:
-YES_AFTER_T_DOC_006_COMMIT_VERIFIED
+YES_AFTER_T_DOC_009_COMMIT_VERIFIED
 
 DO_NOT_START:
 PHASE_2_PRODUCT_IMPLEMENTATION
@@ -188,6 +189,7 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 ## CONFIRMED DECISIONS
 
 ```text
+- USER DIRECTIVE (2026-08-25, supersedes one-task-per-session stop rule): the Agent must execute as many authorized tasks as possible in the same session, in migration order, provided each task still gets its own focused commit, its own verification, and a state-file update at each verified checkpoint. Phase boundaries still hold: Phase 2 must not start in the same session that verifies Phase 1.
 - Agent performs local work only unless explicit push instruction is given.
 - Auto-uploader/external system owns remote synchronization.
 - Local commit + verification is enough to mark a task VERIFIED.
@@ -217,6 +219,10 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - T-DOC-005 completed the third content migration: final_docs_v3/12 is authoritative for Execution Graph, Agent Mode, and provider-agent orchestration; v2 07 and v2 21 are SUPERSEDED baseline material. Critical rule preserved: Provider Agent Capability != Platform Agent Runtime; platform remains the commander.
 - R009 reconciliation: the T-DOC-005 local commit (2b08b04) was re-synchronized by the external auto-uploader as per-file sync commits ending at bf421c8; filesystem verification confirmed all T-DOC-005 artifacts intact (v3 doc 12 present at 887 lines, banners on v2 07/21 present, index flipped). Facts from filesystem, not commit hashes.
 - T-DOC-006 completed the first carry cluster: final_docs_v3/01, 02, 03 are authoritative for product requirements, architecture baseline/invariants, and domain model; v2 01/02/03 are SUPERSEDED baseline material. All 15 architecture invariants and FR-001..FR-015 carried verbatim; no decision changed.
+- R010 reconciliation: the T-DOC-006 local commit (542cb4d) was re-synchronized by the external auto-uploader as per-file sync commits ending at 1f5967a; filesystem verification confirmed all T-DOC-006 artifacts intact (v3 docs 01/02/03 present, banners on v2 01/02/03 present, index flipped). Facts from filesystem, not commit hashes.
+- T-DOC-007 completed the second carry cluster: final_docs_v3/10 and 11 are authoritative for API contracts and model routing/model control; v2 04/06 are SUPERSEDED baseline material. All 5 model policy types and all 5 router selection modes carried verbatim; no decision changed.
+- T-DOC-008 completed the third carry cluster: final_docs_v3/13 and 14 are authoritative for memory/context and skills/tools; v2 08/09 are SUPERSEDED baseline material. Capability Firewall check and unknown-tools-default-to-DENY carried verbatim; no decision changed.
+- T-DOC-009 completed the fourth carry cluster: final_docs_v3/20, 21, 22 are authoritative for security threat model, admin control plane, and evaluation/learning; v2 10/11/12 are SUPERSEDED baseline material. Capability Firewall, deny-by-default, tenant isolation, verification levels, and promotion gates carried verbatim; no decision changed.
 ```
 
 ---
@@ -286,10 +292,13 @@ Recreate this file only after verified reconstruction, then commit before contin
 ## STOP CONDITION
 
 ```text
-Complete one authorized task only.
-Verify locally.
-Update this state only at a verified checkpoint.
-Create local commit.
-Report commit hash and next task.
-Stop.
+Per USER DIRECTIVE (2026-08-25): execute as many authorized tasks as possible
+in the same session, in migration order.
+For EACH task:
+  Verify locally.
+  Update this state only at a verified checkpoint.
+  Create one focused local commit.
+Then continue to the next authorized task in the same session.
+At session end: report all commit hashes and the next task. Stop.
+Phase boundaries still hold: do not start Phase 2 in the session that verifies Phase 1.
 ```
