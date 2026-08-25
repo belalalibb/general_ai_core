@@ -202,7 +202,11 @@ Progress continuity relies on:
 2. local Git committed state
 3. verified filesystem reality
 
+PROJECT_EXECUTION_STATE.md alone is not proof. A referenced task/commit must be verified against local Git and filesystem reality.
+
 A task may become VERIFIED after local verification + successful local commit, even if remote upload has not yet occurred.
+
+Do not create additional mutable state files unless explicitly approved. Reports are audit artifacts, not task-control state.
 
 ## LOW-TOKEN RESUME REQUIREMENT
 The resume prompt must stay short enough to avoid wasting tokens, but strict enough to prevent drift.
@@ -560,7 +564,7 @@ Steps:
 
 ```text
 T-DOC-001
-Objective: Audit final_docs_v2 for duplication, authority conflicts, missing resume pointers, provider documentation clarity, and token bloat.
-Output: DOC_REWRITE_REPORT.md with defect list, exploit→counter map, and one next micro-task.
-Do not rewrite the full pack in one step.
+Objective: Audit final_docs_v2 and establish the authoritative documentation map before rewriting any cluster.
+Output: DOC_REWRITE_REPORT.md with document map, defect list, authority conflicts, exploit→counter map, decision preservation ledger starter, and exactly one next micro-task.
+Do not rewrite the full pack in this task.
 ```

@@ -5,19 +5,29 @@ This file is the single project-level control point for documentation rewrite an
 It is not a replacement for Git. Git + verified filesystem reality remain the factual source of truth.
 This file controls phase/task progression and prevents Agents from drifting, skipping, or reopening decisions.
 
+Important proof rule:
+
+```text
+PROJECT_EXECUTION_STATE.md alone is not proof of completion.
+Trusted proof = this state file + local Git commit exists + filesystem reality matches the verified task.
+```
+
 ---
 
 ## STATE HEADER
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R001
+STATE_REVISION: R002
 
 RESUME_TOKEN:
-PROJECT|R001|PHASE_1_DOCUMENTATION|T-DOC-STATE-001|VERIFIED|VERIFY_HEAD_WITH_GIT
+PROJECT|R002|PHASE_1_DOCUMENTATION|T-DOC-001|PLANNED|fef5c81
 
-LAST_BASELINE_COMMIT_BEFORE_THIS_STATE:
-d8087419b6be09ee52b642a4bfcad2c0529abd2b
+LAST_VERIFIED_LOCAL_COMMIT:
+fef5c8147dffa1b5efeeca17889dda744354935b
+
+LAST_VERIFIED_STATE_TASK:
+T-DOC-STATE-001
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -70,30 +80,28 @@ CURRENT_WORKSTREAM:
 DOCUMENTATION_REARCHITECTURE
 
 CURRENT_TASK:
-T-DOC-STATE-001
+T-DOC-001
 
 TASK_OBJECTIVE:
-Add the project-level execution state and local-only/auto-upload boundary rules.
+Audit final_docs_v2 and establish an authority/documentation map before rewriting any documentation cluster.
 
 TASK_STATUS:
-VERIFIED_AFTER_LOCAL_COMMIT
+PLANNED
 
 TASK_COMPLETION_CRITERIA:
-- PROJECT_EXECUTION_STATE.md exists.
-- README documents local-only Agent boundary.
-- Lightweight resume protocol references PROJECT_EXECUTION_STATE.md.
-- Push/upload responsibility is explicitly external unless user instructs otherwise.
-- Agent may mark a task verified after local verification + local commit, without requiring remote push.
-- State distinguishes current progress from resume checkpoint.
-- Documents use static resume pointer only, not per-step progress state.
-- Git diff reviewed.
-- Local commit created and verified.
+- DOC_REWRITE_REPORT.md is created or updated.
+- Every current documentation file is mapped to purpose/audience/authority.
+- Authority conflicts are listed.
+- Duplication and bloat risks are listed.
+- Exploit -> counter map is started.
+- Decision Preservation Ledger is started.
+- Traceability requirements for future edits are recorded.
+- No product code is modified.
+- Git diff is reviewed.
+- Local commit is created and verified.
 
 VERIFICATION_EVIDENCE:
-- git status before work inspected.
-- git diff reviewed before commit.
-- grep checks for new boundary terms should pass.
-- final commit hash must be reported by the Agent after commit.
+To be recorded when T-DOC-001 is completed.
 ```
 
 ---
@@ -102,16 +110,26 @@ VERIFICATION_EVIDENCE:
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-STATE-001 after commit verification
+T-DOC-STATE-001
+
+LAST_VERIFIED_TASK_COMMIT:
+fef5c8147dffa1b5efeeca17889dda744354935b
 
 NEXT_TASK:
-T-DOC-002
+T-DOC-001
 
 NEXT_TASK_OBJECTIVE:
-Audit final_docs_v2 for required static Resume/Handoff pointers and document completion criteria strategy without duplicating project state in every document.
+Audit/Authority Map for documentation rewrite.
 
 NEXT_TASK_AUTHORIZED:
-YES_AFTER_T_DOC_STATE_001_COMMIT_VERIFIED
+YES
+
+AFTER_T_DOC_001_VERIFIED_SET:
+TASK_STATUS = VERIFIED
+LAST_VERIFIED_TASK = T-DOC-001
+LAST_TRUSTED_COMMIT = <local commit hash>
+NEXT_TASK = T-DOC-002
+NEXT_TASK_AUTHORIZED = YES
 
 DO_NOT_START:
 PHASE_2_PRODUCT_IMPLEMENTATION
@@ -131,6 +149,10 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - final_docs_v2 documents are specifications, not progress-state files.
 - Resume/Handoff inside documents should be static pointers, not live progress data.
 - Phase 2 implementation remains LOCKED until Phase 1 documentation is VERIFIED.
+- Project state alone is not proof; it must be verified against local Git and filesystem reality.
+- Do not add more mutable state files unless explicitly approved.
+- Reports such as DOC_REWRITE_REPORT.md are audit artifacts, not task-control state.
+- Fetch/rebase may be used for recovery/synchronization checks, but it should not become repeated per-task overhead.
 ```
 
 ---
@@ -160,7 +182,8 @@ On a new session:
 3. Run git rev-parse HEAD.
 4. Run git diff --stat.
 5. Compare this state with Git/filesystem reality.
-6. If conflict exists, Git/filesystem reality wins for facts.
+6. Verify referenced commits exist locally when used as evidence.
+7. If conflict exists, Git/filesystem reality wins for facts.
 7. Reconcile this file before advancing tasks.
 8. Continue only the authorized NEXT_TASK.
 9. Do not infer progress from chat history.

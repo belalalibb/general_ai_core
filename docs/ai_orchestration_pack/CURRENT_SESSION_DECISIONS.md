@@ -164,3 +164,27 @@ Documents = specifications + static resume pointer only
 Phase 2 product implementation remains LOCKED until Phase 1 documentation is VERIFIED.
 
 الـAgent لا يعمل `git push` أو remote upload إلا بتفويض صريح من المستخدم.
+
+
+---
+
+## D11. Project state proof and first documentation task clarified
+
+تم تثبيت أن:
+
+```text
+PROJECT_EXECUTION_STATE.md alone is not proof.
+Trusted proof = PROJECT_EXECUTION_STATE.md + local Git commit exists + filesystem reality matches.
+```
+
+كما تم تثبيت أن أول مهمة فعلية لإعادة كتابة الوثائق هي:
+
+```text
+T-DOC-001 = Audit/Authority Map
+```
+
+وليس إعادة كتابة الوثائق مباشرة.
+
+لا يتم إنشاء state files إضافية بدون تفويض صريح. `DOC_REWRITE_REPORT.md` تقرير تدقيق، وليس ملف تحكم في تقدم المهمة.
+
+Read-only fetch/rebase مسموح فقط عند الحاجة للتزامن أو التعافي، لكنه ليس عملًا متكررًا في كل task.

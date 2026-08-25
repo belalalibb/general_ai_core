@@ -484,3 +484,46 @@ Resume only from the authorized task recorded in the project state file.
 ```
 
 This avoids duplicating progress state across many documents and saves tokens.
+
+
+---
+
+## 22. State Is Not Proof By Itself
+
+Project state controls progression, but it is not proof alone.
+
+Trusted proof requires:
+
+```text
+PROJECT_EXECUTION_STATE.md
++
+local Git commit exists
++
+filesystem reality matches the verified task
+```
+
+On resume, if the state references a commit or task, verify it locally before trusting it.
+
+---
+
+## 23. Do Not Add More Mutable State Files
+
+The project-level mutable state should remain centralized in:
+
+```text
+docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+```
+
+Reports such as `DOC_REWRITE_REPORT.md` may exist as audit artifacts, but they do not control task progression.
+
+Individual documents should keep only static resume pointers, not live progress state.
+
+---
+
+## 24. Remote Read Operations
+
+Fetching remote state for recovery or synchronization checks is allowed when useful.
+
+But it must not become repeated per-task overhead.
+
+The local-only boundary forbids push/upload by default; it does not forbid occasional read-only remote inspection when needed for recovery.
