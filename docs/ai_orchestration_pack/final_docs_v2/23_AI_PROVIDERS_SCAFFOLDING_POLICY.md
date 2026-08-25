@@ -1,6 +1,13 @@
 # 23 — AI Providers Scaffolding Policy
 ## When No Real `ai_providers` Exist Yet
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-004)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Purpose
