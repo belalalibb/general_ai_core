@@ -1,9 +1,9 @@
 # ADR-0004 — Observability Setup (OpenTelemetry + Structured Logging)
 
 ```text
-STATUS: PROPOSED
+STATUS: ACCEPTED (explicit operator decision, 2026-08-25: "ADR-0004 = ACCEPTED")
 DATE: 2026-08-25
-TASK: T-IMPL-017 (ADR document; implementation blocked until ACCEPTED)
+TASK: T-IMPL-017
 SUPERSEDES: NONE
 ```
 
@@ -142,6 +142,11 @@ SDK does not touch core or contracts.
 
 ## Status
 
-PROPOSED (T-IMPL-017 ADR part, 2026-08-25). Awaiting explicit operator
-sign-off. Until ACCEPTED: no observability dependency, no OTel wiring code.
-Silence is not acceptance.
+ACCEPTED (T-IMPL-017, 2026-08-25) by explicit operator decision recorded in
+PROJECT_EXECUTION_STATE.md: "Continue from the current checkpoint with the
+operator authorization already granted: ADR-0004 = ACCEPTED". Alternative A
+is confirmed as proposed, with no amendments. The observability
+dependencies (opentelemetry-api/sdk, structlog), the 7th import-linter
+contract, and the apps/ composition-root wiring are now unblocked. From
+this point this file is append-only per ADR rules (40 §8.1); changes
+require a superseding ADR.
