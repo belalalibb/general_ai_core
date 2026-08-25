@@ -45,11 +45,17 @@ final_docs_v2/20_ULTRA_EXECUTION_PROMPT.md
 
 عند تشغيل Agent للتنفيذ أو المراجعة بأقصى جودة.
 
+واستخدم بروتوكول الاستئناف الخفيف:
+
+```text
+final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+```
+
 ---
 
 ## قاعدة الاستئناف الثابتة
 
-هذه القاعدة لا تُحذف ولا تُخفف:
+هذه القاعدة لا تُحذف ولا تُخفف. الاستئناف لازم يكون قليل التوكن، لكنه صارم ويحافظ على حالة التقدم عند فقدان جلسة الشات التي تنفذ المشروع:
 
 ```text
 Git committed state = trusted progress.
@@ -66,15 +72,19 @@ git status
 ↓
 git rev-parse HEAD
 ↓
-git diff
+git diff --stat
 ↓
-inspect filesystem
+inspect filesystem and new files
 ↓
 read README.md and docs index
+↓
+read compact state / next plan if present
 ↓
 identify last trusted commit
 ↓
 classify uncommitted work
+↓
+if state was not updated, reconstruct from Git + files + verification
 ↓
 resume smallest valid micro-task
 ```

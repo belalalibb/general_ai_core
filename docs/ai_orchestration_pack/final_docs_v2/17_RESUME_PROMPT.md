@@ -93,3 +93,27 @@ Never claim DONE without a verified commit.
 Never assume interrupted work succeeded.
 Never use conversation memory as project truth.
 ```
+
+---
+
+# Low-Token Resume Addendum
+
+Use the shortest resume prompt that still enforces recovery safety.
+
+Required principles:
+
+```text
+Git committed state is trusted progress.
+State files are navigation only.
+Uncommitted work is recovery candidate only.
+Do not trust previous chat claims.
+Do not delete/reset blindly.
+If state was not updated before interruption, reconstruct from Git + filesystem + targeted verification.
+No DONE without verification + commit.
+```
+
+For the full compact protocol, see:
+
+```text
+22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+```

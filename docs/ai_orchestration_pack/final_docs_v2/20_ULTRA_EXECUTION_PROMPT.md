@@ -265,3 +265,18 @@ Think like a reliability engineer before touching queues, retries, workflows, or
 Think like a QA gatekeeper before claiming success.
 Think like a product engineer before expanding scope.
 ```
+
+---
+
+# Mandatory Low-Token Resume Reference
+
+When resuming a lost/interrupted session, do not paste the entire documentation pack into context.
+Use the compact resume protocol first:
+
+```text
+22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+```
+
+The Agent must reconstruct reality from Git, filesystem, and targeted verification if progress state was not updated before interruption.
+
+If upload/push is handled automatically by the surrounding platform, the Agent should focus on accurate local progress state and only push when explicitly instructed.

@@ -33,6 +33,13 @@ docs/ai_orchestration_pack/final_docs_v2/20_ULTRA_EXECUTION_PROMPT.md
 docs/ai_orchestration_pack/final_docs_v2/21_PROVIDER_AGENT_ORCHESTRATION_SPEC.md
 ```
 
+
+بروتوكول الاستئناف الخفيف قليل التوكن:
+
+```text
+docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+```
+
 أرشيف المحادثة الأصلية:
 
 ```text
@@ -136,6 +143,18 @@ This resume rule must be present in:
 - Build prompt
 - Resume prompt
 - Handoff/Next plan protocol
+
+UPLOAD / PUSH ASSUMPTION
+If the surrounding platform handles upload/push automatically, the Agent must not waste context on push mechanics.
+The Agent's job is to keep local verified progress state accurate and compact.
+Only push when explicitly instructed.
+
+LOW-TOKEN RESUME REQUIREMENT
+The resume prompt must stay short enough to avoid wasting tokens, but strict enough to prevent drift.
+Use the lightweight resume protocol in:
+docs/ai_orchestration_pack/final_docs_v2/22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+
+If progress state was not updated before interruption, the next Agent must reconstruct reality from Git + filesystem + targeted verification, then update state.
 
 PHASE 0 — REALITY CHECK
 Before editing documents:
@@ -359,7 +378,8 @@ First:
 5. read README.md
 6. read docs/ai_orchestration_pack/README.md
 7. read final_docs_v2/00_INDEX.md
-8. identify last trusted commit
+8. read 22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md if available
+9. identify last trusted commit
 9. classify current task
 10. continue with the smallest valid documentation micro-task
 
