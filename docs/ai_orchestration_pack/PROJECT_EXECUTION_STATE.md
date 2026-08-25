@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R029
+STATE_REVISION: R031
 
 RESUME_TOKEN:
-PROJECT|R029|PHASE_2_IMPLEMENTATION|T-IMPL-012|VERIFIED_MVP_PHASE3_OBJECT_STORAGE_PORT|VERIFY_HEAD_WITH_GIT
+PROJECT|R031|PHASE_2_IMPLEMENTATION|T-IMPL-014|VERIFIED_MVP_PHASE3_AUDIT_CONTRACT_AND_PORT|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-012 content commit: c79b4bc; recovery maintenance: fe3f762. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-014 content commit: 9cb4a4d; recovery maintenance this session: 1f885a1. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-012
+T-IMPL-014
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,36 +126,36 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-012
+T-IMPL-014
 
 TASK_OBJECTIVE:
-Start MVP Phase 3 (41 §42) ports-first: object-storage abstraction — tenant-scoped ObjectStoragePort (put/get/head/delete/list_keys, 40 §5.1 blob role), StoredObject metadata value object, closed error set with anti-enumeration (foreign-tenant probe indistinguishable from absent key, 20 §6), and an in-memory binding with port + tenant-isolation tests. No real S3/network bindings.
+Basic audit logs (41 §42): AuditEvent contract in core/contracts (03 §1 entity; 20 §9 must-audit set as closed AuditEventType enum + 21 §8 admin-change fields; tenant-scoped; details JsonObject carries credential_refs only, never secret values per 20 §5), an append-only tenant-scoped AuditLogPort, an in-memory binding, and tests.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create core/storage/ (ports.py, errors.py, memory.py, __init__.py)
-- create tests/storage/test_object_storage.py
+- create core/contracts/audit.py; export from core/contracts/__init__.py
+- create core/audit/ (ports.py, errors.py, memory.py, __init__.py)
+- create tests/audit/test_audit_log.py
 - update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
-- real S3/object-store bindings; network; new dependencies
-- real secret material anywhere (20 §5)
+- real DB/network bindings; new dependencies; real secret material anywhere (20 §5)
 
 TASK_COMPLETION_CRITERIA:
 - pytest PASS; mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
-- Every port operation tenant-scoped; foreign-tenant read/delete raises the same ObjectNotFound as absent keys; listing never crosses tenants.
+- Event set closed and verbatim from 20 §9; admin publish/rollback events MUST carry the 21 §8 record (and only they may); port surface is append + tenant-scoped read/count ONLY (no update/delete); reads chronological.
 - check_repo.sh => RESULT: PASS. Focused local commit; worktree clean; state updated.
 
-VERIFICATION_EVIDENCE (T-IMPL-012, this session):
-- SESSION RECOVERY FIRST (R029): sandbox had been reset again (toolchain missing) and the uploader had re-tracked 39 cache files. Reinstalled toolchain, untracked caches, ran full gates to RESULT: PASS at resumed HEAD before any new work; maintenance commit fe3f762.
-- core/storage/ports.py: ObjectStoragePort Protocol — tenant_id explicit on every method (isolation at the boundary, never ambient); bytes payloads; StoredObject frozen dataclass (tenant_id/key/size_bytes/content_type/created_at); no cross-tenant or global read operation exists on the port by design.
-- core/storage/errors.py: StorageError + ObjectNotFound; ObjectNotFound deliberately covers both absent and foreign-tenant keys (anti-enumeration, 20 §6).
-- core/storage/memory.py: InMemoryObjectStorage keyed by (tenant_id, key); empty keys rejected; sorted prefix listing; skeleton discipline identical to Phase 2 identity service.
-- tests/storage/test_object_storage.py: 15 tests (195 total pass) — protocol satisfaction, round-trip, metadata, head-without-payload, overwrite, delete, absent-key errors, empty-key rejection, sorted prefix listing; TenantIsolation: same key independent per tenant, foreign read raises NotFound, foreign probe indistinguishable from absent, foreign delete cannot remove data, listing never crosses tenants.
-- mypy --strict: clean. ruff: clean. lint-imports: 4 kept (core.storage imports only core.contracts.base). check_repo.sh: RESULT: PASS.
-- Content commit: c79b4bc.
+VERIFICATION_EVIDENCE (T-IMPL-014, this session):
+- core/contracts/audit.py: AuditEventType closed enum — 13 values, the 20 §9 list carried verbatim with compound lines expanded (login/logout; credential create/revoke; admin config publish/rollback); AdminChangeRecord field-for-field from 21 §8 (who->actor_id and timestamp->occurred_at live on the event; what/previous_version/new_version/validation_result/impact_preview/rollback_target on the record); AuditEvent frozen contract (id, tenant_id, event_type, actor_id|None=system, occurred_at, details JsonObject, admin_change|None); 20 §5 no-secret-in-details rule documented in the docstring and regression-guarded (schema-level enforcement of an open JSON object is impossible — recorded, not hidden). ADMIN_CHANGE_EVENT_TYPES frozenset exported.
+- core/audit/ports.py: AuditLogPort Protocol — append + tenant-scoped read(event_type filter, newest-N limit) + count ONLY; no update/delete/truncate surface by design (tamper-resistance); retention is an infra policy of the later real binding, not a core API.
+- core/audit/errors.py: AuditError + InvalidAuditEvent (21 §8 integrity rule).
+- core/audit/memory.py: InMemoryAuditLog — enforces admin-record-required/forbidden at append; chronological stable-sorted reads; strict tenant filtering; repr shows counts only.
+- tests/audit/test_audit_log.py: 20 tests (231 total pass) — Contract: closed set verbatim, admin subset, immutability, extra-fields rejected, defaults, 21 §8 fields, credential_ref-only details discipline; AppendOnly: protocol satisfaction, round-trip, no mutation surface, admin-record required/forbidden both directions; Reads: chronological, type filter, newest-N limit, count; TenantIsolation: reads/count tenant-scoped, cross_tenant_access_denied recorded in probed tenant only.
+- mypy --strict clean (30 files); ruff clean; lint-imports 4 kept (core.audit imports only core.contracts); check_repo.sh RESULT: PASS.
+- Content commit: 9cb4a4d.
 
 MVP_PHASE_2_EXIT (recorded R028, unchanged): MVP_PHASE_2_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED — full 41 §41 evaluation preserved in git history at the R028 checkpoint commit (d88a876 pre-rewrite).
 ```
@@ -166,25 +166,29 @@ MVP_PHASE_2_EXIT (recorded R028, unchanged): MVP_PHASE_2_STATUS: EXIT_CRITERIA_M
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-012
+T-IMPL-014
 
 LAST_VERIFIED_TASK_COMMIT:
-c79b4bc (content) + the state-checkpoint commit at HEAD after this update
+9cb4a4d (content) + the state-checkpoint commit at HEAD after this update
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP Phase 3 — Storage / Observability (41 §42) IN PROGRESS, ports-first slicing (R029 plan): T-IMPL-012 object-storage port DONE → T-IMPL-013 secret-manager port (credential_ref only, 20 §5) → T-IMPL-014 audit contract + port (20 §9 event set + 21 §8 admin fields). Real PostgreSQL/Redis/OTel bindings in infrastructure/ come after the ports and may need new dependencies (confirm against 40).
+MVP Phase 3 — Storage / Observability (41 §42): the three portable abstractions are DONE (T-IMPL-012 object storage, T-IMPL-013 secret manager, T-IMPL-014 audit logs). Remaining Phase 3 deliverables — PostgreSQL migrations, Redis setup, OpenTelemetry setup — are real infrastructure bindings that require NEW DEPENDENCIES and stack decisions (40 §5.1 fixes PostgreSQL/Redis roles; driver/migration-tool choice e.g. SQLAlchemy/Alembic vs raw asyncpg is a significant architecture choice → needs an ADR per PHASE_2_GOVERNANCE, and new deps must be confirmed against 40).
 
 NEXT_TASK:
-T-IMPL-013
+T-IMPL-015
 
 NEXT_TASK_OBJECTIVE:
-Secret-manager abstraction (41 §42): a SecretManagerPort where core stores/retrieves secrets ONLY via opaque credential_ref handles (20 §5: DB stores credential_ref only; no secrets in logs; secret values never appear in metadata, listings, errors, or reprs), plus an in-memory binding and tests covering ref opacity, tenant isolation, revocation, and no-leak-via-repr/str. No real KMS/vault bindings, no real secret material in code or fixtures beyond obviously-fake placeholders.
+PostgreSQL migrations groundwork (41 §42, 40 §5.1): FIRST write the ADR selecting the persistence toolchain (proposal: SQLAlchemy 2.x + Alembic — async-capable, migration-native, mypy-strict-friendly; alternatives considered: raw asyncpg + hand-rolled SQL migrations), THEN — only after the ADR is recorded — add the dependency pins, an initial alembic environment under infrastructure/db/, and a first migration covering the already-contracted core entities (identity/tenancy tables minimally). Import-linter boundaries must keep core free of any SQLAlchemy import (infrastructure only). If the operator wants a different stack, the ADR is the stopping point for that conversation.
+
+NEXT_TASK_NOTE:
+ADR requirement comes from PHASE_2_GOVERNANCE ("Significant architecture choices ... require an ADR"). The prior stack-selection user-approval rule was satisfied for Python before Phase 1 code; the persistence toolchain is a new significant choice inside the approved stack — ADR required, explicit user sign-off recommended before the dependency lands.
 
 NEXT_TASK_AUTHORIZED:
-YES_SAME_SESSION (same MVP phase; USER DIRECTIVE allows multiple tasks per session within a phase, each with its own commit + verification + checkpoint)
+YES_SAME_SESSION for the ADR document itself (same MVP phase; USER DIRECTIVE). Landing the actual dependency + migrations SHOULD wait for user sign-off on the ADR unless the user has explicitly pre-authorized dependency additions.
 
 DO_NOT_START:
 - MVP Phase 4+ code; real KMS/vault/network bindings; real secret material anywhere (20 §5)
+- do not add SQLAlchemy/Alembic/asyncpg dependencies before the ADR exists
 - do not re-open Phase 1/2 contract or service decisions
 ```
 
