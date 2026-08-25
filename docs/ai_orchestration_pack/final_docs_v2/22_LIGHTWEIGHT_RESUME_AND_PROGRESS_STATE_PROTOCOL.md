@@ -5,30 +5,66 @@
 
 ## 1. Purpose
 
-This protocol defines a **simple, low-token, strict resume system** for any chat/session executing the project or rewriting the documentation.
+This protocol defines **how to resume** work after a lost or interrupted session without wasting tokens and without drifting from the authorized task.
 
-The goal is:
+It applies to:
 
 ```text
-minimum resume tokens
-+
-maximum protection against lost progress
-+
-no conflict with real project state
-+
-no model drift after session interruption
+documentation governance preparation
+documentation re-architecture
+future product implementation
+recovery after interruption
 ```
 
-The resume prompt must be short, but the rules behind it are strict.
+It does not define product architecture. It defines recovery behavior.
 
 ---
 
-## 2. Core Rule
+## 2. Separation of Responsibilities
+
+```text
+README.md
+= permanent operating contract
+
+PROJECT_EXECUTION_STATE.md
+= where the project is, current phase, current task, and next authorized task
+
+22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md
+= how to resume safely
+
+final_docs_v2/*
+= product/documentation specifications and decisions
+
+DOC_REWRITE_REPORT.md, if created
+= audit/report artifact only, not task-control state
+```
+
+There must be only one mutable project-level state file:
+
+```text
+docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+```
+
+Do not create any additional mutable state file unless explicitly instructed.
+
+---
+
+## 3. Core Rule
 
 ```text
 Git committed state is the only trusted progress.
-Progress state files are navigation aids, not proof.
+PROJECT_EXECUTION_STATE.md controls progression, but is not proof by itself.
 Uncommitted work is Recovery Candidate only.
+```
+
+Trusted proof requires:
+
+```text
+PROJECT_EXECUTION_STATE.md
++
+local Git commit exists
++
+filesystem reality matches the verified task
 ```
 
 A future Agent must never trust:
@@ -37,7 +73,6 @@ A future Agent must never trust:
 previous conversation
 memory
 state file alone
-handoff note alone
 previous AI claim
 unverified generated file
 ```
@@ -46,364 +81,7 @@ as proof of completion.
 
 ---
 
-## 3. Upload / Push Assumption
-
-In this project workflow, remote upload/push may be handled automatically by the surrounding system or by an external process.
-
-Therefore, unless explicitly instructed otherwise:
-
-```text
-The Agent should not focus on push/upload mechanics.
-The Agent's responsibility is to keep local verified progress state accurate.
-```
-
-The Agent may update progress/state files directly, but must not treat a progress update as completion unless implementation and verification are real.
-
-If explicit push is requested by the user, follow the secure credential handling rules. Otherwise, assume upload is external/automatic.
-
----
-
-## 4. What the Agent Must Maintain
-
-At minimum, the project should maintain compact state files such as:
-
-```text
-engineering/STATE.md
-engineering/ACTIVE_TASK.md
-engineering/NEXT_PLAN.md
-engineering/HANDOFF.md
-engineering/VERIFY.md
-```
-
-For documentation rewrite work, use:
-
-```text
-docs/ai_orchestration_pack/DOC_REWRITE_STATE.md
-docs/ai_orchestration_pack/DOC_REWRITE_NEXT_PLAN.md
-docs/ai_orchestration_pack/DOC_REWRITE_HANDOFF.md
-```
-
-These files should be short and structured.
-
----
-
-## 5. Minimal Progress State Format
-
-Use a compact format to reduce token usage:
-
-```md
-# STATE
-Last trusted commit: <hash>
-Mode: build | docs-rewrite | audit | recovery
-Phase: <phase>
-Active task: <task-id + one-line objective>
-Status: not_started | in_progress | verified | blocked | recovery_needed
-Verified evidence: <tests/commands/artifacts/commit>
-Changed files: <short list>
-Uncommitted work: none | present | unknown
-Next step: <one smallest task>
-Risks/blockers: <short list>
-Updated at: <timestamp>
-```
-
-Do not write long narratives in state files.
-
----
-
-## 6. Lightweight Resume Prompt
-
-Use this at the start of a new execution session:
-
-```text
-RESUME PROJECT — LOW TOKEN
-
-Git commit is the only trusted progress.
-State files are navigation only.
-Do not trust previous chat claims.
-Do not delete/reset uncommitted work blindly.
-
-Steps:
-1. git status
-2. git rev-parse HEAD
-3. git diff --stat
-4. read README.md
-5. read the relevant STATE / ACTIVE_TASK / NEXT_PLAN files if present
-6. compare state files with real filesystem and Git
-7. classify uncommitted work: none / belongs to active task / unknown / unsafe
-8. verify the smallest relevant evidence
-9. continue only from verified reality
-10. choose one smallest next task
-
-If state files are missing or stale, reconstruct from Git + files + tests, then update state.
-No DONE without verification + commit.
-```
-
----
-
-## 7. Lightweight Documentation Rewrite Resume Prompt
-
-Use this when resuming documentation rewriting, not product implementation:
-
-```text
-RESUME DOCS REWRITE — LOW TOKEN
-
-Goal: improve docs only; do not build product code.
-Git commit is trusted progress.
-State files are navigation only.
-Do not trust previous chat claims.
-
-Steps:
-1. git status
-2. git rev-parse HEAD
-3. git diff --stat
-4. read README.md
-5. read docs/ai_orchestration_pack/README.md
-6. read final_docs_v2/00_INDEX.md
-7. read DOC_REWRITE_STATE / NEXT_PLAN if present
-8. inspect changed/new docs before editing
-9. continue one smallest docs task
-10. update rewrite state and commit
-
-Keep resume short. Preserve recovery rules. Do not add complexity without execution value.
-```
-
----
-
-## 8. If Files Were Created But Not Reviewed
-
-If the Agent finds new files created before interruption:
-
-```text
-1. Do not trust them.
-2. Do not delete them blindly.
-3. Inspect file names and content.
-4. Classify each file:
-   - intended and useful
-   - duplicate
-   - incomplete placeholder
-   - unsafe/unrelated
-   - unknown
-5. Verify whether they match the active task.
-6. Complete, repair, or remove only with explicit evidence.
-7. Update state with the decision.
-```
-
-A file existing on disk is not proof that the task is complete.
-
----
-
-## 9. If the Agent Did Not Update Progress Before Interruption
-
-This is expected and must not break recovery.
-
-On the next session:
-
-```text
-1. Treat state files as possibly stale.
-2. Use Git HEAD as last trusted baseline.
-3. Inspect git diff and untracked files.
-4. Determine whether the work belongs to the last known active task.
-5. Run targeted verification if possible.
-6. If valid and complete: update progress state and commit.
-7. If valid but incomplete: finish the smallest coherent unit, verify, update state, commit.
-8. If unsafe/unrelated: preserve or discard only after explicit inspection.
-```
-
-Never continue based only on the old NEXT_PLAN if the filesystem shows different reality.
-
----
-
-## 10. If Progress State Says Done But Git Does Not
-
-If a state/handoff file says a task is done but there is no verified commit:
-
-```text
-Task is NOT trusted as done.
-```
-
-The Agent must:
-
-```text
-inspect files
-run verification
-commit if truly complete
-or mark as recovery_needed
-```
-
----
-
-## 11. If Git Is Ahead But State Is Stale
-
-If Git contains committed work but state files are outdated:
-
-```text
-Git wins.
-```
-
-The Agent must update state files to match Git reality.
-
----
-
-## 12. If Uncommitted Work Exists
-
-Classify it:
-
-```text
-none
-belongs_to_active_task
-useful_but_out_of_scope
-unknown
-unsafe
-```
-
-Rules:
-
-```text
-belongs_to_active_task → verify/complete smallest unit
-useful_but_out_of_scope → move to future note or ask
-unknown → inspect before action
-unsafe → preserve evidence, ask or isolate
-```
-
-Forbidden:
-
-```text
-git reset --hard
-git clean -fd
-rm untracked files
-checkout overwrite
-```
-
-unless explicitly instructed and after inspection.
-
----
-
-## 13. Strict Anti-Drift Conditions
-
-A resuming Agent must not:
-
-```text
-change architecture because it seems better
-start a new module while recovery is unresolved
-rewrite large docs before reading index/state
-ignore active task
-skip verification
-expand scope during recovery
-trust old chat context over Git
-```
-
-If architecture/docs direction is unclear, create a small audit note first rather than rewriting everything.
-
----
-
-## 14. State Update Timing
-
-The Agent should update progress state:
-
-```text
-1. after selecting the active micro-task
-2. after meaningful file changes
-3. after verification
-4. after commit
-5. before ending voluntarily
-```
-
-But if interruption happens before this, the next session recovers from Git/diff reality.
-
----
-
-## 15. Compact Handoff Format
-
-At voluntary stop, write:
-
-```md
-# HANDOFF
-Last trusted commit: <hash>
-Current task: <id/objective>
-Status: <verified|in_progress|blocked>
-Files changed: <short list>
-Verification: <commands/results>
-Uncommitted work: <none/list>
-Next task: <one task>
-Warnings: <short list>
-```
-
-Keep it short. Do not duplicate full documentation.
-
----
-
-## 16. Build vs Documentation Rewrite Separation
-
-Two modes must not be confused:
-
-```text
-build mode: implementing product code
-```
-
-```text
-docs-rewrite mode: improving documentation only
-```
-
-Resume must identify mode before continuing.
-
-If mode is docs-rewrite:
-
-```text
-Do not implement product code.
-Do not create runtime modules.
-Only edit docs, prompts, protocols, indexes, and decision logs.
-```
-
-If mode is build:
-
-```text
-Do not rewrite documentation broadly unless required by active task.
-```
-
----
-
-## 17. Final Rule
-
-The resume system should be short enough to paste cheaply, but strict enough to prevent damage.
-
-```text
-Short prompt.
-Strict reality checks.
-Git wins.
-State guides.
-Evidence closes.
-Commit confirms.
-```
-
----
-
-## 18. Project Execution State Control Point
-
-The project-level state file is:
-
-```text
-docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
-```
-
-This file defines where the project is now:
-
-```text
-current phase
-phase lock/unlock status
-current task
-task status
-last verified task
-next authorized task
-resume token
-local progress checkpoint
-```
-
-The protocol in this document defines **how to resume**.
-`PROJECT_EXECUTION_STATE.md` defines **where to resume from**.
-
----
-
-## 19. Local-Only Progress / Auto-Uploader Boundary
+## 4. Local-Only Progress / Auto-Uploader Boundary
 
 The Agent is responsible for local execution only unless explicitly instructed otherwise.
 
@@ -412,7 +90,7 @@ The Agent may:
 ```text
 edit files required by the current authorized task
 update PROJECT_EXECUTION_STATE.md
-update compact resume/handoff metadata
+update required static resume/handoff pointers
 run verification
 review git diff
 create a local commit
@@ -427,9 +105,9 @@ trigger remote synchronization
 spend context on push/upload mechanics
 ```
 
-Remote synchronization is handled externally by the project's auto-uploader.
+Remote synchronization is handled externally by the project's auto-uploader unless the user explicitly requests a push.
 
-A task may become VERIFIED after:
+A task may become `VERIFIED` after:
 
 ```text
 local verification
@@ -441,97 +119,202 @@ even if remote upload has not occurred yet.
 
 ---
 
-## 20. Current Progress State vs Resume Checkpoint
+## 5. Low-Token Project Resume Prompt
 
-Do not write long narratives into the state file.
-
-At a verified checkpoint, update only compact state such as:
+Use this at the start of a new session:
 
 ```text
-CURRENT_TASK
-TASK_STATUS
-LAST_VERIFIED_TASK
-NEXT_TASK
-NEXT_TASK_AUTHORIZED
-LAST_TRUSTED_COMMIT_RULE
-RESUME_TOKEN
+RESUME PROJECT — LOW TOKEN
+
+Git commit is trusted progress.
+PROJECT_EXECUTION_STATE.md controls authorized task progression but is not proof alone.
+Previous chat claims are not proof.
+Uncommitted work = Recovery Candidate.
+Do not delete/reset blindly.
+Do not push unless explicitly instructed.
+No DONE without verification + local commit.
+
+Steps:
+1. git status
+2. git rev-parse HEAD
+3. git log --oneline -5
+4. git diff --stat
+5. read README.md
+6. read docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+7. read docs/ai_orchestration_pack/final_docs_v2/00_INDEX.md only if needed
+8. inspect uncommitted/new files
+9. compare state with Git + filesystem reality
+10. continue only the authorized CURRENT_TASK
+
+If PROJECT_EXECUTION_STATE.md is missing/invalid, enter STATE_RECOVERY first.
 ```
-
-If interruption happens during a task:
-
-```text
-CURRENT_TASK = active task
-TASK_STATUS = IN_PROGRESS or recovery-needed
-LAST_VERIFIED_TASK = previous verified task
-NEXT_TASK = current task or last authorized task
-```
-
-The next Agent must not advance to a later task until the current task is verified.
 
 ---
 
-## 21. Static Document Resume Pointer
+## 6. Low-Token Documentation Resume Prompt
 
-Individual specification documents should not store live progress state.
-
-They may contain a static pointer like:
+Use this when resuming documentation work, not product implementation:
 
 ```text
-Resume / Handoff:
-Project execution state is controlled by docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md.
-Do not infer project progress from this document.
-Resume only from the authorized task recorded in the project state file.
+RESUME DOCUMENTATION WORK — LOW TOKEN
+
+Documentation only unless PROJECT_EXECUTION_STATE.md explicitly unlocks implementation.
+Git + filesystem reality verify progress.
+PROJECT_EXECUTION_STATE.md authorizes the current task.
+Do not trust previous chat claims.
+Do not create extra state files.
+Do not push unless explicitly instructed.
+
+Steps:
+1. git status
+2. git rev-parse HEAD
+3. git log --oneline -5
+4. git diff --stat
+5. read README.md
+6. read docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+7. inspect changed/new files
+8. verify whether CURRENT_TASK is PLANNED / IN_PROGRESS / VERIFIED / RECOVERY_REQUIRED
+9. continue only CURRENT_TASK
+10. update PROJECT_EXECUTION_STATE.md only at a verified checkpoint
+
+Complete one micro-task only, then stop.
 ```
-
-This avoids duplicating progress state across many documents and saves tokens.
-
 
 ---
 
-## 22. State Is Not Proof By Itself
+## 7. If Files Were Created But Not Reviewed
 
-Project state controls progression, but it is not proof alone.
-
-Trusted proof requires:
+If new or modified files exist after interruption:
 
 ```text
-PROJECT_EXECUTION_STATE.md
-+
-local Git commit exists
-+
-filesystem reality matches the verified task
+1. Do not trust them.
+2. Do not delete them blindly.
+3. Inspect file names and content.
+4. Classify each file:
+   - belongs_to_current_task
+   - useful_but_out_of_scope
+   - duplicate
+   - incomplete_placeholder
+   - unsafe_or_unrelated
+   - unknown
+5. Verify whether they match CURRENT_TASK in PROJECT_EXECUTION_STATE.md.
+6. Complete, repair, preserve, or discard only with explicit evidence.
+7. Update PROJECT_EXECUTION_STATE.md only after verified reconstruction or verified task completion.
 ```
 
-On resume, if the state references a commit or task, verify it locally before trusting it.
+A file existing on disk is not proof that the task is complete.
 
 ---
 
-## 23. Do Not Add More Mutable State Files
+## 8. If the Agent Did Not Update State Before Interruption
 
-The project-level mutable state should remain centralized in:
+This is expected and must not break recovery.
+
+On the next session:
 
 ```text
-docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+1. Treat PROJECT_EXECUTION_STATE.md as possibly stale.
+2. Use Git HEAD as the last factual baseline.
+3. Inspect git diff and untracked files.
+4. Determine whether work belongs to CURRENT_TASK.
+5. Run targeted verification if possible.
+6. If valid and complete: update PROJECT_EXECUTION_STATE.md and commit.
+7. If valid but incomplete: finish the smallest coherent unit, verify, update state, commit.
+8. If unsafe/unrelated: preserve or discard only after explicit inspection.
 ```
 
-Reports such as `DOC_REWRITE_REPORT.md` may exist as audit artifacts, but they do not control task progression.
-
-Individual documents should keep only static resume pointers, not live progress state.
+Never continue based only on an old task note if filesystem reality shows a different state.
 
 ---
 
-## 24. Remote Read Operations
+## 9. If State Says Verified But Git Does Not
 
-Fetching remote state for recovery or synchronization checks is allowed when useful.
+If `PROJECT_EXECUTION_STATE.md` says a task is verified but there is no local verified commit:
 
-But it must not become repeated per-task overhead.
+```text
+Task is NOT trusted as verified.
+```
 
-The local-only boundary forbids push/upload by default; it does not forbid occasional read-only remote inspection when needed for recovery.
+The Agent must:
 
+```text
+inspect files
+verify referenced commit/task evidence
+run targeted checks
+commit if truly complete
+or mark PROJECT_EXECUTION_STATE.md as RECOVERY_REQUIRED
+```
 
 ---
 
-## 25. Current Documentation Phase Task Boundary
+## 10. If Git Is Ahead But State Is Stale
+
+If Git contains committed work but `PROJECT_EXECUTION_STATE.md` is outdated:
+
+```text
+Git/filesystem reality wins for facts.
+```
+
+The Agent must reconcile `PROJECT_EXECUTION_STATE.md` before advancing tasks.
+
+---
+
+## 11. If Uncommitted Work Exists
+
+Classify it:
+
+```text
+none
+belongs_to_current_task
+useful_but_out_of_scope
+unknown
+unsafe
+```
+
+Rules:
+
+```text
+belongs_to_current_task → verify/complete smallest unit
+useful_but_out_of_scope → preserve as note or ask
+unknown → inspect before action
+unsafe → preserve evidence, ask or isolate
+```
+
+Forbidden unless explicitly instructed and after inspection:
+
+```text
+git reset --hard
+git clean -fd
+rm untracked files
+checkout overwrite
+```
+
+---
+
+## 12. State-Missing Recovery
+
+If `docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md` is missing, unreadable, empty, or invalid:
+
+```text
+treat project progress as UNKNOWN
+do not advance phases
+do not start product implementation
+do not invent task completion
+do not create a new task plan
+enter STATE_RECOVERY first
+reconstruct state only from Git + filesystem + existing repository documentation
+recreate PROJECT_EXECUTION_STATE.md only after verified reconstruction
+mark reconstructed state explicitly as VERIFIED or RECOVERY_REQUIRED
+commit reconstructed state before continuing
+```
+
+A missing state file is a recovery condition, not permission to continue.
+
+Do not create any additional mutable state file.
+
+---
+
+## 13. Current Documentation Phase Task Boundary
 
 ```text
 T-DOC-001 is governance preparation only.
@@ -543,24 +326,69 @@ T-DOC-002 is the first task allowed to begin actual documentation re-architectur
 
 ---
 
-## 26. State-Missing Recovery
+## 14. Static Resume Pointer in Individual Documents
 
-If `docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md` is missing, unreadable, empty, or invalid:
+Individual specification documents should not store live progress state.
+
+They may contain only a static pointer like:
 
 ```text
-treat project progress as UNKNOWN
-do not advance phases
-do not start product implementation
-do not invent task completion
-reconstruct state only from Git + filesystem + existing repository documentation
-recreate PROJECT_EXECUTION_STATE.md only after verified reconstruction
-mark the reconstructed state explicitly as VERIFIED or RECOVERY_REQUIRED
-commit the reconstructed state before continuing
+Resume / Handoff:
+Project execution state is controlled by docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md.
+Do not infer project progress from this document.
+Resume only from the authorized task recorded in the project state file.
 ```
 
-A missing state file is a recovery condition, not permission to continue.
+This avoids duplicated progress state and saves tokens.
 
-If `PROJECT_EXECUTION_STATE.md` is missing, do not create a new task plan.
-Enter `STATE_RECOVERY` first.
+---
 
-Do not create `STATE_RECOVERY.md`, `DOC_REWRITE_STATE.md`, or any additional mutable state file unless explicitly instructed.
+## 15. Build vs Documentation Work Separation
+
+Two modes must not be confused:
+
+```text
+documentation mode
+product implementation mode
+```
+
+If current phase is documentation:
+
+```text
+do not implement product code
+do not create runtime modules
+only edit the authorized documentation/governance scope
+```
+
+If product implementation is locked:
+
+```text
+PHASE_2_STATUS = LOCKED
+```
+
+must be respected.
+
+---
+
+## 16. Remote Read Operations
+
+Read-only remote inspection, such as fetch/rebase, may be used for recovery or synchronization checks when useful.
+
+But it must not become repeated per-task overhead.
+
+The local-only boundary forbids push/upload by default; it does not forbid occasional read-only remote inspection when needed for recovery.
+
+---
+
+## 17. Final Rule
+
+```text
+Short prompt.
+One mutable project state file.
+Strict reality checks.
+Git/filesystem verify facts.
+Project state controls task progression.
+Evidence closes.
+Local commit confirms.
+Push only if explicitly instructed.
+```

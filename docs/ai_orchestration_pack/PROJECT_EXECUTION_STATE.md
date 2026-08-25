@@ -18,10 +18,10 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R003
+STATE_REVISION: R004
 
 RESUME_TOKEN:
-PROJECT|R003|PHASE_1_DOCUMENTATION|T-DOC-001|PLANNED|bd98595
+PROJECT|R004|PHASE_1_DOCUMENTATION|T-DOC-001|VERIFIED|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
 bd98595e797bb4ce0eb9c62e0efa2d46fe6058ce
@@ -86,7 +86,7 @@ TASK_OBJECTIVE:
 Prepare the existing documentation pack for safe resumable execution before the actual documentation re-architecture begins.
 
 TASK_STATUS:
-PLANNED
+VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
 - modify existing resume/handoff sections
@@ -119,7 +119,12 @@ TASK_COMPLETION_CRITERIA:
 - Local commit is created and verified.
 
 VERIFICATION_EVIDENCE:
-To be recorded when T-DOC-001 is completed.
+- 22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md no longer references legacy mutable state files as required state.
+- Resume state is centralized on PROJECT_EXECUTION_STATE.md.
+- DOC_REWRITE_REPORT.md remains an audit artifact, not task-control state.
+- T-DOC-001 did not rewrite product/architecture specs.
+- Git diff reviewed.
+- Local commit created and verified; use `git rev-parse HEAD` for the exact trusted commit.
 ```
 
 ---
@@ -128,28 +133,22 @@ To be recorded when T-DOC-001 is completed.
 
 ```text
 LAST_VERIFIED_TASK:
-T-DOC-STATE-002
-
-LAST_VERIFIED_TASK_COMMIT:
-bd98595e797bb4ce0eb9c62e0efa2d46fe6058ce
-
-NEXT_TASK:
 T-DOC-001
 
+LAST_VERIFIED_TASK_COMMIT:
+VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
+
+CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
+DOCUMENTATION_REARCHITECTURE
+
+NEXT_TASK:
+T-DOC-002
+
 NEXT_TASK_OBJECTIVE:
-Resume/State Governance Preparation.
+Perform the actual documentation re-architecture according to the established governance, authority order, project decisions, and T-DOC-001 cleanup.
 
 NEXT_TASK_AUTHORIZED:
-YES
-
-AFTER_T_DOC_001_VERIFIED_SET:
-TASK_STATUS = VERIFIED
-LAST_VERIFIED_TASK = T-DOC-001
-LAST_TRUSTED_COMMIT = <local commit hash>
-CURRENT_WORKSTREAM = DOCUMENTATION_REARCHITECTURE
-NEXT_TASK = T-DOC-002
-NEXT_TASK_OBJECTIVE = Perform the actual documentation re-architecture according to the established governance, authority order, and project decisions.
-NEXT_TASK_AUTHORIZED = YES
+YES_AFTER_T_DOC_001_COMMIT_VERIFIED
 
 DO_NOT_START:
 PHASE_2_PRODUCT_IMPLEMENTATION
@@ -175,6 +174,7 @@ PHASE_2_PRODUCT_IMPLEMENTATION
 - Fetch/rebase may be used for recovery/synchronization checks, but it should not become repeated per-task overhead.
 - T-DOC-001 is resume/state governance preparation only, not actual documentation rewrite.
 - Actual documentation re-architecture begins at T-DOC-002 after T-DOC-001 is VERIFIED.
+- T-DOC-001 cleaned legacy resume/state instructions and centralized them on PROJECT_EXECUTION_STATE.md.
 ```
 
 ---
