@@ -1,5 +1,14 @@
 # 15 — MVP Roadmap
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-011)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md
+NOTE: Legacy "state files / Git/state/handoff protocol" wording is explicitly
+superseded by D10/D11 (single mutable state = PROJECT_EXECUTION_STATE.md).
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. MVP Philosophy
