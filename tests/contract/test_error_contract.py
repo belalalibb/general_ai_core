@@ -61,9 +61,7 @@ def test_minimal_error_defaults() -> None:
 
 def test_unknown_error_code_rejected() -> None:
     with pytest.raises(ValidationError):
-        ErrorDetail.model_validate(
-            {"code": "not_a_real_code", "message": "x", "retryable": False}
-        )
+        ErrorDetail.model_validate({"code": "not_a_real_code", "message": "x", "retryable": False})
 
 
 def test_unknown_fields_rejected() -> None:
@@ -88,15 +86,13 @@ def test_missing_required_fields_rejected() -> None:
 
 def test_empty_message_rejected() -> None:
     with pytest.raises(ValidationError):
-        ErrorDetail.model_validate(
-            {"code": "internal_error", "message": "", "retryable": False}
-        )
+        ErrorDetail.model_validate({"code": "internal_error", "message": "", "retryable": False})
 
 
 def test_contract_instances_are_immutable() -> None:
     detail = ErrorDetail(code=ErrorCode.RATE_LIMITED, message="slow down", retryable=True)
     with pytest.raises(ValidationError):
-        detail.message = "mutated"  # type: ignore[misc]
+        detail.message = "mutated"
 
 
 def test_json_schema_export() -> None:
