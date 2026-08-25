@@ -1,6 +1,18 @@
 # MASTER IMPLEMENTATION PLAN
 ## AI Orchestration Platform — Execution Baseline
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-011)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md
+NOTE: §32 (Resume Protocol), §33 (NEXT_PLAN.md), §35/§37 (dedicated
+FUTURE_IMPROVEMENTS.md / ARCHITECTURE_GAPS.md ledgers), §39 (Handoff files),
+and §42 (Static Resume Prompt) reference the legacy multi-state-file scheme
+and are explicitly superseded by D10/D11: the single mutable state is
+PROJECT_EXECUTION_STATE.md.
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ### حالة الوثيقة
 
 ```text
