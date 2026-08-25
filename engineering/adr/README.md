@@ -18,4 +18,4 @@ Rules (authority: `docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTO
 
 | ADR | Title | Status | Task |
 |-----|-------|--------|------|
-| [ADR-0001](ADR-0001-implementation-stack.md) | Implementation language / stack selection | PROPOSED (awaiting explicit user approval) | T-IMPL-002 |
+| [ADR-0001](ADR-0001-implementation-stack.md) | Implementation language / stack selection — Python / FastAPI / Pydantic | ACCEPTED (explicit user decision, 2026-08-25) | T-IMPL-002 / T-IMPL-003 |
