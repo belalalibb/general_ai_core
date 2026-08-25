@@ -1,5 +1,16 @@
 # 18 — Q&A Decision Log From Conversation
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-012)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/60_DECISION_LOG.md
+(all 25 Q&A entries carried verbatim as its Part A; the log continues there
+as an append-only live log; migration decision records appended as Part B)
+NOTE: Q20's recording target FUTURE_IMPROVEMENTS.md is explicitly superseded
+by D10/D11 — record such items in 60_DECISION_LOG.md (see successor MR-003).
+This file is retained as V2 baseline material only. Do not edit; do not append here.
+```
+
 هذه الوثيقة تربط أسئلة المستخدم الأصلية بالقرارات النهائية والمكان الذي تظهر فيه في المواصفات.
 
 ---
