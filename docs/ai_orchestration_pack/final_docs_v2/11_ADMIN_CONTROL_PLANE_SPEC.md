@@ -1,5 +1,12 @@
 # 11 — Admin Control Plane Specification
 
+```text
+STATUS: SUPERSEDED — NOT AUTHORITATIVE (T-DOC-009)
+AUTHORITATIVE SUCCESSOR:
+docs/ai_orchestration_pack/final_docs_v3/21_ADMIN_CONTROL_PLANE.md
+This file is retained as V2 baseline material only. Do not edit; do not cite as authority.
+```
+
 ---
 
 ## 1. Purpose
