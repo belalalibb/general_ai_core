@@ -29,7 +29,7 @@ DECISION_PRESERVATION:
 RELATED_AUTHORITY:
   Architecture + invariants baseline:  final_docs_v3/02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md
   Implementation plan / phase detail:  final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md (successor of v2 14+15)
-  Resume / progress protocol:          final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md (until created: v2 22)
+  Resume / progress protocol:          final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md (authoritative since T-DOC-012)
   Single mutable project state:        docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
 ```
 
@@ -540,7 +540,7 @@ That scheme is EXPLICITLY SUPERSEDED by decisions D10/D11:
 ```text
 - Single mutable project state = docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
 - Resume/progress protocol     = final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md
-                                 (until created: v2 22_LIGHTWEIGHT_RESUME_AND_PROGRESS_STATE_PROTOCOL.md)
+                                 (authoritative since T-DOC-012)
 - Decision records             = ADRs + 60_DECISION_LOG.md (successor of v2 18)
 - Do not create additional mutable state files.
 ```
