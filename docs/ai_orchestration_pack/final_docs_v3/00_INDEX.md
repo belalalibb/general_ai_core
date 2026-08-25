@@ -3,7 +3,7 @@
 ```text
 STATUS: V3_BLUEPRINT_APPROVED — MIGRATION_IN_PROGRESS
 AUTHORED_BY_TASK: T-DOC-002
-LAST_MIGRATION_TASK: T-DOC-006 (docs 01, 02, 03 authoritative)
+LAST_MIGRATION_TASK: T-DOC-009 (docs 20, 21, 22 authoritative)
 ```
 
 ## Purpose
@@ -60,14 +60,14 @@ Layer prefixes: `0x` Product/Architecture, `1x` Core Contracts, `2x` Security/Go
 | `01_PRODUCT_REQUIREMENTS.md` | v2 `01` | CARRY (surgical cleanup only) | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `01` SUPERSEDED with pointer banner) |
 | `02_ARCHITECTURE_BASELINE_AND_INVARIANTS.md` | v2 `02` | CARRY (invariants unchanged) | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `02` SUPERSEDED with pointer banner) |
 | `03_DOMAIN_MODEL.md` | v2 `03` | CARRY | COMPLETE_AUTHORITATIVE (T-DOC-006; v2 `03` SUPERSEDED with pointer banner) |
-| `10_API_CONTRACTS.md` | v2 `04` | CARRY | PENDING |
-| `11_MODEL_ROUTING_AND_MODEL_CONTROL.md` | v2 `06` | CARRY (keep all modes: AUTO / TIER / EXPLICIT_MODEL / EXPLICIT_MODELS / AGENT_NODE_MAPPING) | PENDING |
+| `10_API_CONTRACTS.md` | v2 `04` | CARRY | COMPLETE_AUTHORITATIVE (T-DOC-007; v2 `04` SUPERSEDED with pointer banner) |
+| `11_MODEL_ROUTING_AND_MODEL_CONTROL.md` | v2 `06` | CARRY (keep all modes: AUTO / TIER / EXPLICIT_MODEL / EXPLICIT_MODELS / AGENT_NODE_MAPPING) | COMPLETE_AUTHORITATIVE (T-DOC-007; v2 `06` SUPERSEDED with pointer banner) |
 | `12_EXECUTION_GRAPH_AND_AGENT_MODE.md` | v2 `07` + v2 `21` | MERGE (provider-agent orchestration is execution-graph behavior; one authority for Agent Mode) | COMPLETE_AUTHORITATIVE (T-DOC-005; v2 `07` + `21` SUPERSEDED with pointer banners) |
-| `13_MEMORY_AND_CONTEXT.md` | v2 `08` | CARRY | PENDING |
-| `14_SKILLS_AND_TOOLS.md` | v2 `09` | CARRY | PENDING |
-| `20_SECURITY_THREAT_MODEL.md` | v2 `10` | CARRY (Capability Firewall + deny-by-default unchanged) | PENDING |
-| `21_ADMIN_CONTROL_PLANE.md` | v2 `11` | CARRY | PENDING |
-| `22_EVALUATION_AND_LEARNING.md` | v2 `12` | CARRY | PENDING |
+| `13_MEMORY_AND_CONTEXT.md` | v2 `08` | CARRY | COMPLETE_AUTHORITATIVE (T-DOC-008; v2 `08` SUPERSEDED with pointer banner) |
+| `14_SKILLS_AND_TOOLS.md` | v2 `09` | CARRY | COMPLETE_AUTHORITATIVE (T-DOC-008; v2 `09` SUPERSEDED with pointer banner) |
+| `20_SECURITY_THREAT_MODEL.md` | v2 `10` | CARRY (Capability Firewall + deny-by-default unchanged) | COMPLETE_AUTHORITATIVE (T-DOC-009; v2 `10` SUPERSEDED with pointer banner) |
+| `21_ADMIN_CONTROL_PLANE.md` | v2 `11` | CARRY | COMPLETE_AUTHORITATIVE (T-DOC-009; v2 `11` SUPERSEDED with pointer banner) |
+| `22_EVALUATION_AND_LEARNING.md` | v2 `12` | CARRY | COMPLETE_AUTHORITATIVE (T-DOC-009; v2 `12` SUPERSEDED with pointer banner) |
 | `30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md` | v2 `24` + v2 `05` | MERGE (v2 `24` is already declared the final provider reference; v2 `05` detail folds under it — removes dual authority) | COMPLETE_AUTHORITATIVE (T-DOC-003; v2 `24` + `05` SUPERSEDED with pointer banners) |
 | `31_PROVIDER_SCAFFOLDING_AND_ONBOARDING.md` | v2 `23` + v2 `25` | MERGE (both cover the "no real providers yet" state and the path to real providers, by type) | COMPLETE_AUTHORITATIVE (T-DOC-004; v2 `23` + `25` SUPERSEDED with pointer banners) |
 | `40_ENGINEERING_PROTOCOL.md` | v2 `13` | REWRITE-COMPRESS (defect-justified: 2385 lines; legacy STATE.md/PROGRESS.md scheme conflicts with single-state decision D10/D11) | PENDING |
