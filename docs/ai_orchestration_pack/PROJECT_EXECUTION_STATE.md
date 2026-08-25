@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R021
+STATE_REVISION: R022
 
 RESUME_TOKEN:
-PROJECT|R021|PHASE_2_IMPLEMENTATION|T-IMPL-004|VERIFIED_MVP_PHASE1_STARTED_ERROR_CONTRACT|VERIFY_HEAD_WITH_GIT
+PROJECT|R022|PHASE_2_IMPLEMENTATION|T-IMPL-005|VERIFIED_MVP_PHASE1_EXECUTE_API_AND_MODEL_POLICY_CONTRACTS|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-004 commit; earlier this session: T-IMPL-003 f60aa5c)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (T-IMPL-005 content commit: 0a07f3d; earlier: T-IMPL-004 per R021)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-004
+T-IMPL-005
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,17 +126,18 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-004
+T-IMPL-005
 
 TASK_OBJECTIVE:
-MVP Phase 1 (Contracts) start on the accepted Python stack: (1) workspace layout per 41 §2 as Python packages (apps/, core/contracts/, providers/{registry,common}/, infrastructure/, tests/{unit,integration,contract,security,regression}); (2) pyproject.toml with pytest/mypy-strict/ruff/import-linter config incl. 4 import-linter boundary contracts (Core pure; Contracts import no implementation; Providers↔Infrastructure isolation); (3) first contracts: core/contracts/base.py (ContractModel: extra=forbid+frozen; shared ID/scalar aliases) and core/contracts/errors.py (unified error contract per 10 §9 — ErrorCode closed set of 11 categories verbatim, ErrorDetail, ErrorEnvelope); (4) 9 contract tests (spec-exact category set, documented example round-trip, accept/reject, immutability, JSON Schema export); (5) Python gates wired into check_repo.sh (single entry point) and CI workflow recreated for the Python stack.
+Continue MVP Phase 1 — Contracts: implement the /v1/execute API contract as Pydantic models per 10 §2–§5 (ExecuteRequest incl. model_policy per 10 §13 all 5 policy types, sync success response, async accepted response, execution status response) plus the streaming event and webhook event contracts (10 §11–§12), with contract tests validating every documented example verbatim and rejecting invalid payloads.
 
 TASK_STATUS:
 VERIFIED_AFTER_LOCAL_COMMIT
 
 ALLOWED_SCOPE:
-- create pyproject.toml, package skeleton per 41 §2, core/contracts/{base,errors}.py, tests/contract/test_error_contract.py
-- extend engineering/verification/check_repo.sh with Python gates; recreate .github/workflows/ci.yml
+- create core/contracts/execute.py, core/contracts/model_policy.py; export via core/contracts/__init__.py
+- create tests/contract/test_execute_contract.py, tests/contract/test_model_policy_contract.py
+- minor hygiene: gitignore python caches; untrack committed cache dirs
 - update this state file at the verified checkpoint
 
 FORBIDDEN_SCOPE:
@@ -145,16 +146,17 @@ FORBIDDEN_SCOPE:
 
 TASK_COMPLETION_CRITERIA:
 - pytest PASS; mypy --strict on core PASS; ruff PASS; import-linter 4 contracts KEPT.
-- Boundary gate negative-tested (deliberate violation detected, then removed).
+- Every documented example from 10 §2–§5, §11–§13 validates verbatim; invalid payloads rejected.
 - check_repo.sh single entry point runs all gates => RESULT: PASS.
 - Focused local commit; worktree clean; state updated.
 
-VERIFICATION_EVIDENCE (T-IMPL-004, this session):
-- pytest: 9 passed. mypy: no issues in 4 source files (strict, core). ruff: all checks passed. lint-imports: 4 kept, 0 broken.
-- Negative test: temporary core/_tmp_violation.py importing infrastructure => contract BROKEN detected; removed => 4 kept again.
-- check_repo.sh full run: 22 PASS lines, RESULT: PASS.
-- Error categories grep-matched 1:1 against 10 §9 (11 categories, verbatim).
-- Toolchain fact: sandbox runs Python 3.13.13 (pyproject requires >=3.12; CI pins 3.12).
+VERIFICATION_EVIDENCE (T-IMPL-005, this session):
+- pytest: 41 passed (9 error-contract + 15 execute-contract + 17 model-policy tests). mypy --strict (core + tests): no issues in 12 source files. ruff check: all checks passed; ruff format --check: 78 files formatted. lint-imports: 4 kept, 0 broken.
+- check_repo.sh full run: RESULT: PASS (all repo governance checks incl. secret scan).
+- Wire fidelity: ExecuteRequest round-trips the documented 10 §2 example byte-for-byte via aliases ("async", "schema"); JSON Schema export preserves aliases and additionalProperties=false.
+- Closed sets grep/enum-matched 1:1 against spec: ExecutionStatus (6, per 03 Domain Model), WebhookEventType (6, per 10 §12), StreamEvent types (6, per 10 §11), model policy types (5, per 10 §13), SelectionStrategy (5, per 10 §13.4), FallbackScope (6, per 11 §8).
+- All 5 documented policy examples (10 §13.1–§13.5 incl. the full agent_node_mapping workflow example with nested judge_policy) validate verbatim; unknown types/scopes/fields rejected; explicit_models requires non-empty models; auto policy rejects a concrete explicit_model_id; node-level policies reject recursive agent_node_mapping.
+- T-IMPL-005 content commit: 0a07f3d (also untracked previously-committed python cache dirs and extended .gitignore — maintenance, not a decision change).
 ```
 
 ---
@@ -163,19 +165,19 @@ VERIFICATION_EVIDENCE (T-IMPL-004, this session):
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-004
-
-LAST_VERIFIED_TASK_COMMIT:
-VERIFY_WITH_CURRENT_LOCAL_HEAD_AFTER_COMMIT
-
-CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP_PHASE_1_CONTRACTS_IN_PROGRESS (error contract + base types done; remaining 41 §40 deliverables: API schemas incl. execute request/response, provider contract, model contract, execution contract, core domain types)
-
-NEXT_TASK:
 T-IMPL-005
 
+LAST_VERIFIED_TASK_COMMIT:
+0a07f3d (content) + the state-checkpoint commit at HEAD after this update
+
+CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
+MVP_PHASE_1_CONTRACTS_IN_PROGRESS (error contract + base types + execute API contract + model policy contract done; remaining 41 §40 deliverables: provider contract, model contract, execution contract, core domain types)
+
+NEXT_TASK:
+T-IMPL-006
+
 NEXT_TASK_OBJECTIVE:
-Continue MVP Phase 1 — Contracts: implement the /v1/execute API contract as Pydantic models per 10 §2–§5 (ExecuteRequest incl. model_policy per 10 §13 all 5 policy types, sync success response, async accepted response, execution status response) plus the streaming event and webhook event contracts (10 §11–§12), with contract tests validating every documented example verbatim and rejecting invalid payloads. Verification: check_repo.sh single entry point PASS (pytest + mypy + ruff + import-linter).
+Continue MVP Phase 1 — Contracts: implement the provider contract and model contract as Pydantic models per 30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md (provider manifest/capability declaration, health/status surface) and 11_MODEL_ROUTING_AND_MODEL_CONTROL.md (model registry entry: capabilities, tiers, cost units, constraints), plus core domain types per 03_DOMAIN_MODEL.md needed by those contracts — with contract tests validating every documented example verbatim and rejecting invalid payloads. Contracts only: no network, no provider implementations. Verification: check_repo.sh single entry point PASS (pytest + mypy + ruff + import-linter).
 
 NEXT_TASK_AUTHORIZED:
 YES (same-session continuation allowed by the USER DIRECTIVE)
@@ -249,6 +251,8 @@ DO_NOT_START:
 - T-IMPL-004 started MVP Phase 1 (Contracts): workspace layout per 41 §2 created as Python packages; pyproject.toml is the single tool-config source; contract layer posture fixed in core/contracts/base.py (ContractModel = extra:forbid + frozen — deny-by-default at the contract boundary, immutable value objects); unified error contract implemented verbatim from 10 §9 (11 categories, closed StrEnum); 9 contract tests pass; import-linter enforces the 4 boundary contracts and was negative-tested.
 - check_repo.sh remains the single verification entry point: it now additionally runs pytest/mypy/ruff/import-linter when pyproject.toml exists (CI-mirrors-local preserved).
 - R021 note: .github/workflows/ci.yml (created at T-IMPL-001) was found missing from the worktree — evidently dropped during the external auto-uploader's history re-sync of dot-directories. Recreated at T-IMPL-004, upgraded for the Python stack (setup-python 3.12 + dev deps + same check_repo.sh entry point). If the uploader drops it again, restoring it is maintenance, not a decision change.
+- T-IMPL-005 completed the execute API + model policy contracts: core/contracts/execute.py (ExecuteRequest per 10 §2 with wire aliases async/schema; ExecuteSyncResponse §3; ExecuteAsyncAccepted §4 pinned to status=queued; ExecutionStatusResponse §5 with 6-state closed ExecutionStatus per 03; discriminated StreamEvent union §11; WebhookPayload + 6 WebhookEventType values §12) and core/contracts/model_policy.py (discriminated union of all 5 policy types per 10 §13; SelectionStrategy 5 values §13.4; FallbackScope 6 values per 11 §8; AgentPolicy request carrier §13.5; node policies exclude recursive agent_node_mapping). 41 contract tests validate every documented example verbatim (incl. byte-for-byte wire round-trip of the §2 request) and reject unknown fields/enum values/missing required fields. Maintenance in same commit: python cache dirs untracked + gitignored (uploader had synced .mypy_cache etc. as commits).
+- R022 session interruption note: T-IMPL-005 content work (contracts + tests) was authored in a prior interrupted session; this session verified all artifacts from the filesystem (facts from filesystem), fixed one test round-trip assertion (exclude_unset for the optional agent_policy field), removed one stale type-ignore, formatted 2 files, ran all gates green, and committed. Content commit: 0a07f3d.
 ```
 
 ---
