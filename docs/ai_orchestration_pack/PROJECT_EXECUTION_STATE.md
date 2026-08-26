@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R033
+STATE_REVISION: R034
 
 RESUME_TOKEN:
-PROJECT|R033|PHASE_2_IMPLEMENTATION|T-IMPL-017|VERIFIED_ADRS_0002_0003_0004_PROPOSED_AWAITING_SIGNOFF|VERIFY_HEAD_WITH_GIT
+PROJECT|R034|PHASE_2_IMPLEMENTATION|T-IMPL-017|RECONCILED_ADRS_ACCEPTED_DB_AND_REDIS_IMPLEMENTED_OTEL_IMPL_NEXT|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (this session: ADR-0002 commit 229d0e2; cache-untrack maintenance ced1e20; ADR-0003+0004 commit at HEAD after this update. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (R034 reconciliation session: state checkpoint commit at HEAD after this update; cache-untrack maintenance aaee055. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-017 (ADR document part; T-IMPL-015/016/017 ADR parts all done — implementations of all three BLOCKED on user sign-off)
+T-IMPL-016 (implementation part — Redis binding landed and verified; T-IMPL-015 implementation part also landed and verified; T-IMPL-017 implementation part is the next authorized task. Recorded at R034 by filesystem reconciliation: the session that executed the acceptances + implementations was interrupted before its state checkpoint, so R034 re-verified everything from filesystem + gates, per the recovery rule.)
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
