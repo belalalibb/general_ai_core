@@ -43,6 +43,10 @@ TraceId = Annotated[str, Field(min_length=1, max_length=128)]
 # Arbitrary JSON-object payloads (schemas that carry open "details"/"data").
 JsonObject = dict[str, Any]
 
+# Any JSON value (object, array, string, number, bool, null) — for contract
+# fields the spec types as bare "json" (e.g. 03 §3 MemoryItem.value).
+JsonValue = Any
+
 
 def utc_now() -> datetime:
     """Timezone-aware UTC timestamp source for contract defaults."""
