@@ -16,6 +16,11 @@ dependencies = [
     "pgvector>=0.2",
     # Redis binding — ADR-0003 (ACCEPTED 2026-08-25)
     "redis>=5",
+    # Observability — ADR-0004 (ACCEPTED 2026-08-25). OTLP exporter DEFERRED
+    # until a collector exists (per ADR); dev/test = console/no-op exporters.
+    "opentelemetry-api>=1.25",
+    "opentelemetry-sdk>=1.25",
+    "structlog>=24",
 ]
 
 [project.optional-dependencies]
@@ -86,3 +91,11 @@ name = "Core must not import the Redis client (ADR-0003)"
 type = "forbidden"
 source_modules = ["core"]
 forbidden_modules = ["redis"]
+
+# ADR-0004: telemetry SDK/log pipeline confined to apps/ composition root
+# (+ infrastructure instrumentation later) — core purity.
+[[tool.importlinter.contracts]]
+name = "Core must not import the telemetry stack (ADR-0004)"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["opentelemetry", "structlog"]
