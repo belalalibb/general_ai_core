@@ -8,7 +8,8 @@ Covers the 12 §12 execution-test items applicable to this in-process slice:
 single success, pipeline success, node retry, partial failure with fallback —
 plus error-aware failure routing (40 §4.6), Router-order traversal without
 re-scoring (02 invariant 5), record correctness (03 §5), opaque credential
-handling (20 §5), and composition fail-fast.
+handling (20 §5), composition fail-fast, and usage reservation/settlement
+integration (T-IMPL-024; 03 §7 reserve-before / resolve-exactly-once-after).
 """
 
 from __future__ import annotations
@@ -46,6 +47,7 @@ from core.contracts.provider import (
     ProviderOperation,
 )
 from core.contracts.routing import CandidateScore, RoutingDecision, ScoringWeights
+from core.contracts.usage import UsageLedgerStatus
 from core.execution import (
     PREVIOUS_OUTPUT_KEY,
     AdapterNotBound,
@@ -57,6 +59,11 @@ from core.execution import (
 )
 from core.providers import BindingRegistry
 from core.providers.errors import BindingNotFound
+from core.usage import (
+    BudgetExceeded,
+    EntitlementNotConfigured,
+    InMemoryUsageAccounting,
+)
 
 
 def run[T](coro: Coroutine[Any, Any, T]) -> T:
@@ -212,12 +219,18 @@ class World:
             weights=ScoringWeights(),
         )
 
-    def service(self, *, max_retries: int = 1) -> ExecutionService:
+    def service(
+        self,
+        *,
+        max_retries: int = 1,
+        usage: InMemoryUsageAccounting | None = None,
+    ) -> ExecutionService:
         return ExecutionService(
             adapters=self.adapters,
             credential_refs=self.credential_refs,
             bindings=self.bindings,
             max_retries_per_candidate=max_retries,
+            usage=usage,
             sleeper=_no_sleep,
         )
 
@@ -673,3 +686,159 @@ def test_failed_single_status_history_ends_failed() -> None:
     report = _single(world, world.decision(world.candidate(p1)))
     assert report.status_history[-1] is ExecutionStatus.FAILED
     assert report.final_output is None
+
+
+# --- usage reservation/settlement integration (T-IMPL-024; 03 §7) --------------------
+
+
+def _usage_world(limit: float = 10.0) -> tuple[World, InMemoryUsageAccounting, UUID]:
+    world = World()
+    accounting = InMemoryUsageAccounting()
+    tenant_id = uuid4()
+    accounting.configure_tenant(tenant_id, plan="pro", task_units_limit=limit)
+    return world, accounting, tenant_id
+
+
+def test_success_settles_one_unit_per_stage() -> None:
+    world, accounting, tenant = _usage_world()
+    p1, _ = world.add_provider([{"a": 1}])
+    p2, _ = world.add_provider([{"b": 2}])
+    stages = _stages(
+        world, world.decision(world.candidate(p1)), world.decision(world.candidate(p2))
+    )
+    report = run(
+        world.service(usage=accounting).execute_pipeline(
+            tenant_id=tenant, user_id=uuid4(), stages=stages, request_hash="h"
+        )
+    )
+    assert report.usage is not None
+    assert report.usage.status is UsageLedgerStatus.SETTLED
+    assert report.usage.units_reserved == 2.0  # 1 unit/stage × 2 stages held upfront
+    assert report.usage.units_settled == 2.0
+    summary = accounting.summary(tenant)
+    assert summary.task_units.used == 2.0
+    assert summary.task_units.remaining == 8.0
+
+
+def test_failed_execution_resolves_ledger_as_failed_charging_succeeded_stages() -> None:
+    world, accounting, tenant = _usage_world()
+    p1, _ = world.add_provider([{"a": 1}])
+    p2, _ = world.add_provider([_error(ProviderErrorCategory.NON_RETRYABLE_ERROR)])
+    stages = _stages(
+        world, world.decision(world.candidate(p1)), world.decision(world.candidate(p2))
+    )
+    report = run(
+        world.service(usage=accounting).execute_pipeline(
+            tenant_id=tenant, user_id=uuid4(), stages=stages, request_hash="h"
+        )
+    )
+    assert report.execution.status is ExecutionStatus.FAILED
+    assert report.usage is not None
+    assert report.usage.status is UsageLedgerStatus.FAILED
+    assert report.usage.units_settled == 1.0  # only stage-1 SUCCEEDED
+    # The unconsumed hold was released, not kept charged.
+    assert accounting.summary(tenant).task_units.remaining == 9.0
+
+
+def test_budget_denial_aborts_before_any_provider_call() -> None:
+    world, accounting, tenant = _usage_world(limit=1.0)
+    p1, a1 = world.add_provider()
+    p2, a2 = world.add_provider()
+    stages = _stages(
+        world, world.decision(world.candidate(p1)), world.decision(world.candidate(p2))
+    )
+    with pytest.raises(BudgetExceeded):
+        run(
+            world.service(usage=accounting).execute_pipeline(
+                tenant_id=tenant, user_id=uuid4(), stages=stages, request_hash="h"
+            )
+        )
+    assert len(a1.requests) == 0  # denied BEFORE provider work (20 §4)
+    assert len(a2.requests) == 0
+    assert accounting.summary(tenant).task_units.remaining == 1.0  # nothing held
+
+
+def test_unconfigured_tenant_is_denied_by_default() -> None:
+    world = World()
+    accounting = InMemoryUsageAccounting()  # no configure_tenant call
+    p1, a1 = world.add_provider()
+    with pytest.raises(EntitlementNotConfigured):
+        _single(
+            world,
+            world.decision(world.candidate(p1)),
+            service=world.service(usage=accounting),
+        )
+    assert len(a1.requests) == 0
+
+
+def test_unexpected_crash_resolves_reservation_before_propagating() -> None:
+    """A mid-execution fault must not leak the hold (03 §7 exactly-once)."""
+    world, accounting, tenant = _usage_world()
+    p1, _ = world.add_provider()
+
+    class Boom(Exception):
+        pass
+
+    async def _explode(seconds: float) -> None:
+        raise Boom
+
+    # Retryable error with retry_after triggers the sleeper, which explodes
+    # mid-run — simulating an unexpected infrastructure fault.
+    p2, _ = world.add_provider(
+        [_error(ProviderErrorCategory.RATE_LIMITED, retryable=True, retry_after_ms=50)]
+    )
+    decision = world.decision(world.candidate(p2))
+    execution_ids: list[UUID] = []
+
+    def _capture_id() -> UUID:
+        execution_ids.append(uuid4())
+        return execution_ids[-1]
+
+    svc = ExecutionService(
+        adapters=world.adapters,
+        credential_refs=world.credential_refs,
+        bindings=world.bindings,
+        usage=accounting,
+        sleeper=_explode,
+        id_factory=_capture_id,
+    )
+    with pytest.raises(Boom):
+        run(
+            svc.execute_single(
+                tenant_id=tenant,
+                user_id=uuid4(),
+                decision=decision,
+                operation=ProviderOperation.GENERATE_TEXT,
+                payload={"prompt": "hi"},
+                request_hash="h",
+            )
+        )
+    ledger = accounting.get(execution_ids[0])
+    assert ledger.status is UsageLedgerStatus.FAILED
+    assert ledger.units_settled == 0
+    assert accounting.summary(tenant).task_units.remaining == 10.0
+
+
+def test_success_report_ledger_visible_in_cost_snapshot() -> None:
+    world, accounting, tenant = _usage_world()
+    p1, _ = world.add_provider([{"text": "x"}])
+    report = _single(
+        world,
+        world.decision(world.candidate(p1)),
+        service=world.service(usage=accounting),
+        tenant_id=tenant,
+    )
+    settlement = report.execution.cost_snapshot["settlement"]
+    assert settlement == {
+        "status": "settled",
+        "units_reserved": 1.0,
+        "units_settled": 1.0,
+    }
+
+
+def test_unbound_usage_keeps_pending_settlement_and_none_ledger() -> None:
+    world = World()
+    p1, _ = world.add_provider()
+    report = _single(world, world.decision(world.candidate(p1)))
+    assert report.usage is None
+    assert report.execution.cost_snapshot["settlement"] == "pending_usage_service"
