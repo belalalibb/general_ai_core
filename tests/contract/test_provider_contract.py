@@ -154,10 +154,78 @@ def test_manifest_without_account_pool_is_valid() -> None:
 
 
 def test_manifest_auth_requires_at_least_one_type() -> None:
+    # 30 §7: a REAL (functional, non-template) provider must declare auth.
     with pytest.raises(ValidationError):
         ProviderManifest.model_validate(
             _manifest_payload(auth={"types": [], "supports_refresh": False})
         )
+
+
+def test_template_manifest_allows_empty_auth_types() -> None:
+    # 31 §7 verbatim: template manifests declare ``auth: types: []``.
+    manifest = ProviderManifest.model_validate(
+        _manifest_payload(
+            status="template_disabled",
+            is_template=True,
+            is_functional=False,
+            real_provider_required=True,
+            auth={"types": [], "supports_refresh": False},
+            notes=["TEMPLATE ONLY", "replace before enabling"],
+        )
+    )
+    assert manifest.is_template is True
+    assert manifest.auth.types == []
+    assert manifest.notes == ["TEMPLATE ONLY", "replace before enabling"]
+
+
+def test_capabilities_include_diversity_categories() -> None:
+    # 31 §6 categories 8-10 + §8: embeddings/rerank/moderation/tool_use are
+    # declarable capability keys (still deny-by-default).
+    caps = ProviderCapabilities(
+        embeddings=True, rerank=True, moderation=True, tool_use=True
+    )
+    assert caps.embeddings and caps.rerank and caps.moderation and caps.tool_use
+    assert ProviderCapabilities().embeddings is False
+
+
+def test_agent_module_and_security_blocks() -> None:
+    # 31 §8: provider-native agent template declares agent_module + security.
+    manifest = ProviderManifest.model_validate(
+        _manifest_payload(
+            status="template_disabled",
+            is_template=True,
+            is_functional=False,
+            real_provider_required=True,
+            auth={"types": []},
+            agent_module={
+                "supported": True,
+                "type": "provider_native_agent",
+                "state_model": "unknown",
+                "supports_provider_tools": "unknown",
+                "supports_platform_tools": False,
+                "provider_managed_state": "unknown",
+            },
+            security={
+                "provider_side_tools_allowed_by_default": False,
+                "requires_capability_firewall": True,
+                "requires_evaluation": True,
+                "requires_audit": True,
+            },
+        )
+    )
+    assert manifest.agent_module is not None
+    assert manifest.agent_module.supported is True
+    # 11 §5: unknown is a legal declared value, never treated as supported.
+    assert manifest.agent_module.supports_provider_tools == "unknown"
+    assert manifest.security is not None
+    assert manifest.security.provider_side_tools_allowed_by_default is False
+
+
+def test_agent_module_absent_on_ordinary_manifest() -> None:
+    manifest = ProviderManifest.model_validate(_manifest_payload())
+    assert manifest.agent_module is None
+    assert manifest.security is None
+    assert manifest.notes == []
 
 
 # --- §11 health --------------------------------------------------------------------
