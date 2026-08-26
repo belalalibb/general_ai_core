@@ -102,6 +102,23 @@ class SimpleScoringRouter:
         # 11 §8 admin_defined_chain: ordered model_keys, admin-configured.
         self._admin_fallback_chain = admin_fallback_chain
 
+    # -- admin seam (21 §6 routing-policy weights) ----------------------------------
+
+    @property
+    def default_weights(self) -> ScoringWeights:
+        """The weight set used when a request carries none (11 §6)."""
+        return self._default_weights
+
+    def set_default_weights(self, weights: ScoringWeights) -> None:
+        """Replace the default scoring weights (admin control plane, 21 §6).
+
+        Weights are versioned contracts (11 §6 "policy-driven and
+        versioned"): the ScoringWeights ``version`` field keeps published
+        decisions explainable after a change. Per-request weight overrides
+        are unaffected.
+        """
+        self._default_weights = weights
+
     # -- public API ---------------------------------------------------------------
 
     def route(self, request: RoutingRequest) -> RoutingDecision:
