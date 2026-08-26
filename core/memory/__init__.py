@@ -8,8 +8,8 @@ same ports in a later phase (ADR-0002 toolchain stays in infrastructure).
 from core.memory.errors import (
     ConversationNotFound,
     EmptyMessage,
-    MemoryStoreError,
     MemoryItemNotFound,
+    MemoryStoreError,
     SecretLikeMemoryRejected,
 )
 from core.memory.memory import InMemoryConversationStore, InMemoryMemoryStore
