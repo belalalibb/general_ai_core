@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R035
+STATE_REVISION: R036
 
 RESUME_TOKEN:
-PROJECT|R035|PHASE_2_IMPLEMENTATION|MVP_PHASE_3_EXIT_VERIFIED|OTEL_IMPLEMENTED_ALL_PHASE_3_DELIVERABLES_DONE|PHASE_4_REQUIRES_NEW_SESSION
+PROJECT|R036|PHASE_2_IMPLEMENTATION|MVP_PHASE_4_STARTED|R035_REVERIFIED_IN_NEW_SESSION_SLICING_RECORDED|T_IMPL_018_IN_PROGRESS
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (R035 session: T-IMPL-017 implementation commit 6ba586b, cache-untrack maintenance 3d5383f, then this state checkpoint at HEAD. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (R036 session: NEW session re-verified the R035 checkpoint per the recovery rule — filesystem deliverables present, deps reinstalled after another sandbox reset, 269 tests PASS, all 7 import-linter contracts kept, check_repo.sh PASS. Auto-uploader had again re-tracked tool caches — untracked in this checkpoint commit. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-017 (implementation part — ADR-0004 observability wiring landed and verified; MVP Phase 3 exit criteria (41 §42) evaluated in the same session and MET: all six deliverables present with green gates. Phase 4 (41 §43) must start in a NEW session per the MVP-PHASE BOUNDARY DECISION (R024).)
+R035 re-verification in a NEW session (satisfying the R024 phase boundary) + MVP Phase 4 SLICING DECISION recorded. T-IMPL-018 authorized and started in this session.
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -195,19 +195,19 @@ CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
 MVP Phase 3 — Storage / Observability (41 §42): COMPLETE. All six deliverables DONE and verified (T-IMPL-012..017; ADR-0002/0003/0004 all ACCEPTED and IMPLEMENTED). Next workstream: MVP Phase 4 — Provider + Model MVP (41 §43).
 
 NEXT_TASK:
-T-IMPL-018 — first MVP Phase 4 slice (41 §43: provider registry, one provider adapter, model registry, provider-model binding, credential reference, health checks). A Phase 4 SLICING DECISION must be recorded at the start of the Phase 4 session (mirroring the R025 Phase 2 slicing), contracts/ports-first; provider/model/binding/credential CONTRACTS already exist from Phase 1 (core/contracts/domain.py, provider.py), so the slice starts at the port/registry-service layer.
+T-IMPL-018 — MVP Phase 4 slice 1 (per the R036 SLICING DECISION below): ProviderAdapter behavioral port (30 §8.1) + the missing operation contracts (ProviderGenerateRequest/Response, CredentialHealth, HealthScope, ModelDiscovery result) in core/providers/ports.py + core/contracts/provider.py extensions, with hermetic contract tests.
 
 NEXT_TASK_OBJECTIVE:
-At the start of the NEW session: (1) re-verify the R035 checkpoint from filesystem + git per the recovery rule; (2) record the Phase 4 slicing decision; (3) begin the first slice. Constraints carried forward: no real provider network calls in gates (hermetic fakes; 30 §8 ProviderAdapter behavioral interface lands here), credential handling stays opaque-reference-only (20 §5), unknown capability => DENY (30 §7).
+Land the behavioral seam between Core and providers exactly as 30 §8 defines it, hermetically (no network). Then T-IMPL-019 (registries + health aggregation + template-exclusion rules per 31 §10) and T-IMPL-020 (providers/ scaffold tree with 12 disabled templates per 31 §5–§7, pending list, 31 §11 scaffold tests).
 
 NEXT_TASK_NOTE:
-MVP-PHASE BOUNDARY DECISION (R024) applies: Phase 4 must NOT start in this session (the session that verified Phase 3 exit). This session stops after the R035 checkpoint commit.
+Constraints carried forward: no real provider network calls in gates (hermetic fakes), credential handling stays opaque-reference-only (20 §5), unknown capability => DENY (30 §7), templates never active (31 §4/§10). 41 §49 applies: no real provider details exist yet, so Phase 4 delivers scaffold-state per doc 31 — 'one provider adapter' is satisfied by the adapter CONTRACT + template implementations proven non-functional; end-to-end AI execution stays explicitly NOT-CLAIMED until a real provider lands.
 
 NEXT_TASK_AUTHORIZED:
-NO_IN_THIS_SESSION — YES in a NEW session that first re-verifies R035 from filesystem + git. No additional operator sign-off is required to start Phase 4 work itself (the USER DIRECTIVE covers migration-order execution), but any new dependency still requires its own ADR flow per governance.
+YES (R035 re-verified in this new session; USER DIRECTIVE 2026-08-26 covers continuous migration-order execution).
 
 DO_NOT_START:
-- MVP Phase 4 code IN THIS SESSION (new-session boundary per R024 decision); MVP Phase 5+ code until Phase 4 exit is verified
+- MVP Phase 5+ code until Phase 4 exit is verified
 - real KMS/vault/network bindings; real secret material anywhere (20 §5)
 - no OTLP exporter dependency until a collector exists (ADR-0004)
 - do not re-open Phase 1/2 contract or service decisions or ACCEPTED ADRs (superseding ADR required)
@@ -219,6 +219,8 @@ DO_NOT_START:
 
 ```text
 - USER DIRECTIVE (2026-08-25, supersedes one-task-per-session stop rule): the Agent must execute as many authorized tasks as possible in the same session, in migration order, provided each task still gets its own focused commit, its own verification, and a state-file update at each verified checkpoint. Phase boundaries still hold: Phase 2 must not start in the same session that verifies Phase 1.
+- USER DIRECTIVE (2026-08-26, R036 — continuous execution to project completion): the operator instructed "execute the next task and continue until full project completion". Interpretation under governance: continue executing authorized tasks in migration order across MVP phases within this session, keeping per-task commits, per-task verification, and state checkpoints. The R024 phase-boundary decision is SATISFIED for Phase 4 (this is a new session that first re-verified R035). For SUBSEQUENT phase boundaries this directive is read as explicit operator authorization to verify a phase's exit criteria and continue into the next phase within the same session — the R024 rule's purpose (no unverified phase rollover) is preserved because each phase exit still gets an explicit verified checkpoint commit before the next phase starts. "Full project completion" for this workstream = MVP DoD (41 §48) EXCEPT items impossible without real provider credentials/network (41 §49 explicitly authorizes scaffold-state and forbids faking them); those are recorded as PENDING_REAL_PROVIDERS, never claimed.
+- MVP PHASE 4 SLICING DECISION (R036): 41 §43 deliverables are executed contracts-first, mirroring R025: T-IMPL-018 ProviderAdapter behavioral port (30 §8) + missing operation contracts → T-IMPL-019 provider/model/binding registries + health aggregation + template-exclusion (31 §10) → T-IMPL-020 providers/ scaffold tree (31 §5–§7: 12 disabled diverse templates, manifest schema validation, _pending_real_providers.md, 31 §11 test suite). 'Credential reference' deliverable = opaque credential_ref plumbing through registry + adapter port (20 §5), never secret material. 41 §49 scaffold-state rules bind the whole phase.
 - Agent performs local work only unless explicit push instruction is given.
 - Auto-uploader/external system owns remote synchronization.
 - Local commit + verification is enough to mark a task VERIFIED.
