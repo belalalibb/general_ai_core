@@ -58,9 +58,7 @@ class ConversationStorePort(Protocol):
         """Transition active|archived (03 §3 closed set)."""
         ...
 
-    def list_conversations(
-        self, tenant_id: UUID, user_id: UUID
-    ) -> tuple[Conversation, ...]:
+    def list_conversations(self, tenant_id: UUID, user_id: UUID) -> tuple[Conversation, ...]:
         """List the user's conversations within the tenant (newest first)."""
         ...
 
