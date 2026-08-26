@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R037
+STATE_REVISION: R038
 
 RESUME_TOKEN:
-PROJECT|R037|PHASE_2_IMPLEMENTATION|MVP_PHASE_4|T_IMPL_018_VERIFIED|NEXT_T_IMPL_019_REGISTRIES
+PROJECT|R038|PHASE_2_IMPLEMENTATION|MVP_PHASE_4|T_IMPL_019_VERIFIED|NEXT_T_IMPL_020_SCAFFOLD_TREE
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (R037 session: the R036 session was interrupted mid-T-IMPL-018; its artifacts were synced by the auto-uploader as per-file commits. This session applied the recovery rule — verified every T-IMPL-018 artifact from the filesystem, reinstalled deps after ANOTHER sandbox reset, untracked re-tracked tool caches, ran full gates: 291 tests PASS, mypy --strict clean, ruff clean, all 7 import-linter contracts kept, check_repo.sh PASS. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (R038 session: the R037 session was interrupted mid-T-IMPL-019 verification (during a ruff-format inspection); its artifacts were synced by the auto-uploader as per-file commits. This session applied the recovery rule — verified every T-IMPL-019 artifact from the filesystem (core/providers/registry.py 335 lines, errors extended, tests/providers/test_provider_registries.py 323 lines with ZERO type-ignores), reinstalled deps after ANOTHER sandbox reset, ran full gates: 314 tests PASS, mypy --strict clean, ruff clean, all 7 import-linter contracts kept, secret scan clean, check_repo.sh RESULT: PASS. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-018 — ProviderAdapter behavioral port (30 §8) + missing operation contracts, VERIFIED from filesystem + green gates in this session (R037).
+T-IMPL-019 — provider/model/binding registries + health aggregation + template exclusion (31 §10), VERIFIED from filesystem + green gates in this session (R038).
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -186,25 +186,33 @@ MVP_PHASE_3_EXIT (recorded R035): MVP_PHASE_3_STATUS: EXIT_CRITERIA_MET_AND_VERI
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-018 — ProviderAdapter behavioral port + operation contracts (R037)
+T-IMPL-019 — provider/model/binding registries + health aggregation + template exclusion (R038)
 
 LAST_VERIFIED_TASK_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (auto-uploader history rewrites make stored hashes unreliable; content verified against filesystem + green gates at R034)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (auto-uploader history rewrites make stored hashes unreliable; content verified against filesystem + green gates at R038)
+
+T_IMPL_019_VERIFICATION_EVIDENCE (R038):
+- core/providers/registry.py (335 lines): RegisteredProvider (immutable provider+manifest pairing; is_template = ANY 31 §7 marker: is_template OR status=template_disabled OR real_provider_required — defense in depth), ProviderRegistry (register rejects duplicates, replace = explicit re-registration; templates ARE loadable per 31 §10 but never eligible; supports_operation per 30 §5; supports_capability deny-by-default via getattr-False per 30 §7/20 §4; ensure_eligible gate ordered existence→template→functional→status→operation; routing_candidates applies all 31 §10 exclusions), ModelRegistry (03 §4: active_models pool, models_with_capability declared-only per 11 §5), BindingRegistry (ProviderModelBinding; multi-provider per model; availability is per-binding fact), aggregate_provider_health (30 §11: templates/non-functional => UNAVAILABLE always; explicit provider-scope signal wins; account failures only ever DEGRADE — even ALL accounts failing is account-scope evidence, never provider death; no accounts + no signal => HEALTHY since account pools are optional per 30 §10.1).
+- core/providers/errors.py extended: DuplicateRegistration, ProviderNotRegistered, ModelNotRegistered, BindingNotFound, ProviderNotEligible.
+- tests/providers/test_provider_registries.py: 31 hermetic tests, ZERO type-ignore comments — registration/duplicate/replace, template exclusion matrix (all 3 markers), eligibility gate ordering, deny-by-default capability (unknown key => False), routing candidate filtering by operation, model/binding registries, health aggregation matrix (template=>UNAVAILABLE, provider signal precedence, all-accounts-down=>DEGRADED-not-UNAVAILABLE, empty accounts=>HEALTHY).
+- Credential plumbing stayed opaque: registry surfaces touch credential_ref only, no secret material anywhere (20 §5).
+- Gates at R038: 314 tests PASS (31 provider-registry); mypy --strict (core/) clean across 38 files; ruff clean; ALL 7 import-linter contracts kept; secret scan clean; check_repo.sh RESULT: PASS.
+- Session maintenance (R038): sandbox reset wiped dev tools AGAIN — reinstalled all pinned deps (ruff/mypy/import-linter + runtime deps) before gates. Known pre-existing cosmetic note: `ruff format --check` would reformat 15 files repo-wide (long-standing, includes pre-T-IMPL-018 files); the ENFORCED gate is `ruff check` (lint), which is clean — formatting normalization is deliberately NOT bundled into this focused task commit.
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP Phase 4 — Provider + Model MVP (41 §43): IN PROGRESS. Slice 1 (T-IMPL-018 adapter port + contracts) DONE; next slices: T-IMPL-019 registries, T-IMPL-020 scaffold tree.
+MVP Phase 4 — Provider + Model MVP (41 §43): IN PROGRESS. Slice 1 (T-IMPL-018 adapter port + contracts) DONE; slice 2 (T-IMPL-019 registries) DONE; final slice: T-IMPL-020 scaffold tree.
 
 NEXT_TASK:
-T-IMPL-019 — MVP Phase 4 slice 2 (per the R036 SLICING DECISION): provider/model/binding registries + health aggregation + template-exclusion rules (31 §10) in core/providers/registry.py (in-memory, hermetic), honoring: registry trusts ONLY the manifest (30 §4.2), disabled/template providers are NEVER eligible (31 §4/§10), unknown capability => DENY (30 §7), provider health ≠ account health (30 §11), opaque credential_ref plumbing only (20 §5).
+T-IMPL-020 — MVP Phase 4 slice 3 (per the R036 SLICING DECISION): providers/ scaffold tree per 31 §5–§7: 12 disabled diverse provider templates (each with manifest marked template_disabled + is_functional=false + real_provider_required=true), manifest schema validation against core contracts, providers/_pending_real_providers.md ledger, and the 31 §11 scaffold test suite (every template loads, validates, is excluded from routing/execution/health, and raises on invoke).
 
 NEXT_TASK_OBJECTIVE:
-Land the Core-side registries that make the adapter port usable: ProviderRegistry (register/enable/disable, manifest-derived eligibility, template exclusion), ModelRegistry (Model records per 03 §4), BindingRegistry (ProviderModelBinding), health aggregation that never conflates one bad account with provider death. Then T-IMPL-020 (providers/ scaffold tree with 12 disabled templates per 31 §5–§7, _pending_real_providers.md, 31 §11 scaffold tests).
+Make the providers/ top-level package real scaffold-state per doc 31: templates prove the adapter contract shape without any network or secret material; _pending_real_providers.md records exactly what cannot be claimed until real providers land (41 §49). After T-IMPL-020, run the MVP Phase 4 exit evaluation (41 §43) and record it.
 
 NEXT_TASK_NOTE:
-Constraints carried forward: no real provider network calls in gates (hermetic fakes), credential handling stays opaque-reference-only (20 §5), unknown capability => DENY (30 §7), templates never active (31 §4/§10). 41 §49 applies: no real provider details exist yet, so Phase 4 delivers scaffold-state per doc 31 — 'one provider adapter' is satisfied by the adapter CONTRACT + template implementations proven non-functional; end-to-end AI execution stays explicitly NOT-CLAIMED until a real provider lands.
+Constraints carried forward: no real provider network calls in gates (hermetic fakes), credential handling stays opaque-reference-only (20 §5), unknown capability => DENY (30 §7), templates never active (31 §4/§10). 41 §49 applies: end-to-end AI execution stays explicitly NOT-CLAIMED until a real provider lands. import-linter: providers/ may import core contracts, never the reverse.
 
 NEXT_TASK_AUTHORIZED:
-YES (USER DIRECTIVE 2026-08-26 covers continuous migration-order execution; T-IMPL-018 verified in this session).
+YES (USER DIRECTIVE 2026-08-26 covers continuous migration-order execution; T-IMPL-019 verified in this session).
 
 DO_NOT_START:
 - MVP Phase 5+ code until Phase 4 exit is verified
