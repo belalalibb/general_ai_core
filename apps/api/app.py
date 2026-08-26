@@ -87,6 +87,7 @@ from fastapi import FastAPI, Header, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from apps.api.admin import AdminSurface, create_admin_router
 from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
@@ -134,10 +135,17 @@ from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 
 @dataclass(frozen=True)
 class Principal:
-    """Authenticated caller identity — the seam the auth phase will fill."""
+    """Authenticated caller identity — the seam the auth phase will fill.
+
+    ``is_admin`` (T-IMPL-032; R049 boundary (e)): deny-by-default admin
+    flag — NOT a rebuilt RBAC system, just the single seam a real 20 §3
+    role binding will later populate. False unless composition explicitly
+    grants it; every /v1/admin/* route denies without it.
+    """
 
     tenant_id: UUID
     user_id: UUID
+    is_admin: bool = False
 
 
 def _request_hash(payload: ExecuteRequest) -> str:
@@ -272,6 +280,7 @@ def create_app(
     conversations: ConversationStorePort | None = None,
     composer: ContextComposer | None = None,
     context_budget: int = 16_000,
+    admin: AdminSurface | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -280,6 +289,10 @@ def create_app(
     nothing listed, no role admissible — 20 §4); ``conversations`` enables
     history persistence; ``composer`` enables 13 §5 context composition and
     MUST share the same registry/store instances injected here.
+
+    Phase 7 seam: ``admin`` (T-IMPL-032) mounts /v1/admin/* over the
+    injected AdminSurface; absent, NO admin route exists at all — the
+    strongest deny-by-default (nothing to probe, 20 §4).
     """
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
@@ -591,6 +604,17 @@ def create_app(
         return JSONResponse(
             status_code=200,
             content=status_response.model_dump(mode="json", exclude_none=True),
+        )
+
+    # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
+    if admin is not None:
+        app.include_router(
+            create_admin_router(
+                admin,
+                tenant_id=principal.tenant_id,
+                actor_id=principal.user_id,
+                is_admin=principal.is_admin,
+            )
         )
 
     return app
