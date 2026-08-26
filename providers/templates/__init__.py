@@ -27,7 +27,6 @@ not force one provider shape.
 from __future__ import annotations
 
 from core.contracts.provider import ProviderManifest
-
 from providers.templates import (
     audio_stt_provider,
     audio_tts_provider,
