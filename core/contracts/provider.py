@@ -27,10 +27,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from uuid import UUID
 
 from pydantic import Field
-
-from uuid import UUID
 
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.contracts.domain import AuthType, CredentialStatus
