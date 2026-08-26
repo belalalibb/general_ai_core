@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R036
+STATE_REVISION: R037
 
 RESUME_TOKEN:
-PROJECT|R036|PHASE_2_IMPLEMENTATION|MVP_PHASE_4_STARTED|R035_REVERIFIED_IN_NEW_SESSION_SLICING_RECORDED|T_IMPL_018_IN_PROGRESS
+PROJECT|R037|PHASE_2_IMPLEMENTATION|MVP_PHASE_4|T_IMPL_018_VERIFIED|NEXT_T_IMPL_019_REGISTRIES
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (R036 session: NEW session re-verified the R035 checkpoint per the recovery rule — filesystem deliverables present, deps reinstalled after another sandbox reset, 269 tests PASS, all 7 import-linter contracts kept, check_repo.sh PASS. Auto-uploader had again re-tracked tool caches — untracked in this checkpoint commit. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (R037 session: the R036 session was interrupted mid-T-IMPL-018; its artifacts were synced by the auto-uploader as per-file commits. This session applied the recovery rule — verified every T-IMPL-018 artifact from the filesystem, reinstalled deps after ANOTHER sandbox reset, untracked re-tracked tool caches, ran full gates: 291 tests PASS, mypy --strict clean, ruff clean, all 7 import-linter contracts kept, check_repo.sh PASS. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-R035 re-verification in a NEW session (satisfying the R024 phase boundary) + MVP Phase 4 SLICING DECISION recorded. T-IMPL-018 authorized and started in this session.
+T-IMPL-018 — ProviderAdapter behavioral port (30 §8) + missing operation contracts, VERIFIED from filesystem + green gates in this session (R037).
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -186,25 +186,25 @@ MVP_PHASE_3_EXIT (recorded R035): MVP_PHASE_3_STATUS: EXIT_CRITERIA_MET_AND_VERI
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-017 (implementation part) + MVP Phase 3 exit evaluation (R035)
+T-IMPL-018 — ProviderAdapter behavioral port + operation contracts (R037)
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_GIT_REV_PARSE_HEAD (auto-uploader history rewrites make stored hashes unreliable; content verified against filesystem + green gates at R034)
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP Phase 3 — Storage / Observability (41 §42): COMPLETE. All six deliverables DONE and verified (T-IMPL-012..017; ADR-0002/0003/0004 all ACCEPTED and IMPLEMENTED). Next workstream: MVP Phase 4 — Provider + Model MVP (41 §43).
+MVP Phase 4 — Provider + Model MVP (41 §43): IN PROGRESS. Slice 1 (T-IMPL-018 adapter port + contracts) DONE; next slices: T-IMPL-019 registries, T-IMPL-020 scaffold tree.
 
 NEXT_TASK:
-T-IMPL-018 — MVP Phase 4 slice 1 (per the R036 SLICING DECISION below): ProviderAdapter behavioral port (30 §8.1) + the missing operation contracts (ProviderGenerateRequest/Response, CredentialHealth, HealthScope, ModelDiscovery result) in core/providers/ports.py + core/contracts/provider.py extensions, with hermetic contract tests.
+T-IMPL-019 — MVP Phase 4 slice 2 (per the R036 SLICING DECISION): provider/model/binding registries + health aggregation + template-exclusion rules (31 §10) in core/providers/registry.py (in-memory, hermetic), honoring: registry trusts ONLY the manifest (30 §4.2), disabled/template providers are NEVER eligible (31 §4/§10), unknown capability => DENY (30 §7), provider health ≠ account health (30 §11), opaque credential_ref plumbing only (20 §5).
 
 NEXT_TASK_OBJECTIVE:
-Land the behavioral seam between Core and providers exactly as 30 §8 defines it, hermetically (no network). Then T-IMPL-019 (registries + health aggregation + template-exclusion rules per 31 §10) and T-IMPL-020 (providers/ scaffold tree with 12 disabled templates per 31 §5–§7, pending list, 31 §11 scaffold tests).
+Land the Core-side registries that make the adapter port usable: ProviderRegistry (register/enable/disable, manifest-derived eligibility, template exclusion), ModelRegistry (Model records per 03 §4), BindingRegistry (ProviderModelBinding), health aggregation that never conflates one bad account with provider death. Then T-IMPL-020 (providers/ scaffold tree with 12 disabled templates per 31 §5–§7, _pending_real_providers.md, 31 §11 scaffold tests).
 
 NEXT_TASK_NOTE:
 Constraints carried forward: no real provider network calls in gates (hermetic fakes), credential handling stays opaque-reference-only (20 §5), unknown capability => DENY (30 §7), templates never active (31 §4/§10). 41 §49 applies: no real provider details exist yet, so Phase 4 delivers scaffold-state per doc 31 — 'one provider adapter' is satisfied by the adapter CONTRACT + template implementations proven non-functional; end-to-end AI execution stays explicitly NOT-CLAIMED until a real provider lands.
 
 NEXT_TASK_AUTHORIZED:
-YES (R035 re-verified in this new session; USER DIRECTIVE 2026-08-26 covers continuous migration-order execution).
+YES (USER DIRECTIVE 2026-08-26 covers continuous migration-order execution; T-IMPL-018 verified in this session).
 
 DO_NOT_START:
 - MVP Phase 5+ code until Phase 4 exit is verified
@@ -289,6 +289,8 @@ DO_NOT_START:
 - MVP PHASE 2 SLICING DECISION (R025): 41 §41 deliverables are executed contracts-first, mirroring Phase 1 discipline: T-IMPL-008 identity/tenancy contracts (03 §2) → T-IMPL-009 RBAC/entitlement + capability-firewall decision contracts (20 §4) → T-IMPL-010 in-memory identity service skeleton (registration + personal tenant + email-verification port with fake + session) with auth/tenant-isolation tests. No network, no real email, no secrets in code anywhere in Phase 2.
 - T-IMPL-017 completed the ADR-0004 observability implementation (R035, commit 6ba586b): opentelemetry-api/sdk + structlog pinned WITH the 7th import-linter contract (core must not import the telemetry stack) in the same commit; apps/observability/ composition root (TracerProvider wiring ONLY there; console/no-op exporters — OTLP rejected by config until a collector exists, per ADR); AdaptiveSampler per 40 §5.3 under ParentBased(root); structlog JSON pipeline with head-of-pipeline secret scrubbing (20 §5) + trace_id/span_id correlation; audit port untouched (telemetry references audit ids only). 18 hermetic tests; 269 total green; all 7 contracts kept; check_repo.sh PASS.
 - MVP PHASE 3 EXIT (R035): all six 41 §42 deliverables verified from filesystem (migrations / redis / object storage / secret manager / audit logs / OTel) — MVP_PHASE_3_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED. Applying the MVP-PHASE BOUNDARY DECISION (R024): MVP Phase 4 (T-IMPL-018) must start in a NEW session that first re-verifies the R035 checkpoint. This session stops here.
+- T-IMPL-018 completed MVP Phase 4 slice 1 (R037): core/providers/ports.py — ProviderAdapterPort Protocol mapping 30 §8.1 1:1 (get_manifest / validate_credential / discover_models / get_capabilities / generate / health_check / normalize_error; async posture matching runtime ports; generate = normalized entry dispatching to 30 §5 operations, undeclared operation => unsupported_capability), plus the 30 §8.2 OPTIONAL interfaces as SEPARATE protocols (ProviderAccountLifecyclePort, ProviderAssetsPort). core/contracts/provider.py extended with the missing operation contracts: HealthScope (provider|account), CredentialHealth (opaque credential_ref only — secret-material fields rejected by test), DiscoveredModel (provider declaration, NOT a registry binding — binding fields rejected by test), ProviderGenerateRequest (documented-operation-only, positive timeout, inline-secret fields rejected), ProviderGenerateResponse (success shape XOR normalized ProviderError — raw provider error shapes rejected, non-negative latency). core/providers/errors.py: Core-side boundary errors (ProviderNotRegistered/NotEligible, ModelNotRegistered, BindingNotFound, DuplicateRegistration) for the T-IMPL-019 registries. 22 new hermetic tests (14 contract + 8 port-behavior against an in-memory fake adapter: manifest-as-single-source, declared op succeeds, undeclared op => unsupported_capability, opaque credential handling, discovery-not-binding, provider/account health separation, error normalization incl. rate-limit retry hint and no-raw-payload-leak). Gates at R037: 291 tests PASS; mypy --strict clean; ruff clean; ALL 7 import-linter contracts kept; secret scan clean; check_repo.sh RESULT: PASS.
+- R037 reconciliation: the R036 session was interrupted mid-T-IMPL-018 after authoring artifacts; the auto-uploader synced them as per-file commits (ending near HEAD). This session verified every artifact from the filesystem per the recovery rule, reinstalled deps after another sandbox reset (editable install broken — deps installed directly, same pins), untracked re-tracked tool caches again, ran full gates green, and recorded this checkpoint. Facts from filesystem, not chat history.
 ```
 
 ---
