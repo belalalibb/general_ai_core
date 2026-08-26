@@ -50,7 +50,7 @@ from core.contracts.domain import (
     ProviderStatus,
 )
 from core.contracts.provider import ProviderManifest
-from core.contracts.routing import RoutingRequest, ScoringWeights
+from core.contracts.routing import RoutingRequest
 from core.providers import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.routing import NoEligibleCandidates, SimpleScoringRouter
 from core.usage import BudgetExceeded, InMemoryUsageAccounting
