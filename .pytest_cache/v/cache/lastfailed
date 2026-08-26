@@ -1,9 +1,5 @@
 {
-  "tests/db/test_schema_contract_parity.py::TestContractSchemaParity": true,
-  "tests/db/test_schema_contract_parity.py::TestOfflineDdlCompile": true,
-  "tests/db/test_schema_contract_parity.py::TestMigrationMetadataParity": true,
-  "tests/observability/test_observability_setup.py::TestAdaptiveSampler": true,
-  "tests/observability/test_observability_setup.py::TestSecretScrubbing": true,
-  "tests/observability/test_observability_setup.py::TestTraceCorrelation": true,
-  "tests/observability/test_observability_setup.py::TestCompositionRoot": true
+  "tests/providers/test_scaffold_templates.py::test_template_generate_always_raises_for_every_declared_operation": true,
+  "tests/providers/test_scaffold_templates.py::test_template_health_aggregation_is_unavailable_regardless_of_signals": true,
+  "tests/providers/test_scaffold_templates.py::test_template_adapter_satisfies_the_provider_adapter_port": true
 }
