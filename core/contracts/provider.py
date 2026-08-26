@@ -142,12 +142,22 @@ class ProviderManifest(ContractModel):
     status, capabilities, auth policy, health contract, error-normalization
     contract. ``operations`` lists the §5 capability-specific operations the
     provider actually implements.
+
+    Template flags (31 §7): every template provider declares
+    ``is_template=true``, ``is_functional=false``,
+    ``real_provider_required=true`` and ``status="template_disabled"``.
+    They default to the REAL-provider values so real manifests stay minimal;
+    the registry (31 §10) uses these flags to exclude templates from
+    routing/execution and fail their health checks.
     """
 
     id: BoundedStr
     name: BoundedStr
     version: BoundedStr
     status: BoundedStr  # provider-declared lifecycle word, e.g. "active"
+    is_template: bool = False
+    is_functional: bool = True
+    real_provider_required: bool = False
     auth: ManifestAuth
     account_pool: ManifestAccountPool
     capabilities: ProviderCapabilities
