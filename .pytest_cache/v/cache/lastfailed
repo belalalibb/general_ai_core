@@ -1,1 +1,9 @@
-{}
+{
+  "tests/db/test_schema_contract_parity.py::TestContractSchemaParity": true,
+  "tests/db/test_schema_contract_parity.py::TestOfflineDdlCompile": true,
+  "tests/db/test_schema_contract_parity.py::TestMigrationMetadataParity": true,
+  "tests/observability/test_observability_setup.py::TestAdaptiveSampler": true,
+  "tests/observability/test_observability_setup.py::TestSecretScrubbing": true,
+  "tests/observability/test_observability_setup.py::TestTraceCorrelation": true,
+  "tests/observability/test_observability_setup.py::TestCompositionRoot": true
+}
