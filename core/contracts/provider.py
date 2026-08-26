@@ -1,14 +1,17 @@
-"""Provider contract — manifest, health, rate-limit state, error normalization.
+"""Provider contract — manifest, health, rate-limit state, error normalization,
+and the §8 operation payloads (generate request/response, credential health,
+health scope, discovered bindings).
 
 Contract authority:
 docs/ai_orchestration_pack/final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md
 — §4 (capability-driven providers, common minimum), §5 (capability-specific
-operations), §7 (provider manifest), §11 (health), §12 (rate-limit
-normalized state), §14 (error normalization).
+operations), §7 (provider manifest), §8 (adapter interface payload shapes),
+§11 (health), §12 (rate-limit normalized state), §14 (error normalization).
 
 This module is the *contract only* (data shapes the Core reasons about).
-The ProviderAdapter behavioral interface (30 §8) belongs to a later Phase 1
-task once the port layer exists; no network, no provider implementations here.
+The ProviderAdapter behavioral interface itself (30 §8) lives in
+``core/providers/ports.py`` (MVP Phase 4, T-IMPL-018); no network, no
+provider implementations here.
 
 Posture rules carried from 30:
 
@@ -27,8 +30,10 @@ from enum import StrEnum
 
 from pydantic import Field
 
-from core.contracts.base import BoundedStr, ContractModel
-from core.contracts.domain import AuthType
+from uuid import UUID
+
+from core.contracts.base import BoundedStr, ContractModel, JsonObject
+from core.contracts.domain import AuthType, CredentialStatus
 
 # --- §5 capability-specific operations (closed set, verbatim) -------------------
 
@@ -244,3 +249,83 @@ class ProviderError(ContractModel):
     retry_after_ms: int | None = Field(default=None, ge=0)
     provider_code: BoundedStr | None = None
     safe_message: BoundedStr
+
+
+# --- §8 adapter interface payload shapes (MVP Phase 4, T-IMPL-018) -----------------
+
+
+class HealthScope(StrEnum):
+    """Scope selector for ``ProviderAdapter.health_check`` (30 §8.1).
+
+    30 §11: provider health and account health are separate questions —
+    the scope makes the caller say which one it is asking.
+    """
+
+    PROVIDER = "provider"
+    ACCOUNT = "account"
+
+
+class CredentialHealth(ContractModel):
+    """Result of ``ProviderAdapter.validate_credential`` (30 §8.1).
+
+    Carries only the opaque ``credential_ref`` and its observed status —
+    never secret material (20 §5). ``detail`` must be a safe message.
+    """
+
+    credential_ref: BoundedStr
+    status: CredentialStatus
+    checked_at: datetime | None = None
+    detail: BoundedStr | None = None
+
+
+class DiscoveredModel(ContractModel):
+    """One provider-declared model surfaced by ``discover_models`` (30 §8.1).
+
+    This is the provider's raw self-declaration, NOT a registry
+    ``ProviderModelBinding`` (03 §4): binding creation is a Core/registry
+    decision made from this input, never the provider's decision.
+    """
+
+    provider_model_name: BoundedStr
+    endpoint_ref: BoundedStr | None = None
+    modalities: list[BoundedStr] = Field(default_factory=list)
+    capabilities: JsonObject = Field(default_factory=dict)
+    limits_metadata: JsonObject = Field(default_factory=dict)
+
+
+class ProviderGenerateRequest(ContractModel):
+    """Normalized generation request handed to a provider adapter (30 §8.1).
+
+    ``operation`` selects the capability-specific operation (30 §5); the
+    adapter must reject undeclared operations with
+    ``unsupported_capability`` (30 §8.1 note). ``credential_ref`` stays an
+    opaque reference end-to-end (20 §5). ``payload`` carries the
+    operation-specific normalized input; provider-specific request
+    mechanics live in the provider runtime, never here (30 §9).
+    """
+
+    request_id: UUID
+    tenant_id: UUID
+    operation: ProviderOperation
+    provider_model_name: BoundedStr
+    credential_ref: BoundedStr
+    account_id: UUID | None = None
+    payload: JsonObject = Field(default_factory=dict)
+    timeout_ms: int | None = Field(default=None, ge=1)
+
+
+class ProviderGenerateResponse(ContractModel):
+    """Normalized generation response returned by a provider adapter (30 §8.1).
+
+    Exactly one of ``output``/``error`` is meaningful: a failed call carries
+    the normalized :class:`ProviderError` (30 §14) — raw provider errors
+    never cross this boundary. ``usage`` is provider-reported accounting
+    metadata (tokens, units) for reservation settlement.
+    """
+
+    request_id: UUID
+    succeeded: bool
+    output: JsonObject = Field(default_factory=dict)
+    usage: JsonObject = Field(default_factory=dict)
+    error: ProviderError | None = None
+    latency_ms: int | None = Field(default=None, ge=0)
