@@ -24,7 +24,7 @@ RESUME_TOKEN:
 PROJECT|R034|PHASE_2_IMPLEMENTATION|T-IMPL-017|RECONCILED_ADRS_ACCEPTED_DB_AND_REDIS_IMPLEMENTED_OTEL_IMPL_NEXT|VERIFY_HEAD_WITH_GIT
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (R034 reconciliation session: state checkpoint commit at HEAD after this update; cache-untrack maintenance aaee055. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (R034 reconciliation session: state checkpoint commit at HEAD after this update; cache-untrack maintenance 36bc126. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
 T-IMPL-016 (implementation part — Redis binding landed and verified; T-IMPL-015 implementation part also landed and verified; T-IMPL-017 implementation part is the next authorized task. Recorded at R034 by filesystem reconciliation: the session that executed the acceptances + implementations was interrupted before its state checkpoint, so R034 re-verified everything from filesystem + gates, per the recovery rule.)
@@ -126,13 +126,13 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-015/016/017 ADR parts (persistence / Redis / observability). All three ADRs written and PROPOSED; all three implementations BLOCKED on user sign-off.
+T-IMPL-017 implementation part (ADR-0004 observability wiring) — the only remaining MVP Phase 3 deliverable. ADR-0002/0003/0004 are all ACCEPTED (explicit operator decision, 2026-08-25, recorded verbatim in each ADR's Status section); ADR-0002 and ADR-0003 implementations are DONE and verified (see R034 evidence below).
 
 TASK_OBJECTIVE:
 PostgreSQL migrations groundwork (41 §42, 40 §5.1): write ADR-0002 selecting the persistence toolchain BEFORE any DB dependency lands. Proposal: SQLAlchemy 2.x async + asyncpg + Alembic + pgvector, all confined to infrastructure/ with a new import-linter contract keeping core free of persistence imports. Dependency pins, alembic environment under infrastructure/db/, and the first identity/tenancy migration follow ONLY after the ADR is ACCEPTED by the operator.
 
 TASK_STATUS:
-PART_1_VERIFIED_AFTER_LOCAL_COMMIT — ADR-0002 exists with STATUS: PROPOSED; part 2 NOT STARTED (correctly blocked).
+ADR-0002 IMPLEMENTED_AND_VERIFIED; ADR-0003 IMPLEMENTED_AND_VERIFIED; ADR-0004 ACCEPTED_IMPLEMENTATION_AUTHORIZED_NOT_STARTED.
 
 ALLOWED_SCOPE (part 1):
 - create engineering/adr/ADR-0002-persistence-toolchain.md (full §8.1 format)
@@ -147,7 +147,15 @@ TASK_COMPLETION_CRITERIA (part 1):
 - ADR-0002 has all §8.1 sections (Context/Alternatives/Decision/Reason/Consequences/Status), >=2 alternatives analyzed, STATUS: PROPOSED, explicit no-dependency-until-accepted gate stated inside the ADR.
 - ADR index updated. check_repo.sh => RESULT: PASS. Focused local commit; state updated.
 
-VERIFICATION_EVIDENCE (T-IMPL-016/017 ADR parts, this session, R033):
+VERIFICATION_EVIDENCE (R034 reconciliation — filesystem + gates, per recovery rule; the executing session's checkpoint was lost to an interruption):
+- ADR-0002/0003/0004 all read STATUS: ACCEPTED with the operator decision quoted verbatim ("ADR-000N = ACCEPTED", 2026-08-25); ADR index rows updated to ACCEPTED. All three are append-only from acceptance.
+- ADR-0002 implementation (T-IMPL-015 part 2) present and verified: deps pinned (sqlalchemy>=2.0, alembic>=1.13, asyncpg>=0.29, pgvector>=0.2) WITH the 5th import-linter contract ("Core must not import the persistence toolchain"); infrastructure/db/ = alembic.ini + engine.py + tables.py (identity contracts mapped field-for-field) + migrations/versions/0001_identity_tenancy.py (hand-written, full downgrade per 40 §8.2); hermetic gates in tests/db/test_schema_contract_parity.py (contract/schema parity, offline postgresql DDL compile, migration/metadata parity incl. downgrade reversal).
+- ADR-0003 implementation (T-IMPL-016 part 2) present and verified: redis>=5 pinned WITH the 6th import-linter contract ("Core must not import the Redis client"); core/runtime/{ports,errors,memory}.py define Queue/Lease/Cache/RateLimiter ports + in-memory fakes; infrastructure/redis/binding.py implements RedisQueue (Streams consumer groups + DLQ stream), RedisLeaseManager (SET NX PX + INCR fencing + Lua compare-and-delete release), RedisCache (tenant-scoped, PX TTL), RedisRateLimiter (fixed window); hermetic gates in tests/runtime/test_runtime_ports.py run against fakes.
+- Full suite green; check_repo.sh RESULT: PASS (all 6 import-linter contracts kept, secret scan clean).
+- EXTRA (sandbox-only, not a repo artifact): the redis binding was smoke-tested against a real throwaway Redis server — queue publish/consume/ack/claim-stale/dead-letter, lease acquire/renew/release/fencing-monotonicity/TTL-expiry, cache tenant-isolation/TTL, rate-limit window — ALL PASS. Script intentionally not in the repo (hermetic gates keep fakes; ADR-0003 Testing note).
+- Session maintenance (R034): sandbox reset wiped dev tools again — reinstalled all pinned deps; tool caches the auto-uploader had re-tracked were untracked again (36bc126).
+
+VERIFICATION_EVIDENCE (T-IMPL-016/017 ADR parts, earlier session, R033):
 - engineering/adr/ADR-0003-redis-binding.md: PROPOSED. 3 alternatives (A: redis-py asyncio under core ports — chosen; B: task frameworks arq/taskiq/celery — rejected: impose competing job/retry semantics vs 40 §4's outbox/retry-taxonomy/DLQ/leases-with-fencing design; C: aioredis deprecated / valkey-glide immature). Decision: infrastructure/redis/ implements queue (Streams consumer groups), lock/lease (SET NX PX + fencing token + Lua release), cache, rate-limit ports; DLQ terminal record in PostgreSQL (Redis never truth, 40 §5.1); 6th import-linter contract lands with the dep; hermetic gates keep fakes.
 - engineering/adr/ADR-0004-observability-setup.md: PROPOSED. 3 alternatives (A: opentelemetry-python API/SDK split + OTLP + structlog — chosen; B: vendor SDK first — rejected: violates 40 §5.3 standard=OTel; C: DIY-then-retrofit — rejected: retrofit cost on execution/provider tracing). Decision: SDK wiring ONLY at apps/ composition root; dev/test = console/no-op exporters (hermetic); custom AdaptiveSampler per 40 §5.3; structlog JSON w/ trace-id correlation + secret-scrubbing processor (20 §5); audit port (T-IMPL-014) untouched — telemetry references audit ids only; core must not import opentelemetry/structlog (contract lands with dep).
 - engineering/adr/README.md index rows added for both. check_repo.sh RESULT: PASS.
@@ -167,30 +175,30 @@ MVP_PHASE_2_EXIT (recorded R028, unchanged): MVP_PHASE_2_STATUS: EXIT_CRITERIA_M
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-014
+T-IMPL-016 (implementation part; reconciled at R034 from filesystem + gates)
 
 LAST_VERIFIED_TASK_COMMIT:
-9cb4a4d (content) + the state-checkpoint commit at HEAD after this update
+VERIFY_WITH_GIT_REV_PARSE_HEAD (auto-uploader history rewrites make stored hashes unreliable; content verified against filesystem + green gates at R034)
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP Phase 3 — Storage / Observability (41 §42): the three portable abstractions are DONE (T-IMPL-012 object storage, T-IMPL-013 secret manager, T-IMPL-014 audit logs). Remaining Phase 3 deliverables — PostgreSQL migrations, Redis setup, OpenTelemetry setup — are real infrastructure bindings that require NEW DEPENDENCIES and stack decisions (40 §5.1 fixes PostgreSQL/Redis roles; driver/migration-tool choice e.g. SQLAlchemy/Alembic vs raw asyncpg is a significant architecture choice → needs an ADR per PHASE_2_GOVERNANCE, and new deps must be confirmed against 40).
+MVP Phase 3 — Storage / Observability (41 §42): abstractions DONE (T-IMPL-012/013/014); PostgreSQL migrations DONE (T-IMPL-015, ADR-0002 ACCEPTED); Redis setup DONE (T-IMPL-016, ADR-0003 ACCEPTED). ONE deliverable remains: OpenTelemetry setup (T-IMPL-017, ADR-0004 ACCEPTED — implementation authorized).
 
 NEXT_TASK:
-OPERATOR DECISION GATE — sign-off (or rejection/amendment) of ADR-0002, ADR-0003, ADR-0004. This is the hard stop for MVP Phase 3's remaining deliverables (PostgreSQL migrations, Redis setup, OTel setup): ALL are dependency-adding infrastructure bindings and ALL now have their PROPOSED ADR waiting.
+T-IMPL-017 implementation part — ADR-0004 observability wiring (last MVP Phase 3 deliverable).
 
 NEXT_TASK_OBJECTIVE:
-On acceptance of each ADR (independently accepted is fine, in migration order 0002 -> 0003 -> 0004): flip its STATUS to ACCEPTED recording the user decision verbatim (ADR-0001 flow), pin its deps in pyproject.toml, land its import-linter contract in the same commit as the dep, then implement (0002: infrastructure/db/ alembic env + first identity/tenancy migration with offline/metadata tests; 0003: infrastructure/redis/ port bindings with fakes in gates; 0004: apps/ composition-root wiring with console/no-op exporters in dev/test).
+Per ADR-0004 Decision: pin opentelemetry-api, opentelemetry-sdk, structlog WITH the 7th import-linter contract (core must not import opentelemetry/structlog) in the same commit; wire the SDK ONLY at the apps/ composition root (TracerProvider + resource attrs; dev/test default console/no-op exporters — gates stay hermetic); implement the custom AdaptiveSampler per 40 §5.3 (normal → reduced; error/slow/high-value/debug → full; ParentBased(root) composition; thresholds in config); structlog JSON pipeline with trace_id/span_id injection and a secret-scrubbing processor at the pipeline head (20 §5); audit port untouched — telemetry references audit ids only. OTLP exporter package DEFERRED until a collector exists (per ADR). Hermetic tests for sampler policy, scrubbing, correlation, and boundary.
 
 NEXT_TASK_NOTE:
-Each ADR states the stopping rule: silence is not acceptance; if the operator prefers different choices, the ADR is rewritten at the decision point before acceptance. Phase 4+ (41 §43) must not be pulled forward to bypass this gate.
+ADR-0004 is ACCEPTED — no further sign-off needed for this scope. Phase 4+ (41 §43) must NOT be pulled forward; after T-IMPL-017 lands, MVP Phase 3 exit criteria (41 §42) are evaluated before anything else.
 
 NEXT_TASK_AUTHORIZED:
-NO further implementation without ADR acceptance. Remaining dependency-free work in this phase is exhausted (all Phase 3 abstractions done T-IMPL-012/013/014; all Phase 3 binding ADRs written T-IMPL-015/016/017). If the operator directs other dependency-free work (docs/tests hardening), that may proceed under normal governance.
+YES — T-IMPL-017 implementation part only. After it is verified + committed, evaluate MVP Phase 3 exit; Phase 4 requires its own authorization path per governance.
 
 DO_NOT_START:
 - MVP Phase 4+ code; real KMS/vault/network bindings; real secret material anywhere (20 §5)
-- do not add SQLAlchemy/Alembic/asyncpg dependencies before the ADR exists
-- do not re-open Phase 1/2 contract or service decisions
+- no OTLP exporter dependency until a collector exists (ADR-0004)
+- do not re-open Phase 1/2 contract or service decisions or ACCEPTED ADRs (superseding ADR required)
 ```
 
 ---
