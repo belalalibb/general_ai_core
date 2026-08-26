@@ -139,6 +139,24 @@ class SimpleScoringRouter:
 
     # -- eligibility (11 §5: hard filters, deny-by-default) ------------------------
 
+    @staticmethod
+    def _required_capabilities(request: RoutingRequest) -> list[str]:
+        """Explicit list wins; empty => derive from task_analysis (11 §2)."""
+        if request.required_capabilities:
+            return list(request.required_capabilities)
+        if request.task_analysis is not None:
+            return list(request.task_analysis.capabilities_required)
+        return []
+
+    @staticmethod
+    def _required_modalities(request: RoutingRequest) -> list[str]:
+        """Explicit list wins; empty => derive from task_analysis (11 §2)."""
+        if request.required_modalities:
+            return [m.value for m in request.required_modalities]
+        if request.task_analysis is not None:
+            return [m.value for m in request.task_analysis.modalities_required]
+        return []
+
     def _eligible_candidates(
         self,
         request: RoutingRequest,
@@ -375,8 +393,8 @@ class SimpleScoringRouter:
 
     @staticmethod
     def _resolve_fallback_scope(policy: ModelPolicy) -> FallbackScope | None:
-        allow = getattr(policy, "allow_fallback", None)
-        scope = getattr(policy, "fallback_scope", None)
+        allow: bool | None = getattr(policy, "allow_fallback", None)
+        scope: FallbackScope | None = getattr(policy, "fallback_scope", None)
         if allow is False:
             return FallbackScope.NONE
         if scope is not None:
