@@ -15,6 +15,8 @@ Covers:
 - Idempotency-Key replay returns the SAME execution (10 §10).
 - Unknown execution id -> 404 with the recorded mapping decision.
 - Provider internals never leak to clients (20 §4 / 30 §14).
+- Usage block (T-IMPL-024; 10 §3): settled ledger surfaces on success;
+  entitlement denials map to entitlement_exceeded 403 BEFORE provider work.
 """
 
 from __future__ import annotations
@@ -53,6 +55,7 @@ from core.contracts.provider import (
 from core.execution.service import ExecutionService
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.routing.router import SimpleScoringRouter
+from core.usage import InMemoryUsageAccounting
 
 
 def run[T](coro: Coroutine[Any, Any, T]) -> T:
@@ -175,6 +178,7 @@ class World:
         self.bindings = BindingRegistry()
         self.principal = Principal(tenant_id=uuid4(), user_id=uuid4())
         self.store = InMemoryExecutionStore()
+        self.usage: InMemoryUsageAccounting | None = None
 
         self.provider = Provider(
             id=uuid4(),
@@ -197,6 +201,14 @@ class World:
         )
         self.adapter = FakeAdapter(script)
 
+    def grant_budget(self, limit: float) -> InMemoryUsageAccounting:
+        """Bind usage accounting with a configured tenant budget (21 §5 seam)."""
+        self.usage = InMemoryUsageAccounting()
+        self.usage.configure_tenant(
+            self.principal.tenant_id, plan="pro", task_units_limit=limit
+        )
+        return self.usage
+
     def app(self) -> FastAPI:
         router = SimpleScoringRouter(self.providers, self.models, self.bindings)
         service = ExecutionService(
@@ -204,6 +216,7 @@ class World:
             credential_refs={self.provider.id: f"secret-ref://{self.provider.id}"},
             bindings=self.bindings,
             max_retries_per_candidate=0,
+            usage=self.usage,
             sleeper=_no_sleep,
         )
         return create_app(
@@ -256,7 +269,8 @@ def test_execute_success_returns_sync_response() -> None:
     assert body["result"]["type"] == "message"
     assert body["result"]["content"] == "hello from fake"
     UUID(body["execution_id"])  # a real execution id
-    # usage/evaluation are T-IMPL-024+ slices — absent, never faked (10 §3).
+    # No usage accounting bound in this world => usage absent, never faked
+    # (10 §3; evaluation stays a later slice).
     assert "usage" not in body
     assert "evaluation" not in body
 
@@ -471,3 +485,66 @@ def test_get_malformed_execution_id_is_422() -> None:
     response = run(_get(world.app(), "/v1/executions/not-a-uuid"))
     assert response.status_code == 422
     _assert_unified_error(response.json(), "validation_error")
+
+
+# --- usage block + entitlement mapping (T-IMPL-024; 10 §3 / §9) -----------------------
+
+
+def test_success_surfaces_settled_usage_block() -> None:
+    world = World(script=[{"content": "ok"}])
+    world.grant_budget(10.0)
+    response = run(_post(world.app(), {"ask": "hi"}))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["usage"] == {
+        "units_reserved": 1,
+        "units_settled": 1,
+        "details": {"status": "settled"},
+    }
+
+
+def test_budget_exceeded_maps_to_entitlement_exceeded_403() -> None:
+    world = World()
+    world.grant_budget(0.0)  # configured but empty budget
+    response = run(_post(world.app(), {"ask": "hi"}))
+    assert response.status_code == 403
+    body = response.json()
+    _assert_unified_error(body, "entitlement_exceeded")
+    assert body["error"]["details"] == {"requested": 1.0, "remaining": 0.0}
+    assert len(world.adapter.requests) == 0  # denied BEFORE provider work
+
+
+def test_unconfigured_tenant_denied_entitlement_exceeded() -> None:
+    world = World()
+    world.usage = InMemoryUsageAccounting()  # bound, but tenant NOT configured
+    response = run(_post(world.app(), {"ask": "hi"}))
+    assert response.status_code == 403
+    _assert_unified_error(response.json(), "entitlement_exceeded")
+    assert len(world.adapter.requests) == 0
+
+
+def test_budget_depletes_across_requests_then_denies() -> None:
+    world = World(script=[{"content": "a"}, {"content": "b"}])
+    world.grant_budget(2.0)
+    app = world.app()
+    assert run(_post(app, {"ask": "one"})).status_code == 200
+    assert run(_post(app, {"ask": "two"})).status_code == 200
+    denied = run(_post(app, {"ask": "three"}))
+    assert denied.status_code == 403
+    _assert_unified_error(denied.json(), "entitlement_exceeded")
+    assert len(world.adapter.requests) == 2  # third never reached the provider
+
+
+def test_failed_execution_ledger_recorded_without_usage_in_error_body() -> None:
+    """Failure keeps the unified envelope (10 §9) — the ledger is still
+    resolved (failed, 0 settled) and the budget hold released."""
+    world = World(
+        script=[_provider_error(ProviderErrorCategory.NON_RETRYABLE_ERROR)]
+    )
+    accounting = world.grant_budget(5.0)
+    response = run(_post(world.app(), {"ask": "hi"}))
+    assert response.status_code >= 400
+    body = response.json()
+    assert set(body.keys()) == {"error"}  # unified envelope, no usage key
+    summary = accounting.summary(world.principal.tenant_id)
+    assert summary.task_units.remaining == 5.0  # hold released, nothing settled
