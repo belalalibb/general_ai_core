@@ -240,6 +240,15 @@ class ModelRegistry:
             raise ModelNotRegistered(str(model_id))
         return model
 
+    def all_models(self) -> list[Model]:
+        """Every registered model, INCLUDING non-ACTIVE (admin read view, 21 §5).
+
+        The admin control plane must SEE disabled models to re-enable them
+        (21 §4 Models row); routing keeps using ``active_models`` — this
+        read surface changes no eligibility rule.
+        """
+        return sorted(self._by_key.values(), key=lambda m: m.model_key)
+
     def active_models(self) -> list[Model]:
         """Routing pool: only ACTIVE models (03 §4 status)."""
         return sorted(
