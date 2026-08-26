@@ -27,9 +27,10 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.contracts.domain import AuthType, CredentialStatus
@@ -61,9 +62,15 @@ class ProviderOperation(StrEnum):
 
 
 class ManifestAuth(ContractModel):
-    """``auth`` block of the provider manifest (30 §7)."""
+    """``auth`` block of the provider manifest (30 §7).
 
-    types: list[AuthType] = Field(min_length=1)
+    REAL providers must declare at least one auth type (30 §7 example);
+    TEMPLATE providers declare ``types: []`` verbatim per 31 §7. The
+    non-empty requirement for real providers is enforced by a
+    :class:`ProviderManifest` validator, not here, so both rules hold.
+    """
+
+    types: list[AuthType] = Field(default_factory=list)
     supports_refresh: bool = False
 
 
@@ -133,6 +140,40 @@ class ProviderCapabilities(ContractModel):
     file_upload: bool = False
     browser: bool = False
     agent_module: bool = False
+    # 31 §6 diversity categories 8-10 require declarable embeddings/rerank/
+    # moderation capabilities (they back the 30 §5 operations
+    # create_embeddings / rerank_documents / moderate_content). Added as an
+    # explicit contract change at T-IMPL-020, per the closed-set rule above.
+    embeddings: bool = False
+    rerank: bool = False
+    moderation: bool = False
+    # 31 §8 provider-native agent template declares tool_use.
+    tool_use: bool = False
+
+
+class ManifestAgentModule(ContractModel):
+    """``agent_module`` block of the manifest (31 §8 provider-native agent).
+
+    ``unknown`` is a legal tri-state value for provider-managed behaviors the
+    platform has not verified yet — unknown is never treated as supported
+    (11 §5 "Unknown = ineligible").
+    """
+
+    supported: bool
+    type: BoundedStr | None = None
+    state_model: bool | Literal["unknown"] | BoundedStr = "unknown"
+    supports_provider_tools: bool | Literal["unknown"] = "unknown"
+    supports_platform_tools: bool | Literal["unknown"] = False
+    provider_managed_state: bool | Literal["unknown"] = "unknown"
+
+
+class ManifestSecurity(ContractModel):
+    """``security`` block of the manifest (31 §8) — deny-by-default posture."""
+
+    provider_side_tools_allowed_by_default: bool = False
+    requires_capability_firewall: bool = True
+    requires_evaluation: bool = True
+    requires_audit: bool = True
 
 
 class ProviderManifest(ContractModel):
@@ -166,6 +207,25 @@ class ProviderManifest(ContractModel):
     rate_limits: ManifestRateLimits
     health: ManifestHealth
     errors: ManifestErrors
+    # 31 §7: template manifests carry human-readable scaffold notes.
+    notes: list[BoundedStr] = Field(default_factory=list)
+    # 31 §8: only provider-native-agent providers declare these blocks.
+    agent_module: ManifestAgentModule | None = None
+    security: ManifestSecurity | None = None
+
+    @model_validator(mode="after")
+    def _real_providers_must_declare_auth(self) -> ProviderManifest:
+        """30 §7: real providers declare >=1 auth type; templates declare
+        ``[]`` verbatim (31 §7). A functional, non-template manifest with no
+        auth types is a contract violation, not a style choice.
+        """
+        is_template_like = (
+            self.is_template or self.real_provider_required or not self.is_functional
+        )
+        if not is_template_like and not self.auth.types:
+            msg = "real provider manifests must declare at least one auth type (30 §7)"
+            raise ValueError(msg)
+        return self
 
 
 # --- §11 health -------------------------------------------------------------------
