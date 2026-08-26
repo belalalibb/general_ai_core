@@ -20,9 +20,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from core.contracts.domain import CredentialStatus
 from core.contracts.provider import (
     CredentialHealth,
-    CredentialStatus,
     DiscoveredModel,
     HealthScope,
     ProviderCapabilities,
@@ -94,15 +94,11 @@ class TemplateProviderAdapter:
             detail="template provider holds no credentials (31 §7)",
         )
 
-    async def discover_models(
-        self, account_id: UUID | None = None
-    ) -> list[DiscoveredModel]:
+    async def discover_models(self, account_id: UUID | None = None) -> list[DiscoveredModel]:
         """Templates declare ``models.discovery: not_implemented`` (31 §7)."""
         raise TemplateProviderInvoked(self._manifest.id, "discover_models")
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         """31 §11: templates cannot execute generation — always raises."""
         raise TemplateProviderInvoked(self._manifest.id, request.operation.value)
 
