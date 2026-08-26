@@ -9,6 +9,9 @@ description = "General AI Core / AI Orchestration Platform (modular monolith)"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.7",
+    # API framework — ADR-0001 (ACCEPTED 2026-08-25: Python / FastAPI / Pydantic).
+    # Confined to apps/ composition root; core stays framework-free (contract below).
+    "fastapi>=0.111",
     # Persistence toolchain — ADR-0002 (ACCEPTED 2026-08-25)
     "sqlalchemy>=2.0",
     "alembic>=1.13",
@@ -29,6 +32,8 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.4",
     "import-linter>=2",
+    # Hermetic ASGI test client for the API surface (no network).
+    "httpx>=0.27",
 ]
 
 [tool.pytest.ini_options]
@@ -99,3 +104,11 @@ name = "Core must not import the telemetry stack (ADR-0004)"
 type = "forbidden"
 source_modules = ["core"]
 forbidden_modules = ["opentelemetry", "structlog"]
+
+# ADR-0001: the web framework is an apps/ composition-root concern — core and
+# providers stay framework-free (T-IMPL-023: pin + contract land together).
+[[tool.importlinter.contracts]]
+name = "Core and providers must not import the web framework (ADR-0001)"
+type = "forbidden"
+source_modules = ["core", "providers"]
+forbidden_modules = ["fastapi", "starlette"]
