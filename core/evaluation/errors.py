@@ -24,6 +24,28 @@ class EvaluationNotFound(EvaluationStoreError):
         super().__init__(f"evaluation not found: {evaluation_id}")
 
 
+class InactiveGraderType(EvaluationStoreError):
+    """A requested grader type is representable but does not RUN this phase.
+
+    R049 boundary (c): only ``MVP_ACTIVE_GRADER_TYPES`` execute in MVP
+    Phase 7. Naming any other 22 §5 type is denied LOUDLY — silently
+    skipping it would fake evaluation coverage that never ran.
+    """
+
+    def __init__(self, inactive: object) -> None:
+        super().__init__(f"grader type(s) not active in MVP Phase 7: {inactive}")
+
+
+class JudgeFailure(EvaluationStoreError):
+    """The optional model judge could not produce a usable judgment.
+
+    Raised by judge implementations for ANY failure mode (adapter raise,
+    failed call, unusable score/confidence). The policy service CONTAINS
+    this error — evaluation degrades to deterministic-only (41 §46
+    "optional model judge") and never crashes the caller.
+    """
+
+
 class DuplicateEvaluation(EvaluationStoreError):
     """An evaluation with this id is already recorded (never overwritten).
 
