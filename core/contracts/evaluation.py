@@ -104,9 +104,9 @@ MVP_ACTIVE_GRADER_TYPES: frozenset[GraderType] = frozenset(
     {GraderType.DETERMINISTIC, GraderType.MODEL_BASED}
 )
 
-# Bounded [0,1] judgment scalar — used for both score and confidence,
-# which remain SEPARATE FIELDS everywhere (22 §4).
-_UnitInterval = Field(ge=0.0, le=1.0)
+# Bounded [0,1] judgment scalar defaulting to ABSENT — used for both score
+# and confidence, which remain SEPARATE FIELDS everywhere (22 §4).
+_UnitInterval = Field(default=None, ge=0.0, le=1.0)
 
 
 class GraderResult(ContractModel):
