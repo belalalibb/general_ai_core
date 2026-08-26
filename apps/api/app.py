@@ -26,6 +26,12 @@ Scope decisions for this slice (loud rejections, never silent degradation):
 - Persistence is the process-local InMemoryExecutionStore (slice decision
   recorded in PROJECT_EXECUTION_STATE.md); repository-backed storage swaps
   in at the composition root without handler changes.
+- Usage accounting (T-IMPL-024; 10 §3 ``usage`` block): when the injected
+  ExecutionService carries a UsageAccountingPort, entitlement denials
+  (missing budget / budget exceeded) map to the unified
+  ``entitlement_exceeded`` code (10 §9, HTTP 403) BEFORE any provider work,
+  and successful responses surface the settled ledger as the ``usage``
+  block. A service without accounting keeps ``usage`` absent — never faked.
 """
 
 from __future__ import annotations
@@ -55,15 +61,18 @@ from core.contracts.execute import (
     ExecutionResult,
     ExecutionStatus,
     ExecutionStatusResponse,
+    UsageReport,
 )
 from core.contracts.provider import ProviderError, ProviderOperation
 from core.contracts.routing import RoutingRequest
+from core.contracts.usage import UsageLedger
 from core.execution.service import ExecutionReport, ExecutionService
 from core.routing.errors import (
     FallbackNotConfigured,
     NoEligibleCandidates,
 )
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
+from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 
 
 @dataclass(frozen=True)
@@ -116,6 +125,23 @@ def _progress(report: ExecutionReport) -> ExecutionProgress:
     percent = int(round(100 * done / total)) if total else None
     current = report.nodes[-1].node.node_key if report.nodes else None
     return ExecutionProgress(current_stage=current, percent=percent)
+
+
+def _usage_report(ledger: UsageLedger | None) -> UsageReport | None:
+    """Shape the settled ledger as the 10 §3 ``usage`` block (absent if none).
+
+    The ledger carries floats (estimates may be fractional in later plans);
+    the 10 §3 block is whole task units — int conversion is exact for the
+    MVP metric (1 unit per stage) and any fractional policy would change
+    the contract first, not silently truncate here.
+    """
+    if ledger is None:
+        return None
+    return UsageReport(
+        units_reserved=int(ledger.units_reserved),
+        units_settled=int(ledger.units_settled),
+        details={"status": ledger.status.value},
+    )
 
 
 def _last_provider_error(report: ExecutionReport) -> ProviderError | None:
@@ -223,16 +249,32 @@ def create_app(
             payload["output"] = body.output.model_dump(
                 mode="json", by_alias=True, exclude_none=True
             )
-        report = await execution_service.execute_single(
-            tenant_id=principal.tenant_id,
-            user_id=principal.user_id,
-            decision=decision,
-            operation=ProviderOperation.GENERATE_TEXT,
-            payload=payload,
-            request_hash=_request_hash(body),
-            idempotency_key=idempotency_key,
-            conversation_id=conversation_id,
-        )
+        try:
+            report = await execution_service.execute_single(
+                tenant_id=principal.tenant_id,
+                user_id=principal.user_id,
+                decision=decision,
+                operation=ProviderOperation.GENERATE_TEXT,
+                payload=payload,
+                request_hash=_request_hash(body),
+                idempotency_key=idempotency_key,
+                conversation_id=conversation_id,
+            )
+        except BudgetExceeded as exc:
+            # Denied BEFORE any provider work (03 §7; 10 §9). The accounting
+            # facts explain the denial without leaking other tenants' data.
+            return error_response(
+                ErrorCode.ENTITLEMENT_EXCEEDED,
+                "Task-unit budget exceeded for this request.",
+                details={"requested": exc.requested, "remaining": exc.remaining},
+            )
+        except EntitlementNotConfigured:
+            # Deny-by-default (20 §4): no budget configured means DENY, and
+            # the client-facing message stays generic.
+            return error_response(
+                ErrorCode.ENTITLEMENT_EXCEEDED,
+                "No task-unit entitlement is configured for this tenant.",
+            )
         execution_store.put(report)
         if idempotency_key is not None:
             idempotency_index[(principal.tenant_id, idempotency_key)] = (
@@ -249,7 +291,7 @@ def create_app(
                 execution_id=str(report.execution.id),
                 status=report.execution.status,
                 result=_result_from_output(output, format_hint),
-                usage=None,  # reservation/settlement is the T-IMPL-024 slice
+                usage=_usage_report(report.usage),
                 evaluation=None,
             )
             return JSONResponse(
