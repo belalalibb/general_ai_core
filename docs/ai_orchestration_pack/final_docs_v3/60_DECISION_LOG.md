@@ -584,3 +584,82 @@ language-neutral JSON-Schema contract exports).
 ### Ref
 engineering/adr/ADR-0001-implementation-stack.md (ACCEPTED, append-only from
 this point). Applied by T-IMPL-003.
+
+---
+
+## IMPL-002. Persistence toolchain: SQLAlchemy 2.x async + asyncpg + Alembic + pgvector (ADR-0002 ACCEPTED)
+
+### Question
+Which persistence toolchain binds core contracts to PostgreSQL (40 §5.1)?
+Blocked MVP Phase 3 — PostgreSQL migrations; required an ADR + explicit
+operator approval before any DB dependency landed.
+
+### Decision (explicit operator decision, 2026-08-25)
+"ADR-0002 = ACCEPTED" — Alternative A as proposed: SQLAlchemy 2.x async +
+asyncpg + Alembic + pgvector, ALL confined to infrastructure/; a dedicated
+import-linter contract (core must not import sqlalchemy/alembic/asyncpg/
+pgvector) landed in the SAME commit as the dependency pins; downgrade paths
+mandatory per 40 §8.2; autogenerate output treated as reviewed draft only.
+
+### Consequences recorded
+infrastructure/db/ owns alembic env + tables + migrations; first migration
+0001_identity_tenancy (hand-written, reversible). Hermetic gates prove
+contract/schema parity and offline PostgreSQL DDL compile — no live DB in CI.
+
+### Ref
+engineering/adr/ADR-0002-persistence-toolchain.md (ACCEPTED, append-only from
+this point). Applied by T-IMPL-015 (implementation part).
+
+---
+
+## IMPL-003. Redis binding: redis-py asyncio under core runtime ports (ADR-0003 ACCEPTED)
+
+### Question
+How does the platform bind Redis for queue/lease/cache/rate-limit roles
+(40 §5.1, §4) without letting a task framework impose competing semantics?
+
+### Decision (explicit operator decision, 2026-08-25)
+"ADR-0003 = ACCEPTED" — Alternative A as proposed: redis-py (>=5) asyncio
+client under core-owned ports (Queue via Streams consumer groups, Lease via
+SET NX PX + fencing token + Lua compare-and-delete release, Cache
+tenant-scoped, RateLimiter fixed-window). DLQ terminal record belongs to
+PostgreSQL — Redis is never the source of truth. Import-linter contract
+(core must not import redis) landed with the dependency. Task frameworks
+(arq/taskiq/celery) rejected: they impose competing job/retry semantics vs
+40 §4's outbox/retry-taxonomy/DLQ/leases-with-fencing design.
+
+### Consequences recorded
+core/runtime/ defines ports + in-memory fakes (hermetic gates use fakes
+only); infrastructure/redis/binding.py is the sole Redis touchpoint.
+
+### Ref
+engineering/adr/ADR-0003-redis-binding.md (ACCEPTED, append-only from this
+point). Applied by T-IMPL-016 (implementation part).
+
+---
+
+## IMPL-004. Observability: OpenTelemetry API/SDK + structlog, composition-root only (ADR-0004 ACCEPTED)
+
+### Question
+How is tracing/logging wired (40 §5.3) without polluting core purity and
+without binding to a vendor or to a collector that does not exist yet?
+
+### Decision (explicit operator decision, 2026-08-25)
+"ADR-0004 = ACCEPTED" — Alternative A as proposed: opentelemetry-python
+API/SDK split + structlog. SDK wiring ONLY at the apps/ composition root;
+dev/test default to console/no-op exporters (gates stay hermetic); custom
+AdaptiveSampler per 40 §5.3 (normal traffic reduced-rate; error/slow/
+high-value/debug-flag full-rate; ParentBased root composition); structlog
+JSON pipeline with trace-id correlation and a secret-scrubbing processor at
+the pipeline head (20 §5). The OTLP exporter dependency is DEFERRED until a
+collector exists. Audit port (T-IMPL-014) untouched — telemetry references
+audit ids only. Import-linter contract (core must not import
+opentelemetry/structlog) lands with the dependency.
+
+### Consequences recorded
+Vendor lock-in avoided (OTel standard per 40 §5.3); tracing of execution and
+provider spans is retrofit-free from day one.
+
+### Ref
+engineering/adr/ADR-0004-observability-setup.md (ACCEPTED, append-only from
+this point). Applied by T-IMPL-017 (implementation part).
