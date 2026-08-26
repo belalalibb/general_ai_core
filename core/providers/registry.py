@@ -214,6 +214,20 @@ class ModelRegistry:
         self._by_key[model.model_key] = model
         self._by_id[model.id] = model
 
+    def replace(self, model: Model) -> None:
+        """Explicit re-registration (admin update path, 21 §4 Models row).
+
+        Mirrors ``ProviderRegistry.replace``: the admin control plane
+        publishes model status changes (enable/disable) by replacing the
+        stored frozen record — routing sees the change immediately through
+        ``active_models()``; there is no parallel admin copy.
+        """
+        existing = self._by_key.get(model.model_key)
+        if existing is not None:
+            del self._by_id[existing.id]
+        self._by_key[model.model_key] = model
+        self._by_id[model.id] = model
+
     def get(self, model_key: str) -> Model:
         model = self._by_key.get(model_key)
         if model is None:
