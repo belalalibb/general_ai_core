@@ -22,9 +22,8 @@ from uuid import uuid4
 
 import pytest
 
-from core.contracts.domain import Provider, ProviderStatus
+from core.contracts.domain import AuthType, CredentialStatus, Provider, ProviderStatus
 from core.contracts.provider import (
-    CredentialStatus,
     ProviderErrorCategory,
     ProviderGenerateRequest,
     ProviderHealthState,
@@ -32,7 +31,11 @@ from core.contracts.provider import (
     ProviderOperation,
 )
 from core.providers.ports import ProviderAdapterPort
-from core.providers.registry import ProviderRegistry, aggregate_provider_health
+from core.providers.registry import (
+    ProviderRegistry,
+    RegisteredProvider,
+    aggregate_provider_health,
+)
 from providers.common.manifest_builder import TEMPLATE_NOTES, build_template_manifest
 from providers.common.template_adapter import (
     TemplateProviderAdapter,
@@ -70,7 +73,7 @@ def _domain_provider_for(manifest: ProviderManifest) -> Provider:
         provider_key=manifest.id,
         display_name=manifest.name,
         status=ProviderStatus.DISABLED,
-        auth_types=["custom"],
+        auth_types=[AuthType.CUSTOM],
         supports_account_pool=manifest.account_pool.supported,
     )
 
@@ -160,10 +163,12 @@ def test_template_generate_always_raises_for_every_declared_operation() -> None:
         adapter = module.build_adapter()
         for operation in module.MANIFEST.operations:
             request = ProviderGenerateRequest(
+                request_id=uuid4(),
+                tenant_id=uuid4(),
                 operation=operation,
-                model_name="any-model",
+                provider_model_name="any-model",
+                credential_ref="vault://tenants/x/creds/y",
                 payload={"input": "scaffold"},
-                timeout_seconds=1.0,
             )
             with pytest.raises(TemplateProviderInvoked):
                 asyncio.run(adapter.generate(request))
@@ -194,7 +199,7 @@ def test_template_health_check_is_unavailable_for_both_scopes() -> None:
     for module in TEMPLATE_MODULES:
         adapter = module.build_adapter()
         for scope in ("provider", "account"):
-            health = asyncio.run(adapter.health_check(scope))  # type: ignore[arg-type]
+            health = asyncio.run(adapter.health_check(scope))
             assert health.state is ProviderHealthState.UNAVAILABLE
 
 
@@ -202,12 +207,12 @@ def test_template_health_aggregation_is_unavailable_regardless_of_signals() -> N
     # 31 §10: real_provider_required=true providers cannot pass health checks —
     # even a (bogus) healthy provider-scope signal cannot lift a template.
     manifest = all_template_manifests()[0]
-    state = aggregate_provider_health(
-        manifest=manifest,
+    entry = RegisteredProvider(_domain_provider_for(manifest), manifest)
+    health = aggregate_provider_health(
+        entry,
         provider_signal=ProviderHealthState.HEALTHY,
-        account_states=[],
     )
-    assert state is ProviderHealthState.UNAVAILABLE
+    assert health.state is ProviderHealthState.UNAVAILABLE
 
 
 # --- 31 §11: diverse capability categories are represented ---------------------------
@@ -247,9 +252,7 @@ def test_auth_shape_diversity_is_recorded_without_functional_auth() -> None:
 def test_account_pool_shape_is_diverse_not_forced() -> None:
     # 31 §12: the scaffold must not force one lifecycle — exactly the
     # session/cookie multimodal template declares an account pool.
-    pool_ids = {
-        m.id for m in all_template_manifests() if m.account_pool.supported
-    }
+    pool_ids = {m.id for m in all_template_manifests() if m.account_pool.supported}
     assert pool_ids == {"template_multimodal_provider"}
 
 
@@ -272,9 +275,19 @@ def test_provider_agent_template_preserves_the_31s8_security_posture() -> None:
 
 def test_template_adapter_satisfies_the_provider_adapter_port() -> None:
     # Structural check: the scaffold proves the 30 §8 contract SHAPE is
-    # implementable — the port is runtime-checkable on method presence.
+    # implementable later (31 §11). Static: the annotation below is checked
+    # by mypy --strict. Dynamic: every port method must be present + callable.
     adapter: ProviderAdapterPort = TEMPLATE_MODULES[0].build_adapter()
-    assert isinstance(adapter, ProviderAdapterPort)
+    for method in (
+        "get_manifest",
+        "validate_credential",
+        "discover_models",
+        "get_capabilities",
+        "generate",
+        "health_check",
+        "normalize_error",
+    ):
+        assert callable(getattr(adapter, method))
 
 
 def test_template_adapter_rejects_non_template_manifests() -> None:
