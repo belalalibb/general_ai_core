@@ -32,6 +32,47 @@ Scope decisions for this slice (loud rejections, never silent degradation):
   ``entitlement_exceeded`` code (10 §9, HTTP 403) BEFORE any provider work,
   and successful responses surface the settled ledger as the ``usage``
   block. A service without accounting keeps ``usage`` absent — never faked.
+
+Phase 6 slice 4 (T-IMPL-028; 41 §45; 10 §2/§7) — recorded decisions:
+
+- GET /v1/skills lists ONLY selectable skills (SkillRegistry.list_selectable:
+  status=active AND source=local — the loadable-not-selectable posture
+  surfaced to the API). Rows are the 10 §7 shape via SkillListEntry
+  (manifest id, not the registry UUID; flat deduplicated tool-name list —
+  DATA, never a grant, 03 §8).
+- Role selection (10 §2 ``role``): ``role.id`` may be the registry UUID or
+  the unique role NAME (the 10 §2 example uses a symbolic id like
+  ``senior_software_architect``). Admission is RoleRegistry.select — only
+  ACTIVE roles compose. The closed 10 §9 set has no ``not_found``/
+  ``role_unavailable``: unknown, ambiguous, non-selectable, and
+  scope-mismatched role references all map to ``validation_error`` 422
+  with the named reason in ``details`` (same mapping posture as the
+  unknown-execution-id decision in apps/api/errors.py).
+- Conversation persistence (10 §2 ``conversation_id``): when a
+  ConversationStorePort is injected, an unknown conversation id is
+  AUTO-CREATED under the caller's tenant/user (there is no separate
+  create-conversation endpoint in this slice — recorded, not accidental;
+  anti-enumeration (20 §6) makes "absent" and "exists in a foreign tenant"
+  indistinguishable, so both create fresh under the caller's own tenant).
+  A conversation owned by ANOTHER user in the same tenant denies with
+  ``unauthorized`` 403 (13 §7 cross-user rule). The user ask is appended
+  BEFORE execution (history is an audit-grade record of what was asked —
+  failures keep the ask); the assistant turn is appended only on
+  ``succeeded`` with the same content the client receives. Idempotent
+  replays short-circuit BEFORE persistence, so no duplicate turns.
+  Without an injected store, ``conversation_id`` stays what it was in
+  slice 3: execution-record metadata only.
+- Context composition (T-IMPL-027 wiring): when a ContextComposer is
+  injected, the composed 13 §5 object (blocks + NAMED exclusions —
+  exclusions stay data) rides the execution payload under ``context``;
+  composition runs BEFORE the current ask is appended, so history blocks
+  are prior turns only. ``ContextBudgetExceeded`` maps to
+  ``validation_error`` 422 with the required/budget facts. The composer
+  MUST share the SAME registry/store instances injected here — that
+  agreement is the composition root's duty. When a role is selected AND a
+  composer is present, the role objective rides ONLY inside the composed
+  context (role block); without a composer it rides as ``payload["role"]``
+  — never both (no duplicated instruction blocks).
 """
 
 from __future__ import annotations
@@ -40,7 +81,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Header, Request, Response
 from fastapi.exceptions import RequestValidationError
@@ -52,7 +93,16 @@ from apps.api.errors import (
     execution_failure_detail,
 )
 from apps.api.store import ExecutionNotFound, InMemoryExecutionStore
-from core.contracts.base import JsonObject
+from core.context.composer import ContextComposer
+from core.context.errors import ContextBudgetExceeded
+from core.contracts.base import JsonObject, utc_now
+from core.contracts.context import ComposedContext, ContextComposeRequest
+from core.contracts.conversation import (
+    Conversation,
+    ConversationStatus,
+    Message,
+    MessageRole,
+)
 from core.contracts.errors import ErrorCode
 from core.contracts.execute import (
     ExecuteRequest,
@@ -61,12 +111,19 @@ from core.contracts.execute import (
     ExecutionResult,
     ExecutionStatus,
     ExecutionStatusResponse,
+    RoleSelector,
     UsageReport,
 )
 from core.contracts.provider import ProviderError, ProviderOperation
+from core.contracts.roles import Role
 from core.contracts.routing import RoutingRequest
+from core.contracts.skills import SkillListEntry, SkillsListResponse
 from core.contracts.usage import UsageLedger
 from core.execution.service import ExecutionReport, ExecutionService
+from core.memory.errors import ConversationNotFound
+from core.memory.ports import ConversationStorePort
+from core.roles.errors import RoleNotRegistered, RoleNotSelectable
+from core.roles.registry import RoleRegistry, SkillRegistry
 from core.routing.errors import (
     FallbackNotConfigured,
     NoEligibleCandidates,
@@ -152,16 +209,82 @@ def _last_provider_error(report: ExecutionReport) -> ProviderError | None:
     return None
 
 
+def _resolve_role(selector: RoleSelector, registry: RoleRegistry) -> Role | JSONResponse:
+    """Admit the requested role or return the unified-error denial (10 §9).
+
+    ``role.id`` accepts the registry UUID or the unique role NAME (10 §2
+    example: ``senior_software_architect``). All denials are the recorded
+    ``validation_error`` mappings (module docstring) — named, never silent.
+    """
+    candidate_id: UUID | None
+    try:
+        candidate_id = UUID(selector.id)
+    except ValueError:
+        candidate_id = None
+    if candidate_id is None:
+        matches = [r for r in registry.list_all() if r.name == selector.id]
+        if not matches:
+            return error_response(
+                ErrorCode.VALIDATION_ERROR,
+                "Unknown role.",
+                details={"field": "role.id"},
+            )
+        if len(matches) > 1:
+            return error_response(
+                ErrorCode.VALIDATION_ERROR,
+                "Ambiguous role name; use the role id.",
+                details={"field": "role.id"},
+            )
+        candidate_id = matches[0].id
+    try:
+        role = registry.select(candidate_id)
+    except RoleNotRegistered:
+        return error_response(
+            ErrorCode.VALIDATION_ERROR,
+            "Unknown role.",
+            details={"field": "role.id"},
+        )
+    except RoleNotSelectable as exc:
+        # Loadable-but-not-selectable (draft/disabled): the named reason
+        # crosses the boundary as data, never a silent skip (11 §14).
+        return error_response(
+            ErrorCode.VALIDATION_ERROR,
+            "Role is not selectable.",
+            details={"field": "role.id", "role_status": exc.status},
+        )
+    if selector.type != role.scope.value:
+        return error_response(
+            ErrorCode.VALIDATION_ERROR,
+            "role.type does not match the selected role's scope.",
+            details={"field": "role.type", "expected": role.scope.value},
+        )
+    return role
+
+
 def create_app(
     *,
     router: SimpleScoringRouter,
     execution_service: ExecutionService,
     store: InMemoryExecutionStore | None = None,
     principal: Principal,
+    skills: SkillRegistry | None = None,
+    roles: RoleRegistry | None = None,
+    conversations: ConversationStorePort | None = None,
+    composer: ContextComposer | None = None,
+    context_budget: int = 16_000,
 ) -> FastAPI:
-    """Build the API application from injected, already-verified services."""
+    """Build the API application from injected, already-verified services.
+
+    Phase 6 seams (all optional — absent seams keep prior slices' behavior):
+    ``skills``/``roles`` default to EMPTY registries (deny-by-default:
+    nothing listed, no role admissible — 20 §4); ``conversations`` enables
+    history persistence; ``composer`` enables 13 §5 context composition and
+    MUST share the same registry/store instances injected here.
+    """
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
+    skill_registry = skills if skills is not None else SkillRegistry()
+    role_registry = roles if roles is not None else RoleRegistry()
     # Idempotency index (10 §10): (tenant_id, key) -> execution_id.
     idempotency_index: dict[tuple[UUID, str], UUID] = {}
 
@@ -212,11 +335,85 @@ def create_app(
                     details={"field": "conversation_id"},
                 )
 
+        # --- role admission (10 §2 role; T-IMPL-026 registry) -------------------
+        role: Role | None = None
+        if body.role is not None:
+            resolved = _resolve_role(body.role, role_registry)
+            if isinstance(resolved, JSONResponse):
+                return resolved
+            role = resolved
+
         # --- idempotent replay (10 §10) ----------------------------------------
+        # BEFORE persistence/composition: a replay must not duplicate turns.
         if idempotency_key is not None:
             replay_id = idempotency_index.get((principal.tenant_id, idempotency_key))
             if replay_id is not None:
                 return _sync_response(execution_store.get(replay_id), body)
+
+        # --- conversation admission (13 §7; module-docstring decisions) ---------
+        conversation: Conversation | None = None
+        if conversations is not None and conversation_id is not None:
+            try:
+                conversation = conversations.get_conversation(
+                    principal.tenant_id, conversation_id
+                )
+            except ConversationNotFound:
+                # Auto-create under the caller (recorded decision): absent
+                # and foreign-tenant are indistinguishable (20 §6), so both
+                # start a fresh conversation owned by the caller.
+                conversation = conversations.create_conversation(
+                    Conversation(
+                        id=conversation_id,
+                        tenant_id=principal.tenant_id,
+                        user_id=principal.user_id,
+                        title=body.ask[:80],
+                        status=ConversationStatus.ACTIVE,
+                    )
+                )
+            if conversation.user_id != principal.user_id:
+                # Same tenant, different user: 13 §7 — one user's history is
+                # never used for another. Named denial, not silent skip.
+                return error_response(
+                    ErrorCode.UNAUTHORIZED,
+                    "Conversation belongs to another user.",
+                    details={"field": "conversation_id"},
+                )
+
+        # --- context composition (T-IMPL-027; BEFORE appending the ask) ---------
+        composed: ComposedContext | None = None
+        if composer is not None:
+            try:
+                composed = composer.compose(
+                    ContextComposeRequest(
+                        tenant_id=principal.tenant_id,
+                        user_id=principal.user_id,
+                        ask=body.ask,
+                        role_id=role.id if role is not None else None,
+                        conversation_id=(
+                            conversation.id if conversation is not None else None
+                        ),
+                        context_budget=context_budget,
+                    )
+                )
+            except ContextBudgetExceeded as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Mandatory context exceeds the context budget.",
+                    details={"required": exc.required, "budget": exc.budget},
+                )
+
+        # --- persist the ask (append-only history; failures keep the ask) -------
+        if conversations is not None and conversation is not None:
+            conversations.append_message(
+                principal.tenant_id,
+                Message(
+                    id=uuid4(),
+                    conversation_id=conversation.id,
+                    role=MessageRole.USER,
+                    content=body.ask,
+                    created_at=utc_now(),
+                ),
+            )
 
         # --- route (11; Router decides) ----------------------------------------
         routing_request = RoutingRequest(
@@ -249,6 +446,14 @@ def create_app(
             payload["output"] = body.output.model_dump(
                 mode="json", by_alias=True, exclude_none=True
             )
+        if composed is not None:
+            # The composed 13 §5 object rides the payload verbatim — blocks
+            # AND named exclusions stay data all the way down.
+            payload["context"] = composed.model_dump(mode="json", exclude_none=True)
+        elif role is not None:
+            # No composer: the admitted role's objective rides as payload
+            # data (never both — recorded decision, no duplicated blocks).
+            payload["role"] = {"id": str(role.id), "objective": role.objective}
         try:
             report = await execution_service.execute_single(
                 tenant_id=principal.tenant_id,
@@ -280,6 +485,24 @@ def create_app(
             idempotency_index[(principal.tenant_id, idempotency_key)] = (
                 report.execution.id
             )
+        # --- persist the assistant turn (succeeded only; same content) ----------
+        if (
+            conversations is not None
+            and conversation is not None
+            and report.execution.status is ExecutionStatus.SUCCEEDED
+            and report.final_output is not None
+        ):
+            format_hint = body.output.format if body.output is not None else None
+            conversations.append_message(
+                principal.tenant_id,
+                Message(
+                    id=uuid4(),
+                    conversation_id=conversation.id,
+                    role=MessageRole.ASSISTANT,
+                    content=_result_from_output(report.final_output, format_hint).content,
+                    created_at=utc_now(),
+                ),
+            )
         return _sync_response(report, body)
 
     def _sync_response(report: ExecutionReport, body: ExecuteRequest) -> Response:
@@ -306,6 +529,25 @@ def create_app(
         return JSONResponse(
             status_code=HTTP_STATUS_BY_CODE[detail.code],
             content={"error": detail.model_dump(mode="json", exclude_none=True)},
+        )
+
+    @app.get("/v1/skills")
+    async def list_skills() -> Response:
+        """GET /v1/skills (10 §7): selectable skills only, name-ordered.
+
+        Non-selectable registrations (pipeline states, disabled, imported
+        source) are LOADED but never listed — the registry's admission rule
+        surfaced, not re-implemented here.
+        """
+        response = SkillsListResponse(
+            skills=[
+                SkillListEntry.from_skill(skill)
+                for skill in skill_registry.list_selectable()
+            ]
+        )
+        return JSONResponse(
+            status_code=200,
+            content=response.model_dump(mode="json", exclude_none=True),
         )
 
     @app.get("/v1/executions/{execution_id}")
