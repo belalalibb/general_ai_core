@@ -18,15 +18,29 @@ from core.providers.ports import (
     ProviderAdapterPort,
     ProviderAssetsPort,
 )
+from core.providers.registry import (
+    TEMPLATE_DISABLED_STATUS,
+    BindingRegistry,
+    ModelRegistry,
+    ProviderRegistry,
+    RegisteredProvider,
+    aggregate_provider_health,
+)
 
 __all__ = [
+    "TEMPLATE_DISABLED_STATUS",
     "BindingNotFound",
+    "BindingRegistry",
     "DuplicateRegistration",
     "ModelNotRegistered",
+    "ModelRegistry",
     "ProviderAccountLifecyclePort",
     "ProviderAdapterPort",
     "ProviderAssetsPort",
     "ProviderBoundaryError",
     "ProviderNotEligible",
     "ProviderNotRegistered",
+    "ProviderRegistry",
+    "RegisteredProvider",
+    "aggregate_provider_health",
 ]
