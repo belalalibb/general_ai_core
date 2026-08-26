@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R034
+STATE_REVISION: R035
 
 RESUME_TOKEN:
-PROJECT|R034|PHASE_2_IMPLEMENTATION|T-IMPL-017|RECONCILED_ADRS_ACCEPTED_DB_AND_REDIS_IMPLEMENTED_OTEL_IMPL_NEXT|VERIFY_HEAD_WITH_GIT
+PROJECT|R035|PHASE_2_IMPLEMENTATION|MVP_PHASE_3_EXIT_VERIFIED|OTEL_IMPLEMENTED_ALL_PHASE_3_DELIVERABLES_DONE|PHASE_4_REQUIRES_NEW_SESSION
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (R034 reconciliation session: state checkpoint commit at HEAD after this update; cache-untrack maintenance 36bc126. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (R035 session: T-IMPL-017 implementation commit 6ba586b, cache-untrack maintenance 3d5383f, then this state checkpoint at HEAD. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-016 (implementation part — Redis binding landed and verified; T-IMPL-015 implementation part also landed and verified; T-IMPL-017 implementation part is the next authorized task. Recorded at R034 by filesystem reconciliation: the session that executed the acceptances + implementations was interrupted before its state checkpoint, so R034 re-verified everything from filesystem + gates, per the recovery rule.)
+T-IMPL-017 (implementation part — ADR-0004 observability wiring landed and verified; MVP Phase 3 exit criteria (41 §42) evaluated in the same session and MET: all six deliverables present with green gates. Phase 4 (41 §43) must start in a NEW session per the MVP-PHASE BOUNDARY DECISION (R024).)
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -126,13 +126,13 @@ CURRENT_WORKSTREAM:
 PRODUCT_IMPLEMENTATION_MVP
 
 CURRENT_TASK:
-T-IMPL-017 implementation part (ADR-0004 observability wiring) — the only remaining MVP Phase 3 deliverable. ADR-0002/0003/0004 are all ACCEPTED (explicit operator decision, 2026-08-25, recorded verbatim in each ADR's Status section); ADR-0002 and ADR-0003 implementations are DONE and verified (see R034 evidence below).
+DONE — T-IMPL-017 implementation part (ADR-0004 observability wiring) + MVP Phase 3 exit evaluation. Phase 3 is CLOSED. The next task control lives in PROGRESS CHECKPOINT below.
 
 TASK_OBJECTIVE:
 PostgreSQL migrations groundwork (41 §42, 40 §5.1): write ADR-0002 selecting the persistence toolchain BEFORE any DB dependency lands. Proposal: SQLAlchemy 2.x async + asyncpg + Alembic + pgvector, all confined to infrastructure/ with a new import-linter contract keeping core free of persistence imports. Dependency pins, alembic environment under infrastructure/db/, and the first identity/tenancy migration follow ONLY after the ADR is ACCEPTED by the operator.
 
 TASK_STATUS:
-ADR-0002 IMPLEMENTED_AND_VERIFIED; ADR-0003 IMPLEMENTED_AND_VERIFIED; ADR-0004 ACCEPTED_IMPLEMENTATION_AUTHORIZED_NOT_STARTED.
+ADR-0002 IMPLEMENTED_AND_VERIFIED; ADR-0003 IMPLEMENTED_AND_VERIFIED; ADR-0004 IMPLEMENTED_AND_VERIFIED (T-IMPL-017, commit 6ba586b). MVP_PHASE_3_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED (R035).
 
 ALLOWED_SCOPE (part 1):
 - create engineering/adr/ADR-0002-persistence-toolchain.md (full §8.1 format)
@@ -146,6 +146,15 @@ FORBIDDEN_SCOPE:
 TASK_COMPLETION_CRITERIA (part 1):
 - ADR-0002 has all §8.1 sections (Context/Alternatives/Decision/Reason/Consequences/Status), >=2 alternatives analyzed, STATUS: PROPOSED, explicit no-dependency-until-accepted gate stated inside the ADR.
 - ADR index updated. check_repo.sh => RESULT: PASS. Focused local commit; state updated.
+
+VERIFICATION_EVIDENCE (T-IMPL-017 + Phase 3 exit, R035):
+- apps/observability/ = config.py (ObservabilityConfig: service resource attrs, exporter mode closed set console|none — OTLP intentionally NOT a valid value until a collector exists per ADR-0004; sampler thresholds), sampler.py (AdaptiveSampler per 40 §5.3: normal→reduced ratio, error/slow/high-value/debug→ALWAYS_ON, composed under ParentBased(root) so child spans follow the parent decision), logs.py (structlog JSON pipeline; secret-scrubbing processor at the PIPELINE HEAD per 20 §5 — recursive over dicts/lists, key-pattern + value-pattern based; trace_id/span_id correlation processor injecting active span context), setup.py (composition root: TracerProvider wiring ONLY here; console/no-op exporters; idempotent init guard).
+- Dependencies pinned in the SAME commit as the 7th import-linter contract ("Core must not import the telemetry stack": core/* forbidden from opentelemetry*, structlog): opentelemetry-api>=1.25, opentelemetry-sdk>=1.25, structlog>=24.
+- tests/observability/test_observability_setup.py: 18 hermetic tests — sampler policy matrix (normal sampled at reduced ratio, error/slow/high-value/debug always sampled, parent decision honored), scrubbing (nested dicts/lists, key patterns, value patterns, pipeline-head position asserted), correlation (trace_id/span_id present inside span, absent outside), config validation (OTLP rejected), boundary (core imports clean of telemetry).
+- Audit port untouched: telemetry references audit ids only (ADR-0004 consequence honored).
+- Gates at R035: 269 tests PASS; mypy --strict (core/) clean; ruff clean; ALL 7 import-linter contracts kept; secret scan clean; check_repo.sh RESULT: PASS.
+- MVP PHASE 3 EXIT EVALUATION (41 §42) — all six deliverables verified from filesystem: (1) PostgreSQL migrations: infrastructure/db/{alembic.ini,engine.py,tables.py,migrations/versions/0001_identity_tenancy.py} + parity gates in tests/db/. (2) Redis setup: core/runtime/{ports,errors,memory}.py + infrastructure/redis/binding.py + hermetic gates in tests/runtime/. (3) Object storage abstraction: core/storage/{ports,errors,memory}.py. (4) Secret manager abstraction: core/secrets/{ports,errors,memory}.py (opaque refs only, no secret material). (5) Basic audit logs: core/audit/{ports,errors,memory}.py. (6) OpenTelemetry setup: apps/observability/ (this task). => MVP_PHASE_3_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED.
+- Session maintenance (R035): sandbox reset wiped dev tools AGAIN — reinstalled all pinned deps before gates; auto-uploader had re-tracked tool caches — untracked again (3d5383f).
 
 VERIFICATION_EVIDENCE (R034 reconciliation — filesystem + gates, per recovery rule; the executing session's checkpoint was lost to an interruption):
 - ADR-0002/0003/0004 all read STATUS: ACCEPTED with the operator decision quoted verbatim ("ADR-000N = ACCEPTED", 2026-08-25); ADR index rows updated to ACCEPTED. All three are append-only from acceptance.
@@ -167,6 +176,8 @@ VERIFICATION_EVIDENCE (T-IMPL-015 part 1, this session):
 - check_repo.sh RESULT: PASS after edits.
 
 MVP_PHASE_2_EXIT (recorded R028, unchanged): MVP_PHASE_2_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED — full 41 §41 evaluation preserved in git history at the R028 checkpoint commit (d88a876 pre-rewrite).
+
+MVP_PHASE_3_EXIT (recorded R035): MVP_PHASE_3_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED — full 41 §42 evaluation in the R035 evidence block above.
 ```
 
 ---
@@ -175,28 +186,29 @@ MVP_PHASE_2_EXIT (recorded R028, unchanged): MVP_PHASE_2_STATUS: EXIT_CRITERIA_M
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-016 (implementation part; reconciled at R034 from filesystem + gates)
+T-IMPL-017 (implementation part) + MVP Phase 3 exit evaluation (R035)
 
 LAST_VERIFIED_TASK_COMMIT:
 VERIFY_WITH_GIT_REV_PARSE_HEAD (auto-uploader history rewrites make stored hashes unreliable; content verified against filesystem + green gates at R034)
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP Phase 3 — Storage / Observability (41 §42): abstractions DONE (T-IMPL-012/013/014); PostgreSQL migrations DONE (T-IMPL-015, ADR-0002 ACCEPTED); Redis setup DONE (T-IMPL-016, ADR-0003 ACCEPTED). ONE deliverable remains: OpenTelemetry setup (T-IMPL-017, ADR-0004 ACCEPTED — implementation authorized).
+MVP Phase 3 — Storage / Observability (41 §42): COMPLETE. All six deliverables DONE and verified (T-IMPL-012..017; ADR-0002/0003/0004 all ACCEPTED and IMPLEMENTED). Next workstream: MVP Phase 4 — Provider + Model MVP (41 §43).
 
 NEXT_TASK:
-T-IMPL-017 implementation part — ADR-0004 observability wiring (last MVP Phase 3 deliverable).
+T-IMPL-018 — first MVP Phase 4 slice (41 §43: provider registry, one provider adapter, model registry, provider-model binding, credential reference, health checks). A Phase 4 SLICING DECISION must be recorded at the start of the Phase 4 session (mirroring the R025 Phase 2 slicing), contracts/ports-first; provider/model/binding/credential CONTRACTS already exist from Phase 1 (core/contracts/domain.py, provider.py), so the slice starts at the port/registry-service layer.
 
 NEXT_TASK_OBJECTIVE:
-Per ADR-0004 Decision: pin opentelemetry-api, opentelemetry-sdk, structlog WITH the 7th import-linter contract (core must not import opentelemetry/structlog) in the same commit; wire the SDK ONLY at the apps/ composition root (TracerProvider + resource attrs; dev/test default console/no-op exporters — gates stay hermetic); implement the custom AdaptiveSampler per 40 §5.3 (normal → reduced; error/slow/high-value/debug → full; ParentBased(root) composition; thresholds in config); structlog JSON pipeline with trace_id/span_id injection and a secret-scrubbing processor at the pipeline head (20 §5); audit port untouched — telemetry references audit ids only. OTLP exporter package DEFERRED until a collector exists (per ADR). Hermetic tests for sampler policy, scrubbing, correlation, and boundary.
+At the start of the NEW session: (1) re-verify the R035 checkpoint from filesystem + git per the recovery rule; (2) record the Phase 4 slicing decision; (3) begin the first slice. Constraints carried forward: no real provider network calls in gates (hermetic fakes; 30 §8 ProviderAdapter behavioral interface lands here), credential handling stays opaque-reference-only (20 §5), unknown capability => DENY (30 §7).
 
 NEXT_TASK_NOTE:
-ADR-0004 is ACCEPTED — no further sign-off needed for this scope. Phase 4+ (41 §43) must NOT be pulled forward; after T-IMPL-017 lands, MVP Phase 3 exit criteria (41 §42) are evaluated before anything else.
+MVP-PHASE BOUNDARY DECISION (R024) applies: Phase 4 must NOT start in this session (the session that verified Phase 3 exit). This session stops after the R035 checkpoint commit.
 
 NEXT_TASK_AUTHORIZED:
-YES — T-IMPL-017 implementation part only. After it is verified + committed, evaluate MVP Phase 3 exit; Phase 4 requires its own authorization path per governance.
+NO_IN_THIS_SESSION — YES in a NEW session that first re-verifies R035 from filesystem + git. No additional operator sign-off is required to start Phase 4 work itself (the USER DIRECTIVE covers migration-order execution), but any new dependency still requires its own ADR flow per governance.
 
 DO_NOT_START:
-- MVP Phase 4+ code; real KMS/vault/network bindings; real secret material anywhere (20 §5)
+- MVP Phase 4 code IN THIS SESSION (new-session boundary per R024 decision); MVP Phase 5+ code until Phase 4 exit is verified
+- real KMS/vault/network bindings; real secret material anywhere (20 §5)
 - no OTLP exporter dependency until a collector exists (ADR-0004)
 - do not re-open Phase 1/2 contract or service decisions or ACCEPTED ADRs (superseding ADR required)
 ```
@@ -273,6 +285,8 @@ DO_NOT_START:
 - R024 environment note: this session recovered from a sandbox reset + auto-uploader history rewrite. All previously recorded short commit hashes are invalid in the rewritten history; the trusted progress anchor is HEAD + filesystem + green gates, per the state file's own proof rule. Dev tooling (mypy/ruff/import-linter) had to be reinstalled; pre-task gates re-run PASS before new work began.
 - MVP-PHASE BOUNDARY DECISION (R024): applying the same discipline as the documentation PHASE_2_START_RULE and the USER DIRECTIVE's phase-boundary clause, MVP Phase 2 (T-IMPL-008) must start in a NEW session that first re-verifies the R024 checkpoint from filesystem + git. This session verified Phase 1 exit and therefore stops here.
 - MVP PHASE 2 SLICING DECISION (R025): 41 §41 deliverables are executed contracts-first, mirroring Phase 1 discipline: T-IMPL-008 identity/tenancy contracts (03 §2) → T-IMPL-009 RBAC/entitlement + capability-firewall decision contracts (20 §4) → T-IMPL-010 in-memory identity service skeleton (registration + personal tenant + email-verification port with fake + session) with auth/tenant-isolation tests. No network, no real email, no secrets in code anywhere in Phase 2.
+- T-IMPL-017 completed the ADR-0004 observability implementation (R035, commit 6ba586b): opentelemetry-api/sdk + structlog pinned WITH the 7th import-linter contract (core must not import the telemetry stack) in the same commit; apps/observability/ composition root (TracerProvider wiring ONLY there; console/no-op exporters — OTLP rejected by config until a collector exists, per ADR); AdaptiveSampler per 40 §5.3 under ParentBased(root); structlog JSON pipeline with head-of-pipeline secret scrubbing (20 §5) + trace_id/span_id correlation; audit port untouched (telemetry references audit ids only). 18 hermetic tests; 269 total green; all 7 contracts kept; check_repo.sh PASS.
+- MVP PHASE 3 EXIT (R035): all six 41 §42 deliverables verified from filesystem (migrations / redis / object storage / secret manager / audit logs / OTel) — MVP_PHASE_3_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED. Applying the MVP-PHASE BOUNDARY DECISION (R024): MVP Phase 4 (T-IMPL-018) must start in a NEW session that first re-verifies the R035 checkpoint. This session stops here.
 ```
 
 ---
