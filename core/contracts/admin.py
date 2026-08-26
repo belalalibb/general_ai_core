@@ -41,6 +41,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
 from pydantic import Field
@@ -154,3 +155,46 @@ class ConfigChange(ContractModel):
     validation_result: BoundedStr | None = None
     impact_preview: BoundedStr | None = None
     published_version: BoundedStr | None = None
+
+
+# --- API request/read shapes (T-IMPL-032, MVP Phase 7 slice 4) -------------------
+
+
+class AdminDraftRequest(ContractModel):
+    """POST /v1/admin/changes body: the action + its payload, nothing more.
+
+    The area is DERIVED from the action (ACTION_AREA) and tenant/actor come
+    from the authenticated principal — clients never claim identity fields.
+    """
+
+    action: AdminAction
+    payload: JsonObject = Field(default_factory=dict)
+
+
+class LearningDashboard(ContractModel):
+    """21 §7 learning-dashboard read model — PLACEHOLDER in MVP Phase 7.
+
+    Field-for-field from the 21 §7 admin view list (verified samples, gold
+    samples, dataset coverage, task coverage, specialist models, accuracy
+    trends, cost reduction, teacher agreement, canary status, promotion
+    history, rollback actions). R049 boundary (a): NO learning machinery
+    exists in this phase, so the surface serves HONEST empty/zero values
+    with an EXPLICIT placeholder marker — fabricated metrics would fake a
+    lifecycle (22 §8–§11) that was never built. ``placeholder`` is a
+    Literal[True]: this shape structurally CANNOT claim to be real data;
+    when the learning lifecycle lands, a non-placeholder variant replaces
+    it consciously (contract change, not silent flag flip).
+    """
+
+    placeholder: Literal[True] = True
+    verified_samples: Annotated[int, Field(ge=0)] = 0
+    gold_samples: Annotated[int, Field(ge=0)] = 0
+    dataset_coverage: JsonObject = Field(default_factory=dict)
+    task_coverage: JsonObject = Field(default_factory=dict)
+    specialist_models: tuple[BoundedStr, ...] = ()
+    accuracy_trends: tuple[JsonObject, ...] = ()
+    cost_reduction: float | None = None
+    teacher_agreement: float | None = None
+    canary_status: BoundedStr | None = None
+    promotion_history: tuple[JsonObject, ...] = ()
+    rollback_actions: tuple[JsonObject, ...] = ()
