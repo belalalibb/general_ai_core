@@ -105,6 +105,12 @@ from core.contracts.security import (
     ResourceRef,
     ScopeRef,
 )
+from core.contracts.usage import (
+    TaskUnitBudget,
+    UsageLedger,
+    UsageLedgerStatus,
+    UsageSummary,
+)
 
 __all__ = [
     "ADMIN_CHANGE_EVENT_TYPES",
@@ -184,9 +190,13 @@ __all__ = [
     "SelectionStrategy",
     "StreamEvent",
     "TaskAnalysis",
+    "TaskUnitBudget",
     "Tenant",
     "TenantStatus",
     "TenantType",
+    "UsageLedger",
+    "UsageLedgerStatus",
+    "UsageSummary",
     "User",
     "UserStatus",
     "WebhookEventType",
