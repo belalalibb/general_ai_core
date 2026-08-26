@@ -152,6 +152,50 @@ class SkillProvenance(ContractModel):
     local_version: BoundedStr | None = None
 
 
+# --- 10 §7 skills listing -----------------------------------------------------------
+
+
+class SkillListEntry(ContractModel):
+    """One row of GET /v1/skills (10 §7 example, field-for-field).
+
+    Recorded mapping decisions (contract-level, not silent):
+
+    - ``id`` is the MANIFEST id — the 10 §7 example shows ``code_review``,
+      the stable human key from 14 §2 — not the registry UUID (the UUID is
+      an internal registry address, 20 §6 anti-enumeration posture).
+    - ``requires_tools`` is the example's FLAT name list: required tools
+      first, then optional, deduplicated in that order. The required/
+      optional split stays inspectable on the manifest itself; the listing
+      is a summary — and listing a tool remains DATA, never a grant
+      (03 §8: "Skill can require Tools but cannot bypass Tool permissions").
+    """
+
+    id: BoundedStr
+    version: BoundedStr
+    status: SkillStatus
+    requires_tools: list[BoundedStr] = Field(default_factory=list)
+
+    @classmethod
+    def from_skill(cls, skill: Skill) -> SkillListEntry:
+        """Project a registered Skill onto the 10 §7 row shape."""
+        tools = skill.manifest.requires_tools
+        seen: dict[str, None] = {}  # ordered dedup: required first, then optional
+        for tool in (*tools.required, *tools.optional):
+            seen.setdefault(tool, None)
+        return cls(
+            id=skill.manifest.id,
+            version=skill.version,
+            status=skill.status,
+            requires_tools=list(seen),
+        )
+
+
+class SkillsListResponse(ContractModel):
+    """GET /v1/skills response (10 §7): the ``skills`` array envelope."""
+
+    skills: list[SkillListEntry] = Field(default_factory=list)
+
+
 # --- Entity ----------------------------------------------------------------------
 
 
