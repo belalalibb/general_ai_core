@@ -400,12 +400,14 @@ class AdminConfigService:
             self._set_model_status(str(change.payload["model_key"]), status)
             return
         if action in (AdminAction.ENABLE_PROVIDER, AdminAction.DISABLE_PROVIDER):
-            status = (
+            provider_status = (
                 ProviderStatus.ACTIVE
                 if action is AdminAction.ENABLE_PROVIDER
                 else ProviderStatus.DISABLED
             )
-            self._set_provider_status(str(change.payload["provider_key"]), status)
+            self._set_provider_status(
+                str(change.payload["provider_key"]), provider_status
+            )
             return
         if action is AdminAction.SET_PLAN:
             payload = change.payload
