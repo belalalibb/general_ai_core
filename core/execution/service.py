@@ -41,10 +41,19 @@ Composition faults (adapter missing, credential ref missing, malformed
 pipeline) raise BEFORE any provider work starts — fail-fast, no partial
 execution on misconfiguration (core/execution/errors.py).
 
+Usage accounting (T-IMPL-024; 41 §44 "usage reservation/settlement"; 03 §7):
+when a :class:`~core.usage.ports.UsageAccountingPort` is bound, the service
+reserves ``units_per_stage × stage-count`` BEFORE any provider work (a
+denied reservation aborts the execution before a single adapter call) and
+resolves the reservation exactly once afterwards — ``settle`` on success,
+``fail`` on failure, both settling 1 unit per SUCCEEDED stage (the MVP
+task-unit metric; provider-reported raw usage rides along as
+``modality_costs`` data, 03 §7). Unbound (``usage=None``) keeps the
+pre-T-IMPL-024 behavior: ``cost_snapshot.settlement`` says
+``pending_usage_service`` and nothing is charged.
+
 Scope notes (deliberate, not omissions):
 
-- Usage reservation/settlement is slice T-IMPL-024; ``cost_snapshot`` here
-  carries raw provider-reported usage only and says so.
 - Non-model node types (tool_call, planner, ...), approval gates, and the
   durable workflow runtime (queues/leases/crash recovery, 12 §9) belong to
   the execution-graph phase; this MVP service runs model-call stages
@@ -78,6 +87,7 @@ from core.contracts.provider import (
     ProviderOperation,
 )
 from core.contracts.routing import CandidateScore, RoutingDecision
+from core.contracts.usage import UsageLedger
 from core.execution.errors import (
     AdapterNotBound,
     CredentialNotConfigured,
@@ -85,6 +95,7 @@ from core.execution.errors import (
 )
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry
+from core.usage.ports import UsageAccountingPort
 
 # Categories that indict the REQUEST itself: no retry, no failover — another
 # provider cannot fix a malformed request, and safety rejections are never
@@ -143,11 +154,16 @@ class NodeReport:
 
 @dataclass(frozen=True)
 class ExecutionReport:
-    """Service result: the Execution record, per-node reports, status trail."""
+    """Service result: the Execution record, per-node reports, status trail.
+
+    ``usage`` is the resolved 03 §7 ledger entry when a usage-accounting
+    port is bound to the service, else ``None`` (settlement pending).
+    """
 
     execution: Execution
     nodes: tuple[NodeReport, ...]
     status_history: tuple[ExecutionStatus, ...]
+    usage: UsageLedger | None = None
 
     @property
     def final_output(self) -> JsonObject | None:
@@ -185,6 +201,11 @@ class ExecutionService:
       provider-specific model name for each (provider, model) candidate.
     - ``max_retries_per_candidate``: bounded same-candidate retry budget
       for retryable errors (40 §4.6/§4.7 — no infinite retry).
+    - ``usage``: optional UsageAccountingPort (T-IMPL-024). Bound: reserve
+      before / settle-or-fail after (module docstring). ``None``: no
+      accounting, ``cost_snapshot.settlement = pending_usage_service``.
+    - ``units_per_stage``: MVP task-unit metric — units reserved per stage
+      and settled per SUCCEEDED stage (10 §3 example: 2 units ≈ 2 stages).
     - ``sleeper`` / ``id_factory`` / ``clock``: seams for hermetic tests.
     """
 
@@ -195,6 +216,8 @@ class ExecutionService:
         credential_refs: Mapping[UUID, str],
         bindings: BindingRegistry,
         max_retries_per_candidate: int = 1,
+        usage: UsageAccountingPort | None = None,
+        units_per_stage: float = 1.0,
         sleeper: Callable[[float], Awaitable[None]] | None = None,
         id_factory: Callable[[], UUID] = uuid4,
         clock: Callable[[], datetime] = utc_now,
@@ -202,6 +225,11 @@ class ExecutionService:
         if max_retries_per_candidate < 0:
             msg = "max_retries_per_candidate must be >= 0"
             raise ValueError(msg)
+        if units_per_stage < 0:
+            msg = "units_per_stage must be >= 0"
+            raise ValueError(msg)
+        self._usage = usage
+        self._units_per_stage = units_per_stage
         self._adapters = adapters
         self._credential_refs = credential_refs
         self._bindings = bindings
@@ -301,6 +329,16 @@ class ExecutionService:
 
         execution_id = self._id_factory()
         created_at = self._clock()
+
+        # --- usage reservation (T-IMPL-024; 03 §7) BEFORE any provider work.
+        # A denied reservation (budget/entitlement) raises here — no adapter
+        # is ever called for work the tenant cannot pay for (20 §4 posture).
+        reserved = False
+        if self._usage is not None:
+            self._usage.reserve(
+                tenant_id, execution_id, self._units_per_stage * len(stages)
+            )
+            reserved = True
         status_history: list[ExecutionStatus] = [
             ExecutionStatus.QUEUED,
             ExecutionStatus.RUNNING,
@@ -311,43 +349,78 @@ class ExecutionService:
         failed = False
         previous_output: JsonObject | None = None
 
-        for stage in stages:
-            if failed:
-                node_reports.append(
-                    self._skipped_node(execution_id, stage, previous_output=None)
-                )
-                continue
-
-            stage_payload = dict(stage.payload)
-            if previous_output is not None:
-                stage_payload[PREVIOUS_OUTPUT_KEY] = previous_output
-
-            run = await self._run_node(
-                stage=stage,
-                tenant_id=tenant_id,
-                payload=stage_payload,
-                timeout_ms=timeout_ms,
-            )
-            node_reports.append(
-                self._completed_node(execution_id, stage, stage_payload, run)
-            )
-            if run.succeeded and run.response is not None:
-                previous_output = run.response.output
-                if run.response.usage:
-                    provider_usage.append(
-                        {"node_key": stage.node_key, "usage": run.response.usage}
+        try:
+            for stage in stages:
+                if failed:
+                    node_reports.append(
+                        self._skipped_node(execution_id, stage, previous_output=None)
                     )
-            else:
-                failed = True
+                    continue
+
+                stage_payload = dict(stage.payload)
+                if previous_output is not None:
+                    stage_payload[PREVIOUS_OUTPUT_KEY] = previous_output
+
+                run = await self._run_node(
+                    stage=stage,
+                    tenant_id=tenant_id,
+                    payload=stage_payload,
+                    timeout_ms=timeout_ms,
+                )
+                node_reports.append(
+                    self._completed_node(execution_id, stage, stage_payload, run)
+                )
+                if run.succeeded and run.response is not None:
+                    previous_output = run.response.output
+                    if run.response.usage:
+                        provider_usage.append(
+                            {"node_key": stage.node_key, "usage": run.response.usage}
+                        )
+                else:
+                    failed = True
+        except BaseException:
+            # A reservation must NEVER leak (03 §7 exactly-once resolution):
+            # an unexpected crash mid-execution resolves it as failed with
+            # zero settled units before the fault propagates.
+            if reserved and self._usage is not None:
+                self._usage.fail(execution_id, 0)
+            raise
 
         final_status = ExecutionStatus.FAILED if failed else ExecutionStatus.SUCCEEDED
         status_history.append(final_status)
 
-        # Raw provider-reported accounting only; reservation/settlement is
-        # the T-IMPL-024 slice and is NOT claimed here.
+        # --- usage settlement (exactly-once resolution; 03 §7) -----------------
+        # MVP metric: 1 × units_per_stage per SUCCEEDED stage; raw provider-
+        # reported usage rides along as modality_costs data.
+        ledger: UsageLedger | None = None
+        if reserved and self._usage is not None:
+            succeeded_stages = sum(
+                1
+                for entry in node_reports
+                if entry.node.status is ExecutionNodeStatus.SUCCEEDED
+            )
+            actual_units = self._units_per_stage * succeeded_stages
+            modality_costs: JsonObject = {"provider_usage": provider_usage}
+            if failed:
+                ledger = self._usage.fail(
+                    execution_id, actual_units, modality_costs=modality_costs
+                )
+            else:
+                ledger = self._usage.settle(
+                    execution_id, actual_units, modality_costs=modality_costs
+                )
+
         cost_snapshot: JsonObject = {
             "provider_usage": provider_usage,
-            "settlement": "pending_usage_service",
+            "settlement": (
+                "pending_usage_service"
+                if ledger is None
+                else {
+                    "status": ledger.status.value,
+                    "units_reserved": ledger.units_reserved,
+                    "units_settled": ledger.units_settled,
+                }
+            ),
         }
         execution = Execution(
             id=execution_id,
@@ -366,6 +439,7 @@ class ExecutionService:
             execution=execution,
             nodes=tuple(node_reports),
             status_history=tuple(status_history),
+            usage=ledger,
         )
 
     # --- candidate traversal (Router order, never re-scored) -----------------------
