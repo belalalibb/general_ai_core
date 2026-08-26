@@ -18,16 +18,16 @@ Trusted proof = this state file + local Git commit exists + filesystem reality m
 
 ```text
 STATE_VERSION: 1
-STATE_REVISION: R038
+STATE_REVISION: R039
 
 RESUME_TOKEN:
-PROJECT|R038|PHASE_2_IMPLEMENTATION|MVP_PHASE_4|T_IMPL_019_VERIFIED|NEXT_T_IMPL_020_SCAFFOLD_TREE
+PROJECT|R039|PHASE_2_IMPLEMENTATION|MVP_PHASE_4_EXIT_VERIFIED|T_IMPL_020_VERIFIED|NEXT_MVP_PHASE_5_ROUTING_EXECUTION
 
 LAST_VERIFIED_LOCAL_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (R038 session: the R037 session was interrupted mid-T-IMPL-019 verification (during a ruff-format inspection); its artifacts were synced by the auto-uploader as per-file commits. This session applied the recovery rule — verified every T-IMPL-019 artifact from the filesystem (core/providers/registry.py 335 lines, errors extended, tests/providers/test_provider_registries.py 323 lines with ZERO type-ignores), reinstalled deps after ANOTHER sandbox reset, ran full gates: 314 tests PASS, mypy --strict clean, ruff clean, all 7 import-linter contracts kept, secret scan clean, check_repo.sh RESULT: PASS. NOTE: the auto-uploader periodically rewrites history with per-file sync commits; recorded short hashes may go stale — trust HEAD + filesystem + green gates over old hashes.)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (R039 session: the R038 session executed T-IMPL-020 and committed it, but was interrupted before this state checkpoint could be recorded; the auto-uploader then rewrote history into per-file sync commits (the recorded local hash 2553709 no longer exists). This session applied the recovery rule — verified every T-IMPL-020 artifact from the filesystem (12 template packages, manifest_builder 84 lines, template_adapter 125 lines with canonical CredentialStatus import, _pending_real_providers.md ledger, 21-test §11 suite at 354 lines), reinstalled deps after ANOTHER sandbox reset, ran full gates: 339 tests PASS, mypy --strict clean, ruff clean, all 7 import-linter contracts kept, secret scan clean, check_repo.sh RESULT: PASS. Trust HEAD + filesystem + green gates over old hashes.)
 
 LAST_VERIFIED_STATE_TASK:
-T-IMPL-019 — provider/model/binding registries + health aggregation + template exclusion (31 §10), VERIFIED from filesystem + green gates in this session (R038).
+T-IMPL-020 — providers/ scaffold tree (31 §5–§7 templates + §11 test suite + NOT-CLAIMED ledger), VERIFIED from filesystem + green gates in this session (R039). MVP Phase 4 exit evaluated and VERIFIED in this session (see PROGRESS CHECKPOINT).
 
 LAST_TRUSTED_COMMIT_RULE:
 Run `git rev-parse HEAD`. The current committed HEAD is the trusted progress point after verification.
@@ -186,10 +186,23 @@ MVP_PHASE_3_EXIT (recorded R035): MVP_PHASE_3_STATUS: EXIT_CRITERIA_MET_AND_VERI
 
 ```text
 LAST_VERIFIED_TASK:
-T-IMPL-019 — provider/model/binding registries + health aggregation + template exclusion (R038)
+T-IMPL-020 — providers/ scaffold tree per 31 §5–§7 + §11 test suite (R039); MVP Phase 4 exit VERIFIED (R039)
 
 LAST_VERIFIED_TASK_COMMIT:
-VERIFY_WITH_GIT_REV_PARSE_HEAD (auto-uploader history rewrites make stored hashes unreliable; content verified against filesystem + green gates at R038)
+VERIFY_WITH_GIT_REV_PARSE_HEAD (auto-uploader history rewrites make stored hashes unreliable; content verified against filesystem + green gates at R039)
+
+T_IMPL_020_VERIFICATION_EVIDENCE (R039):
+- providers/templates/: 12 disabled diverse template packages covering the 31 §6 categories in order (chat_text, reasoning, coding, image_generation, audio_tts, audio_stt, vision, multimodal, embeddings, rerank, moderation_safety, provider_agent). Each exposes MANIFEST + build_adapter(); every manifest carries the FULL 31 §7 marker set (status=template_disabled, is_template=true, is_functional=false, real_provider_required=true, auth.types=[] verbatim, models.discovery=not_implemented, verbatim scaffold notes). Auth-shape diversity per 31 §12 recorded as INTENT-ONLY in notes (7 api_key, 2 oauth, 1 session_cookie, 2 no-auth local/internal), never functional auth. provider_agent template carries the 31 §8 agent_module + security blocks (agent posture) verbatim.
+- providers/common/manifest_builder.py (84 lines): single builder guaranteeing the marker set on every template; unsupported modules marked not_implemented per 31 §12 (never TODOs implying mandatory work).
+- providers/common/template_adapter.py (125 lines): TemplateProviderAdapter — structurally satisfies the ProviderAdapter port (T-IMPL-018) but is NON-FUNCTIONAL: generate/discovery ALWAYS raise (normalized to unsupported-capability taxonomy), credential check reports CredentialStatus.INVALID (canonical import from core.contracts.domain), health_check returns UNAVAILABLE for both scopes; constructor REJECTS non-template manifests (defense against accidental real-provider reuse).
+- providers/_pending_real_providers.md: NOT-CLAIMED ledger per 31 §9 / 41 §49 — records that end-to-end AI execution is explicitly NOT-CLAIMED and lists the activation requirements for any future real provider.
+- tests/providers/test_scaffold_templates.py: 21 hermetic tests (354 lines) = the 31 §11 suite — every template loads + validates against core contract schema, category coverage in order, full marker-set matrix, no secret material scan, loadable-but-never-routable, execution-eligibility exclusion, generate-raises for every declared operation, discovery-raises + credential-invalid, taxonomy normalization, health UNAVAILABLE (adapter + aggregation regardless of signals), capability diversity, auth-shape diversity intent-only, account-pool diversity not forced, 31 §8 agent posture, structural port satisfaction, non-template-manifest rejection, core-does-not-import-providers boundary, ledger content, builder marker invariance.
+- Gates at R039: 339 tests PASS (21 scaffold; up from 314 at R038: +21 scaffold suite, +4 from adapter-port test fixes in the same slice); mypy --strict (core/) clean; ruff check clean; ALL 7 import-linter contracts kept; secret scan clean; check_repo.sh RESULT: PASS.
+- Session maintenance (R039): sandbox reset wiped dev tools AGAIN — reinstalled all pinned deps before gates. Pre-existing cosmetic note unchanged: ruff format --check would reformat 17 files repo-wide; the ENFORCED gate is ruff check (lint), which is clean.
+
+MVP_PHASE_4_EXIT_EVALUATION (41 §43, R039) — all six deliverables verified from filesystem:
+(1) provider registry: core/providers/registry.py ProviderRegistry (register/replace, template exclusion, deny-by-default capability, ensure_eligible, routing_candidates). (2) one provider adapter: ProviderAdapter behavioral port (T-IMPL-018, 30 §8) + TemplateProviderAdapter proving the contract shape; a REAL functional adapter is PENDING_REAL_PROVIDERS per 41 §49 (scaffold-state explicitly allowed; never faked). (3) model registry: ModelRegistry (active pool, declared-capability filter). (4) provider-model binding: BindingRegistry (multi-provider per model, per-binding availability). (5) credential reference: opaque credential_ref plumbing through registry + adapter port + templates; zero secret material (20 §5). (6) health checks: adapter health_check + aggregate_provider_health (30 §11 matrix; templates always UNAVAILABLE).
+=> MVP_PHASE_4_STATUS: EXIT_CRITERIA_MET_AND_VERIFIED (scaffold-state qualifications recorded, per 41 §49 and the R036 directive interpretation).
 
 T_IMPL_019_VERIFICATION_EVIDENCE (R038):
 - core/providers/registry.py (335 lines): RegisteredProvider (immutable provider+manifest pairing; is_template = ANY 31 §7 marker: is_template OR status=template_disabled OR real_provider_required — defense in depth), ProviderRegistry (register rejects duplicates, replace = explicit re-registration; templates ARE loadable per 31 §10 but never eligible; supports_operation per 30 §5; supports_capability deny-by-default via getattr-False per 30 §7/20 §4; ensure_eligible gate ordered existence→template→functional→status→operation; routing_candidates applies all 31 §10 exclusions), ModelRegistry (03 §4: active_models pool, models_with_capability declared-only per 11 §5), BindingRegistry (ProviderModelBinding; multi-provider per model; availability is per-binding fact), aggregate_provider_health (30 §11: templates/non-functional => UNAVAILABLE always; explicit provider-scope signal wins; account failures only ever DEGRADE — even ALL accounts failing is account-scope evidence, never provider death; no accounts + no signal => HEALTHY since account pools are optional per 30 §10.1).
@@ -200,22 +213,22 @@ T_IMPL_019_VERIFICATION_EVIDENCE (R038):
 - Session maintenance (R038): sandbox reset wiped dev tools AGAIN — reinstalled all pinned deps (ruff/mypy/import-linter + runtime deps) before gates. Known pre-existing cosmetic note: `ruff format --check` would reformat 15 files repo-wide (long-standing, includes pre-T-IMPL-018 files); the ENFORCED gate is `ruff check` (lint), which is clean — formatting normalization is deliberately NOT bundled into this focused task commit.
 
 CURRENT_WORKSTREAM_AFTER_THIS_COMMIT:
-MVP Phase 4 — Provider + Model MVP (41 §43): IN PROGRESS. Slice 1 (T-IMPL-018 adapter port + contracts) DONE; slice 2 (T-IMPL-019 registries) DONE; final slice: T-IMPL-020 scaffold tree.
+MVP Phase 4 — Provider + Model MVP (41 §43): CLOSED (EXIT_CRITERIA_MET_AND_VERIFIED at R039, with 41 §49 scaffold-state qualifications). Next phase: MVP Phase 5 — Routing + Execution MVP (41 §44).
 
 NEXT_TASK:
-T-IMPL-020 — MVP Phase 4 slice 3 (per the R036 SLICING DECISION): providers/ scaffold tree per 31 §5–§7: 12 disabled diverse provider templates (each with manifest marked template_disabled + is_functional=false + real_provider_required=true), manifest schema validation against core contracts, providers/_pending_real_providers.md ledger, and the 31 §11 scaffold test suite (every template loads, validates, is excluded from routing/execution/health, and raises on invoke).
+T-IMPL-021 — MVP Phase 5 slice 1 (contracts-first, mirroring R025/R036 slicing): routing contracts + router simple scoring engine in core/routing/ per doc 06 routing spec — routing request/decision contracts, simple scoring policy (tier + capability + explicit model override), candidate sourcing from the T-IMPL-019 registries (templates excluded by construction), deny-by-default on unknown capability, and hermetic tests. Phase 5 remaining deliverables (41 §44) follow as further slices: single execution + pipeline execution service, POST /v1/execute + execution status endpoint (FastAPI per ADR-0001 — dependency pin requires the import-linter contract landing WITH it), usage reservation/settlement.
 
 NEXT_TASK_OBJECTIVE:
-Make the providers/ top-level package real scaffold-state per doc 31: templates prove the adapter contract shape without any network or secret material; _pending_real_providers.md records exactly what cannot be claimed until real providers land (41 §49). After T-IMPL-020, run the MVP Phase 4 exit evaluation (41 §43) and record it.
+Start MVP Phase 5 with the router core: given an execution request, produce a deterministic, explainable routing decision over ACTIVE models/bindings only, honoring explicit model requests, tier policy, and declared capabilities (11 §5 declared-only), with templates and non-functional providers excluded (31 §10).
 
 NEXT_TASK_NOTE:
-Constraints carried forward: no real provider network calls in gates (hermetic fakes), credential handling stays opaque-reference-only (20 §5), unknown capability => DENY (30 §7), templates never active (31 §4/§10). 41 §49 applies: end-to-end AI execution stays explicitly NOT-CLAIMED until a real provider lands. import-linter: providers/ may import core contracts, never the reverse.
+Constraints carried forward: hermetic gates only (no network), credential handling stays opaque-reference-only (20 §5), unknown capability => DENY (30 §7), templates never routable (31 §4/§10), 41 §49 NOT-CLAIMED rule still binds (routing can be fully tested against registries + fakes without any real provider). Slicing of the remaining Phase 5 deliverables must be recorded as a decision when T-IMPL-021 lands.
 
 NEXT_TASK_AUTHORIZED:
-YES (USER DIRECTIVE 2026-08-26 covers continuous migration-order execution; T-IMPL-019 verified in this session).
+YES (USER DIRECTIVE 2026-08-26 R036 authorizes verifying a phase exit and continuing into the next phase in the same session; Phase 4 exit verified at this R039 checkpoint).
 
 DO_NOT_START:
-- MVP Phase 5+ code until Phase 4 exit is verified
+- MVP Phase 6+ code until Phase 5 exit is verified
 - real KMS/vault/network bindings; real secret material anywhere (20 §5)
 - no OTLP exporter dependency until a collector exists (ADR-0004)
 - do not re-open Phase 1/2 contract or service decisions or ACCEPTED ADRs (superseding ADR required)
