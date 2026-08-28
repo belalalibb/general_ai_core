@@ -17,3 +17,7 @@ class MessageNotPending(RuntimeCoordinationError):
 
 class LeaseNotHeld(RuntimeCoordinationError):
     """Release/renew by an owner that does not hold the lease (fencing)."""
+
+
+class RecordNotPending(RuntimeCoordinationError):
+    """Outbox mark_dispatched referenced a record not pending (40 §4.2)."""
