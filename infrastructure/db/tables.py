@@ -144,6 +144,23 @@ Design decisions (recorded):
   claims NO settled consumption; ``status`` has NO server_default — the
   lifecycle stage must be explicit (same recorded posture as
   skills.status). units CHECKs >= 0 match the contract Field(ge=0).
+- ``evaluations`` (FINAL Phase 3, 41 §6 "evaluations") maps
+  EvaluationRecord in ``core/contracts/evaluation.py`` field-for-field.
+  TENANT-SCOPED: tenant_id FK + index (20 §6) — the contract ITSELF
+  carries tenant_id (recorded R049 storage-shape decision), so the pair
+  matches bidirectionally with no schema-side addition. NO node_id
+  column: R049 boundary (d) attaches evaluation at EXECUTION level in
+  MVP (03 §8 'Evaluation belongs to Execution/Node' — node-level is
+  representable later, never silently pre-built). execution_id FK
+  RESTRICT + index; deliberately NOT unique — the contract permits
+  multiple evaluations per execution and no spec forbids it (nothing
+  invented). score/confidence are SEPARATE nullable [0,1] columns
+  (22 §4 'never merge them into one number' — embodied in DDL exactly
+  as in the contract); CHECKs allow NULL explicitly. ``graders`` JSONB
+  server_default '[]' == contract default () — an evaluation that
+  recorded no grader rows claims none. ``level`` has NO server_default
+  — the verification level must be explicit (RAW is a real claim, not
+  a fallback; same posture as skills.status/usage_ledger.status).
 """
 
 from __future__ import annotations
@@ -167,6 +184,7 @@ from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
 from core.contracts.conversation import ConversationStatus, MessageRole
 from core.contracts.domain import ModelStatus, ModelTier, ProviderStatus
+from core.contracts.evaluation import VerificationLevel
 from core.contracts.execute import ExecutionStatus
 from core.contracts.execution import (
     ExecutionNodeStatus,
@@ -563,4 +581,45 @@ usage_ledger = Table(
     CheckConstraint("units_reserved >= 0", name="units_reserved_nonnegative"),
     CheckConstraint("units_settled >= 0", name="units_settled_nonnegative"),
     Index("ix_usage_ledger_tenant_id", "tenant_id"),
+)
+
+evaluations = Table(
+    "evaluations",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "execution_id",
+        UUID(as_uuid=True),
+        ForeignKey("executions.id", ondelete="RESTRICT"),
+        nullable=False,
+        # NOT unique — multiple evaluations per execution are permitted
+        # by the contract; no spec forbids it (nothing invented).
+    ),
+    Column("level", String(32), nullable=False),  # NO default — level must be explicit
+    # 22 §4: score and confidence stay SEPARATE nullable columns — never
+    # merged into one number. NULL = no judgment recorded (RAW).
+    Column("score", Float, nullable=True),
+    Column("confidence", Float, nullable=True),
+    Column("evidence_ref", String(512), nullable=True),
+    Column("graders", JSONB, nullable=False, server_default="[]"),
+    CheckConstraint(
+        f"level IN ({_enum_values(VerificationLevel)})",
+        name="level_closed_set",
+    ),
+    CheckConstraint(
+        "score IS NULL OR (score >= 0 AND score <= 1)",
+        name="score_bounds",
+    ),
+    CheckConstraint(
+        "confidence IS NULL OR (confidence >= 0 AND confidence <= 1)",
+        name="confidence_bounds",
+    ),
+    Index("ix_evaluations_tenant_id", "tenant_id"),
+    Index("ix_evaluations_execution_id", "execution_id"),
 )

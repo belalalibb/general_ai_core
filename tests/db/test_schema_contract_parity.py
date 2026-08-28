@@ -27,6 +27,7 @@ from sqlalchemy.schema import CreateTable
 
 from core.contracts.conversation import Conversation, Message
 from core.contracts.domain import Model, Provider
+from core.contracts.evaluation import EvaluationRecord
 from core.contracts.execution import Execution, ExecutionNode
 from core.contracts.identity import Project, Tenant, User, Workspace
 from core.contracts.memory import MemoryItem
@@ -37,6 +38,7 @@ from core.contracts.skills import Skill
 from core.contracts.usage import UsageLedger
 from infrastructure.db.tables import (
     conversations,
+    evaluations,
     execution_nodes,
     executions,
     memory_embeddings,
@@ -81,6 +83,7 @@ CONTRACT_TABLE_PAIRS = [
     (Execution, executions),
     (ExecutionNode, execution_nodes),
     (UsageLedger, usage_ledger),
+    (EvaluationRecord, evaluations),
 ]
 # memory_embeddings is deliberately NOT in CONTRACT_TABLE_PAIRS: 03 §3
 # defines NO embedding field on MemoryItem — the table is infrastructure
@@ -111,6 +114,7 @@ class TestContractSchemaParity:
             memory_items,
             executions,
             usage_ledger,
+            evaluations,
         ):
             assert "tenant_id" in table.columns
             indexed = {col.name for ix in table.indexes for col in ix.columns}
@@ -244,6 +248,28 @@ class TestContractSchemaParity:
             if constraint.__class__.__name__ == "UniqueConstraint"
         }
         assert ("execution_id", "node_key") in composites
+
+    def test_evaluations_execution_level_attachment_and_separate_judgment(self) -> None:
+        # R049 boundary (d): evaluation attaches at EXECUTION level in
+        # MVP — NO node_id column (03 §8 node-level stays representable
+        # later, never silently pre-built).
+        assert "node_id" not in evaluations.columns
+        column = evaluations.columns["execution_id"]
+        # NOT unique — multiple evaluations per execution are permitted.
+        assert not column.unique
+        assert {fk.column.table.name for fk in column.foreign_keys} == {"executions"}
+        indexed = {col.name for ix in evaluations.indexes for col in ix.columns}
+        assert "execution_id" in indexed
+        # 22 §4: score and confidence are SEPARATE nullable columns —
+        # never merged into one number.
+        assert evaluations.columns["score"].nullable
+        assert evaluations.columns["confidence"].nullable
+        assert "quality" not in evaluations.columns
+        # graders default '[]' == contract default (); level must be an
+        # explicit claim (no server_default).
+        assert str(evaluations.columns["graders"].server_default.arg) == "[]"  # type: ignore[union-attr]
+        assert evaluations.columns["level"].server_default is None
+        assert not evaluations.columns["level"].nullable
 
     def test_usage_ledger_one_entry_per_execution_and_honest_defaults(self) -> None:
         # core/usage/memory.py keys the ledger by execution_id and a
