@@ -56,6 +56,19 @@ class ObservabilityConfig:
     )
     scrub_replacement: str = "[SCRUBBED]"
 
+    # Value-pattern scrubbing (20 §5, T-IMPL-033 hardening fix): secret
+    # material embedded in FREE TEXT — event messages and exception text —
+    # is unreachable by key-marker matching, so string VALUES are also
+    # pattern-scrubbed (same credential shapes core/memory screens for).
+    scrub_value_patterns: tuple[str, ...] = (
+        r"\bBearer\s+[A-Za-z0-9\-_.~+/]{16,}",  # bearer tokens
+        r"-----BEGIN [A-Z ]*PRIVATE KEY-----(?:.|\n)*?-----END [A-Z ]*PRIVATE KEY-----",
+        r"-----BEGIN [A-Z ]*PRIVATE KEY-----",  # PEM header even if truncated
+        r"\bAKIA[0-9A-Z]{16}\b",  # AWS access key id
+        r"\beyJ[A-Za-z0-9\-_]{10,}\.[A-Za-z0-9\-_]{10,}\.[A-Za-z0-9\-_]*",  # JWT
+        r"\b(?:sk|pk|ghp|gho|xoxb)[-_][A-Za-z0-9\-_]{16,}",  # opaque API tokens
+    )
+
     # Free-form resource attributes (tenant-safe only — never per-tenant or
     # per-user identifiers at resource level).
     extra_resource_attributes: dict[str, str] = field(default_factory=dict)
