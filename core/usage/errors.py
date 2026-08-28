@@ -56,6 +56,23 @@ class BudgetExceeded(UsageError):
         self.remaining = remaining
 
 
+class UnknownComplexity(UsageError):
+    """No unit value is configured for the task's complexity (41 §19).
+
+    Deny-by-default applied to pricing: a complexity absent from the
+    configuration-driven unit table has NO price — inventing one would
+    fabricate billing policy, so estimation refuses loudly instead.
+    """
+
+    def __init__(self, complexity: str, *, known: list[str]) -> None:
+        super().__init__(
+            f"no task-unit value configured for complexity {complexity!r}; "
+            f"known: {known}"
+        )
+        self.complexity = complexity
+        self.known = known
+
+
 class ReservationNotFound(UsageError):
     """No ledger entry exists for the execution being settled/refunded."""
 

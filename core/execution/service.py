@@ -52,6 +52,18 @@ task-unit metric; provider-reported raw usage rides along as
 pre-T-IMPL-024 behavior: ``cost_snapshot.settlement`` says
 ``pending_usage_service`` and nothing is charged.
 
+41 §19 billing rules (FINAL Phase 16, T-IMPL-065; recorded):
+
+- "Cost Snapshot: fixed at Task start." — ``estimated_units`` is computed
+  ONCE before any provider work and carried verbatim in ``cost_snapshot``
+  (the 11 §10 documented key); nothing downstream recomputes it.
+- "Internal retry/failover never multiplies the user's cost." — this is
+  STRUCTURAL: both the reservation (``units_per_stage × stage-count``)
+  and the settlement (``units_per_stage × SUCCEEDED stages``) are stage
+  arithmetic; the attempt count appears in NEITHER formula, so a stage
+  that succeeded after N retries/failovers costs exactly what a
+  first-attempt success costs.
+
 Scope notes (deliberate, not omissions):
 
 - Non-model node types (tool_call, planner, ...), approval gates, and the
@@ -330,14 +342,17 @@ class ExecutionService:
         execution_id = self._id_factory()
         created_at = self._clock()
 
+        # --- cost estimate FIXED AT TASK START (41 §19; T-IMPL-065): computed
+        # once BEFORE any provider work; the snapshot carries this value
+        # verbatim — retries, failovers, and outcomes never recompute it.
+        estimated_units = self._units_per_stage * len(stages)
+
         # --- usage reservation (T-IMPL-024; 03 §7) BEFORE any provider work.
         # A denied reservation (budget/entitlement) raises here — no adapter
         # is ever called for work the tenant cannot pay for (20 §4 posture).
         reserved = False
         if self._usage is not None:
-            self._usage.reserve(
-                tenant_id, execution_id, self._units_per_stage * len(stages)
-            )
+            self._usage.reserve(tenant_id, execution_id, estimated_units)
             reserved = True
         status_history: list[ExecutionStatus] = [
             ExecutionStatus.QUEUED,
@@ -411,6 +426,8 @@ class ExecutionService:
                 )
 
         cost_snapshot: JsonObject = {
+            # 11 §10 documented shape; value FIXED at task start (41 §19).
+            "estimated_units": estimated_units,
             "provider_usage": provider_usage,
             "settlement": (
                 "pending_usage_service"

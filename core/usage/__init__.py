@@ -11,17 +11,27 @@ from core.usage.errors import (
     EntitlementNotConfigured,
     ReservationAlreadyResolved,
     ReservationNotFound,
+    UnknownComplexity,
     UsageError,
+)
+from core.usage.estimation import (
+    DEFAULT_TASK_UNIT_VALUES,
+    CostEstimate,
+    TaskUnitEstimator,
 )
 from core.usage.memory import InMemoryUsageAccounting
 from core.usage.ports import UsageAccountingPort
 
 __all__ = [
+    "DEFAULT_TASK_UNIT_VALUES",
     "BudgetExceeded",
+    "CostEstimate",
     "EntitlementNotConfigured",
     "InMemoryUsageAccounting",
     "ReservationAlreadyResolved",
     "ReservationNotFound",
+    "TaskUnitEstimator",
+    "UnknownComplexity",
     "UsageAccountingPort",
     "UsageError",
 ]
