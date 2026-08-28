@@ -26,8 +26,19 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
 from core.contracts.identity import Project, Tenant, User, Workspace
+from core.contracts.permission import Permission
 from core.contracts.plan import Plan
-from infrastructure.db.tables import metadata, plans, projects, tenants, users, workspaces
+from core.contracts.roles import Role
+from infrastructure.db.tables import (
+    metadata,
+    permissions,
+    plans,
+    projects,
+    roles,
+    tenants,
+    users,
+    workspaces,
+)
 
 VERSIONS_DIR = Path(__file__).resolve().parents[2] / "infrastructure/db/migrations/versions"
 MIGRATION_SOURCES = {
@@ -43,6 +54,8 @@ CONTRACT_TABLE_PAIRS = [
     (Workspace, workspaces),
     (Project, projects),
     (Plan, plans),
+    (Role, roles),
+    (Permission, permissions),
 ]
 
 
@@ -97,6 +110,30 @@ class TestContractSchemaParity:
         empty = Plan(id=uuid4(), name="x", limits={}, entitlements={}, model_control={})
         assert empty.limits.task_units == 0
         assert empty.entitlements == {} and empty.model_control == {}
+
+    def test_roles_and_permissions_are_platform_catalogs(self) -> None:
+        # Recorded derivations: role applicability is the 03 §6 `scope`
+        # field; per-tenant permission grants are firewall policy DATA.
+        assert "tenant_id" not in roles.columns
+        assert "tenant_id" not in permissions.columns
+        assert permissions.columns["key"].unique  # the 20 §4 dotted identifier
+
+    def test_roles_name_version_composite_unique(self) -> None:
+        composites = {
+            tuple(sorted(c.name for c in constraint.columns))
+            for constraint in roles.constraints
+            if constraint.__class__.__name__ == "UniqueConstraint"
+        }
+        assert ("name", "version") in composites
+
+    def test_permissions_db_default_is_most_restrictive(self) -> None:
+        # Deny-by-default: the DB default must equal the contract default
+        # (ALWAYS) — the DB can never grant more than the contract.
+        column = permissions.columns["approval"]
+        assert not column.nullable
+        assert column.server_default is not None
+        assert str(column.server_default.arg) == "always"  # type: ignore[union-attr]
+        assert Permission(id=uuid4(), key="x").approval.value == "always"
 
 
 class TestOfflineDdlCompile:
@@ -166,5 +203,9 @@ class TestMigrationMetadataParity:
 
     def _table_block(self, table: Table) -> str:
         start = ALL_SOURCE.index(f'op.create_table(\n        "{table.name}"')
-        end = ALL_SOURCE.index("op.create_", start + 1)
+        # The block ends at the next op.* call — or at end-of-source when
+        # this create_table is the last operation in the chain.
+        end = ALL_SOURCE.find("op.create_", start + 1)
+        if end == -1:
+            end = len(ALL_SOURCE)
         return ALL_SOURCE[start:end]

@@ -40,6 +40,21 @@ Design decisions (recorded):
   parses to the contract defaults, which grant NOTHING (deny-by-default,
   41 §1 rule 9) — the DB default can never grant more than the contract
   default.
+- ``roles`` (FINAL Phase 3, 41 §6) maps ``core/contracts/roles.py`` — the
+  03 §6 Role ENTITY (agent prompt role, NOT an RBAC role — distinction
+  recorded in core/contracts/security.py). PLATFORM catalog: the 03 §6
+  ``scope`` field (system|tenant|user|project) is the role's APPLICABILITY
+  dimension, part of the entity itself — not a tenant-ownership column, so
+  no tenant_id (20 §6 applies to tenant-scoped tables). (name, version)
+  unique — the registry lists by name; versions coexist. Closed sets
+  (RoleScope/RoleStatus) via CHECK constraints from the contract enums.
+- ``permissions`` (FINAL Phase 3, 41 §6) maps
+  ``core/contracts/permission.py``. PLATFORM catalog (20 §4: catalogs are
+  admin-configurable; per-tenant grants are firewall policy DATA, not
+  catalog rows) — no tenant_id. ``key`` unique = the 20 §4 dotted
+  identifier. ``approval`` server_default 'always' — the DB default is the
+  MOST RESTRICTIVE value, matching the contract default (deny-by-default,
+  41 §1 rule 9 + 14 §8).
 """
 
 from __future__ import annotations
@@ -53,10 +68,14 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
+    Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
 from core.contracts.identity import TenantStatus, TenantType, UserStatus
+from core.contracts.roles import RoleScope, RoleStatus
+from core.contracts.tools import ApprovalRequirement
 
 # Naming convention -> deterministic constraint names -> reviewable,
 # reversible autogenerate diffs (Alembic best practice).
@@ -156,4 +175,33 @@ projects = Table(
     Column("name", String(512), nullable=False),
     Column("metadata", JSONB, nullable=False, server_default="{}"),
     Index("ix_projects_tenant_id", "tenant_id"),
+)
+
+roles = Table(
+    "roles",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("scope", String(32), nullable=False),
+    Column("name", String(512), nullable=False),
+    Column("version", String(512), nullable=False),
+    Column("objective", Text, nullable=False),
+    Column("behavior_policies", JSONB, nullable=False, server_default="{}"),
+    Column("output_contract", JSONB, nullable=False, server_default="{}"),
+    Column("status", String(32), nullable=False),
+    Column("capabilities_requested", JSONB, nullable=False, server_default="[]"),
+    CheckConstraint(f"scope IN ({_enum_values(RoleScope)})", name="scope_closed_set"),
+    CheckConstraint(f"status IN ({_enum_values(RoleStatus)})", name="status_closed_set"),
+    UniqueConstraint("name", "version", name="uq_roles_name_version"),
+)
+
+permissions = Table(
+    "permissions",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("key", String(512), nullable=False, unique=True),
+    Column("approval", String(32), nullable=False, server_default="always"),
+    CheckConstraint(
+        f"approval IN ({_enum_values(ApprovalRequirement)})",
+        name="approval_closed_set",
+    ),
 )
