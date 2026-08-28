@@ -88,6 +88,15 @@ from core.contracts.provider import (
     RateLimitState,
     RateLimitStatus,
 )
+from core.contracts.provider_agent import (
+    ProviderAgentEvent,
+    ProviderAgentEventType,
+    ProviderAgentRequest,
+    ProviderAgentResponse,
+    ProviderAgentRun,
+    ProviderAgentRunState,
+    ProviderAgentRunStatus,
+)
 from core.contracts.routing import (
     CandidateScore,
     ExclusionRecord,
@@ -170,6 +179,13 @@ __all__ = [
     "Provider",
     "ProviderAccount",
     "ProviderCapabilities",
+    "ProviderAgentEvent",
+    "ProviderAgentEventType",
+    "ProviderAgentRequest",
+    "ProviderAgentResponse",
+    "ProviderAgentRun",
+    "ProviderAgentRunState",
+    "ProviderAgentRunStatus",
     "ProviderError",
     "ProviderErrorCategory",
     "ProviderGenerateRequest",

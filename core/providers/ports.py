@@ -14,6 +14,10 @@ Spec anchors:
 - 30 §8.2 optional interfaces: account lifecycle and asset transfer are
   SEPARATE protocols — an adapter implements them only if the provider
   needs them (account pool is optional, 30 §10.1).
+- 30 §15.2 optional provider-agent interface (FINAL Phase 4, T-IMPL-054):
+  same SEPARATE-protocol pattern — only providers declaring the
+  ``provider_agent`` capability implement ``ProviderAgentModulePort``;
+  payload/event shapes live in ``core/contracts/provider_agent.py``.
 - 30 §9: provider request mechanics (HTTP, cookies, retries, polling...)
   live behind this port; "The Core must not see these details."
 - 30 §14: adapters return/raise only normalized ProviderError shapes.
@@ -26,6 +30,7 @@ implementations), so the port is async — matching the runtime ports
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from typing import Protocol
 from uuid import UUID
 
@@ -39,6 +44,13 @@ from core.contracts.provider import (
     ProviderGenerateResponse,
     ProviderHealth,
     ProviderManifest,
+)
+from core.contracts.provider_agent import (
+    ProviderAgentEvent,
+    ProviderAgentRequest,
+    ProviderAgentResponse,
+    ProviderAgentRun,
+    ProviderAgentRunStatus,
 )
 
 
@@ -108,6 +120,51 @@ class ProviderAccountLifecyclePort(Protocol):
 
     async def disable_account(self, account_id: UUID) -> None:
         """Mark the account unusable (lifecycle DISABLED, 30 §10.2)."""
+        ...
+
+
+class ProviderAgentModulePort(Protocol):
+    """Optional provider-native agent interface (30 §15.2).
+
+    Only providers declaring the ``provider_agent`` capability implement
+    this — 30 §15.2 marks every method optional in the TS interface; here
+    the PORT itself is the optional unit (same pattern as the other §8.2
+    optional protocols: an adapter without the capability simply does not
+    implement this protocol).
+
+    Contract obligations on implementors:
+
+    - Provider Agent Capability != Platform Agent Runtime (30 §15): the
+      platform still owns authorization, capability firewall, tool
+      approval, tenant isolation, usage accounting, evaluation, audit,
+      and the final response — none of that moves behind this port.
+    - All emitted events are the normalized 30 §15.3 shapes; raw provider
+      agent semantics never cross this boundary.
+    - ``run_id`` values are opaque provider-managed handles; the platform
+      never parses them.
+    - Provider-side tool use is deny-by-default (30 §15.4): honored only
+      when the request explicitly grants it AND policy allows.
+    - Errors are normalized :class:`ProviderError` shapes only (30 §14).
+    """
+
+    async def run_agent(self, request: ProviderAgentRequest) -> ProviderAgentResponse:
+        """Execute one provider-agent invocation to completion (one-shot)."""
+        ...
+
+    async def create_agent_run(self, request: ProviderAgentRequest) -> ProviderAgentRun:
+        """Start a provider-managed run; return its opaque handle."""
+        ...
+
+    async def get_agent_run(self, run_id: str) -> ProviderAgentRunStatus:
+        """Report the run's normalized point-in-time status."""
+        ...
+
+    async def cancel_agent_run(self, run_id: str) -> None:
+        """Request cancellation of a provider-managed run (30 §15.4 cleanup)."""
+        ...
+
+    def stream_agent_run(self, run_id: str) -> AsyncIterator[ProviderAgentEvent]:
+        """Stream normalized 30 §15.3 events for a run."""
         ...
 
 

@@ -16,6 +16,7 @@ from core.providers.errors import (
 from core.providers.ports import (
     ProviderAccountLifecyclePort,
     ProviderAdapterPort,
+    ProviderAgentModulePort,
     ProviderAssetsPort,
 )
 from core.providers.registry import (
@@ -36,6 +37,7 @@ __all__ = [
     "ModelRegistry",
     "ProviderAccountLifecyclePort",
     "ProviderAdapterPort",
+    "ProviderAgentModulePort",
     "ProviderAssetsPort",
     "ProviderBoundaryError",
     "ProviderNotEligible",
