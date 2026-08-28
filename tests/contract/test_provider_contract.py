@@ -293,6 +293,31 @@ def test_rate_limit_status_unknown_is_valid_state() -> None:
     assert status.cooldown_until is None
 
 
+def test_cooldown_state_without_timestamp_is_rejected() -> None:
+    """T-IMPL-034: a cooldown with no end time cannot drive behavior —
+    incoherent rate-limit state must not be constructible (30 §12)."""
+    with pytest.raises(ValidationError):
+        RateLimitStatus.model_validate({"state": "cooldown_until"})
+
+
+def test_available_state_with_cooldown_timestamp_is_rejected() -> None:
+    """T-IMPL-034: "available but cooling down" is contradictory data —
+    the state that consumers act on must be honest (30 §12)."""
+    with pytest.raises(ValidationError):
+        RateLimitStatus.model_validate(
+            {"state": "available", "cooldown_until": "2026-08-25T12:30:00Z"}
+        )
+
+
+def test_limited_and_unknown_may_carry_advisory_timestamp() -> None:
+    """Advisory hints stay legal: limited/unknown may carry a timestamp."""
+    for state in ("limited", "unknown"):
+        status = RateLimitStatus.model_validate(
+            {"state": state, "cooldown_until": "2026-08-25T12:30:00Z"}
+        )
+        assert status.cooldown_until is not None
+
+
 # --- §14 error normalization ------------------------------------------------------------
 
 DOCUMENTED_ERROR_CATEGORIES = {

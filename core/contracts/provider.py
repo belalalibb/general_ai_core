@@ -280,10 +280,30 @@ class RateLimitState(StrEnum):
 
 
 class RateLimitStatus(ContractModel):
-    """A provider's real limits translated into normalized state (30 §12)."""
+    """A provider's real limits translated into normalized state (30 §12).
+
+    Coherence rules (T-IMPL-034 hardening — the state must be honorable):
+
+    - ``cooldown_until`` state REQUIRES a timestamp; a cooldown with no end
+      time cannot drive any behavior and is a contract violation, not a
+      style choice.
+    - ``available`` MUST NOT carry a cooldown timestamp; "available but
+      cooling down" is contradictory data. ``limited``/``unknown`` MAY carry
+      an advisory timestamp (a provider hint), so they are not constrained.
+    """
 
     state: RateLimitState
     cooldown_until: datetime | None = None
+
+    @model_validator(mode="after")
+    def _state_and_timestamp_must_cohere(self) -> RateLimitStatus:
+        if self.state is RateLimitState.COOLDOWN_UNTIL and self.cooldown_until is None:
+            msg = "cooldown_until state requires a cooldown_until timestamp (30 §12)"
+            raise ValueError(msg)
+        if self.state is RateLimitState.AVAILABLE and self.cooldown_until is not None:
+            msg = "available state must not carry a cooldown_until timestamp (30 §12)"
+            raise ValueError(msg)
+        return self
 
 
 # --- §14 error normalization ----------------------------------------------------------
