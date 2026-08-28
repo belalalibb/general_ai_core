@@ -180,6 +180,24 @@ Design decisions (recorded):
   training gate (this differs from level-must-be-explicit on
   evaluations: HERE the spec defines a semantically-safe zero state,
   and the contract defaults to it — DB == contract, recorded).
+- ``credentials`` (FINAL Phase 3 secret-manager slice — the row DEFERRED
+  at R068 by explicit record: 'the Credential entity row with its opaque
+  credential_ref arrives with the secret-manager binding slice') maps
+  the 03 §4 Credential in ``core/contracts/domain.py`` field-for-field.
+  20 §5 / 40 §5.1 verbatim: the DB stores ``credential_ref`` ONLY — the
+  secret value lives in the Secret Manager; NO secret-value column
+  exists or ever will. NOT tenant-scoped in the 20 §6 sense BY SPEC:
+  ownership is the (owner_type, owner_id) pair — platform|tenant|user
+  — with owner_id nullable (03 §4 ``uuid|null``; the platform owner has
+  no UUID row — recorded, no conditional CHECK invented since the spec
+  states none). provider_id FK→providers RESTRICT + index (03 §8
+  'Credential belongs to platform/tenant/user' + provider linkage).
+  ``credential_ref`` UNIQUE — derived from the SecretManagerPort
+  rotation model (core/secrets/ports.py: store() mints a NEW immutable
+  ref each time; 'audit trails unambiguous — which ref was used when'):
+  one ref identifies exactly one custody record. ``status`` has NO
+  server_default — the credential lifecycle state is an explicit claim
+  (same posture as skills.status).
 """
 
 from __future__ import annotations
@@ -202,7 +220,13 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
 from core.contracts.conversation import ConversationStatus, MessageRole
-from core.contracts.domain import ModelStatus, ModelTier, ProviderStatus
+from core.contracts.domain import (
+    CredentialStatus,
+    ModelStatus,
+    ModelTier,
+    OwnerType,
+    ProviderStatus,
+)
 from core.contracts.evaluation import VerificationLevel
 from core.contracts.execute import ExecutionStatus
 from core.contracts.execution import (
@@ -684,4 +708,35 @@ learning_samples = Table(
     ),
     Index("ix_learning_samples_tenant_id", "tenant_id"),
     Index("ix_learning_samples_source_execution_id", "source_execution_id"),
+)
+
+credentials = Table(
+    "credentials",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("owner_type", String(32), nullable=False),
+    # BY SPEC (03 §4 uuid|null): the platform owner has no UUID row. No
+    # polymorphic FK exists in SQL for a platform|tenant|user union — the
+    # pair stays a recorded reference, resolved at the application layer.
+    Column("owner_id", UUID(as_uuid=True), nullable=True),
+    Column(
+        "provider_id",
+        UUID(as_uuid=True),
+        ForeignKey("providers.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    # 20 §5 / 40 §5.1: opaque reference ONLY — the secret value lives in
+    # the Secret Manager, never in this table. UNIQUE: store() mints a
+    # new immutable ref per custody record (core/secrets/ports.py).
+    Column("credential_ref", String(512), nullable=False, unique=True),
+    Column("status", String(32), nullable=False),  # NO default — explicit claim
+    CheckConstraint(
+        f"owner_type IN ({_enum_values(OwnerType)})",
+        name="owner_type_closed_set",
+    ),
+    CheckConstraint(
+        f"status IN ({_enum_values(CredentialStatus)})",
+        name="status_closed_set",
+    ),
+    Index("ix_credentials_provider_id", "provider_id"),
 )

@@ -26,7 +26,7 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
 from core.contracts.conversation import Conversation, Message
-from core.contracts.domain import Model, Provider
+from core.contracts.domain import Credential, Model, Provider
 from core.contracts.evaluation import EvaluationRecord
 from core.contracts.execution import Execution, ExecutionNode
 from core.contracts.identity import Project, Tenant, User, Workspace
@@ -39,6 +39,7 @@ from core.contracts.skills import Skill
 from core.contracts.usage import UsageLedger
 from infrastructure.db.tables import (
     conversations,
+    credentials,
     evaluations,
     execution_nodes,
     executions,
@@ -87,6 +88,7 @@ CONTRACT_TABLE_PAIRS = [
     (UsageLedger, usage_ledger),
     (EvaluationRecord, evaluations),
     (LearningSample, learning_samples),
+    (Credential, credentials),
 ]
 # memory_embeddings is deliberately NOT in CONTRACT_TABLE_PAIRS: 03 §3
 # defines NO embedding field on MemoryItem — the table is infrastructure
@@ -251,6 +253,26 @@ class TestContractSchemaParity:
             if constraint.__class__.__name__ == "UniqueConstraint"
         }
         assert ("execution_id", "node_key") in composites
+
+    def test_credentials_store_ref_only_never_secret_value(self) -> None:
+        # 20 §5 / 40 §5.1: the DB stores credential_ref ONLY — no
+        # secret-value column exists or ever will.
+        forbidden = {"secret", "secret_value", "api_key", "token", "password", "value"}
+        assert not forbidden & {c.name for c in credentials.columns}
+        # UNIQUE ref: store() mints a new immutable ref per custody record.
+        assert credentials.columns["credential_ref"].unique
+        # Ownership union (platform|tenant|user): owner_id nullable BY
+        # SPEC, and deliberately NO polymorphic FK (recorded).
+        owner = credentials.columns["owner_id"]
+        assert owner.nullable and not list(owner.foreign_keys)
+        # provider linkage real: FK + index.
+        provider_col = credentials.columns["provider_id"]
+        assert {fk.column.table.name for fk in provider_col.foreign_keys} == {"providers"}
+        indexed = {col.name for ix in credentials.indexes for col in ix.columns}
+        assert "provider_id" in indexed
+        # Lifecycle state is an explicit claim.
+        assert credentials.columns["status"].server_default is None
+        assert not credentials.columns["status"].nullable
 
     def test_learning_samples_nullable_tenant_and_zero_grant_defaults(self) -> None:
         # tenant_id NULLABLE BY SPEC (03 §7 uuid|null) — deliberately NOT
