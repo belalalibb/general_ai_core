@@ -111,6 +111,27 @@ Design decisions (recorded):
   produced the vector — required so retrieval never compares vectors
   from incompatible spaces (13 §9 retrieval integrity; recorded
   derivation, not contract invention).
+- ``executions`` / ``execution_nodes`` (FINAL Phase 3, 41 §6
+  "executions") map the 03 §5 entities in
+  ``core/contracts/execution.py`` field-for-field. executions is
+  TENANT-SCOPED: tenant_id FK + index (20 §6). The 10 §10 idempotency
+  rule ("Same tenant + same idempotency key should not create duplicate
+  executions") is enforced by UNIQUE (tenant_id, idempotency_key) with
+  the Postgres DEFAULT null treatment (NULLS DISTINCT) — the key is
+  nullable BY SPEC and executions WITHOUT a key must never collide
+  (the opposite posture from the memory upsert key; recorded).
+  execution_nodes carries NO tenant_id BY SPEC (03 §5 defines none) —
+  isolation flows through the execution_id FK to its tenant-scoped
+  parent (RESTRICT; indexed — same recorded posture as messages).
+  UNIQUE (execution_id, node_key): the execution service already
+  rejects duplicate node_keys per run (InvalidPipeline) — the DB
+  enforces the same invariant. ``input_ref``/``output_ref`` are JSONB:
+  the spec says ``string/json`` and the contract is
+  ``BoundedStr | JsonObject`` — a bare JSON string is valid JSONB, so
+  ONE column carries both shapes without inventing a discriminator
+  (recorded). ``cost_snapshot``/``error`` JSONB per spec ``json``.
+  Timestamps are the entity's own audit fields (created_at NOT NULL,
+  completed_at nullable — running executions have no completion).
 """
 
 from __future__ import annotations
@@ -134,6 +155,12 @@ from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
 from core.contracts.conversation import ConversationStatus, MessageRole
 from core.contracts.domain import ModelStatus, ModelTier, ProviderStatus
+from core.contracts.execute import ExecutionStatus
+from core.contracts.execution import (
+    ExecutionNodeStatus,
+    ExecutionNodeType,
+    ExecutionStrategy,
+)
 from core.contracts.identity import TenantStatus, TenantType, UserStatus
 from core.contracts.memory import MemoryScope, MemorySensitivity
 from core.contracts.roles import RoleScope, RoleStatus
@@ -420,4 +447,77 @@ memory_embeddings = Table(
     ),
     Column("model_key", String(512), nullable=False),
     Column("embedding", Vector(), nullable=False),
+)
+
+executions = Table(
+    "executions",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "user_id",
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "conversation_id",
+        UUID(as_uuid=True),
+        ForeignKey("conversations.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("request_hash", String(512), nullable=False),
+    Column("idempotency_key", String(512), nullable=True),
+    Column("status", String(32), nullable=False),
+    Column("strategy", String(32), nullable=False),
+    Column("cost_snapshot", JSONB, nullable=False),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=False),
+    Column("completed_at", TIMESTAMP(timezone=True), nullable=True),
+    CheckConstraint(f"status IN ({_enum_values(ExecutionStatus)})", name="status_closed_set"),
+    CheckConstraint(
+        f"strategy IN ({_enum_values(ExecutionStrategy)})",
+        name="strategy_closed_set",
+    ),
+    # 10 §10: same tenant + same idempotency key must not create duplicate
+    # executions. Postgres DEFAULT null treatment (NULLS DISTINCT) is the
+    # REQUIRED posture here: idempotency_key is nullable by spec, and
+    # executions submitted WITHOUT a key must never collide with each other.
+    UniqueConstraint("tenant_id", "idempotency_key", name="uq_executions_idempotency_key"),
+    Index("ix_executions_tenant_id", "tenant_id"),
+)
+
+execution_nodes = Table(
+    "execution_nodes",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "execution_id",
+        UUID(as_uuid=True),
+        ForeignKey("executions.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column("node_key", String(512), nullable=False),
+    Column("type", String(32), nullable=False),
+    Column("status", String(32), nullable=False),
+    # 03 §5 "string/json": a bare JSON string is valid JSONB, so one column
+    # carries both contract shapes (BoundedStr | JsonObject) — recorded.
+    Column("input_ref", JSONB, nullable=False),
+    Column("output_ref", JSONB, nullable=True),
+    Column("retry_count", Integer, nullable=False),
+    Column("error", JSONB, nullable=True),
+    CheckConstraint(f"type IN ({_enum_values(ExecutionNodeType)})", name="type_closed_set"),
+    CheckConstraint(
+        f"status IN ({_enum_values(ExecutionNodeStatus)})",
+        name="status_closed_set",
+    ),
+    CheckConstraint("retry_count >= 0", name="retry_count_nonnegative"),
+    # The execution service rejects duplicate node_keys per run
+    # (InvalidPipeline) — the DB enforces the same invariant.
+    UniqueConstraint("execution_id", "node_key", name="uq_execution_nodes_node_key"),
+    Index("ix_execution_nodes_execution_id", "execution_id"),
 )

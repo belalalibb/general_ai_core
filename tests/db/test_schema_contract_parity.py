@@ -27,6 +27,7 @@ from sqlalchemy.schema import CreateTable
 
 from core.contracts.conversation import Conversation, Message
 from core.contracts.domain import Model, Provider
+from core.contracts.execution import Execution, ExecutionNode
 from core.contracts.identity import Project, Tenant, User, Workspace
 from core.contracts.memory import MemoryItem
 from core.contracts.permission import Permission
@@ -35,6 +36,8 @@ from core.contracts.roles import Role
 from core.contracts.skills import Skill
 from infrastructure.db.tables import (
     conversations,
+    execution_nodes,
+    executions,
     memory_embeddings,
     memory_items,
     messages,
@@ -73,6 +76,8 @@ CONTRACT_TABLE_PAIRS = [
     (Conversation, conversations),
     (Message, messages),
     (MemoryItem, memory_items),
+    (Execution, executions),
+    (ExecutionNode, execution_nodes),
 ]
 # memory_embeddings is deliberately NOT in CONTRACT_TABLE_PAIRS: 03 §3
 # defines NO embedding field on MemoryItem — the table is infrastructure
@@ -95,7 +100,7 @@ class TestContractSchemaParity:
 
     def test_tenant_scoped_tables_carry_indexed_tenant_id(self) -> None:
         # 20 §6 — tenant isolation at the schema level.
-        for table in (users, workspaces, projects, conversations, memory_items):
+        for table in (users, workspaces, projects, conversations, memory_items, executions):
             assert "tenant_id" in table.columns
             indexed = {col.name for ix in table.indexes for col in ix.columns}
             assert "tenant_id" in indexed, f"{table.name}: tenant_id not indexed"
@@ -191,6 +196,43 @@ class TestContractSchemaParity:
         # server_default; NULL parses to contract None (undeclared).
         column = models.columns["agent_capability"]
         assert column.nullable and column.server_default is None
+
+    def test_executions_idempotency_key_unique_with_default_null_treatment(self) -> None:
+        # 10 §10: same tenant + same idempotency key must not create
+        # duplicate executions. The key is nullable BY SPEC — executions
+        # WITHOUT a key must never collide, so this constraint must use
+        # the Postgres DEFAULT null treatment (NULLS DISTINCT), the
+        # OPPOSITE posture from the memory upsert key.
+        uniques = {
+            tuple(sorted(c.name for c in constraint.columns)): constraint
+            for constraint in executions.constraints
+            if constraint.__class__.__name__ == "UniqueConstraint"
+        }
+        key = ("idempotency_key", "tenant_id")
+        assert key in uniques
+        opts = uniques[key].dialect_options["postgresql"]
+        assert not opts.get("nulls_not_distinct")
+        assert executions.columns["idempotency_key"].nullable
+
+    def test_execution_nodes_isolation_flows_through_execution_fk(self) -> None:
+        # 03 §5 defines NO tenant_id on ExecutionNode — isolation resolves
+        # through the tenant-scoped parent (same posture as messages).
+        assert "tenant_id" not in execution_nodes.columns
+        fk_targets = {
+            fk.column.table.name
+            for fk in execution_nodes.columns["execution_id"].foreign_keys
+        }
+        assert fk_targets == {"executions"}
+        indexed = {col.name for ix in execution_nodes.indexes for col in ix.columns}
+        assert "execution_id" in indexed
+        # Per-run node_key uniqueness — the DB enforces the service's
+        # InvalidPipeline invariant.
+        composites = {
+            tuple(sorted(c.name for c in constraint.columns))
+            for constraint in execution_nodes.constraints
+            if constraint.__class__.__name__ == "UniqueConstraint"
+        }
+        assert ("execution_id", "node_key") in composites
 
     def test_memory_items_upsert_key_is_nulls_not_distinct_unique(self) -> None:
         # core/memory/ports.py keys upserts by (tenant, user, scope, key);
