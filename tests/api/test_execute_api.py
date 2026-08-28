@@ -329,7 +329,9 @@ def test_valid_conversation_id_reaches_execution() -> None:
     conversation_id = str(uuid4())
     response = run(_post(world.app(), {"ask": "hi", "conversation_id": conversation_id}))
     assert response.status_code == 200
-    report = world.store.get(UUID(response.json()["execution_id"]))
+    report = world.store.get(
+        world.principal.tenant_id, UUID(response.json()["execution_id"])
+    )
     assert str(report.execution.conversation_id) == conversation_id
 
 

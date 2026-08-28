@@ -361,7 +361,9 @@ def create_app(
         if idempotency_key is not None:
             replay_id = idempotency_index.get((principal.tenant_id, idempotency_key))
             if replay_id is not None:
-                return _sync_response(execution_store.get(replay_id), body)
+                return _sync_response(
+                    execution_store.get(principal.tenant_id, replay_id), body
+                )
 
         # --- conversation admission (13 §7; module-docstring decisions) ---------
         conversation: Conversation | None = None
@@ -574,7 +576,9 @@ def create_app(
                 details={"field": "execution_id"},
             )
         try:
-            report = execution_store.get(parsed)
+            # Tenant-scoped read (T-IMPL-033 IDOR fix, 20 §6): a foreign
+            # tenant's execution is indistinguishable from an absent one.
+            report = execution_store.get(principal.tenant_id, parsed)
         except ExecutionNotFound:
             # Closed 10 §9 code set has no not_found; mapping decision in
             # apps/api/errors.py — validation_error body with HTTP 404.
