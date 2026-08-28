@@ -24,6 +24,9 @@ dependencies = [
     "opentelemetry-api>=1.25",
     "opentelemetry-sdk>=1.25",
     "structlog>=24",
+    # Password hashing — ADR-0005 (ACCEPTED 2026-08-28: Argon2id via argon2-cffi).
+    # Confined to infrastructure/ by import-linter; core sees PasswordHasherPort only.
+    "argon2-cffi>=23",
 ]
 
 [project.optional-dependencies]
@@ -112,3 +115,11 @@ name = "Core and providers must not import the web framework (ADR-0001)"
 type = "forbidden"
 source_modules = ["core", "providers"]
 forbidden_modules = ["fastapi", "starlette"]
+
+# ADR-0005: Argon2id hashing confined to infrastructure/ — core sees only
+# PasswordHasherPort (T-IMPL-040: pin + contract land together).
+[[tool.importlinter.contracts]]
+name = "Core must not import the password-hashing library (ADR-0005)"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["argon2"]

@@ -1,7 +1,7 @@
 # ADR-0005 — Password Hashing Production Binding (Argon2id)
 
 ```text
-STATUS: PROPOSED (awaiting explicit operator decision)
+STATUS: ACCEPTED (explicit operator decision, 2026-08-28: "ADR-0005 = ACCEPTED")
 DATE: 2026-08-28
 TASK: T-IMPL-040 (Lane B — FINAL Phase 2 gap: "Argon2id" in the 41 §5 security list)
 SUPERSEDES: NONE
@@ -83,7 +83,7 @@ Cons:
 
 ## Decision
 
-PROPOSED: Alternative A — add `argon2-cffi>=23` to `[project] dependencies`
+ACCEPTED: Alternative A — add `argon2-cffi>=23` to `[project] dependencies`
 and implement `infrastructure/security/password.py` binding
 `PasswordHasherPort` via `argon2.PasswordHasher` (library defaults, which
 track RFC 9106; parameters overridable at composition root only).
@@ -111,5 +111,5 @@ C fails the spec.
 
 ## Status
 
-PROPOSED — awaiting operator sign-off. Until then: no dependency change,
-no binding code.
+ACCEPTED — explicit operator sign-off 2026-08-28 ("ADR-0005 = ACCEPTED").
+Implementation: T-IMPL-040 — argon2-cffi dependency + infrastructure/security/password.py.
