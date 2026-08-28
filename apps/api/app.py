@@ -73,6 +73,20 @@ Phase 6 slice 4 (T-IMPL-028; 41 §45; 10 §2/§7) — recorded decisions:
   composer is present, the role objective rides ONLY inside the composed
   context (role block); without a composer it rides as ``payload["role"]``
   — never both (no duplicated instruction blocks).
+
+FINAL Phase 18 slice 1 (T-IMPL-067; 41 §21; 10 §6/§8) — recorded decisions:
+
+- GET /v1/models and GET /v1/usage land as OPTIONAL seams (``models`` +
+  ``bindings``, ``usage``) with the admin-router posture: absent seam ⇒
+  the route does not exist at all (nothing to probe, 20 §4). Full seam
+  decisions live on the ``create_app`` docstring.
+- The remaining 41 §21 surface (POST /v1/webhooks, Async, Streaming,
+  API Keys, Scopes) is NOT in this slice — async/streaming stay the
+  recorded loud rejections (12 §9 durable runtime seam exists as
+  WorkflowRuntimePort with no engine binding — a real engine is a NEW
+  DEPENDENCY requiring an operator-ACCEPTED ADR); webhook DELIVERY is
+  outbound I/O gated the same way. Contracts for all of them already
+  exist in core/contracts/execute.py (10 §4/§11/§12). Never faked (41 §49).
 """
 
 from __future__ import annotations
@@ -115,6 +129,7 @@ from core.contracts.execute import (
     RoleSelector,
     UsageReport,
 )
+from core.contracts.model_listing import ModelListEntry, ModelsListResponse
 from core.contracts.provider import ProviderError, ProviderOperation
 from core.contracts.roles import Role
 from core.contracts.routing import RoutingRequest
@@ -123,6 +138,7 @@ from core.contracts.usage import UsageLedger
 from core.execution.service import ExecutionReport, ExecutionService
 from core.memory.errors import ConversationNotFound
 from core.memory.ports import ConversationStorePort
+from core.providers.registry import BindingRegistry, ModelRegistry
 from core.roles.errors import RoleNotRegistered, RoleNotSelectable
 from core.roles.registry import RoleRegistry, SkillRegistry
 from core.routing.errors import (
@@ -131,6 +147,7 @@ from core.routing.errors import (
 )
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
+from core.usage.ports import UsageAccountingPort
 
 
 @dataclass(frozen=True)
@@ -281,6 +298,9 @@ def create_app(
     composer: ContextComposer | None = None,
     context_budget: int = 16_000,
     admin: AdminSurface | None = None,
+    models: ModelRegistry | None = None,
+    bindings: BindingRegistry | None = None,
+    usage: UsageAccountingPort | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -293,6 +313,24 @@ def create_app(
     Phase 7 seam: ``admin`` (T-IMPL-032) mounts /v1/admin/* over the
     injected AdminSurface; absent, NO admin route exists at all — the
     strongest deny-by-default (nothing to probe, 20 §4).
+
+    FINAL Phase 18 seams (T-IMPL-067; 41 §21; 10 §6/§8) — recorded decisions:
+
+    - ``models`` + ``bindings`` mount GET /v1/models (10 §6). BOTH must be
+      the SAME instances the injected router routes over (composition-root
+      duty, same posture as the composer/registry agreement above) — the
+      listing must describe the pool that actually routes. Either absent ⇒
+      the route does not exist (nothing to probe, 20 §4). The listing shows
+      ACTIVE models only (``ModelRegistry.active_models`` — the routing
+      pool; disabled models are an ADMIN read surface, 21 §5, already
+      served by /v1/admin/models). Row availability is the best-across-
+      bindings projection recorded in core/contracts/model_listing.py.
+    - ``usage`` mounts GET /v1/usage (10 §8) over UsageAccountingPort
+      .summary — the SAME accounting instance the execution service
+      reserves/settles against (composition-root duty). Absent ⇒ no route.
+      An unconfigured tenant maps to ``entitlement_exceeded`` 403 — the
+      SAME deny-by-default mapping the execute path already applies to
+      EntitlementNotConfigured (one behavior, both surfaces).
     """
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
@@ -564,6 +602,56 @@ def create_app(
             status_code=200,
             content=response.model_dump(mode="json", exclude_none=True),
         )
+
+    # --- GET /v1/models (10 §6; T-IMPL-067): mounted ONLY with both seams ------
+    if models is not None and bindings is not None:
+        model_registry = models
+        binding_registry = bindings
+
+        @app.get("/v1/models")
+        async def list_models() -> Response:
+            """GET /v1/models (10 §6): ACTIVE models only, key-ordered.
+
+            The routing pool surfaced, not re-derived: rows come from the
+            same registries the router selects over; availability is the
+            recorded best-across-bindings projection (empty ⇒ unavailable).
+            """
+            response = ModelsListResponse(
+                models=[
+                    ModelListEntry.from_model(
+                        model, binding_registry.bindings_for_model(model.id)
+                    )
+                    for model in model_registry.active_models()
+                ]
+            )
+            return JSONResponse(
+                status_code=200,
+                content=response.model_dump(mode="json", exclude_none=True),
+            )
+
+    # --- GET /v1/usage (10 §8; T-IMPL-067): mounted ONLY with the usage seam ---
+    if usage is not None:
+        usage_accounting = usage
+
+        @app.get("/v1/usage")
+        async def usage_summary() -> Response:
+            """GET /v1/usage (10 §8): the caller tenant's plan + budgets.
+
+            Tenant-scoped by the principal (never a client-supplied tenant
+            id — 20 §6 anti-enumeration); an unconfigured tenant denies
+            with the same entitlement_exceeded mapping as /v1/execute.
+            """
+            try:
+                summary = usage_accounting.summary(principal.tenant_id)
+            except EntitlementNotConfigured:
+                return error_response(
+                    ErrorCode.ENTITLEMENT_EXCEEDED,
+                    "No task-unit entitlement is configured for this tenant.",
+                )
+            return JSONResponse(
+                status_code=200,
+                content=summary.model_dump(mode="json", exclude_none=True),
+            )
 
     @app.get("/v1/executions/{execution_id}")
     async def execution_status(execution_id: str) -> Response:
