@@ -47,6 +47,7 @@ class ObservabilityConfig:
         "passwd",
         "token",
         "api_key",
+        "api-key",  # hyphenated header form: X-Api-Key (T-IMPL-033 gap fix)
         "apikey",
         "authorization",
         "credential",

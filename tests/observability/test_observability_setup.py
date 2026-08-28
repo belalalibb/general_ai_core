@@ -139,6 +139,20 @@ class TestSecretScrubbing:
         for key in ("password", "Api_Key", "AUTHORIZATION", "refresh_token"):
             assert out[key] == "[SCRUBBED]"
 
+    def test_hyphenated_header_form_keys_scrubbed(self) -> None:
+        """T-IMPL-033 gap fix: 'api-key' marker — the hyphenated HTTP header
+        form (X-Api-Key) was NOT covered by api_key/apikey and leaked."""
+        out = self._scrub(
+            {
+                "event": "rotate",
+                "X-Api-Key": "k1",
+                "x-api-key-rotation": "k2",
+            }
+        )
+        assert out["X-Api-Key"] == "[SCRUBBED]"
+        assert out["x-api-key-rotation"] == "[SCRUBBED]"
+        assert out["event"] == "rotate"
+
     def test_nested_payloads_scrubbed_recursively(self) -> None:
         out = self._scrub(
             {
