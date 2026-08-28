@@ -326,14 +326,20 @@ def test_core_does_not_import_provider_internals() -> None:
 # --- 31 §9: pending ledger exists and claims nothing ---------------------------------
 
 
-def test_pending_real_providers_ledger_records_scaffold_state() -> None:
+def test_pending_real_providers_ledger_records_current_state() -> None:
+    """31 §9 ledger stays truthful as providers land (updated at T-IMPL-036:
+    groq is the first implemented real provider; every OTHER category must
+    still carry the explicit 41 §49 not-claimed record)."""
     from pathlib import Path
 
     ledger = Path(__file__).resolve().parents[2] / "providers" / "_pending_real_providers.md"
     assert ledger.is_file()
     text = ledger.read_text(encoding="utf-8")
-    assert "No real AI providers are implemented yet." in text
-    assert "NOT-CLAIMED" in text  # 41 §49 explicit not-claimed record
+    assert "groq" in text  # the implemented-provider record exists
+    assert "providers/real/groq/" in text
+    assert "NOT-CLAIMED" in text  # 41 §49 record binds for the rest
+    # the old blanket claim must be GONE — it would now be false the other way
+    assert "No real AI providers are implemented yet." not in text
 
 
 def test_manifest_builder_refuses_nothing_but_keeps_markers_fixed() -> None:

@@ -1,13 +1,32 @@
 # Pending Real Providers
 
-No real AI providers are implemented yet.
+## Implemented real providers
 
-This ledger is the scaffold-state truth record required by 31 §9 and 41 §49:
-end-to-end AI execution with real providers is explicitly **NOT-CLAIMED**.
-The 12 templates under `providers/templates/` are disabled scaffolds
+- **groq** (`providers/real/groq/`, T-IMPL-036, 2026-08-28) — OpenAI-compatible
+  API-key chat/text provider (31 §20 Type A). Operations: `generate_text`.
+  Verified LIVE at onboarding: credential validation (ACTIVE), provider
+  health (HEALTHY), dynamic model discovery (14 models), end-to-end
+  generation through POST /v1/execute → Router → ExecutionService →
+  GroqAdapter → api.groq.com with usage settlement. Hermetic contract
+  suite: `tests/providers/test_groq_adapter.py` (MockTransport, no network
+  in gates). Live suites (env-gated, manual): `test_groq_live.py`,
+  `test_groq_live_e2e.py` — skipped unless `GROQ_API_KEY` is set.
+  Manifest ships `status: disabled` (31 §19 step 13); enablement is a
+  composition/admin decision after verification (step 14). The credential
+  enters ONLY via `SecretManagerPort` → opaque `credential_ref` (20 §5);
+  no secret material exists anywhere in the repo.
+
+The 41 §49 closing rule — "end-to-end AI execution is not considered
+complete until at least one real provider is implemented and verified" —
+is **SATISFIED** by groq as of T-IMPL-036.
+
+## Still-pending scaffold state (remaining categories)
+
+The 12 templates under `providers/templates/` remain disabled scaffolds
 (`status: template_disabled`, `is_functional: false`,
 `real_provider_required: true`) and are excluded from routing, execution,
-and health passing (31 §10).
+and health passing (31 §10). Every category other than Chat/Text remains
+NOT-CLAIMED.
 
 ## Required before activation / before adding any provider
 
@@ -40,14 +59,17 @@ and health passing (31 §10).
 - Multimodal
 - Provider-native agent
 
-## What cannot be claimed until real providers land (41 §49)
+## What cannot be claimed until MORE real providers land (41 §49)
 
-- Real provider generation of any kind (text/image/audio/embeddings/…)
-- Real credential validation against a provider
-- Real model discovery from a provider API
-- Real rate-limit observation or error mapping from provider responses
-- Provider health checks that PASS
-- End-to-end execution through the Router with a live provider
+Claimed for **text generation via groq only** (verified 2026-08-28):
+real credential validation, real model discovery, real error/rate-limit
+mapping, passing provider health checks, end-to-end Router execution.
+
+Still NOT-CLAIMED for every other category:
+
+- Real image/audio/embeddings/rerank/moderation/vision/agent generation
+- OAuth or session/cookie provider auth shapes
+- Account-pool lifecycle against a real provider
 
 Real provider onboarding follows 31 Part II (§14+): each real provider lands
 under `providers/real/<provider_key>/` with its own manifest, adapter,
