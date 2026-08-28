@@ -238,6 +238,42 @@ def test_capability_filter_uses_declared_capabilities_only() -> None:
     assert reg.models_with_capability("vision") == []
 
 
+def test_tier_filter_matches_router_tier_policy_semantics() -> None:
+    # 41 §9 Tier Registry (T-IMPL-055): tier.value comparison against an OPEN
+    # string — the exact TierModelPolicy hard-filter semantics (10 §13.2);
+    # ACTIVE models only; unknown tier => empty, never guessed (11 §5).
+    reg = ModelRegistry()
+    reg.register(_model("fast-1"))
+    reg.register(_model("fast-off", ModelStatus.DISABLED))
+    assert [m.model_key for m in reg.models_in_tier("fast")] == ["fast-1"]
+    assert reg.models_in_tier("max") == []
+    assert reg.models_in_tier("admin_custom_tier") == []
+
+
+def test_modality_filter_uses_declared_modalities_only() -> None:
+    # 41 §9 Modality Registry (T-IMPL-055): same declared-only semantics as
+    # the Router's model-level exclusion (11 §5) — undeclared => excluded.
+    reg = ModelRegistry()
+    reg.register(_model("fast-1"))  # modalities=["text"]
+    assert [m.model_key for m in reg.models_with_modality("text")] == ["fast-1"]
+    assert reg.models_with_modality("image") == []
+    assert reg.models_with_modality("not_a_modality") == []
+
+
+def test_registry_answers_eligibility_without_provider_http() -> None:
+    # 41 §9 exit criterion: "Which models are eligible for task X?" answered
+    # from declarations alone — this test constructs NO adapter, NO transport,
+    # NO provider registration at all; only Model declarations exist.
+    reg = ModelRegistry()
+    reg.register(_model("fast-1"))
+    eligible = [
+        m.model_key
+        for m in reg.models_with_capability("reasoning")
+        if m in reg.models_in_tier("fast") and m in reg.models_with_modality("text")
+    ]
+    assert eligible == ["fast-1"]
+
+
 # --- binding registry ----------------------------------------------------------------
 
 

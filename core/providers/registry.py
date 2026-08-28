@@ -260,6 +260,35 @@ class ModelRegistry:
         """Declared-capability filter (11 §5): undeclared => ineligible."""
         return [m for m in self.active_models() if capability in m.capabilities]
 
+    def models_in_tier(self, tier: str) -> list[Model]:
+        """Tier-registry query (41 §9 'Tier Registry'; FINAL Phase 6,
+        T-IMPL-055).
+
+        Compares against ``tier.value`` with an OPEN string parameter — the
+        same semantics as the Router's TierModelPolicy hard filter (10 §13.2:
+        allowed tiers are admin-configurable, so policy tier strings stay
+        open; the domain enum's ``custom`` bucket carries admin-defined
+        tiers). ACTIVE models only; unknown tier => empty list, never a
+        guess (11 §5).
+        """
+        return [m for m in self.active_models() if m.tier.value == tier]
+
+    def models_with_modality(self, modality: str) -> list[Model]:
+        """Modality-registry query (41 §9 'Modality Registry'; FINAL Phase 6,
+        T-IMPL-055).
+
+        Declared-modality filter with the same semantics as the Router's
+        model-level exclusion (11 §5): a modality the model did not declare
+        makes it ineligible — undeclared/unknown => excluded, never guessed.
+        Compares against ``Modality.value`` strings so callers do not need
+        the enum type.
+        """
+        return [
+            m
+            for m in self.active_models()
+            if modality in {mod.value for mod in m.modalities}
+        ]
+
 
 class BindingRegistry:
     """In-memory provider<->model binding registry (03 §4).
