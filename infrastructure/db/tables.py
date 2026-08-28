@@ -79,6 +79,17 @@ Design decisions (recorded):
   Secret Manager (41 §6 verbatim); the Credential entity's
   ``credential_ref`` is an opaque reference and its storage row arrives
   with the secret-manager binding slice, not here.
+- ``conversations`` / ``messages`` (FINAL Phase 3, 41 §6) map the 03 §3
+  entities in ``core/contracts/conversation.py``. conversations is
+  TENANT-SCOPED: tenant_id FK + index (20 §6) — the first Phase 3 slice
+  where that posture applies (the catalogs above are platform-scope).
+  messages carries NO tenant_id BY SPEC (03 §3 defines none) — tenant
+  isolation flows through the conversation_id FK to its tenant-scoped
+  parent (ondelete RESTRICT; conversation_id indexed for retrieval and
+  because 20 §6 isolation checks resolve through it). ``attachments``
+  JSONB default '[]' — attachment ROWS are references; large artifacts
+  live in object storage per 41 §6, never inline. ``content`` is Text
+  (03 §3 ``text/json``; the contract bounds it at 200k).
 """
 
 from __future__ import annotations
@@ -99,6 +110,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
+from core.contracts.conversation import ConversationStatus, MessageRole
 from core.contracts.domain import ModelStatus, ModelTier, ProviderStatus
 from core.contracts.identity import TenantStatus, TenantType, UserStatus
 from core.contracts.roles import RoleScope, RoleStatus
@@ -281,4 +293,52 @@ providers = Table(
     Column("auth_types", JSONB, nullable=False),
     Column("supports_account_pool", Boolean, nullable=False),
     CheckConstraint(f"status IN ({_enum_values(ProviderStatus)})", name="status_closed_set"),
+)
+
+conversations = Table(
+    "conversations",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "user_id",
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "project_id",
+        UUID(as_uuid=True),
+        ForeignKey("projects.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("title", String(512), nullable=False),
+    Column("status", String(32), nullable=False),
+    CheckConstraint(
+        f"status IN ({_enum_values(ConversationStatus)})", name="status_closed_set"
+    ),
+    Index("ix_conversations_tenant_id", "tenant_id"),
+)
+
+messages = Table(
+    "messages",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "conversation_id",
+        UUID(as_uuid=True),
+        ForeignKey("conversations.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column("role", String(32), nullable=False),
+    Column("content", Text, nullable=False),
+    Column("attachments", JSONB, nullable=False, server_default="[]"),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=False),
+    CheckConstraint(f"role IN ({_enum_values(MessageRole)})", name="role_closed_set"),
+    Index("ix_messages_conversation_id", "conversation_id"),
 )

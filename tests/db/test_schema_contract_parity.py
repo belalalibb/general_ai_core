@@ -25,6 +25,7 @@ from sqlalchemy import Table
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
+from core.contracts.conversation import Conversation, Message
 from core.contracts.domain import Model, Provider
 from core.contracts.identity import Project, Tenant, User, Workspace
 from core.contracts.permission import Permission
@@ -32,6 +33,8 @@ from core.contracts.plan import Plan
 from core.contracts.roles import Role
 from core.contracts.skills import Skill
 from infrastructure.db.tables import (
+    conversations,
+    messages,
     metadata,
     models,
     permissions,
@@ -64,6 +67,8 @@ CONTRACT_TABLE_PAIRS = [
     (Skill, skills),
     (Model, models),
     (Provider, providers),
+    (Conversation, conversations),
+    (Message, messages),
 ]
 
 
@@ -83,10 +88,20 @@ class TestContractSchemaParity:
 
     def test_tenant_scoped_tables_carry_indexed_tenant_id(self) -> None:
         # 20 §6 — tenant isolation at the schema level.
-        for table in (users, workspaces, projects):
+        for table in (users, workspaces, projects, conversations):
             assert "tenant_id" in table.columns
             indexed = {col.name for ix in table.indexes for col in ix.columns}
             assert "tenant_id" in indexed, f"{table.name}: tenant_id not indexed"
+
+    def test_messages_isolation_flows_through_conversation_fk(self) -> None:
+        # 03 §3 defines NO tenant_id on Message — isolation resolves through
+        # the tenant-scoped parent. The FK must exist, RESTRICT, and be
+        # indexed (20 §6 checks resolve through it).
+        assert "tenant_id" not in messages.columns
+        fks = {fk.column.table.name for fk in messages.columns["conversation_id"].foreign_keys}
+        assert fks == {"conversations"}
+        indexed = {col.name for ix in messages.indexes for col in ix.columns}
+        assert "conversation_id" in indexed
 
     def test_users_email_unique_and_no_credential_columns(self) -> None:
         assert users.columns["email"].unique
