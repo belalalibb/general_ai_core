@@ -57,6 +57,7 @@ from core.contracts.admin import (
     ACTION_AREA,
     MVP_ACTIVE_ADMIN_AREAS,
     AdminAction,
+    AdminArea,
     ConfigChange,
     ConfigLifecycleState,
 )
@@ -64,9 +65,15 @@ from core.contracts.audit import AdminChangeRecord, AuditEvent, AuditEventType
 from core.contracts.base import JsonObject
 from core.contracts.domain import ModelStatus, ProviderStatus
 from core.contracts.routing import ScoringWeights
+from core.contracts.skills import SkillStatus
+from core.contracts.tools import ToolStatus
 from core.contracts.usage import UsageSummary
 from core.providers.errors import ModelNotRegistered, ProviderNotRegistered
 from core.providers.registry import ModelRegistry, ProviderRegistry
+from core.roles.errors import SkillNotRegistered
+from core.roles.registry import SkillRegistry
+from core.tools.errors import ToolNotRegistered
+from core.tools.registry import ToolRegistry
 from core.usage.errors import EntitlementNotConfigured
 
 
@@ -110,12 +117,28 @@ class AdminConfigService:
         usage: UsageConfigurationPort,
         routing: RoutingWeightsPort,
         audit_log: AuditLogPort,
+        skills: SkillRegistry | None = None,
+        tools: ToolRegistry | None = None,
+        active_areas: frozenset[AdminArea] = MVP_ACTIVE_ADMIN_AREAS,
     ) -> None:
+        """FINAL Phase 19 widening (T-IMPL-068) — recorded decisions:
+
+        ``active_areas`` is injectable DATA (default MVP — the T-IMPL-064
+        ``active_types`` pattern: existing compositions keep their exact
+        behavior; the FINAL composition passes FINAL_ACTIVE_ADMIN_AREAS).
+        ``skills``/``tools`` are the SAME registry instances selection/
+        the tool gate read (no parallel state); a skill/tool action whose
+        registry seam is absent FAILS VALIDATION loudly — an admin area
+        without bindable machinery cannot pretend to publish (41 §49).
+        """
         self._providers = providers
         self._models = models
         self._usage = usage
         self._routing = routing
         self._audit = audit_log
+        self._skills = skills
+        self._tools = tools
+        self._active_areas = active_areas
         # Lifecycle records, physically keyed by (tenant, id) — foreign
         # changes are unaddressable by construction (20 §6).
         self._changes: dict[tuple[UUID, UUID], ConfigChange] = {}
@@ -141,7 +164,7 @@ class AdminConfigService:
         non-MVP area never even enters the lifecycle.
         """
         area = ACTION_AREA[action]
-        if area not in MVP_ACTIVE_ADMIN_AREAS:  # pragma: no cover — MVP map
+        if area not in self._active_areas:
             raise InactiveAdminArea(area)
         change = ConfigChange(
             tenant_id=tenant_id,
@@ -286,7 +309,7 @@ class AdminConfigService:
 
     def _subject(self, change: ConfigChange) -> str:
         payload = change.payload
-        for key in ("model_key", "provider_key", "target_tenant_id"):
+        for key in ("model_key", "provider_key", "target_tenant_id", "skill_id", "tool_id"):
             value = payload.get(key)
             if isinstance(value, str):
                 return value
@@ -321,6 +344,42 @@ class AdminConfigService:
                 # a change eligibility would silently ignore.
                 return f"provider is a scaffold template (31 §10): {provider_key}"
             return None
+        if action in (AdminAction.ENABLE_SKILL, AdminAction.DISABLE_SKILL):
+            if self._skills is None:
+                return "skills registry seam is not bound in this composition"
+            problem = self._require_uuid_payload(payload, "skill_id")
+            if problem is not None:
+                return problem
+            try:
+                skill = self._skills.get(UUID(str(payload["skill_id"])))
+            except SkillNotRegistered:
+                return f"skill not registered: {payload['skill_id']}"
+            if action is AdminAction.ENABLE_SKILL and skill.status not in (
+                SkillStatus.APPROVED,
+                SkillStatus.DISABLED,
+                SkillStatus.ACTIVE,
+            ):
+                # 21 §4 'Admin Cannot Break: scan/review requirement' —
+                # enable never skips the 14 §3 pipeline: only a skill that
+                # ALREADY passed review/approval (or was active and then
+                # disabled) may be (re-)enabled by admin action.
+                return (
+                    "skill has not completed the import pipeline "
+                    f"(status={skill.status.value}); enable cannot skip "
+                    "scan/review (21 §4, 14 §3)"
+                )
+            return None
+        if action in (AdminAction.ENABLE_TOOL, AdminAction.DISABLE_TOOL):
+            if self._tools is None:
+                return "tools registry seam is not bound in this composition"
+            problem = self._require_uuid_payload(payload, "tool_id")
+            if problem is not None:
+                return problem
+            try:
+                self._tools.get(UUID(str(payload["tool_id"])))
+            except ToolNotRegistered:
+                return f"tool not registered: {payload['tool_id']}"
+            return None
         if action is AdminAction.SET_PLAN:
             target = payload.get("target_tenant_id")
             plan = payload.get("plan")
@@ -347,6 +406,17 @@ class AdminConfigService:
             return "'weights' is not a valid ScoringWeights object"
         return None
 
+    @staticmethod
+    def _require_uuid_payload(payload: JsonObject, field: str) -> str | None:
+        value = payload.get(field)
+        if not isinstance(value, str) or not value:
+            return f"payload requires a non-empty '{field}'"
+        try:
+            UUID(value)
+        except ValueError:
+            return f"'{field}' is not a UUID"
+        return None
+
     def _impact_preview(self, change: ConfigChange) -> str:
         action = change.action
         if action is AdminAction.DISABLE_MODEL:
@@ -368,6 +438,20 @@ class AdminConfigService:
                 f"tenant {self._subject(change)} plan/limits replaced; "
                 "accounting history preserved (21 §4 accounting integrity)"
             )
+        if action is AdminAction.DISABLE_SKILL:
+            return (
+                f"skill {self._subject(change)} leaves the selectable set "
+                "(registry admission: active+local only)"
+            )
+        if action is AdminAction.ENABLE_SKILL:
+            return f"skill {self._subject(change)} becomes selectable"
+        if action is AdminAction.DISABLE_TOOL:
+            return (
+                f"tool {self._subject(change)} is refused by the tool call "
+                "gate (14 §1: never trusted by default)"
+            )
+        if action is AdminAction.ENABLE_TOOL:
+            return f"tool {self._subject(change)} becomes admissible to the call gate"
         return "router default scoring weights replaced (11 §6 versioned weights)"
 
     # -- snapshot / apply / restore (the registry-mutating core) ---------------------------
@@ -387,6 +471,14 @@ class AdminConfigService:
             except EntitlementNotConfigured:
                 summary = None  # first-ever plan config: nothing to roll back TO
             return {"plan_summary": summary}
+        if action in (AdminAction.ENABLE_SKILL, AdminAction.DISABLE_SKILL):
+            assert self._skills is not None  # validated pre-publish
+            skill = self._skills.get(UUID(str(change.payload["skill_id"])))
+            return {"skill_status": skill.status}
+        if action in (AdminAction.ENABLE_TOOL, AdminAction.DISABLE_TOOL):
+            assert self._tools is not None  # validated pre-publish
+            tool = self._tools.get(UUID(str(change.payload["tool_id"])))
+            return {"tool_status": tool.status}
         return {"weights": self._routing.default_weights}
 
     def _apply(self, change: ConfigChange) -> None:
@@ -423,6 +515,22 @@ class AdminConfigService:
                 ),
             )
             return
+        if action in (AdminAction.ENABLE_SKILL, AdminAction.DISABLE_SKILL):
+            skill_status = (
+                SkillStatus.ACTIVE
+                if action is AdminAction.ENABLE_SKILL
+                else SkillStatus.DISABLED
+            )
+            self._set_skill_status(UUID(str(change.payload["skill_id"])), skill_status)
+            return
+        if action in (AdminAction.ENABLE_TOOL, AdminAction.DISABLE_TOOL):
+            tool_status = (
+                ToolStatus.ACTIVE
+                if action is AdminAction.ENABLE_TOOL
+                else ToolStatus.DISABLED
+            )
+            self._set_tool_status(UUID(str(change.payload["tool_id"])), tool_status)
+            return
         weights_payload = change.payload["weights"]
         self._routing.set_default_weights(ScoringWeights.model_validate(weights_payload))
 
@@ -455,6 +563,16 @@ class AdminConfigService:
                 modality_limits=dict(summary.modality_limits),
             )
             return
+        if action in (AdminAction.ENABLE_SKILL, AdminAction.DISABLE_SKILL):
+            skill_status = snapshot["skill_status"]
+            assert isinstance(skill_status, SkillStatus)
+            self._set_skill_status(UUID(str(change.payload["skill_id"])), skill_status)
+            return
+        if action in (AdminAction.ENABLE_TOOL, AdminAction.DISABLE_TOOL):
+            tool_status = snapshot["tool_status"]
+            assert isinstance(tool_status, ToolStatus)
+            self._set_tool_status(UUID(str(change.payload["tool_id"])), tool_status)
+            return
         weights = snapshot["weights"]
         assert isinstance(weights, ScoringWeights)
         self._routing.set_default_weights(weights)
@@ -468,3 +586,23 @@ class AdminConfigService:
         self._providers.replace(
             entry.provider.model_copy(update={"status": status}), entry.manifest
         )
+
+    def _set_skill_status(self, skill_id: UUID, status: SkillStatus) -> None:
+        # Entity and embedded manifest advance TOGETHER (the registry's
+        # agreement rule holds at every state — same posture as the
+        # Phase-13 import steps).
+        assert self._skills is not None
+        skill = self._skills.get(skill_id)
+        self._skills.replace(
+            skill.model_copy(
+                update={
+                    "status": status,
+                    "manifest": skill.manifest.model_copy(update={"status": status}),
+                }
+            )
+        )
+
+    def _set_tool_status(self, tool_id: UUID, status: ToolStatus) -> None:
+        assert self._tools is not None
+        tool = self._tools.get(tool_id)
+        self._tools.replace(tool.model_copy(update={"status": status}))

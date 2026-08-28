@@ -178,9 +178,22 @@ class TestContracts:
         }
 
     def test_every_action_maps_to_an_active_area(self) -> None:
-        # 21 §4: only "can control" verbs exist, all in MVP-active areas.
+        # 21 §4: only "can control" verbs exist. FINAL Phase 19 (T-IMPL-068)
+        # widened the action set beyond MVP areas: every action maps into
+        # FINAL_ACTIVE_ADMIN_AREAS; the original six still map into MVP.
+        from core.contracts.admin import FINAL_ACTIVE_ADMIN_AREAS
+
         assert set(ACTION_AREA) == set(AdminAction)
-        assert set(ACTION_AREA.values()) <= MVP_ACTIVE_ADMIN_AREAS
+        assert set(ACTION_AREA.values()) <= FINAL_ACTIVE_ADMIN_AREAS
+        mvp_actions = {
+            AdminAction.ENABLE_MODEL,
+            AdminAction.DISABLE_MODEL,
+            AdminAction.ENABLE_PROVIDER,
+            AdminAction.DISABLE_PROVIDER,
+            AdminAction.SET_PLAN,
+            AdminAction.SET_ROUTING_WEIGHTS,
+        }
+        assert {ACTION_AREA[a] for a in mvp_actions} <= MVP_ACTIVE_ADMIN_AREAS
 
     def test_no_security_action_exists(self) -> None:
         # 21 §4 "cannot break": no action can touch security/tenancy/accounting.

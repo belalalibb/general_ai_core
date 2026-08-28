@@ -117,6 +117,24 @@ class SkillRegistry:
             raise SkillNotRegistered(skill_id)
         return skill
 
+    def replace(self, skill: Skill) -> None:
+        """Explicit re-registration (admin update path, 21 §4 Skills row).
+
+        Mirrors ``ModelRegistry.replace`` (T-IMPL-068): the admin control
+        plane publishes status changes (enable/disable) by replacing the
+        stored frozen record — selection sees the change immediately
+        through ``select``/``list_selectable``; no parallel admin copy.
+        The unknown-id case refuses loudly (an admin cannot 'replace' a
+        skill that was never registered); manifest agreement is re-checked
+        exactly as on first registration.
+        """
+        if skill.id not in self._skills:
+            raise SkillNotRegistered(skill.id)
+        for field in _MANIFEST_AGREEMENT_FIELDS:
+            if getattr(skill, field) != getattr(skill.manifest, field):
+                raise ManifestMismatch(skill.id, field)
+        self._skills[skill.id] = skill
+
     def select(self, skill_id: UUID) -> Skill:
         """Admission: return the skill ONLY if selectable.
 

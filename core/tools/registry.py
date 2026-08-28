@@ -51,6 +51,19 @@ class ToolRegistry:
             raise ToolNotRegistered(tool_id)
         return tool
 
+    def replace(self, tool: Tool) -> None:
+        """Explicit re-registration (admin update path, 21 §4 Tools row).
+
+        Mirrors ``ModelRegistry.replace`` (T-IMPL-068): the admin control
+        plane publishes status changes (enable/disable) by replacing the
+        stored frozen record — the tool call gate sees the change
+        immediately through ``select``; no parallel admin copy. Unknown
+        ids refuse loudly.
+        """
+        if tool.id not in self._tools:
+            raise ToolNotRegistered(tool.id)
+        self._tools[tool.id] = tool
+
     def select(self, tool_id: UUID) -> Tool:
         """Admission: return the tool ONLY if selectable (active).
 

@@ -89,6 +89,19 @@ MVP_ACTIVE_ADMIN_AREAS: frozenset[AdminArea] = frozenset(
     }
 )
 
+# FINAL Phase 19 (T-IMPL-068; 41 §22 + 41 §50 'all modules + config
+# lifecycle'): the active set widens to every 21 §4 control-matrix area
+# whose CONTROLLED MACHINERY exists in this repo — Skills (registry +
+# import lifecycle, Phase 13) and Tools (registry + call gate, Phase 14).
+# Areas whose 21 §4 verbs have no bindable machinery yet (Learning
+# datasets/teacher policy, Security thresholds, Evaluation visibility,
+# Observability sampling) stay INERT — activating an area whose publishes
+# could not touch reality would fake control (41 §49); recorded open.
+FINAL_ACTIVE_ADMIN_AREAS: frozenset[AdminArea] = MVP_ACTIVE_ADMIN_AREAS | {
+    AdminArea.SKILLS,
+    AdminArea.TOOLS,
+}
+
 
 # --- Lifecycle (21 §3) ----------------------------------------------------------
 
@@ -119,6 +132,14 @@ class AdminAction(StrEnum):
     DISABLE_PROVIDER = "disable_provider"
     SET_PLAN = "set_plan"
     SET_ROUTING_WEIGHTS = "set_routing_weights"
+    # FINAL Phase 19 verbs (21 §4 rows 'Skills: import, approve, disable'
+    # and 'Tools: enable, permissions, approval rules' — the enable/disable
+    # subset whose machinery exists; import/approve remain owned by the
+    # Phase-13 SkillImportService pipeline, never duplicated here).
+    ENABLE_SKILL = "enable_skill"
+    DISABLE_SKILL = "disable_skill"
+    ENABLE_TOOL = "enable_tool"
+    DISABLE_TOOL = "disable_tool"
 
 
 # Each action belongs to EXACTLY ONE area (mismatch = invalid change).
@@ -129,6 +150,10 @@ ACTION_AREA: dict[AdminAction, AdminArea] = {
     AdminAction.DISABLE_PROVIDER: AdminArea.PROVIDERS,
     AdminAction.SET_PLAN: AdminArea.PLANS,
     AdminAction.SET_ROUTING_WEIGHTS: AdminArea.ROUTING_POLICIES,
+    AdminAction.ENABLE_SKILL: AdminArea.SKILLS,
+    AdminAction.DISABLE_SKILL: AdminArea.SKILLS,
+    AdminAction.ENABLE_TOOL: AdminArea.TOOLS,
+    AdminAction.DISABLE_TOOL: AdminArea.TOOLS,
 }
 
 
