@@ -28,9 +28,18 @@ Design decisions (recorded):
   identity contracts (20 §5). The account-credential table arrives with the
   real identity binding in a later slice, designed against the hasher port.
 - FKs: users/workspaces/projects -> tenants.id; projects.workspace_id is
-  nullable (optional future scope, 03 §2). ``tenants.plan_id`` is a plain
-  UUID (no FK) — the Plan entity is not yet contracted; the FK lands with
-  the plans migration in phase order.
+  nullable (optional future scope, 03 §2). ``tenants.plan_id`` -> plans.id
+  (the FK landed with the plans migration 0002, exactly as the original
+  phase-order note recorded).
+- ``plans`` (FINAL Phase 3, 41 §6) maps ``core/contracts/plan.py``. It is
+  a PLATFORM catalog — deliberately NOT tenant-scoped (no tenant_id; the
+  tenant side of the relation is ``tenants.plan_id``, 20 §6 applies to
+  tenant-scoped tables only). ``name`` is unique — it is the ``plan:``
+  configuration lookup key (21 §5). ``limits``/``entitlements``/
+  ``model_control`` are JSONB with server_default ``{}``: an empty object
+  parses to the contract defaults, which grant NOTHING (deny-by-default,
+  41 §1 rule 9) — the DB default can never grant more than the contract
+  default.
 """
 
 from __future__ import annotations
@@ -67,6 +76,16 @@ def _enum_values(enum_cls: type) -> str:
     return ", ".join(f"'{member.value}'" for member in enum_cls)  # type: ignore[attr-defined]
 
 
+plans = Table(
+    "plans",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("name", String(512), nullable=False, unique=True),
+    Column("limits", JSONB, nullable=False, server_default="{}"),
+    Column("entitlements", JSONB, nullable=False, server_default="{}"),
+    Column("model_control", JSONB, nullable=False, server_default="{}"),
+)
+
 tenants = Table(
     "tenants",
     metadata,
@@ -74,7 +93,12 @@ tenants = Table(
     Column("name", String(512), nullable=False),
     Column("type", String(32), nullable=False),
     Column("status", String(32), nullable=False),
-    Column("plan_id", UUID(as_uuid=True), nullable=False),
+    Column(
+        "plan_id",
+        UUID(as_uuid=True),
+        ForeignKey("plans.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
     CheckConstraint(f"type IN ({_enum_values(TenantType)})", name="type_closed_set"),
     CheckConstraint(f"status IN ({_enum_values(TenantStatus)})", name="status_closed_set"),
 )
