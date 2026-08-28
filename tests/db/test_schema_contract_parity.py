@@ -29,12 +29,14 @@ from core.contracts.identity import Project, Tenant, User, Workspace
 from core.contracts.permission import Permission
 from core.contracts.plan import Plan
 from core.contracts.roles import Role
+from core.contracts.skills import Skill
 from infrastructure.db.tables import (
     metadata,
     permissions,
     plans,
     projects,
     roles,
+    skills,
     tenants,
     users,
     workspaces,
@@ -56,6 +58,7 @@ CONTRACT_TABLE_PAIRS = [
     (Plan, plans),
     (Role, roles),
     (Permission, permissions),
+    (Skill, skills),
 ]
 
 
@@ -125,6 +128,21 @@ class TestContractSchemaParity:
             if constraint.__class__.__name__ == "UniqueConstraint"
         }
         assert ("name", "version") in composites
+
+    def test_skills_is_platform_metadata_catalog(self) -> None:
+        # 41 §6 "skills metadata": catalog row only — no tenant_id (03 §6
+        # defines none); (name, version) composite unique like roles;
+        # status has NO server_default — lifecycle stage must be explicit
+        # (14 §9 forbids implicit activation).
+        assert "tenant_id" not in skills.columns
+        composites = {
+            tuple(sorted(c.name for c in constraint.columns))
+            for constraint in skills.constraints
+            if constraint.__class__.__name__ == "UniqueConstraint"
+        }
+        assert ("name", "version") in composites
+        assert skills.columns["status"].server_default is None
+        assert not skills.columns["status"].nullable
 
     def test_permissions_db_default_is_most_restrictive(self) -> None:
         # Deny-by-default: the DB default must equal the contract default

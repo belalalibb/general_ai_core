@@ -55,6 +55,17 @@ Design decisions (recorded):
   identifier. ``approval`` server_default 'always' — the DB default is the
   MOST RESTRICTIVE value, matching the contract default (deny-by-default,
   41 §1 rule 9 + 14 §8).
+- ``skills`` (FINAL Phase 3, 41 §6 "skills metadata") maps
+  ``core/contracts/skills.py`` — the 03 §6 Skill entity field-for-field.
+  METADATA ONLY per §6: provenance/manifest are stored as JSONB catalog
+  data (the contract binds their shapes to 14 §2/§3 at the boundary);
+  skill CONTENT/artifacts belong to object storage, not this table.
+  PLATFORM catalog — no tenant_id (03 §6 defines none). (name, version)
+  unique — versions coexist, same posture as roles. Closed sets
+  (SkillType/SkillSource/SkillStatus incl. the 14 §3 seven-state import
+  lifecycle) via CHECK constraints from the contract enums; ``status`` has
+  NO permissive server_default — a row must state its lifecycle stage
+  explicitly (14 §9 forbids implicit activation).
 """
 
 from __future__ import annotations
@@ -75,6 +86,7 @@ from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
 from core.contracts.identity import TenantStatus, TenantType, UserStatus
 from core.contracts.roles import RoleScope, RoleStatus
+from core.contracts.skills import SkillSource, SkillStatus, SkillType
 from core.contracts.tools import ApprovalRequirement
 
 # Naming convention -> deterministic constraint names -> reviewable,
@@ -204,4 +216,21 @@ permissions = Table(
         f"approval IN ({_enum_values(ApprovalRequirement)})",
         name="approval_closed_set",
     ),
+)
+
+skills = Table(
+    "skills",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("name", String(512), nullable=False),
+    Column("version", String(512), nullable=False),
+    Column("type", String(32), nullable=False),
+    Column("source", String(32), nullable=False),
+    Column("provenance", JSONB, nullable=False, server_default="{}"),
+    Column("manifest", JSONB, nullable=False),
+    Column("status", String(32), nullable=False),
+    CheckConstraint(f"type IN ({_enum_values(SkillType)})", name="type_closed_set"),
+    CheckConstraint(f"source IN ({_enum_values(SkillSource)})", name="source_closed_set"),
+    CheckConstraint(f"status IN ({_enum_values(SkillStatus)})", name="status_closed_set"),
+    UniqueConstraint("name", "version", name="uq_skills_name_version"),
 )
