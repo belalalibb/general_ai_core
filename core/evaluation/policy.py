@@ -45,10 +45,13 @@ that only judgment-style graders produce. GOLD is NEVER assigned by this
 pipeline: 22 §3 defines it as "APPROVED as high-quality reference
 sample" — approval is a human/admin act, not a pipeline outcome.
 
-Grader-type boundary (R049 boundary (c)): only the types in
-``MVP_ACTIVE_GRADER_TYPES`` run this phase. A request naming any OTHER
-22 §5 type is DENIED loudly with :class:`InactiveGraderType` — never
-silently skipped (silent skipping would fake coverage that never ran).
+Grader-type boundary (R049 boundary (c)): the ADMITTED set is DATA —
+the injectable ``active_types`` (default ``MVP_ACTIVE_GRADER_TYPES``, so
+every recorded MVP posture keeps holding; FINAL Phase 15 / T-IMPL-064
+widens it via ``core.evaluation.graders.FINAL_ACTIVE_GRADER_TYPES``).
+A request naming any type OUTSIDE the admitted set is DENIED loudly with
+:class:`InactiveGraderType` — never silently skipped (silent skipping
+would fake coverage that never ran).
 
 22 §7 user visibility (scores never in user-facing responses) binds at
 the API surface in T-IMPL-032, not here — this service is admin-side
@@ -220,12 +223,14 @@ class EvaluationPolicyService:
         *,
         checks: tuple[DeterministicCheck, ...] = MVP_DETERMINISTIC_CHECKS,
         judge: ModelJudgePort | None = None,
+        active_types: frozenset[GraderType] = MVP_ACTIVE_GRADER_TYPES,
         verified_confidence_threshold: float = 0.75,
         id_factory: Callable[[], UUID] = uuid4,
     ) -> None:
         self._store = store
         self._checks = checks
         self._judge = judge
+        self._active_types = active_types
         self._verified_confidence_threshold = verified_confidence_threshold
         self._id_factory = id_factory
 
@@ -240,9 +245,9 @@ class EvaluationPolicyService:
         """Run the pipeline over one execution output and record the result.
 
         ``grader_types`` selects which ACTIVE grader families run
-        (default: all of ``MVP_ACTIVE_GRADER_TYPES``). Naming any
-        inactive 22 §5 type raises :class:`InactiveGraderType` — denied
-        loudly, never silently skipped.
+        (default: the service's whole admitted set). Naming any type
+        outside the admitted set raises :class:`InactiveGraderType` —
+        denied loudly, never silently skipped.
         """
         requested = self._admitted_grader_types(grader_types)
 
@@ -284,14 +289,14 @@ class EvaluationPolicyService:
 
     # --- pipeline steps ---------------------------------------------------------------
 
-    @staticmethod
     def _admitted_grader_types(
+        self,
         grader_types: Iterable[GraderType] | None,
     ) -> frozenset[GraderType]:
         if grader_types is None:
-            return MVP_ACTIVE_GRADER_TYPES
+            return self._active_types
         requested = frozenset(grader_types)
-        inactive = requested - MVP_ACTIVE_GRADER_TYPES
+        inactive = requested - self._active_types
         if inactive:
             raise InactiveGraderType(sorted(t.value for t in inactive))
         return requested
