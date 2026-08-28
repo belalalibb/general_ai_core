@@ -55,6 +55,7 @@ from core.contracts.provider import (
     ProviderHealth,
     ProviderHealthState,
     ProviderManifest,
+    ProviderOperation,
 )
 
 #: Genspark LLM proxy's OpenAI-compatible base URL (31 §20 Type A).
@@ -213,7 +214,25 @@ class GensparkLLMAdapter:
                     ),
                 ),
             )
-        body = _chat_completion_body(request)
+        if request.operation is ProviderOperation.CREATE_EMBEDDINGS:
+            path = "/embeddings"
+            body = _embeddings_body(request)
+            if body is None:
+                return self._failed(
+                    request,
+                    ProviderError(
+                        category=ProviderErrorCategory.BAD_REQUEST,
+                        retryable=False,
+                        provider_code="missing_input",
+                        safe_message=(
+                            "create_embeddings requires payload['input'] as a "
+                            "non-empty string or list of strings"
+                        ),
+                    ),
+                )
+        else:
+            path = "/chat/completions"
+            body = _chat_completion_body(request)
         timeout_s = (
             request.timeout_ms / 1000.0 if request.timeout_ms is not None else self._timeout
         )
@@ -222,7 +241,7 @@ class GensparkLLMAdapter:
         try:
             async with self._client(timeout_s) as client:
                 response = await client.post(
-                    "/chat/completions",
+                    path,
                     headers=self._auth_headers(api_key),
                     json=body,
                 )
@@ -235,13 +254,17 @@ class GensparkLLMAdapter:
             )
         try:
             parsed = response.json()
-            content, finish_reason = _extract_content(parsed)
+            if request.operation is ProviderOperation.CREATE_EMBEDDINGS:
+                output = _extract_embeddings(parsed)
+            else:
+                content, finish_reason = _extract_content(parsed)
+                output = {"content": content, "finish_reason": finish_reason}
         except (ValueError, KeyError, IndexError, TypeError) as exc:
             return self._failed(request, self.normalize_error(exc), latency_ms=latency_ms)
         return ProviderGenerateResponse(
             request_id=request.request_id,
             succeeded=True,
-            output={"content": content, "finish_reason": finish_reason},
+            output=output,
             usage=_extract_usage(parsed),
             error=None,
             latency_ms=latency_ms,
@@ -455,6 +478,47 @@ def _chat_completion_body(request: ProviderGenerateRequest) -> dict[str, Any]:
             if key in _GENERATION_PARAM_WHITELIST:
                 body[key] = value
     return body
+
+
+def _embeddings_body(request: ProviderGenerateRequest) -> dict[str, Any] | None:
+    """Build the OpenAI-compatible embeddings body from the normalized payload.
+
+    ``payload["input"]`` must be a non-empty string or a non-empty list of
+    strings; anything else returns None and the caller reports a normalized
+    ``bad_request`` WITHOUT any network call (fail-before-spend).
+    """
+    raw = request.payload.get("input")
+    if isinstance(raw, str) and raw:
+        input_value: str | list[str] = raw
+    elif (
+        isinstance(raw, list)
+        and raw
+        and all(isinstance(item, str) and item for item in raw)
+    ):
+        input_value = raw
+    else:
+        return None
+    return {"model": str(request.provider_model_name), "input": input_value}
+
+
+def _extract_embeddings(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Extract vectors from the OpenAI-compatible embeddings response.
+
+    Output shape: ``{"embeddings": [[float, ...], ...], "dimensions": int}``
+    preserving provider order (index-sorted, honest to the provider's own
+    index field). Raises on malformed payloads — the caller normalizes.
+    """
+    data = parsed["data"]
+    if not isinstance(data, list) or not data:
+        raise ValueError("embeddings response carried no data items")
+    items = sorted(data, key=lambda item: item.get("index", 0))
+    vectors: list[list[float]] = []
+    for item in items:
+        vector = item["embedding"]
+        if not isinstance(vector, list) or not vector:
+            raise ValueError("embeddings response carried an empty vector")
+        vectors.append([float(component) for component in vector])
+    return {"embeddings": vectors, "dimensions": len(vectors[0])}
 
 
 def _extract_content(parsed: dict[str, Any]) -> tuple[str, str | None]:

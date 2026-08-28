@@ -121,12 +121,19 @@ class TestManifestPosture:
         # enable via Admin/Config only after verification.
         assert MANIFEST.status == "disabled"
 
-    def test_manifest_declares_generate_text_only(self) -> None:
-        assert MANIFEST.operations == [ProviderOperation.GENERATE_TEXT]
+    def test_manifest_declares_exactly_text_and_embeddings(self) -> None:
+        # T-IMPL-038 added create_embeddings (live-verified); the set stays
+        # CLOSED — nothing else is declared (deny-by-default, 30 §4.3).
+        assert MANIFEST.operations == [
+            ProviderOperation.GENERATE_TEXT,
+            ProviderOperation.CREATE_EMBEDDINGS,
+        ]
         assert MANIFEST.capabilities.chat is True
-        # undeclared capabilities stay False (deny-by-default, 30 §4.3)
+        assert MANIFEST.capabilities.embeddings is True
+        # undeclared capabilities stay False
         assert MANIFEST.capabilities.image_generation is False
         assert MANIFEST.capabilities.audio_input is False
+        assert MANIFEST.capabilities.moderation is False
 
     def test_manifest_id_does_not_collide_with_groq(self) -> None:
         # No duplicate providers/contracts: distinct id from the reference.
@@ -267,6 +274,135 @@ class TestGenerateContract:
         run(adapter.generate(_generate_request(timeout_ms=5000)))
         timeout = recorder.requests[0].extensions.get("timeout", {})
         assert timeout.get("read") == 5.0
+
+
+# --- embeddings contract (T-IMPL-038; 30 §5 create_embeddings) ---------------------------
+
+
+def _ok_embeddings(request: httpx.Request) -> httpx.Response:
+    return httpx.Response(
+        200,
+        json={
+            "data": [
+                {"index": 1, "embedding": [0.4, 0.5, 0.6]},
+                {"index": 0, "embedding": [0.1, 0.2, 0.3]},  # out of order on purpose
+            ],
+            "usage": {"prompt_tokens": 2, "total_tokens": 2},
+            "model": "text-embedding-3-small",
+        },
+    )
+
+
+def _embeddings_request(**overrides: Any) -> ProviderGenerateRequest:
+    base: dict[str, Any] = {
+        "request_id": uuid4(),
+        "tenant_id": uuid4(),
+        "operation": ProviderOperation.CREATE_EMBEDDINGS,
+        "provider_model_name": "text-embedding-3-small",
+        "credential_ref": CRED_REF,
+        "payload": {"input": ["hello", "world"]},
+    }
+    base.update(overrides)
+    return ProviderGenerateRequest.model_validate(base)
+
+
+class TestEmbeddingsContract:
+    def test_successful_embeddings_normalized_shape(self) -> None:
+        adapter, recorder = _adapter(_ok_embeddings)
+        request = _embeddings_request()
+        response = run(adapter.generate(request))
+        assert response.succeeded is True
+        # provider order restored by index — never trusted blindly
+        assert response.output["embeddings"] == [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
+        assert response.output["dimensions"] == 3
+        assert response.usage == {"prompt_tokens": 2, "total_tokens": 2}
+        # routed to /embeddings with the right body; no chat fields leak in
+        sent_request = recorder.requests[0]
+        assert sent_request.url.path.endswith("/embeddings")
+        sent = json.loads(sent_request.content)
+        assert sent == {"model": "text-embedding-3-small", "input": ["hello", "world"]}
+
+    def test_string_input_accepted(self) -> None:
+        adapter, recorder = _adapter(_ok_embeddings)
+        run(adapter.generate(_embeddings_request(payload={"input": "solo"})))
+        sent = json.loads(recorder.requests[0].content)
+        assert sent["input"] == "solo"
+
+    @pytest.mark.parametrize(
+        "bad_payload",
+        [
+            {},  # missing input
+            {"input": ""},  # empty string
+            {"input": []},  # empty list
+            {"input": ["ok", ""]},  # empty item
+            {"input": [1, 2]},  # non-strings
+            {"input": {"nested": "object"}},  # wrong type
+        ],
+    )
+    def test_invalid_input_rejected_before_any_network_call(
+        self, bad_payload: dict[str, Any]
+    ) -> None:
+        adapter, recorder = _adapter(_ok_embeddings)
+        response = run(adapter.generate(_embeddings_request(payload=bad_payload)))
+        assert response.succeeded is False
+        assert response.error is not None
+        assert response.error.category is ProviderErrorCategory.BAD_REQUEST
+        assert response.error.provider_code == "missing_input"
+        assert recorder.requests == []  # fail-before-spend: zero network
+
+    def test_embedding_allowlist_400_maps_to_model_unavailable(self) -> None:
+        # Live-verified shape: the embeddings allowlist error uses the same
+        # "Model '...' is not allowed" detail (with "Allowed embedding
+        # models:") — the SAME structural detector must catch it.
+        adapter, _ = _adapter(
+            lambda req: httpx.Response(
+                400,
+                json={"detail": (
+                    "Model 'zzz' is not allowed. Allowed embedding models: "
+                    "text-embedding-3-large, text-embedding-3-small"
+                )},
+            )
+        )
+        response = run(adapter.generate(_embeddings_request()))
+        assert response.error is not None
+        assert response.error.category is ProviderErrorCategory.MODEL_UNAVAILABLE
+        assert "Allowed embedding" not in response.error.model_dump_json()
+
+    def test_malformed_embeddings_response_normalizes_never_raises(self) -> None:
+        adapter, _ = _adapter(lambda req: httpx.Response(200, json={"data": []}))
+        response = run(adapter.generate(_embeddings_request()))
+        assert response.succeeded is False
+        assert response.error is not None
+        assert response.error.category is ProviderErrorCategory.NON_RETRYABLE_ERROR
+
+    def test_empty_vector_in_response_normalizes(self) -> None:
+        adapter, _ = _adapter(
+            lambda req: httpx.Response(
+                200, json={"data": [{"index": 0, "embedding": []}]}
+            )
+        )
+        response = run(adapter.generate(_embeddings_request()))
+        assert response.succeeded is False
+        assert response.error is not None
+
+    def test_key_only_in_authorization_header_for_embeddings(self) -> None:
+        adapter, recorder = _adapter(_ok_embeddings)
+        run(adapter.generate(_embeddings_request()))
+        sent = recorder.requests[0]
+        assert sent.headers["authorization"] == f"Bearer {API_KEY}"
+        assert API_KEY not in sent.content.decode()
+        assert API_KEY not in str(sent.url)
+
+    def test_generate_image_still_rejected_operations_stay_closed(self) -> None:
+        # Adding create_embeddings must NOT loosen the closed-set rejection.
+        adapter, recorder = _adapter(_ok_embeddings)
+        response = run(
+            adapter.generate(_embeddings_request(operation=ProviderOperation.GENERATE_IMAGE))
+        )
+        assert response.succeeded is False
+        assert response.error is not None
+        assert response.error.category is ProviderErrorCategory.UNSUPPORTED_CAPABILITY
+        assert recorder.requests == []
 
 
 # --- error normalization (31 §20 + genspark-specific shapes) -----------------------------

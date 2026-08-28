@@ -20,7 +20,11 @@
   OpenAI-compatible API-key chat/text provider (31 §20 Type A) over the
   Genspark LLM proxy (an aggregation gateway exposing many upstream model
   families — GPT/Claude/DeepSeek/Kimi/Grok/etc. — behind ONE key; modeled
-  as ONE Type A provider per 30 §4). Operations: `generate_text`.
+  as ONE Type A provider per 30 §4). Operations: `generate_text`,
+  `create_embeddings` (added T-IMPL-038, live-verified 2026-08-28:
+  text-embedding-3-small 1536 dims / -large 3072 dims; 4 embedding models
+  on the proxy's own allowlist; embedding models are NOT listed by
+  GET /models — static allowlist only).
   Verified LIVE at onboarding: credential validation (ACTIVE), provider
   health (HEALTHY), dynamic model discovery (52 models), the structural
   model-allowlist rejection mapping (HTTP 400 → model_unavailable), and
@@ -80,14 +84,14 @@ NOT-CLAIMED.
 
 ## What cannot be claimed until MORE real providers land (41 §49)
 
-Claimed for **text generation via groq and genspark_llm only** (both
-verified 2026-08-28): real credential validation, real model discovery,
-real error/rate-limit mapping, passing provider health checks, end-to-end
-Router execution.
+Claimed (all verified 2026-08-28): **text generation via groq and
+genspark_llm**, and **embeddings via genspark_llm** — real credential
+validation, real model discovery, real error/rate-limit mapping, passing
+provider health checks, end-to-end Router execution (text).
 
 Still NOT-CLAIMED for every other category:
 
-- Real image/audio/embeddings/rerank/moderation/vision/agent generation
+- Real image/audio/rerank/moderation/vision/agent generation
 - OAuth or session/cookie provider auth shapes
 - Account-pool lifecycle against a real provider
 

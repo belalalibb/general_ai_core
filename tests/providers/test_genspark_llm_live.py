@@ -112,6 +112,28 @@ class TestGensparkLLMLive:
         # the allowlist echo never crosses
         assert "Allowed models" not in response.error.model_dump_json()
 
+    def test_embeddings_succeed_with_real_vectors(self) -> None:
+        # T-IMPL-038: create_embeddings live proof (text-embedding-3-small,
+        # 1536 dims verified at onboarding).
+        adapter, ref = _live_adapter()
+        request = ProviderGenerateRequest.model_validate(
+            {
+                "request_id": uuid4(),
+                "tenant_id": uuid4(),
+                "operation": ProviderOperation.CREATE_EMBEDDINGS,
+                "provider_model_name": "text-embedding-3-small",
+                "credential_ref": ref,
+                "payload": {"input": ["hello", "world"]},
+            }
+        )
+        response = run(adapter.generate(request))
+        assert response.succeeded is True, f"live embeddings failed: {response.error}"
+        vectors = response.output["embeddings"]
+        assert len(vectors) == 2
+        assert response.output["dimensions"] == 1536
+        assert all(isinstance(v, float) for v in vectors[0])
+        assert response.usage.get("total_tokens", 0) > 0
+
     def test_key_absent_from_all_artifacts(self) -> None:
         adapter, ref = _live_adapter()
         key = os.environ["GSK_API_KEY"]

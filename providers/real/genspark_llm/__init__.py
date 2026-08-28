@@ -52,6 +52,16 @@ VERIFIED_TEXT_MODELS: tuple[str, ...] = (
     "grok-4.6",
 )
 
+#: Embedding model names verified LIVE against POST /embeddings on 2026-08-28
+#: (the proxy's own allowlist error enumerates exactly these four; the two
+#: OpenAI-family models were exercised live: 1536/3072 dims, real usage).
+VERIFIED_EMBEDDING_MODELS: tuple[str, ...] = (
+    "text-embedding-3-small",
+    "text-embedding-3-large",
+    "gemini-embedding-2-preview",
+    "qwen3-embedding-8B",
+)
+
 MANIFEST = ProviderManifest(
     id="genspark_llm",
     name="Genspark LLM Proxy",
@@ -62,9 +72,12 @@ MANIFEST = ProviderManifest(
     real_provider_required=False,
     auth=ManifestAuth(types=[AuthType.API_KEY], supports_refresh=False),
     account_pool=ManifestAccountPool(supported=False),
-    capabilities=ProviderCapabilities(chat=True, reasoning=True, code=True),
-    operations=[ProviderOperation.GENERATE_TEXT],
-    models=ManifestModels(discovery="dynamic", static_models=list(VERIFIED_TEXT_MODELS)),
+    capabilities=ProviderCapabilities(chat=True, reasoning=True, code=True, embeddings=True),
+    operations=[ProviderOperation.GENERATE_TEXT, ProviderOperation.CREATE_EMBEDDINGS],
+    models=ManifestModels(
+        discovery="dynamic",
+        static_models=list(VERIFIED_TEXT_MODELS) + list(VERIFIED_EMBEDDING_MODELS),
+    ),
     rate_limits=ManifestRateLimits(strategy="provider_defined"),
     health=ManifestHealth(checks=["models_endpoint_authenticated"]),
     errors=ManifestErrors(
@@ -77,5 +90,8 @@ MANIFEST = ProviderManifest(
         "modeled as ONE Type A provider per 30 §4 (capability-driven).",
         "Model-allowlist rejections arrive as HTTP 400 'Model ... is not allowed' "
         "(live-verified) and are normalized to model_unavailable structurally.",
+        "create_embeddings added T-IMPL-038 (live-verified 2026-08-28 against "
+        "POST /embeddings): text-embedding-3-small 1536 dims / -large 3072 dims; "
+        "embedding models NOT listed by GET /models — static allowlist only.",
     ],
 )
