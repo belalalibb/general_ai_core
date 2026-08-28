@@ -128,6 +128,7 @@ from core.contracts.execute import (
     ExecutionStatusResponse,
     RoleSelector,
     UsageReport,
+    WebhookEventType,
 )
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
 from core.contracts.provider import ProviderError, ProviderOperation
@@ -135,6 +136,11 @@ from core.contracts.roles import Role
 from core.contracts.routing import RoutingRequest
 from core.contracts.skills import SkillListEntry, SkillsListResponse
 from core.contracts.usage import UsageLedger
+from core.contracts.webhooks import (
+    WebhookSubscription,
+    WebhookSubscriptionRequest,
+    WebhookSubscriptionResponse,
+)
 from core.execution.service import ExecutionReport, ExecutionService
 from core.memory.errors import ConversationNotFound
 from core.memory.ports import ConversationStorePort
@@ -301,6 +307,7 @@ def create_app(
     models: ModelRegistry | None = None,
     bindings: BindingRegistry | None = None,
     usage: UsageAccountingPort | None = None,
+    webhooks: bool = False,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -331,6 +338,13 @@ def create_app(
       An unconfigured tenant maps to ``entitlement_exceeded`` 403 — the
       SAME deny-by-default mapping the execute path already applies to
       EntitlementNotConfigured (one behavior, both surfaces).
+    - ``webhooks=True`` mounts POST /v1/webhooks (41 §21) — subscription
+      REGISTRATION only, stored process-locally and tenant-scoped, same
+      persistence posture as InMemoryExecutionStore (repository binding
+      swaps in at the composition root). Event DELIVERY is outbound I/O:
+      the documented 40 §4.2 outbox chain (core/runtime/outbox.py) is the
+      recorded seam a delivery relay will consume — never claimed here
+      (41 §49). Default False ⇒ route absent (nothing to probe, 20 §4).
     """
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
@@ -651,6 +665,47 @@ def create_app(
             return JSONResponse(
                 status_code=200,
                 content=summary.model_dump(mode="json", exclude_none=True),
+            )
+
+    # --- POST /v1/webhooks (41 §21; T-IMPL-067 slice 2): registration only -----
+    if webhooks:
+        # Tenant-scoped subscription store (process-local, same posture as
+        # InMemoryExecutionStore — recorded in the create_app docstring).
+        webhook_subscriptions: dict[UUID, list[WebhookSubscription]] = {}
+
+        @app.post("/v1/webhooks", status_code=201)
+        async def register_webhook(body: WebhookSubscriptionRequest) -> Response:
+            """POST /v1/webhooks: register a subscription for the caller tenant.
+
+            ``events`` absent ⇒ all six documented 10 §12 types (the closed
+            set is the universe — recorded in core/contracts/webhooks.py);
+            an empty explicit list is a contradiction and refuses loudly.
+            Delivery is NOT performed or promised by this route (41 §49).
+            """
+            if body.events is not None and len(body.events) == 0:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "events must be omitted (all types) or non-empty.",
+                    details={"field": "events"},
+                )
+            events = (
+                list(body.events)
+                if body.events is not None
+                else list(WebhookEventType)
+            )
+            subscription = WebhookSubscription(
+                id=uuid4(),
+                tenant_id=principal.tenant_id,
+                url=body.url,
+                events=events,
+            )
+            webhook_subscriptions.setdefault(principal.tenant_id, []).append(
+                subscription
+            )
+            response = WebhookSubscriptionResponse.from_subscription(subscription)
+            return JSONResponse(
+                status_code=201,
+                content=response.model_dump(mode="json", exclude_none=True),
             )
 
     @app.get("/v1/executions/{execution_id}")
