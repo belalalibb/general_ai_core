@@ -63,6 +63,24 @@ class ApprovalRequirement(StrEnum):
     ALWAYS = "always"
 
 
+class ClientRuntimeKind(StrEnum):
+    """Client runtime kinds (41 §17 Phase 14 list) — closed set, verbatim.
+
+    41 §17: ``Browser / Filesystem / Terminal / IDE / Local Project``.
+    Values are the snake_case forms (same normalization every other enum
+    in this module applies to the doc's display names). 14 §5 examples map
+    onto these (browser automation → client/hybrid; local filesystem /
+    terminal → client). This is DATA — client-runtime transport is not
+    built in core (recorded scope boundary above).
+    """
+
+    BROWSER = "browser"
+    FILESYSTEM = "filesystem"
+    TERMINAL = "terminal"
+    IDE = "ide"
+    LOCAL_PROJECT = "local_project"
+
+
 class ProviderAgentToolClass(StrEnum):
     """Classification of provider-side agent tools (14 §11) — closed set."""
 
