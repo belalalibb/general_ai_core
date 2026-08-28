@@ -28,12 +28,15 @@ from sqlalchemy.schema import CreateTable
 from core.contracts.conversation import Conversation, Message
 from core.contracts.domain import Model, Provider
 from core.contracts.identity import Project, Tenant, User, Workspace
+from core.contracts.memory import MemoryItem
 from core.contracts.permission import Permission
 from core.contracts.plan import Plan
 from core.contracts.roles import Role
 from core.contracts.skills import Skill
 from infrastructure.db.tables import (
     conversations,
+    memory_embeddings,
+    memory_items,
     messages,
     metadata,
     models,
@@ -69,7 +72,11 @@ CONTRACT_TABLE_PAIRS = [
     (Provider, providers),
     (Conversation, conversations),
     (Message, messages),
+    (MemoryItem, memory_items),
 ]
+# memory_embeddings is deliberately NOT in CONTRACT_TABLE_PAIRS: 03 §3
+# defines NO embedding field on MemoryItem — the table is infrastructure
+# retrieval data (41 §6 pgvector), not a contract entity mapping.
 
 
 class TestContractSchemaParity:
@@ -88,7 +95,7 @@ class TestContractSchemaParity:
 
     def test_tenant_scoped_tables_carry_indexed_tenant_id(self) -> None:
         # 20 §6 — tenant isolation at the schema level.
-        for table in (users, workspaces, projects, conversations):
+        for table in (users, workspaces, projects, conversations, memory_items):
             assert "tenant_id" in table.columns
             indexed = {col.name for ix in table.indexes for col in ix.columns}
             assert "tenant_id" in indexed, f"{table.name}: tenant_id not indexed"
@@ -185,6 +192,43 @@ class TestContractSchemaParity:
         column = models.columns["agent_capability"]
         assert column.nullable and column.server_default is None
 
+    def test_memory_items_upsert_key_is_nulls_not_distinct_unique(self) -> None:
+        # core/memory/ports.py keys upserts by (tenant, user, scope, key);
+        # user_id NULL (tenant-shared, 03 §3) must collide like a value —
+        # NULLS NOT DISTINCT — or tenant-shared upserts would duplicate.
+        uniques = {
+            tuple(sorted(c.name for c in constraint.columns)): constraint
+            for constraint in memory_items.constraints
+            if constraint.__class__.__name__ == "UniqueConstraint"
+        }
+        key = ("key", "scope", "tenant_id", "user_id")
+        assert key in uniques
+        assert uniques[key].dialect_options["postgresql"]["nulls_not_distinct"] is True
+        # And the sensitivity DB default matches the contract default (LOW).
+        column = memory_items.columns["sensitivity"]
+        assert not column.nullable
+        assert str(column.server_default.arg) == "low"  # type: ignore[union-attr]
+
+    def test_memory_embeddings_is_infrastructure_retrieval_data(self) -> None:
+        # Not a contract entity: exactly one row per memory item (PK = FK,
+        # CASCADE — derived data never outlives its source); model_key
+        # records the producing model (vectors from incompatible spaces
+        # are never compared); embedding dimension-UNCONSTRAINED (the
+        # embedding model is admin config; no ANN index until pinned).
+        assert {c.name for c in memory_embeddings.columns} == {
+            "memory_item_id",
+            "model_key",
+            "embedding",
+        }
+        pk_column = memory_embeddings.columns["memory_item_id"]
+        assert pk_column.primary_key
+        fks = list(pk_column.foreign_keys)
+        assert len(fks) == 1
+        assert fks[0].column.table.name == "memory_items"
+        assert fks[0].ondelete == "CASCADE"
+        assert memory_embeddings.columns["embedding"].type.dim is None  # type: ignore[union-attr]
+        assert not memory_embeddings.indexes  # no ANN index until a model is pinned
+
     def test_permissions_db_default_is_most_restrictive(self) -> None:
         # Deny-by-default: the DB default must equal the contract default
         # (ALWAYS) — the DB can never grant more than the contract.
@@ -253,6 +297,17 @@ class TestMigrationMetadataParity:
         parents = [p for p in revisions.values() if p is not None]
         assert set(parents) <= set(revisions), "broken chain: missing parent revision"
         assert len(parents) == len(set(parents)), "branched chain: parent reused"
+
+    def test_0007_creates_pgvector_extension_idempotently(self) -> None:
+        # The vector column type requires the extension; upgrade must
+        # create it idempotently. Downgrade must NOT drop it (extension
+        # lifecycle is database-level administration).
+        source = MIGRATION_SOURCES["0007_memory.py"]
+        assert 'op.execute("CREATE EXTENSION IF NOT EXISTS vector")' in source
+        assert "DROP EXTENSION" not in source
+        assert 'down_revision: str | None = "0006"' in source
+        assert "postgresql_nulls_not_distinct=True" in source
+        assert 'ondelete="CASCADE"' in source
 
     def test_0002_lands_the_tenants_plan_fk(self) -> None:
         source = MIGRATION_SOURCES["0002_plans.py"]

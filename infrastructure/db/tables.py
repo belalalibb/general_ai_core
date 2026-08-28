@@ -90,10 +90,32 @@ Design decisions (recorded):
   JSONB default '[]' — attachment ROWS are references; large artifacts
   live in object storage per 41 §6, never inline. ``content`` is Text
   (03 §3 ``text/json``; the contract bounds it at 200k).
+- ``memory_items`` (FINAL Phase 3, 41 §6 "memory") maps the 03 §3
+  MemoryItem in ``core/contracts/memory.py`` (incl. the 13 §3
+  ``sensitivity`` field the contract already carries). TENANT-SCOPED:
+  tenant_id FK + index (20 §6). The memory port's upsert semantics
+  (keyed by tenant/user/scope/key) are enforced by a UNIQUE constraint
+  with NULLS NOT DISTINCT — user_id NULL (tenant-shared memory) must
+  collide like a value, or the upsert key would silently duplicate.
+- ``memory_embeddings`` (41 §6 "pgvector: semantic retrieval") is
+  INFRASTRUCTURE RETRIEVAL DATA, not a contract entity — 03 §3 defines
+  NO embedding field on MemoryItem, so the vector lives in a SEPARATE
+  table (schema must not invent contract state; recorded). One row per
+  memory item (PK = FK, ondelete CASCADE — derived data must never
+  outlive its source; an orphan embedding would be a semantic leak).
+  ``embedding`` is a dimension-UNCONSTRAINED pgvector column: the
+  embedding model (and thus dimension) is admin configuration — fixing a
+  dimension or creating an ANN index here would invent a decision the
+  specs leave to configuration (recorded; the index arrives when the
+  embedding model is pinned). ``model_key`` records WHICH embedding model
+  produced the vector — required so retrieval never compares vectors
+  from incompatible spaces (13 §9 retrieval integrity; recorded
+  derivation, not contract invention).
 """
 
 from __future__ import annotations
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
@@ -113,6 +135,7 @@ from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 from core.contracts.conversation import ConversationStatus, MessageRole
 from core.contracts.domain import ModelStatus, ModelTier, ProviderStatus
 from core.contracts.identity import TenantStatus, TenantType, UserStatus
+from core.contracts.memory import MemoryScope, MemorySensitivity
 from core.contracts.roles import RoleScope, RoleStatus
 from core.contracts.skills import SkillSource, SkillStatus, SkillType
 from core.contracts.tools import ApprovalRequirement
@@ -341,4 +364,60 @@ messages = Table(
     Column("created_at", TIMESTAMP(timezone=True), nullable=False),
     CheckConstraint(f"role IN ({_enum_values(MessageRole)})", name="role_closed_set"),
     Index("ix_messages_conversation_id", "conversation_id"),
+)
+
+memory_items = Table(
+    "memory_items",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "user_id",
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="RESTRICT"),
+        nullable=True,
+    ),
+    Column("scope", String(32), nullable=False),
+    Column("key", String(512), nullable=False),
+    Column("value", JSONB, nullable=False),
+    Column("source", String(512), nullable=False),
+    Column("confidence", Float, nullable=False),
+    Column("evidence_count", Integer, nullable=False),
+    Column("last_seen", TIMESTAMP(timezone=True), nullable=False),
+    Column("expires_at", TIMESTAMP(timezone=True), nullable=True),
+    Column("sensitivity", String(32), nullable=False, server_default="low"),
+    CheckConstraint(f"scope IN ({_enum_values(MemoryScope)})", name="scope_closed_set"),
+    CheckConstraint(
+        f"sensitivity IN ({_enum_values(MemorySensitivity)})",
+        name="sensitivity_closed_set",
+    ),
+    CheckConstraint("confidence >= 0 AND confidence <= 1", name="confidence_bounds"),
+    CheckConstraint("evidence_count >= 0", name="evidence_count_nonnegative"),
+    UniqueConstraint(
+        "tenant_id",
+        "user_id",
+        "scope",
+        "key",
+        name="uq_memory_items_logical_key",
+        postgresql_nulls_not_distinct=True,
+    ),
+    Index("ix_memory_items_tenant_id", "tenant_id"),
+)
+
+memory_embeddings = Table(
+    "memory_embeddings",
+    metadata,
+    Column(
+        "memory_item_id",
+        UUID(as_uuid=True),
+        ForeignKey("memory_items.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("model_key", String(512), nullable=False),
+    Column("embedding", Vector(), nullable=False),
 )
