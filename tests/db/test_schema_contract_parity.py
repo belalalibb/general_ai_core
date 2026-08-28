@@ -34,6 +34,7 @@ from core.contracts.permission import Permission
 from core.contracts.plan import Plan
 from core.contracts.roles import Role
 from core.contracts.skills import Skill
+from core.contracts.usage import UsageLedger
 from infrastructure.db.tables import (
     conversations,
     execution_nodes,
@@ -50,6 +51,7 @@ from infrastructure.db.tables import (
     roles,
     skills,
     tenants,
+    usage_ledger,
     users,
     workspaces,
 )
@@ -78,6 +80,7 @@ CONTRACT_TABLE_PAIRS = [
     (MemoryItem, memory_items),
     (Execution, executions),
     (ExecutionNode, execution_nodes),
+    (UsageLedger, usage_ledger),
 ]
 # memory_embeddings is deliberately NOT in CONTRACT_TABLE_PAIRS: 03 §3
 # defines NO embedding field on MemoryItem — the table is infrastructure
@@ -100,7 +103,15 @@ class TestContractSchemaParity:
 
     def test_tenant_scoped_tables_carry_indexed_tenant_id(self) -> None:
         # 20 §6 — tenant isolation at the schema level.
-        for table in (users, workspaces, projects, conversations, memory_items, executions):
+        for table in (
+            users,
+            workspaces,
+            projects,
+            conversations,
+            memory_items,
+            executions,
+            usage_ledger,
+        ):
             assert "tenant_id" in table.columns
             indexed = {col.name for ix in table.indexes for col in ix.columns}
             assert "tenant_id" in indexed, f"{table.name}: tenant_id not indexed"
@@ -233,6 +244,20 @@ class TestContractSchemaParity:
             if constraint.__class__.__name__ == "UniqueConstraint"
         }
         assert ("execution_id", "node_key") in composites
+
+    def test_usage_ledger_one_entry_per_execution_and_honest_defaults(self) -> None:
+        # core/usage/memory.py keys the ledger by execution_id and a
+        # reservation resolves exactly once — execution_id UNIQUE + FK.
+        column = usage_ledger.columns["execution_id"]
+        assert column.unique
+        assert {fk.column.table.name for fk in column.foreign_keys} == {"executions"}
+        # Deny-by-default: DB defaults equal contract defaults — an
+        # unresolved entry claims NO settled consumption.
+        assert str(usage_ledger.columns["units_settled"].server_default.arg) == "0"  # type: ignore[union-attr]
+        assert str(usage_ledger.columns["modality_costs"].server_default.arg) == "{}"  # type: ignore[union-attr]
+        # Lifecycle stage must be explicit (same posture as skills.status).
+        assert usage_ledger.columns["status"].server_default is None
+        assert not usage_ledger.columns["status"].nullable
 
     def test_memory_items_upsert_key_is_nulls_not_distinct_unique(self) -> None:
         # core/memory/ports.py keys upserts by (tenant, user, scope, key);

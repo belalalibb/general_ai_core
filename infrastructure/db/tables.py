@@ -132,6 +132,18 @@ Design decisions (recorded):
   (recorded). ``cost_snapshot``/``error`` JSONB per spec ``json``.
   Timestamps are the entity's own audit fields (created_at NOT NULL,
   completed_at nullable — running executions have no completion).
+- ``usage_ledger`` (FINAL Phase 3, 41 §6 "usage") maps the 03 §7
+  UsageLedger in ``core/contracts/usage.py`` field-for-field.
+  TENANT-SCOPED: tenant_id FK + index (20 §6). ONE ledger entry per
+  execution — the usage port keys the ledger by execution_id
+  (core/usage/memory.py) and a reservation resolves exactly once
+  (ReservationAlreadyResolved) — so execution_id is UNIQUE + FK
+  (RESTRICT: accounting records must never dangle). Deny-by-default in
+  DB defaults: units_settled server_default '0' and modality_costs
+  server_default '{}' equal the contract defaults — an unresolved entry
+  claims NO settled consumption; ``status`` has NO server_default — the
+  lifecycle stage must be explicit (same recorded posture as
+  skills.status). units CHECKs >= 0 match the contract Field(ge=0).
 """
 
 from __future__ import annotations
@@ -166,6 +178,7 @@ from core.contracts.memory import MemoryScope, MemorySensitivity
 from core.contracts.roles import RoleScope, RoleStatus
 from core.contracts.skills import SkillSource, SkillStatus, SkillType
 from core.contracts.tools import ApprovalRequirement
+from core.contracts.usage import UsageLedgerStatus
 
 # Naming convention -> deterministic constraint names -> reviewable,
 # reversible autogenerate diffs (Alembic best practice).
@@ -520,4 +533,34 @@ execution_nodes = Table(
     # (InvalidPipeline) — the DB enforces the same invariant.
     UniqueConstraint("execution_id", "node_key", name="uq_execution_nodes_node_key"),
     Index("ix_execution_nodes_execution_id", "execution_id"),
+)
+
+usage_ledger = Table(
+    "usage_ledger",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "execution_id",
+        UUID(as_uuid=True),
+        ForeignKey("executions.id", ondelete="RESTRICT"),
+        nullable=False,
+        unique=True,  # one ledger entry per execution (core/usage/memory.py keying)
+    ),
+    Column("units_reserved", Float, nullable=False),
+    Column("units_settled", Float, nullable=False, server_default="0"),
+    Column("modality_costs", JSONB, nullable=False, server_default="{}"),
+    Column("status", String(32), nullable=False),  # NO default — stage must be explicit
+    CheckConstraint(
+        f"status IN ({_enum_values(UsageLedgerStatus)})",
+        name="status_closed_set",
+    ),
+    CheckConstraint("units_reserved >= 0", name="units_reserved_nonnegative"),
+    CheckConstraint("units_settled >= 0", name="units_settled_nonnegative"),
+    Index("ix_usage_ledger_tenant_id", "tenant_id"),
 )
