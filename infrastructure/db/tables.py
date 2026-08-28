@@ -66,6 +66,19 @@ Design decisions (recorded):
   lifecycle) via CHECK constraints from the contract enums; ``status`` has
   NO permissive server_default — a row must state its lifecycle stage
   explicitly (14 §9 forbids implicit activation).
+- ``models`` / ``providers`` (FINAL Phase 3, 41 §6) map the 03 §4 entities
+  in ``core/contracts/domain.py``. PLATFORM catalogs — no tenant_id (03 §4
+  defines none; tenant visibility is admin policy DATA, 21 §10).
+  ``model_key`` / ``provider_key`` unique — the registry lookup keys.
+  List/nested contract fields (modalities, capabilities, auth_types,
+  agent_capability) are stored as JSONB — the contract validates their
+  shapes at the boundary; agent_capability nullable (None = undeclared,
+  30 §4.3: unknown must NOT read as supported — no permissive default).
+  Scores/context_window nullable — unset means unscored, never invented.
+  NO credential-value column anywhere: Credential VALUES live in the
+  Secret Manager (41 §6 verbatim); the Credential entity's
+  ``credential_ref`` is an opaque reference and its storage row arrives
+  with the secret-manager binding slice, not here.
 """
 
 from __future__ import annotations
@@ -74,8 +87,10 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Column,
+    Float,
     ForeignKey,
     Index,
+    Integer,
     MetaData,
     String,
     Table,
@@ -84,6 +99,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
+from core.contracts.domain import ModelStatus, ModelTier, ProviderStatus
 from core.contracts.identity import TenantStatus, TenantType, UserStatus
 from core.contracts.roles import RoleScope, RoleStatus
 from core.contracts.skills import SkillSource, SkillStatus, SkillType
@@ -233,4 +249,36 @@ skills = Table(
     CheckConstraint(f"source IN ({_enum_values(SkillSource)})", name="source_closed_set"),
     CheckConstraint(f"status IN ({_enum_values(SkillStatus)})", name="status_closed_set"),
     UniqueConstraint("name", "version", name="uq_skills_name_version"),
+)
+
+models = Table(
+    "models",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("model_key", String(512), nullable=False, unique=True),
+    Column("display_name", String(512), nullable=False),
+    Column("tier", String(32), nullable=False),
+    Column("modalities", JSONB, nullable=False),
+    Column("capabilities", JSONB, nullable=False, server_default="[]"),
+    Column("context_window", Integer, nullable=True),
+    Column("quality_score", Float, nullable=True),
+    Column("speed_score", Float, nullable=True),
+    Column("cost_score", Float, nullable=True),
+    Column("reliability_score", Float, nullable=True),
+    Column("status", String(32), nullable=False),
+    Column("agent_capability", JSONB, nullable=True),
+    CheckConstraint(f"tier IN ({_enum_values(ModelTier)})", name="tier_closed_set"),
+    CheckConstraint(f"status IN ({_enum_values(ModelStatus)})", name="status_closed_set"),
+)
+
+providers = Table(
+    "providers",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column("provider_key", String(512), nullable=False, unique=True),
+    Column("display_name", String(512), nullable=False),
+    Column("status", String(32), nullable=False),
+    Column("auth_types", JSONB, nullable=False),
+    Column("supports_account_pool", Boolean, nullable=False),
+    CheckConstraint(f"status IN ({_enum_values(ProviderStatus)})", name="status_closed_set"),
 )

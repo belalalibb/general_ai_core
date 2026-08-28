@@ -25,6 +25,7 @@ from sqlalchemy import Table
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
+from core.contracts.domain import Model, Provider
 from core.contracts.identity import Project, Tenant, User, Workspace
 from core.contracts.permission import Permission
 from core.contracts.plan import Plan
@@ -32,9 +33,11 @@ from core.contracts.roles import Role
 from core.contracts.skills import Skill
 from infrastructure.db.tables import (
     metadata,
+    models,
     permissions,
     plans,
     projects,
+    providers,
     roles,
     skills,
     tenants,
@@ -59,6 +62,8 @@ CONTRACT_TABLE_PAIRS = [
     (Role, roles),
     (Permission, permissions),
     (Skill, skills),
+    (Model, models),
+    (Provider, providers),
 ]
 
 
@@ -143,6 +148,27 @@ class TestContractSchemaParity:
         assert ("name", "version") in composites
         assert skills.columns["status"].server_default is None
         assert not skills.columns["status"].nullable
+
+    def test_models_providers_are_platform_registries(self) -> None:
+        # 03 §4 defines no tenant_id; tenant visibility is admin policy
+        # DATA (21 §10). Registry lookup keys are unique.
+        assert "tenant_id" not in models.columns
+        assert "tenant_id" not in providers.columns
+        assert models.columns["model_key"].unique
+        assert providers.columns["provider_key"].unique
+
+    def test_no_credential_value_columns_in_registries(self) -> None:
+        # 41 §6 verbatim: credentials live in the Secret Manager — never a
+        # column. (Same 20 §5 posture the users table already enforces.)
+        forbidden = {"credential", "credential_value", "secret", "api_key", "token"}
+        for table in (models, providers):
+            assert not forbidden & {c.name for c in table.columns}, table.name
+
+    def test_agent_capability_has_no_permissive_default(self) -> None:
+        # 30 §4.3: unknown must NOT read as supported — nullable with no
+        # server_default; NULL parses to contract None (undeclared).
+        column = models.columns["agent_capability"]
+        assert column.nullable and column.server_default is None
 
     def test_permissions_db_default_is_most_restrictive(self) -> None:
         # Deny-by-default: the DB default must equal the contract default
