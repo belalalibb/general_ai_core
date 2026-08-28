@@ -183,3 +183,65 @@ class TestFixedCostSnapshot:
             "units_settled": 1.0,  # not 2.0
         }
         assert report.execution.cost_snapshot["estimated_units"] == 1.0
+
+
+class TestEstimateReserveWiring:
+    """41 §19 flow: Estimate → Reserve — the estimator prices the hold."""
+
+    def _execute(
+        self, *, estimated_units: float | None, with_usage: bool = True
+    ) -> Any:
+        from uuid import uuid4
+
+        from core.contracts.provider import ProviderOperation
+        from core.usage import InMemoryUsageAccounting
+        from tests.execution.test_execution_service import World
+
+        world = World()
+        usage = InMemoryUsageAccounting() if with_usage else None
+        provider_id, _ = world.add_provider([{"text": "ok"}])
+        service = world.service(usage=usage)
+        tenant_id = uuid4()
+        if usage is not None:
+            usage.configure_tenant(tenant_id, plan="pro", task_units_limit=10)
+        report = run(
+            service.execute_single(
+                tenant_id=tenant_id,
+                user_id=uuid4(),
+                decision=world.decision(world.candidate(provider_id)),
+                operation=ProviderOperation.GENERATE_TEXT,
+                payload={"prompt": "x"},
+                request_hash="h",
+                estimated_units=estimated_units,
+            )
+        )
+        return report, usage
+
+    def test_estimator_output_prices_the_reservation(self) -> None:
+        """A complex task's 3 units become the hold AND the snapshot."""
+        estimate = TaskUnitEstimator().estimate(make_task("complex"))
+        report, _ = self._execute(estimated_units=estimate.estimated_units)
+        snapshot = report.execution.cost_snapshot
+        assert snapshot["estimated_units"] == 3.0
+        assert snapshot["settlement"]["units_reserved"] == 3.0
+
+    def test_settlement_still_reflects_actual_usage(self) -> None:
+        """03 §7: settled = ACTUAL usage — the estimate prices only the hold."""
+        report, _ = self._execute(estimated_units=3.0)
+        settlement = report.execution.cost_snapshot["settlement"]
+        assert settlement["units_reserved"] == 3.0  # the estimate
+        assert settlement["units_settled"] == 1.0  # 1 succeeded stage (MVP metric)
+
+    def test_absent_estimate_keeps_the_mvp_stage_metric(self) -> None:
+        report, _ = self._execute(estimated_units=None)
+        assert report.execution.cost_snapshot["estimated_units"] == 1.0
+
+    def test_estimate_beyond_budget_denied_before_provider_work(self) -> None:
+        from core.usage import BudgetExceeded
+
+        with pytest.raises(BudgetExceeded):
+            self._execute(estimated_units=99.0)
+
+    def test_negative_estimate_rejected(self) -> None:
+        with pytest.raises(ValueError, match="estimated_units"):
+            self._execute(estimated_units=-1.0, with_usage=False)

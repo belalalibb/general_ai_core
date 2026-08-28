@@ -63,6 +63,15 @@ pre-T-IMPL-024 behavior: ``cost_snapshot.settlement`` says
   arithmetic; the attempt count appears in NEITHER formula, so a stage
   that succeeded after N retries/failovers costs exactly what a
   first-attempt success costs.
+- Estimate→Reserve wiring (the 41 §19 flow): callers holding a
+  complexity-based estimate (:class:`~core.usage.estimation.TaskUnitEstimator`
+  over ``TaskAnalysis.complexity``) pass it as ``estimated_units``; it
+  becomes BOTH the reservation amount and the fixed snapshot value.
+  Absent, the recorded MVP stage metric holds (posture unchanged).
+  Settlement is NOT overridden by the estimate — 03 §7 verbatim:
+  "settled — reservation finalized from ACTUAL usage AFTER execution";
+  the estimate prices the hold, actuals price the bill (recorded, not
+  invented — a fixed-price settlement rule exists in no doc).
 
 Scope notes (deliberate, not omissions):
 
@@ -264,8 +273,14 @@ class ExecutionService:
         idempotency_key: str | None = None,
         conversation_id: UUID | None = None,
         timeout_ms: int | None = None,
+        estimated_units: float | None = None,
     ) -> ExecutionReport:
-        """Run one model call (03 §5 strategy=single) over the decision."""
+        """Run one model call (03 §5 strategy=single) over the decision.
+
+        ``estimated_units`` (41 §19 Estimate step): an externally computed
+        task-unit estimate; becomes the reservation amount and the fixed
+        cost-snapshot value. ``None`` keeps the MVP stage metric.
+        """
         stage = PipelineStage(
             node_key="single",
             decision=decision,
@@ -281,6 +296,7 @@ class ExecutionService:
             idempotency_key=idempotency_key,
             conversation_id=conversation_id,
             timeout_ms=timeout_ms,
+            estimated_units=estimated_units,
         )
 
     async def execute_pipeline(
@@ -293,6 +309,7 @@ class ExecutionService:
         idempotency_key: str | None = None,
         conversation_id: UUID | None = None,
         timeout_ms: int | None = None,
+        estimated_units: float | None = None,
     ) -> ExecutionReport:
         """Run stages sequentially (03 §5 strategy=pipeline).
 
@@ -317,6 +334,7 @@ class ExecutionService:
             idempotency_key=idempotency_key,
             conversation_id=conversation_id,
             timeout_ms=timeout_ms,
+            estimated_units=estimated_units,
         )
 
     # --- orchestration ------------------------------------------------------------
@@ -332,6 +350,7 @@ class ExecutionService:
         idempotency_key: str | None,
         conversation_id: UUID | None,
         timeout_ms: int | None,
+        estimated_units: float | None = None,
     ) -> ExecutionReport:
         # Fail-fast composition validation for the WHOLE route of EVERY
         # stage — misconfiguration must never interrupt an execution
@@ -345,7 +364,13 @@ class ExecutionService:
         # --- cost estimate FIXED AT TASK START (41 §19; T-IMPL-065): computed
         # once BEFORE any provider work; the snapshot carries this value
         # verbatim — retries, failovers, and outcomes never recompute it.
-        estimated_units = self._units_per_stage * len(stages)
+        # An externally supplied estimate (the Estimate→Reserve wiring) wins;
+        # absent, the recorded MVP stage metric prices the hold.
+        if estimated_units is not None and estimated_units < 0:
+            msg = "estimated_units must be >= 0"
+            raise ValueError(msg)
+        if estimated_units is None:
+            estimated_units = self._units_per_stage * len(stages)
 
         # --- usage reservation (T-IMPL-024; 03 §7) BEFORE any provider work.
         # A denied reservation (budget/entitlement) raises here — no adapter
