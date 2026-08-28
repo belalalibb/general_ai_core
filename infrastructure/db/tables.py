@@ -161,6 +161,25 @@ Design decisions (recorded):
   recorded no grader rows claims none. ``level`` has NO server_default
   — the verification level must be explicit (RAW is a real claim, not
   a fallback; same posture as skills.status/usage_ledger.status).
+- ``learning_samples`` (FINAL Phase 3, 41 §6 "learning metadata" — the
+  LAST §6 entity) maps LearningSample in ``core/contracts/learning.py``
+  field-for-field (03 §7 yaml verbatim). tenant_id is NULLABLE BY SPEC
+  (03 §7 ``uuid|null``): the honest recorded reading is "sample not
+  attributed to a tenant" — no richer semantics invented. Attributed
+  samples get the 20 §6 posture: FK + partial-value index (the index
+  covers the column; NULLs are simply absent from tenant-filtered
+  queries). source_execution_id FK RESTRICT + index — 22 §9 requires
+  "source trace exists"; a dangling source would break training
+  eligibility forensics. dataset_id is a PLAIN nullable UUID — NO
+  Dataset table exists in the 41 §6 list, so there is NO FK target
+  (03 §8: a sample enters Dataset only after eligibility+verification;
+  the Dataset entity belongs to a later phase — never invented).
+  Deny-by-default DB defaults equal the contract defaults:
+  eligibility 'pending', sanitization_state 'pending',
+  verification_level 'RAW' — a new row grants NOTHING toward the 22 §9
+  training gate (this differs from level-must-be-explicit on
+  evaluations: HERE the spec defines a semantically-safe zero state,
+  and the contract defaults to it — DB == contract, recorded).
 """
 
 from __future__ import annotations
@@ -192,6 +211,7 @@ from core.contracts.execution import (
     ExecutionStrategy,
 )
 from core.contracts.identity import TenantStatus, TenantType, UserStatus
+from core.contracts.learning import LearningEligibility, SanitizationState
 from core.contracts.memory import MemoryScope, MemorySensitivity
 from core.contracts.roles import RoleScope, RoleStatus
 from core.contracts.skills import SkillSource, SkillStatus, SkillType
@@ -622,4 +642,46 @@ evaluations = Table(
     ),
     Index("ix_evaluations_tenant_id", "tenant_id"),
     Index("ix_evaluations_execution_id", "execution_id"),
+)
+
+learning_samples = Table(
+    "learning_samples",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "source_execution_id",
+        UUID(as_uuid=True),
+        ForeignKey("executions.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="RESTRICT"),
+        nullable=True,  # BY SPEC (03 §7 uuid|null): unattributed samples exist
+    ),
+    Column("eligibility", String(32), nullable=False, server_default="pending"),
+    Column(
+        "sanitization_state",
+        String(32),
+        nullable=False,
+        server_default="pending",
+    ),
+    Column("verification_level", String(32), nullable=False, server_default="RAW"),
+    # PLAIN nullable UUID — no Dataset table exists in 41 §6 (recorded).
+    Column("dataset_id", UUID(as_uuid=True), nullable=True),
+    CheckConstraint(
+        f"eligibility IN ({_enum_values(LearningEligibility)})",
+        name="eligibility_closed_set",
+    ),
+    CheckConstraint(
+        f"sanitization_state IN ({_enum_values(SanitizationState)})",
+        name="sanitization_state_closed_set",
+    ),
+    CheckConstraint(
+        f"verification_level IN ({_enum_values(VerificationLevel)})",
+        name="verification_level_closed_set",
+    ),
+    Index("ix_learning_samples_tenant_id", "tenant_id"),
+    Index("ix_learning_samples_source_execution_id", "source_execution_id"),
 )

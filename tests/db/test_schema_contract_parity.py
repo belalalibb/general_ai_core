@@ -30,6 +30,7 @@ from core.contracts.domain import Model, Provider
 from core.contracts.evaluation import EvaluationRecord
 from core.contracts.execution import Execution, ExecutionNode
 from core.contracts.identity import Project, Tenant, User, Workspace
+from core.contracts.learning import LearningSample
 from core.contracts.memory import MemoryItem
 from core.contracts.permission import Permission
 from core.contracts.plan import Plan
@@ -41,6 +42,7 @@ from infrastructure.db.tables import (
     evaluations,
     execution_nodes,
     executions,
+    learning_samples,
     memory_embeddings,
     memory_items,
     messages,
@@ -84,6 +86,7 @@ CONTRACT_TABLE_PAIRS = [
     (ExecutionNode, execution_nodes),
     (UsageLedger, usage_ledger),
     (EvaluationRecord, evaluations),
+    (LearningSample, learning_samples),
 ]
 # memory_embeddings is deliberately NOT in CONTRACT_TABLE_PAIRS: 03 §3
 # defines NO embedding field on MemoryItem — the table is infrastructure
@@ -248,6 +251,36 @@ class TestContractSchemaParity:
             if constraint.__class__.__name__ == "UniqueConstraint"
         }
         assert ("execution_id", "node_key") in composites
+
+    def test_learning_samples_nullable_tenant_and_zero_grant_defaults(self) -> None:
+        # tenant_id NULLABLE BY SPEC (03 §7 uuid|null) — deliberately NOT
+        # in the NOT-NULL tenant-scoped matrix; attributed samples still
+        # get FK + index (20 §6 for tenant-filtered queries).
+        column = learning_samples.columns["tenant_id"]
+        assert column.nullable
+        assert {fk.column.table.name for fk in column.foreign_keys} == {"tenants"}
+        indexed = {col.name for ix in learning_samples.indexes for col in ix.columns}
+        assert "tenant_id" in indexed
+        # 22 §9 "source trace exists": source_execution_id FK + indexed.
+        source = learning_samples.columns["source_execution_id"]
+        assert not source.nullable
+        assert {fk.column.table.name for fk in source.foreign_keys} == {"executions"}
+        assert "source_execution_id" in indexed
+        # dataset_id: PLAIN nullable UUID — no Dataset table in 41 §6, so
+        # NO FK target may be invented.
+        dataset = learning_samples.columns["dataset_id"]
+        assert dataset.nullable and not list(dataset.foreign_keys)
+        # Deny-by-default: DB defaults == contract defaults — a new row
+        # grants NOTHING toward the 22 §9 training gate.
+        assert str(learning_samples.columns["eligibility"].server_default.arg) == "pending"  # type: ignore[union-attr]
+        assert (
+            str(learning_samples.columns["sanitization_state"].server_default.arg)  # type: ignore[union-attr]
+            == "pending"
+        )
+        assert (
+            str(learning_samples.columns["verification_level"].server_default.arg)  # type: ignore[union-attr]
+            == "RAW"
+        )
 
     def test_evaluations_execution_level_attachment_and_separate_judgment(self) -> None:
         # R049 boundary (d): evaluation attaches at EXECUTION level in
