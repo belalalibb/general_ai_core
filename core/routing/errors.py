@@ -31,3 +31,18 @@ class FallbackNotConfigured(RoutingError):
     ``admin_defined_chain`` (11 §8) requires an admin-defined chain; routing
     with that scope and no chain configured must fail clearly, never guess.
     """
+
+
+class BootstrapNotConfigured(RoutingError):
+    """The Bootstrap Routing Policy is absent or invalid (11 §9).
+
+    Bootstrap selection is policy-driven; without a pinned policy the
+    bootstrap path never guesses a router-analysis model (deny-by-default).
+    """
+
+
+class UnknownStrategy(RoutingError):
+    """A requested execution strategy is outside the 03 §5 closed set.
+
+    Unknown values are rejected loudly, never coerced (11 §5 posture).
+    """
