@@ -14,6 +14,11 @@ from core.memory.errors import (
 )
 from core.memory.memory import InMemoryConversationStore, InMemoryMemoryStore
 from core.memory.ports import ConversationStorePort, MemoryStorePort
+from core.memory.preferences import (
+    LearningDecision,
+    PreferenceLearningGate,
+    PreferenceObservation,
+)
 
 __all__ = [
     "ConversationNotFound",
@@ -21,8 +26,11 @@ __all__ = [
     "EmptyMessage",
     "InMemoryConversationStore",
     "InMemoryMemoryStore",
-    "MemoryStoreError",
+    "LearningDecision",
     "MemoryItemNotFound",
+    "MemoryStoreError",
     "MemoryStorePort",
+    "PreferenceLearningGate",
+    "PreferenceObservation",
     "SecretLikeMemoryRejected",
 ]
