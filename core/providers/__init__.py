@@ -5,10 +5,18 @@ MVP Phase 4 (41 §43). Registries live in ``core/providers/registry.py``
 NEVER here: core must not import provider internals (40 §6.2 contract).
 """
 
+from core.providers.accounts import (
+    LEASE_RESOURCE_PREFIX,
+    AccountPool,
+    AccountPoolManager,
+    lease_resource_for,
+)
 from core.providers.errors import (
     BindingNotFound,
     DuplicateRegistration,
     ModelNotRegistered,
+    NoEligibleAccount,
+    PoolOwnershipViolation,
     ProviderBoundaryError,
     ProviderNotEligible,
     ProviderNotRegistered,
@@ -29,12 +37,17 @@ from core.providers.registry import (
 )
 
 __all__ = [
+    "LEASE_RESOURCE_PREFIX",
     "TEMPLATE_DISABLED_STATUS",
+    "AccountPool",
+    "AccountPoolManager",
     "BindingNotFound",
     "BindingRegistry",
     "DuplicateRegistration",
     "ModelNotRegistered",
     "ModelRegistry",
+    "NoEligibleAccount",
+    "PoolOwnershipViolation",
     "ProviderAccountLifecyclePort",
     "ProviderAdapterPort",
     "ProviderAgentModulePort",
@@ -45,4 +58,5 @@ __all__ = [
     "ProviderRegistry",
     "RegisteredProvider",
     "aggregate_provider_health",
+    "lease_resource_for",
 ]

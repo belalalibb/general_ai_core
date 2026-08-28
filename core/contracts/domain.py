@@ -96,6 +96,27 @@ class OwnerType(StrEnum):
     USER = "user"
 
 
+class CredentialPolicy(StrEnum):
+    """Credential-ownership selection policy (30 §10.5, 41 §10) — closed set,
+    verbatim: platform_only / user_only / prefer_user / auto.
+
+    FINAL Phase 7 (T-IMPL-056). Recorded readings (never silent):
+
+    - ``user_only``/``prefer_user`` treat the USER SIDE as tenant- or
+      user-owned credentials — 41 §10 splits ownership as
+      ``Platform → Platform Account Pool`` vs ``Tenant/User → User
+      Credential``, so tenant-owned and user-owned are both the user side.
+    - ``auto`` places no ownership restriction; selection proceeds by the
+      normal account-selection rules (no preference order is stated by the
+      spec for auto, so none is invented).
+    """
+
+    PLATFORM_ONLY = "platform_only"
+    USER_ONLY = "user_only"
+    PREFER_USER = "prefer_user"
+    AUTO = "auto"
+
+
 class CredentialStatus(StrEnum):
     """Credential status (03 §4) — closed set, verbatim."""
 
