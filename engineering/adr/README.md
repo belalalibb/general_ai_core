@@ -22,4 +22,4 @@ Rules (authority: `docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTO
 | [ADR-0002](ADR-0002-persistence-toolchain.md) | Persistence toolchain — SQLAlchemy 2.x async + asyncpg + Alembic + pgvector | ACCEPTED (explicit operator decision, 2026-08-25) | T-IMPL-015 |
 | [ADR-0003](ADR-0003-redis-binding.md) | Redis client/binding — redis-py asyncio under core ports (streams, locks, cache) | ACCEPTED (explicit operator decision, 2026-08-25) | T-IMPL-016 |
 | [ADR-0004](ADR-0004-observability-setup.md) | Observability — OpenTelemetry API/SDK at composition root + structlog + adaptive sampler | ACCEPTED (explicit operator decision, 2026-08-25) | T-IMPL-017 |
-| [ADR-0008](ADR-0008-remote-provider-gateway.md) | Remote Provider Gateway — control-plane / data-plane split (OPEN-1..7 resolutions) | PROPOSED | R103 review / implementation NOT YET AUTHORIZED |
+| [ADR-0008](ADR-0008-remote-provider-gateway.md) | Remote Provider Gateway — control-plane / data-plane split (OPEN-1..7 resolutions) | ACCEPTED (explicit operator decision, 2026-08-29) | R103 review / implementation NOT YET AUTHORIZED |

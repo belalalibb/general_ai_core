@@ -1,8 +1,9 @@
 # ADR-0008 — Remote Provider Gateway (control-plane / data-plane split)
 
 ```text
-STATUS: PROPOSED
+STATUS: ACCEPTED (explicit operator decision, 2026-08-29: "OPERATOR DECISION — ACCEPT ADR-0008 … exactly as currently committed and remotely verified")
 DATE: 2026-08-29
+DATE_ACCEPTED: 2026-08-29
 TASK: R103 architecture review (proposal) / implementation task NOT YET AUTHORIZED
 SUPERSEDES: NONE
 ```
@@ -300,7 +301,9 @@ Migration: none forced — direct adapters and gateway adapters coexist
 
 ## Status
 
-PROPOSED — awaiting explicit operator review and acceptance.
+ACCEPTED — explicit operator sign-off 2026-08-29, issued against the
+remotely verified document at commit `35d9454c02351dcbacb713ddd722291be74e15c2`
+(decision text preserved verbatim; this status block is the only change).
 
 Acceptance of this ADR records the DECISION only. Implementation
 phases (G1 gateway skeleton, G2 platform adapter + composition +
