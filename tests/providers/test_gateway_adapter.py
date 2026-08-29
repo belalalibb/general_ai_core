@@ -755,3 +755,142 @@ class TestNoLeak:
         # 500 path uses the FIXED safe message; hostile body text is dropped.
         assert result.error.safe_message == "gateway internal error"
         assert INTERNAL_SLUG not in _all_text_of(result)
+
+
+# --------------------------------------------------------------------------- #
+# generate_text canonicalization (G3; operator decision A)                    #
+# --------------------------------------------------------------------------- #
+
+
+class TestGenerateTextCanonicalization:
+    """Pins the platform-payload -> canonical-wire-payload boundary translation.
+
+    Operation-specific, NEVER provider-specific (decision A): the platform's
+    task language (ask / role / context / previous_output) becomes the wire's
+    chat language (messages, CONTRACT §1) so that facades — which reject
+    unknown payload keys as bad_request — receive only the canonical schema.
+    """
+
+    def _sent_payload(self, recorder: _Recorder) -> dict[str, Any]:
+        assert recorder.requests, "no request crossed the transport"
+        body = json.loads(recorder.requests[-1].content)
+        payload = body["payload"]
+        assert isinstance(payload, dict)
+        return payload
+
+    def _request_with(self, payload: dict[str, Any]) -> ProviderGenerateRequest:
+        return ProviderGenerateRequest(
+            request_id=uuid4(),
+            tenant_id=uuid4(),
+            operation=ProviderOperation.GENERATE_TEXT,
+            provider_model_name="alpha-model-1",
+            credential_ref=CRED_REF,
+            payload=payload,
+            timeout_ms=5_000,
+        )
+
+    def test_ask_becomes_single_user_message(self) -> None:
+        adapter, recorder, _ = _adapter(_success_body)
+        run(adapter.generate(self._request_with({"ask": "hello"})))
+        payload = self._sent_payload(recorder)
+        assert payload == {"messages": [{"role": "user", "content": "hello"}]}
+
+    def test_full_platform_convention_maps_in_documented_order(self) -> None:
+        """role.objective -> system; context -> system JSON; previous_output
+        -> assistant; ask -> user. Same order as the in-process Groq adapter."""
+        adapter, recorder, _ = _adapter(_success_body)
+        run(
+            adapter.generate(
+                self._request_with(
+                    {
+                        "ask": "continue",
+                        "role": {"objective": "You are a summarizer."},
+                        "context": {"topic": "gateways"},
+                        "previous_output": {"content": "stage one output"},
+                    }
+                )
+            )
+        )
+        messages = self._sent_payload(recorder)["messages"]
+        assert messages == [
+            {"role": "system", "content": "You are a summarizer."},
+            {"role": "system", "content": 'Context:\n{"topic": "gateways"}'},
+            {"role": "assistant", "content": "stage one output"},
+            {"role": "user", "content": "continue"},
+        ]
+
+    def test_temperature_and_max_tokens_whitelisted_extras_dropped(self) -> None:
+        adapter, recorder, _ = _adapter(_success_body)
+        run(
+            adapter.generate(
+                self._request_with(
+                    {
+                        "ask": "hi",
+                        "temperature": 0.2,
+                        "max_tokens": 64,
+                        "output": {"format": "text"},  # platform-only key: dropped
+                        "seed": 7,  # not in the wire schema: dropped
+                    }
+                )
+            )
+        )
+        payload = self._sent_payload(recorder)
+        assert payload["temperature"] == 0.2
+        assert payload["max_tokens"] == 64
+        assert set(payload) == {"messages", "temperature", "max_tokens"}
+
+    def test_already_canonical_messages_pass_through_untouched(self) -> None:
+        """Idempotence: a wire-shaped payload is not double-translated."""
+        canonical = [
+            {"role": "system", "content": "s"},
+            {"role": "user", "content": "u"},
+        ]
+        adapter, recorder, _ = _adapter(_success_body)
+        run(adapter.generate(self._request_with({"messages": canonical})))
+        assert self._sent_payload(recorder) == {"messages": canonical}
+
+    def test_non_string_ask_becomes_empty_user_content(self) -> None:
+        """Mirrors the in-process Groq adapter's defensive posture."""
+        adapter, recorder, _ = _adapter(_success_body)
+        run(adapter.generate(self._request_with({"ask": 42})))
+        messages = self._sent_payload(recorder)["messages"]
+        assert messages == [{"role": "user", "content": ""}]
+
+    def test_canonical_text_output_gains_content_alias(self) -> None:
+        """Wire {"text", "finish_reason"} -> platform-consumable "content"."""
+
+        def _canonical_success(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "succeeded": True,
+                    "output": {"text": "Hello!", "finish_reason": "stop"},
+                    "usage": {"input_tokens": 2, "output_tokens": 3, "units": 1},
+                    "latency_ms": 9,
+                    "error": None,
+                },
+            )
+
+        adapter, _, _ = _adapter(_canonical_success)
+        result = run(adapter.generate(self._request_with({"ask": "hi"})))
+        assert result.succeeded is True
+        assert result.output["content"] == "Hello!"
+        assert result.output["text"] == "Hello!"  # canonical evidence retained
+        assert result.output["finish_reason"] == "stop"
+
+    def test_existing_content_key_is_never_overwritten(self) -> None:
+        def _both_keys(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    "succeeded": True,
+                    "output": {"text": "t", "content": "already-set"},
+                    "usage": {},
+                    "latency_ms": 1,
+                    "error": None,
+                },
+            )
+
+        adapter, _, _ = _adapter(_both_keys)
+        result = run(adapter.generate(self._request_with({"ask": "hi"})))
+        assert result.output["content"] == "already-set"

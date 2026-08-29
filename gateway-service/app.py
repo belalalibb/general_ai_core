@@ -33,10 +33,24 @@ def main() -> None:  # pragma: no cover — process entrypoint, not hermetic
 
     config = load_config_from_env()
     registry = ProviderRegistry()
-    # Live provider registration happens here in later authorized phases.
-    # G1 ships NO live providers: _example/_template are never registered.
+    register_live_providers(registry)
     registry.eager_verify_all()
     uvicorn.run(build_app(config, registry), host="127.0.0.1", port=8800)
+
+
+def register_live_providers(registry: ProviderRegistry) -> None:
+    """Register the gateway's LIVE providers (G3: groq is the first).
+
+    The slug is deployment-internal (5-layer identity: it never crosses to
+    the platform); routing to it happens via opaque route tokens in the
+    config's route_map. The Groq API key is resolved by the provider's own
+    Layer 1 from the ``GW_GROQ_API_KEY`` environment variable (platform
+    credential mode) — the platform never learns it.
+    """
+
+    from providers.groq.definition import DEFINITION as GROQ_DEFINITION
+
+    registry.register("groq", GROQ_DEFINITION, "providers.groq.adapter")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -41,8 +41,9 @@ so contract tests run against ``httpx.MockTransport`` with zero network.
 
 from __future__ import annotations
 
+import json
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -89,6 +90,13 @@ _CREDENTIAL_MODES = frozenset({CREDENTIAL_MODE_USER_KEY, CREDENTIAL_MODE_PLATFOR
 #: Gateway wire bound for timeout_ms (RequestEnvelope: ge=1, le=600_000).
 _TIMEOUT_MS_MIN = 1
 _TIMEOUT_MS_MAX = 600_000
+
+#: Operation whose payload this adapter canonicalizes (G3, operator decision A).
+_GENERATE_TEXT_OPERATION = "generate_text"
+
+#: The ONLY optional generate_text params the wire contract admits (CONTRACT §1).
+#: Facades reject extras as bad_request, so the adapter whitelists here.
+_GENERATE_TEXT_PARAM_WHITELIST = frozenset({"temperature", "max_tokens"})
 
 #: gateway /v1/health status -> platform ProviderHealthState (30 §11).
 #: UNKNOWN maps conservatively to UNAVAILABLE — "Unknown = ineligible"
@@ -362,13 +370,16 @@ class RemoteGatewayAdapter:
                 msg = "user_key credential mode requires a user_key_resolver"
                 raise ValueError(msg)
             credential["value"] = self._resolve_user_key(request.credential_ref)
+        payload = dict(request.payload)
+        if request.operation.value == _GENERATE_TEXT_OPERATION:
+            payload = _canonical_generate_text_payload(request.payload)
         return {
             "operation": request.operation.value,
             "model": str(request.provider_model_name),
             "request_id": str(request.request_id),
             "tenant_id": str(request.tenant_id),
             "credential": credential,
-            "payload": dict(request.payload),
+            "payload": payload,
             "timeout_ms": timeout_ms,
         }
 
@@ -403,6 +414,8 @@ class RemoteGatewayAdapter:
             if not isinstance(output, dict):
                 return self._failed(request, malformed, latency_ms=latency_ms)
             usage_obj = usage if isinstance(usage, dict) else {}
+            if request.operation.value == _GENERATE_TEXT_OPERATION:
+                output = _normalize_generate_text_output(output)
             return ProviderGenerateResponse(
                 request_id=request.request_id,
                 succeeded=True,
@@ -648,3 +661,76 @@ def _parse_wire_error(raw: object) -> ProviderError | None:
         provider_code=provider_code,
         safe_message=message,
     )
+
+
+# --- generate_text canonicalization (G3; operator decision A) -------------------------
+#
+# The platform's payload convention (apps/api/app.py + pipeline chaining) and the
+# gateway's canonical wire schema (CONTRACT.md §1) differ by design: the platform
+# speaks task language (ask / role / context / previous_output), the wire speaks
+# chat language (messages). The boundary translation lives HERE — operation-specific,
+# NEVER provider-specific — mirroring the mapping the in-process Groq adapter already
+# documents (providers/real/groq/adapter.py::_chat_completion_body):
+#
+# - payload["role"]["objective"] (str)          -> system message, verbatim.
+# - payload["context"] (non-empty dict)         -> system message, compact JSON data.
+# - payload["previous_output"]["content"] (str) -> assistant message (stage chaining).
+# - payload["ask"] (str)                        -> user message (always emitted).
+# - payload["messages"] (already canonical)     -> passed through untouched.
+# - temperature / max_tokens                    -> whitelisted; everything else is
+#   DROPPED (the wire facades reject unknown payload keys as bad_request).
+
+
+def _canonical_generate_text_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Platform generate_text payload -> canonical wire payload (CONTRACT §1).
+
+    Idempotent for already-canonical input: a payload that carries a valid
+    ``messages`` list is passed through (params still whitelisted), so callers
+    that speak the wire schema directly (e.g. the router-entry live test) are
+    not double-translated.
+    """
+    canonical: dict[str, Any] = {}
+    messages = payload.get("messages")
+    if isinstance(messages, list) and messages:
+        canonical["messages"] = [dict(m) for m in messages if isinstance(m, dict)]
+    else:
+        built: list[dict[str, str]] = []
+        role = payload.get("role")
+        if isinstance(role, dict) and isinstance(role.get("objective"), str):
+            built.append({"role": "system", "content": role["objective"]})
+        context = payload.get("context")
+        if isinstance(context, dict) and context:
+            built.append(
+                {
+                    "role": "system",
+                    "content": "Context:\n" + json.dumps(context, sort_keys=True),
+                }
+            )
+        previous = payload.get("previous_output")
+        if isinstance(previous, dict) and isinstance(previous.get("content"), str):
+            built.append({"role": "assistant", "content": previous["content"]})
+        ask = payload.get("ask")
+        built.append({"role": "user", "content": ask if isinstance(ask, str) else ""})
+        canonical["messages"] = built
+    for key in _GENERATE_TEXT_PARAM_WHITELIST:
+        if key in payload:
+            canonical[key] = payload[key]
+    return canonical
+
+
+def _normalize_generate_text_output(output: dict[str, Any]) -> dict[str, Any]:
+    """Canonical wire success output -> platform-consumable output.
+
+    The wire's canonical shape is ``{"text": str, "finish_reason": str}``
+    (CONTRACT §1); the platform API surfaces ``output["content"]``
+    (apps/api/app.py::_result_from_output). Add ``content`` as an alias of
+    ``text`` without discarding the canonical fields (raw evidence stays).
+    Non-canonical dicts pass through untouched — defensive parsing already
+    handled shape policing upstream.
+    """
+    text = output.get("text")
+    if isinstance(text, str) and "content" not in output:
+        normalized = dict(output)
+        normalized["content"] = text
+        return normalized
+    return output
