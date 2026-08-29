@@ -33,10 +33,12 @@ from __future__ import annotations
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
+from uuid import UUID
 
 import httpx
 
 from core.contracts.provider import ProviderManifest
+from core.secrets import SecretManagerPort
 from providers.real.gateway import GatewaySecret, RemoteGatewayAdapter
 
 _ENV_BASE_URL = "GATEWAY_BASE_URL"
@@ -119,6 +121,61 @@ def _validate_base_url(base_url: str) -> None:
     )
 
 
+def gateway_secret_resolver_from_secret_manager(
+    secrets: SecretManagerPort,
+    *,
+    tenant_id: UUID,
+    secret_ref: str,
+    version_ref: str,
+) -> Callable[[], GatewaySecret]:
+    """Bind the gateway shared secret to the SecretManagerPort seam (G4 §2).
+
+    The adapter re-reads the secret PER ATTEMPT via this resolver, so a
+    rotation performed in the secret manager (store new value+version under
+    the same refs' replacement, then rebind) is picked up by the OPEN-7
+    self-heal retry with no restart and no code change. Rules preserved:
+
+    - resolution happens at the LAST moment (20 §5) — nothing is cached here;
+    - only opaque refs are held; the value never lands in any attribute;
+    - a malformed stored version fails LOUD (never a silent guess);
+    - no vendor path/token appears here — the port hides the backend.
+    """
+
+    def _resolve() -> GatewaySecret:
+        value = secrets.resolve(tenant_id, secret_ref)
+        version_raw = secrets.resolve(tenant_id, version_ref).strip()
+        if not version_raw.isdigit() or int(version_raw) < 1:
+            msg = (
+                "Gateway secret version stored in the secret manager must be "
+                "a positive integer (20 §5: custody is all-or-nothing)."
+            )
+            raise ValueError(msg)
+        return GatewaySecret(value=value, version=int(version_raw))
+
+    return _resolve
+
+
+def route_token_resolver_from_secret_manager(
+    secrets: SecretManagerPort,
+    *,
+    tenant_id: UUID,
+    route_token_ref: str,
+) -> Callable[[], str]:
+    """Bind one provider's opaque route token to the SecretManagerPort seam.
+
+    Same last-moment posture: the token is re-read per attempt, so token
+    rotation (revoke old line + store new token under a new ref + rebind)
+    needs no process restart. The token is a CREDENTIAL (5-layer identity)
+    and gets full custody treatment — it never appears in settings, repr,
+    or environment dumps.
+    """
+
+    def _resolve() -> str:
+        return secrets.resolve(tenant_id, route_token_ref)
+
+    return _resolve
+
+
 def build_gateway_adapter(
     settings: GatewaySettings,
     *,
@@ -127,6 +184,7 @@ def build_gateway_adapter(
     credential_mode: str,
     user_key_resolver: Callable[[str], str] | None = None,
     transport: httpx.AsyncBaseTransport | None = None,
+    gateway_secret_resolver: Callable[[], GatewaySecret] | None = None,
 ) -> RemoteGatewayAdapter:
     """Construct ONE remote-provider adapter from validated settings.
 
@@ -139,6 +197,11 @@ def build_gateway_adapter(
 
     ``transport`` is injectable for hermetic tests (httpx.MockTransport);
     production callers pass nothing and get the real transport.
+
+    ``gateway_secret_resolver`` (G4 §2): when provided — e.g. built by
+    :func:`gateway_secret_resolver_from_secret_manager` — it OVERRIDES the
+    env-settings snapshot, moving secret custody to the SecretManagerPort
+    seam without the adapter noticing. Default keeps the G2 env binding.
     """
 
     def _gateway_secret() -> GatewaySecret:
@@ -147,7 +210,7 @@ def build_gateway_adapter(
     return RemoteGatewayAdapter(
         manifest,
         base_url=settings.base_url,
-        gateway_secret_resolver=_gateway_secret,
+        gateway_secret_resolver=gateway_secret_resolver or _gateway_secret,
         route_token_resolver=route_token_resolver,
         credential_mode=credential_mode,
         user_key_resolver=user_key_resolver,

@@ -16,7 +16,9 @@ ever silently half-configured.
 from apps.composition.gateway import (
     GatewaySettings,
     build_gateway_adapter,
+    gateway_secret_resolver_from_secret_manager,
     gateway_settings_from_env,
+    route_token_resolver_from_secret_manager,
 )
 from apps.composition.secrets import (
     VaultSettings,
@@ -36,7 +38,9 @@ __all__ = [
     "build_gateway_adapter",
     "build_object_storage",
     "build_secret_manager",
+    "gateway_secret_resolver_from_secret_manager",
     "gateway_settings_from_env",
+    "route_token_resolver_from_secret_manager",
     "object_storage_settings_from_env",
     "vault_settings_from_env",
 ]

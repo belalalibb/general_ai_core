@@ -28,6 +28,29 @@ class GatewayConfig:
     route_map: dict[str, str] = field(default_factory=dict)
     dual_accept_window_seconds: int = 600  # OPEN-7 initial value: 10 minutes
     disabled_slugs: frozenset[str] = frozenset()
+    #: Epoch seconds when the current rotation began (OPEN-7). None =>
+    #: window tracking not configured: a configured previous secret stays
+    #: accepted (pre-G4 behavior, honest). When set, non-current versions
+    #: expire at rotation_started_at + dual_accept_window_seconds.
+    #: OPERATIONAL configuration — never domain identity.
+    rotation_started_at: float | None = None
+
+    def __repr__(self) -> str:
+        """G4 leak fix: secret VALUES and route TOKENS never appear in repr.
+
+        Dataclass auto-reprs reach logs and tracebacks; this repr carries
+        only non-sensitive shape facts (versions, counts, window).
+        """
+        return (
+            "GatewayConfig("
+            f"secret_versions={sorted(self.secrets_by_version)}, "
+            f"current_secret_version={self.current_secret_version}, "
+            f"route_count={len(self.route_map)}, "
+            f"dual_accept_window_seconds={self.dual_accept_window_seconds}, "
+            f"disabled_count={len(self.disabled_slugs)}, "
+            f"rotation_started_at={self.rotation_started_at}, "
+            "secrets='[SCRUBBED]', route_tokens='[SCRUBBED]')"
+        )
 
     def __post_init__(self) -> None:
         if not self.secrets_by_version:
@@ -49,6 +72,9 @@ class GatewayConfig:
         if self.dual_accept_window_seconds < 0:
             msg = "GatewayConfig: dual_accept_window_seconds must be >= 0"
             raise ValueError(msg)
+        if self.rotation_started_at is not None and self.rotation_started_at < 0:
+            msg = "GatewayConfig: rotation_started_at must be >= 0 epoch seconds"
+            raise ValueError(msg)
 
 
 def load_config_from_env(environ: dict[str, str] | None = None) -> GatewayConfig:
@@ -60,6 +86,9 @@ def load_config_from_env(environ: dict[str, str] | None = None) -> GatewayConfig
     GW_SECRET_PREVIOUS_VERSION integer version         (required if PREVIOUS set)
     GW_ROUTE_MAP               "token1:slug1,token2:slug2" (optional at boot)
     GW_DUAL_ACCEPT_WINDOW_S    seconds (optional, default 600 — OPEN-7)
+    GW_ROTATION_STARTED_AT     epoch seconds the rotation began (optional;
+                               set by the rotation runbook — enables window
+                               EXPIRY for the previous secret version)
     """
 
     env = environ if environ is not None else dict(os.environ)
@@ -100,9 +129,19 @@ def load_config_from_env(environ: dict[str, str] | None = None) -> GatewayConfig
         msg = "GW_DUAL_ACCEPT_WINDOW_S must be a non-negative integer"
         raise ValueError(msg)
 
+    rotation_started_raw = env.get("GW_ROTATION_STARTED_AT", "").strip()
+    rotation_started_at: float | None = None
+    if rotation_started_raw:
+        try:
+            rotation_started_at = float(rotation_started_raw)
+        except ValueError as exc:
+            msg = "GW_ROTATION_STARTED_AT must be epoch seconds (number)"
+            raise ValueError(msg) from exc
+
     return GatewayConfig(
         secrets_by_version=secrets_by_version,
         current_secret_version=int(current_version_raw),
         route_map=route_map,
         dual_accept_window_seconds=int(window_raw),
+        rotation_started_at=rotation_started_at,
     )

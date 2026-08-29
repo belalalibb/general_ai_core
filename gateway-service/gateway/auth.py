@@ -16,6 +16,8 @@ never ``assert``.
 from __future__ import annotations
 
 import hmac
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -35,12 +37,32 @@ class AuthResult:
     current_version: int
 
 
+def _window_expired(config: GatewayConfig, now: float) -> bool:
+    """True iff rotation tracking is configured AND the window has elapsed.
+
+    G4 hardening: the dual-accept window (OPEN-7) is now ENFORCED, not just
+    configured. ``rotation_started_at`` unset keeps the pre-G4 behavior
+    (previous version accepted while configured) — honest, no fake expiry.
+    The window duration stays OPERATIONAL configuration.
+    """
+
+    if config.rotation_started_at is None:
+        return False
+    return now >= config.rotation_started_at + config.dual_accept_window_seconds
+
+
 def authenticate(
     config: GatewayConfig,
     secret_header: str | None,
     version_header: str | None,
+    *,
+    clock: Callable[[], float] = time.time,
 ) -> AuthResult:
-    """Validate the gateway secret headers against the dual-accept map."""
+    """Validate the gateway secret headers against the dual-accept map.
+
+    ``clock`` is injectable so the rotation drill is DETERMINISTIC in tests;
+    production callers pass nothing and get wall time.
+    """
 
     current = config.current_secret_version
     if not secret_header or not version_header:
@@ -52,6 +74,14 @@ def authenticate(
     expected = config.secrets_by_version.get(version)
     if expected is None:
         # Unknown version: rotation signal, not an attack signal.
+        return AuthResult(outcome=AuthOutcome.STALE_VERSION, current_version=current)
+
+    if version != current and _window_expired(config, clock()):
+        # Previous version outlived the dual-accept window: expired.
+        # Same wire semantics as unknown version (auth_expired, retryable
+        # — the adapter self-heals by re-reading the CURRENT secret).
+        # Deliberately signaled BEFORE the value compare: an expired
+        # version is expired regardless of what value rides with it.
         return AuthResult(outcome=AuthOutcome.STALE_VERSION, current_version=current)
 
     if hmac.compare_digest(secret_header.encode(), expected.encode()):
