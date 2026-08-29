@@ -1,9 +1,10 @@
 # ADR-0007 — Secret Manager Production Binding
 
 ```text
-STATUS: PROPOSED
+STATUS: ACCEPTED (explicit operator decision, 2026-08-29: "Accept ADR-0006 + ADR-0007")
 DATE: 2026-08-28
-TASK: T-IMPL-053 (Lane B — FINAL Phase 3: "Secrets" role, 41 §6 / 20 §5 / 40 §5.1)
+DATE_ACCEPTED: 2026-08-29
+TASK: T-IMPL-053 (proposal) / T-IMPL-074 (implementation)
 SUPERSEDES: NONE
 ```
 
@@ -97,11 +98,8 @@ Cons:
 
 ## Decision
 
-PROPOSED (operator decision required — the backend choice is a deployment
-decision):
-
-Recommend **Alternative A (Vault via hvac)** for cloud-neutrality, with
-**Alternative B as the stated fallback** if the deployment lands on AWS
+ACCEPTED: **Alternative A (Vault via hvac)** for cloud-neutrality, with
+**Alternative B recorded as the stated fallback** if the deployment lands on AWS
 and ADR-0006's boto3 is accepted (one shared dependency tree). In BOTH
 cases the in-memory implementation remains the dev/test profile;
 Alternative C is recorded as REJECTED for production (20 §5 verbatim).
@@ -128,6 +126,9 @@ Rollback: in-memory implementation keeps the port green; removing the
 
 ## Status
 
-PROPOSED — awaiting explicit operator sign-off on the backend (and
-thereby the client dependency). No dependency added, no binding code
-written until ACCEPTED.
+ACCEPTED — explicit operator sign-off 2026-08-29 ("Accept ADR-0006 + ADR-0007").
+Backend: HashiCorp Vault (KV v2); client: hvac. Alternative C stays
+REJECTED for production (20 §5 verbatim); the in-memory implementation
+remains the dev/test profile. Implementation: T-IMPL-074 — hvac dependency
++ import-linter confinement contract + `infrastructure/secrets/vault.py`
+binding, all in the same commit.

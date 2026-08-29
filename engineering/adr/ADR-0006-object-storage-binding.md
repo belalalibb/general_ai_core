@@ -1,9 +1,10 @@
 # ADR-0006 — Object Storage Production Binding (S3-compatible client)
 
 ```text
-STATUS: PROPOSED
+STATUS: ACCEPTED (explicit operator decision, 2026-08-29: "Accept ADR-0006 + ADR-0007")
 DATE: 2026-08-28
-TASK: T-IMPL-053 (Lane B — FINAL Phase 3: "Object Storage" role, 41 §6 / 40 §5.1)
+DATE_ACCEPTED: 2026-08-29
+TASK: T-IMPL-053 (proposal) / T-IMPL-073 (implementation)
 SUPERSEDES: NONE
 ```
 
@@ -101,9 +102,7 @@ Cons:
 
 ## Decision
 
-PROPOSED (operator decision required — no dependency is added until then):
-
-Recommend **Alternative A (boto3)** with `boto3-stubs[s3]` as a dev
+ACCEPTED: **Alternative A (boto3)** with `boto3-stubs[s3]` as a dev
 dependency: it matches the port's existing sync shape exactly, works
 against every S3-compatible target the deployment might choose, and
 follows the "boring, battle-tested" bias the stack ADRs (0001–0003)
@@ -134,7 +133,7 @@ Rollback: the in-memory implementation keeps passing the same port tests;
 
 ## Status
 
-PROPOSED — awaiting explicit operator sign-off. No dependency added, no
-binding code written until ACCEPTED (repo governance: every dependency
-pin so far — ADR-0001..0005 — landed only via explicit operator
-ACCEPTED).
+ACCEPTED — explicit operator sign-off 2026-08-29 ("Accept ADR-0006 + ADR-0007").
+Implementation: T-IMPL-073 — boto3 dependency + import-linter confinement
+contract + `infrastructure/storage/s3.py` binding, all in the same commit
+(established pattern: ADR-0003 redis, ADR-0005 argon2).
