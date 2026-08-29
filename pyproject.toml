@@ -33,6 +33,12 @@ dependencies = [
     # Secret manager — ADR-0007 (ACCEPTED 2026-08-29: HashiCorp Vault via hvac).
     # Confined to infrastructure/ by import-linter; core sees SecretManagerPort only.
     "hvac>=2",
+    # HTTP client — ADR-0008 OPEN-6 (ACCEPTED 2026-08-29): promoted from the
+    # dev extra to a RUNTIME dependency at gateway-adapter implementation time
+    # (G2). Real provider adapters (providers/real/*) and the gateway
+    # composition seam depend on it in production; core stays HTTP-free
+    # (contract below). Also remains the hermetic ASGI test client.
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
@@ -41,8 +47,6 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.4",
     "import-linter>=2",
-    # Hermetic ASGI test client for the API surface (no network).
-    "httpx>=0.27",
     # ADR-0006: typed boto3 for mypy --strict on the storage binding.
     "boto3-stubs[s3]>=1.34",
     # ADR-0007: type stubs for hvac ("strict mypy needs care" — recorded con).
@@ -149,3 +153,12 @@ name = "Core must not import the Vault client (ADR-0007)"
 type = "forbidden"
 source_modules = ["core"]
 forbidden_modules = ["hvac"]
+
+# ADR-0008 OPEN-6: httpx is a runtime dependency (remote gateway adapter),
+# but core never performs HTTP itself — adapters live behind
+# ProviderAdapterPort (promotion + contract land together, same-commit rule).
+[[tool.importlinter.contracts]]
+name = "Core must not import the HTTP client (ADR-0008)"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["httpx"]
