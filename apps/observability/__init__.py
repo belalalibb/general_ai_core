@@ -15,12 +15,14 @@ ids only and never duplicates audit content.
 
 from apps.observability.config import ObservabilityConfig
 from apps.observability.logs import build_processors, configure_logging, scrub_secrets
+from apps.observability.metrics import build_meter_provider
 from apps.observability.sampler import AdaptiveSampler
 from apps.observability.setup import build_tracer_provider, configure_observability
 
 __all__ = [
     "AdaptiveSampler",
     "ObservabilityConfig",
+    "build_meter_provider",
     "build_processors",
     "build_tracer_provider",
     "configure_logging",
