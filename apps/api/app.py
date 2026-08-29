@@ -152,6 +152,7 @@ from core.routing.errors import (
     NoEligibleCandidates,
 )
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
+from core.runtime.ports import RateLimitPort
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 from core.usage.ports import UsageAccountingPort
 
@@ -308,6 +309,9 @@ def create_app(
     bindings: BindingRegistry | None = None,
     usage: UsageAccountingPort | None = None,
     webhooks: bool = False,
+    rate_limits: RateLimitPort | None = None,
+    execute_rate_limit: int = 0,
+    execute_rate_window_seconds: float = 1.0,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -345,6 +349,30 @@ def create_app(
       the documented 40 §4.2 outbox chain (core/runtime/outbox.py) is the
       recorded seam a delivery relay will consume — never claimed here
       (41 §49). Default False ⇒ route absent (nothing to probe, 20 §4).
+
+    FINAL Phase 21 seam (T-IMPL-070; 41 §24 "API: rate limits") — recorded
+    decisions:
+
+    - ``rate_limits`` + ``execute_rate_limit > 0`` gate POST /v1/execute
+      through the EXISTING RateLimitPort (40 §4.5 admission machinery —
+      core/runtime; nothing new invented). The scope is per-tenant
+      (``execute:{tenant_id}``) because 20 §3 names the unbounded-spend /
+      account-abuse threats at tenant granularity and the Principal is the
+      only identity at this seam. Refusal = the unified ``rate_limited``
+      429 (10 §9 closed set) with ``retryable=true`` — the code already
+      existed for provider-side limits; the SAME code serves the API-side
+      gate (one vocabulary, both directions).
+    - The gate runs FIRST, before idempotent replay and all persistence —
+      a limited caller must not consume composition/storage work, and a
+      429 must leave ZERO state behind (same zero-residue posture the
+      admin deny gate holds).
+    - No doc defines default numeric limits ⇒ limits are composition-root
+      DATA (same posture as plan/task-unit values, 41 §19). The default
+      ``execute_rate_limit=0`` means NOT CONFIGURED ⇒ gate absent —
+      composition roots must OPT IN with a real number; a zero/absent
+      configuration never silently rate-limits (and never silently
+      unlimits a configured one). ``rate_limits`` absent ⇒ gate absent
+      (same absent-seam posture as every other optional seam here).
     """
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
@@ -375,6 +403,22 @@ def create_app(
         body: ExecuteRequest,
         idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     ) -> Response:
+        # --- API rate limit (41 §24; T-IMPL-070) — FIRST: a limited caller
+        # consumes no replay/persistence/composition work and leaves no state.
+        if rate_limits is not None and execute_rate_limit > 0:
+            within = await rate_limits.hit(
+                f"execute:{principal.tenant_id}",
+                execute_rate_limit,
+                execute_rate_window_seconds,
+            )
+            if not within:
+                return error_response(
+                    ErrorCode.RATE_LIMITED,
+                    "Rate limit exceeded for this tenant.",
+                    retryable=True,
+                    details={"scope": "execute"},
+                )
+
         # --- loud scope rejections (module docstring posture) ------------------
         policy = body.execution_policy
         if policy is not None and policy.async_ is True:
