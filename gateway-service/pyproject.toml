@@ -1,0 +1,32 @@
+# gateway-service — self-contained project root (ADR-0008 G1).
+# Independent of the platform's pyproject; nothing here touches the platform.
+
+[project]
+name = "provider-gateway"
+version = "0.1.0"
+description = "Remote Provider Gateway — data plane (ADR-0008). G1 skeleton: no live providers."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "pydantic>=2.7",
+    "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",  # hermetic ASGI test client only — no network in tests
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
