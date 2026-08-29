@@ -1,0 +1,33 @@
+"""Composition-root wiring for production infrastructure bindings (Lane C).
+
+This package is the ONLY place that reads deployment environment variables
+and constructs real infrastructure clients (boto3/hvac). Core never sees
+any of this — it receives ports (import-linter contracts 10/11 confine the
+clients to infrastructure/, and this package to apps/).
+
+Posture (recorded at R09x, reaffirmed here): "not configured ⇒ binding
+absent" — each ``*_from_env`` returns ``None`` when the deployment has not
+provided the required variables, and the caller keeps the in-memory
+implementation (the dev/test profile ADR-0006/0007 record). Nothing is
+ever silently half-configured.
+"""
+
+from apps.composition.secrets import (
+    VaultSettings,
+    build_secret_manager,
+    vault_settings_from_env,
+)
+from apps.composition.storage import (
+    ObjectStorageSettings,
+    build_object_storage,
+    object_storage_settings_from_env,
+)
+
+__all__ = [
+    "ObjectStorageSettings",
+    "VaultSettings",
+    "build_object_storage",
+    "build_secret_manager",
+    "object_storage_settings_from_env",
+    "vault_settings_from_env",
+]
