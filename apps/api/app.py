@@ -93,6 +93,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import MutableMapping
 from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID, uuid4
@@ -312,6 +313,9 @@ def create_app(
     rate_limits: RateLimitPort | None = None,
     execute_rate_limit: int = 0,
     execute_rate_window_seconds: float = 1.0,
+    idempotency_index: MutableMapping[tuple[UUID, str], UUID] | None = None,
+    webhook_subscriptions: MutableMapping[UUID, list[WebhookSubscription]]
+    | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -373,13 +377,34 @@ def create_app(
       configuration never silently rate-limits (and never silently
       unlimits a configured one). ``rate_limits`` absent ⇒ gate absent
       (same absent-seam posture as every other optional seam here).
+
+    FINAL Phase 23 seams (T-IMPL-072; 41 §26 "Stateless API") — recorded
+    decisions:
+
+    - 41 §26 names "Stateless API" + "API → horizontal" scaling. The app
+      held exactly TWO process-local mutable maps that would break under
+      horizontal replicas: the idempotency index (10 §10) and the webhook
+      subscription store (41 §21). Both become INJECTABLE MutableMapping
+      seams here — a shared binding (Redis-hash/DB-table adapter offering
+      the mapping protocol) restores cross-replica statelessness at the
+      composition root without touching handler code.
+    - Defaults stay process-local dicts: single-process behavior, every
+      existing caller and test, and the recorded single-replica posture
+      are all UNCHANGED. This seam is honesty-complete: no distributed
+      binding is claimed to exist (41 §49) — the seam makes one POSSIBLE.
+    - The injected execution ``store`` was ALREADY a seam (same posture);
+      registries/services are read-only at request time; no other
+      request-path mutable process state remains — asserted by the
+      T-IMPL-072 statelessness suite.
     """
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
     skill_registry = skills if skills is not None else SkillRegistry()
     role_registry = roles if roles is not None else RoleRegistry()
     # Idempotency index (10 §10): (tenant_id, key) -> execution_id.
-    idempotency_index: dict[tuple[UUID, str], UUID] = {}
+    # Injectable for horizontal replicas (T-IMPL-072); default process-local.
+    if idempotency_index is None:
+        idempotency_index = {}
 
     @app.exception_handler(RequestValidationError)
     async def _validation_handler(
@@ -713,9 +738,10 @@ def create_app(
 
     # --- POST /v1/webhooks (41 §21; T-IMPL-067 slice 2): registration only -----
     if webhooks:
-        # Tenant-scoped subscription store (process-local, same posture as
-        # InMemoryExecutionStore — recorded in the create_app docstring).
-        webhook_subscriptions: dict[UUID, list[WebhookSubscription]] = {}
+        # Tenant-scoped subscription store — injectable for horizontal
+        # replicas (T-IMPL-072); default process-local (docstring posture).
+        if webhook_subscriptions is None:
+            webhook_subscriptions = {}
 
         @app.post("/v1/webhooks", status_code=201)
         async def register_webhook(body: WebhookSubscriptionRequest) -> Response:
