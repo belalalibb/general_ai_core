@@ -144,6 +144,7 @@ from apps.api.errors import (
     error_response,
     execution_failure_detail,
 )
+from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
 from apps.api.store import ExecutionNotFound, InMemoryExecutionStore
 from apps.api.streaming import Sleeper, event_stream
 from core.context.composer import ContextComposer
@@ -1331,6 +1332,120 @@ def create_app(
     # AgentToolSurface) read this attribute — zero parallel derivations.
     app.state.capability_catalog = capability_catalog
 
+    # --- Capability Exercise Surface (Vision V7 chunk 2) ----------------------
+    # REAL probes over the SAME composed machinery the catalog rows point
+    # at (apps/api/exercise.py header) — registered ONLY for AVAILABLE
+    # capabilities whose exercise is a safe, budget-bounded read/execute.
+    # A capability without a registered probe is honestly not exercisable
+    # (the surface lists exactly what has a real probe, 41 §49).
+    async def _exercise_execute_sync(caller: Principal) -> JsonObject:
+        # Identical posture to the agent's R1 run_test_execution: a REAL
+        # execution over the real path, billed to the caller's tenant,
+        # labeled machine-checkably in the stored node's input_ref.
+        probe_payload: JsonObject = {
+            "ask": "capability exercise probe",
+            "context": {"metadata": {EXERCISE_LABEL_KEY: {"kind": "probe"}}},
+        }
+        try:
+            probe_decision = router.route(
+                RoutingRequest(operation=ProviderOperation.GENERATE_TEXT)
+            )
+        except (
+            NoEligibleCandidates,
+            FallbackNotConfigured,
+            UnsupportedPolicyType,
+        ) as exc:
+            return {"exercised": False, "error": f"routing failed: {type(exc).__name__}"}
+        probe_hash = hashlib.sha256(
+            json.dumps(probe_payload, sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        try:
+            probe_report = await execution_service.execute_single(
+                tenant_id=caller.tenant_id,
+                user_id=caller.user_id,
+                decision=probe_decision,
+                operation=ProviderOperation.GENERATE_TEXT,
+                payload=probe_payload,
+                request_hash=probe_hash,
+            )
+        except BudgetExceeded as exc:
+            return {
+                "exercised": False,
+                "error": "budget exceeded",
+                "requested": exc.requested,
+                "remaining": exc.remaining,
+            }
+        except EntitlementNotConfigured:
+            return {
+                "exercised": False,
+                "error": "no entitlement configured for this tenant",
+            }
+        execution_store.put(probe_report)
+        return {
+            # Honest verdict: exercised means the machinery RAN and stored
+            # a record — the stored status is the evidence, success or not.
+            "exercised": True,
+            "evidence": {
+                "kind": "execution",
+                "execution_id": str(probe_report.execution.id),
+                "status": probe_report.execution.status.value,
+            },
+        }
+
+    async def _exercise_skills_listing(caller: Principal) -> JsonObject:
+        rows = skill_registry.list_selectable()
+        return {
+            "exercised": True,
+            "evidence": {
+                "kind": "system",
+                "selectable_count": len(rows),
+                "source": "SkillRegistry.list_selectable",
+            },
+        }
+
+    exercise_handlers: dict[str, ExerciseHandler] = {
+        "execute.sync": _exercise_execute_sync,
+        "skills.listing": _exercise_skills_listing,
+    }
+    if usage is not None:
+        usage_port = usage
+
+        async def _exercise_usage_reporting(caller: Principal) -> JsonObject:
+            try:
+                summary = usage_port.summary(caller.tenant_id)
+            except EntitlementNotConfigured:
+                return {
+                    "exercised": False,
+                    "error": "no entitlement configured for this tenant",
+                }
+            return {
+                "exercised": True,
+                "evidence": {
+                    "kind": "usage_summary",
+                    "plan": summary.plan,
+                    "task_units_limit": summary.task_units.limit,
+                },
+            }
+
+        exercise_handlers["usage.reporting"] = _exercise_usage_reporting
+    if models is not None and bindings is not None:
+        model_registry_probe = models
+
+        async def _exercise_models_listing(caller: Principal) -> JsonObject:
+            active = model_registry_probe.active_models()
+            return {
+                "exercised": True,
+                "evidence": {
+                    "kind": "system",
+                    "active_model_count": len(active),
+                    "source": "ModelRegistry.active_models",
+                },
+            }
+
+        exercise_handlers["models.listing"] = _exercise_models_listing
+    exercise_surface = ExerciseSurface(exercise_handlers)
+    app.state.exercise_surface = exercise_surface
+
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:
         app.include_router(
@@ -1339,6 +1454,7 @@ def create_app(
                 resolve=_principal,
                 system_info=system_info,
                 capabilities=capability_catalog,
+                exercise=exercise_surface,
             )
         )
 

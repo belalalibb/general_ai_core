@@ -70,6 +70,7 @@ from fastapi.responses import JSONResponse, Response
 
 from apps.api.capabilities import Capability, catalog_json
 from apps.api.errors import error_response
+from apps.api.exercise import ExerciseSurface
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
@@ -131,6 +132,7 @@ def create_admin_router(
     resolve: Callable[[Request], Principal | JSONResponse],
     system_info: Callable[[], JsonObject] | None = None,
     capabilities: tuple[Capability, ...] | None = None,
+    exercise: ExerciseSurface | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -488,6 +490,45 @@ def create_admin_router(
             if isinstance(admitted, JSONResponse):
                 return admitted
             return _json(catalog_payload)
+
+    # --- V7 chunk 2: Capability Exercise Surface (real probes, real evidence) -------
+
+    if exercise is not None:
+        exercise_registry = exercise
+
+        @router.get("/capabilities/exercisable")
+        async def exercisable_capabilities(request: Request) -> Response:
+            """The ids that have a REAL probe — exactly the registered set."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json({"exercisable": exercise_registry.exercisable()})
+
+        @router.post("/capabilities/{capability_id}/exercise")
+        async def exercise_capability(
+            request: Request, capability_id: str
+        ) -> Response:
+            """POST /v1/admin/capabilities/{id}/exercise: prove it by running it.
+
+            The probe runs the SAME machinery a user request runs, as the
+            admitted caller (billed/recorded against their tenant). The
+            response is EVIDENCE (record ids, stored statuses) — an
+            unexercisable id maps to the recorded unknown-resource 404
+            (anti-enumeration: unknown and unregistered are identical).
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            handler = exercise_registry.get(capability_id)
+            if handler is None:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown exercisable capability id.",
+                    details={"capability_id": capability_id[:100]},
+                    http_status=404,
+                )
+            result = await handler(admitted)
+            return _json({"capability_id": capability_id, "result": result})
 
     # --- AA-1 seam SYS-1: system read-model (process-local truths, labeled) ---------
 

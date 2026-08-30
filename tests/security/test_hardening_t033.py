@@ -219,6 +219,7 @@ class TestAdminCannotBreak:
         )
         assert admin_paths == [
             "GET /v1/admin/capabilities",
+            "GET /v1/admin/capabilities/exercisable",
             "GET /v1/admin/changes",
             "GET /v1/admin/changes/{change_id}",
             "GET /v1/admin/evaluations/{evaluation_id}",
@@ -228,6 +229,7 @@ class TestAdminCannotBreak:
             "GET /v1/admin/plans/{plan_tenant_id}",
             "GET /v1/admin/providers",
             "GET /v1/admin/routing/weights",
+            "POST /v1/admin/capabilities/{capability_id}/exercise",
             "POST /v1/admin/changes",
             "POST /v1/admin/changes/{change_id}/preview",
             "POST /v1/admin/changes/{change_id}/publish",
