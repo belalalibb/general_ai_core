@@ -43,6 +43,7 @@ from apps.api.scenarios import (
     UnknownCheckName,
     scenario_json,
 )
+from apps.api.self_review import SelfReviewService
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
@@ -98,6 +99,10 @@ class AgentToolSurface:
     #: review routes dispatch (read it from
     #: ``app.state.learning_observability_service``). Optional (P2).
     learning_observability: LearningObservabilityService | None = None
+    #: V7 chunk 6 — the SAME service the /v1/admin/self-review and
+    #: /v1/admin/changes/propose routes dispatch (read it from
+    #: ``app.state.self_review_service``). Optional (P2).
+    self_review: SelfReviewService | None = None
 
 
 def _report_row(report: ExecutionReport) -> JsonObject:
@@ -377,6 +382,64 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 description=(
                     "Prove a capability by exercising it — a REAL probe over "
                     "the real path returning record evidence."
+                ),
+            )
+        )
+
+    # --- V7 chunk 6: self-review + impact-simulator tools (registered ONLY
+    # when composed) — the SAME service the admin routes dispatch.
+    # self_review is R0 (pure read assembly). propose_change is R2: it
+    # creates config-lifecycle state (draft→validate→preview composed —
+    # exactly the tier of the existing draft/validate/preview tools) and
+    # NEVER publishes (publish stays a human act, structurally).
+    if surface.self_review is not None:
+        review_service = surface.self_review
+
+        async def self_review_tool(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            return scrub_object(review_service.self_review(caller.tenant_id))
+
+        async def propose_change_tool(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            raw_action = str(args.get("action", ""))
+            try:
+                action = AdminAction(raw_action)
+            except ValueError:
+                return {"error": f"unknown admin action: {raw_action[:100]}"}
+            payload = args.get("payload") or {}
+            if not isinstance(payload, dict):
+                return {"error": "payload must be a JSON object"}
+            try:
+                result = review_service.propose_change(
+                    caller.tenant_id, caller.user_id, action, payload
+                )
+            except InactiveAdminArea as exc:
+                return {"error": str(exc)}
+            return scrub_object(result)
+
+        capability_specs.append(
+            ToolSpec(
+                name="self_review",
+                tool_class=ToolClass.R0_READ,
+                handler=self_review_tool,
+                description=(
+                    "The platform's evidence-backed self-portrait: "
+                    "capabilities, lifecycle, scenarios, review state."
+                ),
+            )
+        )
+        capability_specs.append(
+            ToolSpec(
+                name="propose_change",
+                tool_class=ToolClass.R2_CONFIG_CHANGE,
+                handler=propose_change_tool,
+                allowed_args=frozenset({"action", "payload"}),
+                description=(
+                    "Simulate a change through the REAL lifecycle "
+                    "(draft→validate→preview) — evidence-backed proposal, "
+                    "NEVER auto-applied (publish stays a human act)."
                 ),
             )
         )

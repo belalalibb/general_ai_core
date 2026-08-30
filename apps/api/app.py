@@ -148,6 +148,7 @@ from apps.api.errors import (
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
 from apps.api.scenarios import ScenarioService
+from apps.api.self_review import SelfReviewService
 from apps.api.store import ExecutionNotFound, InMemoryExecutionStore
 from apps.api.streaming import Sleeper, event_stream
 from core.context.composer import ContextComposer
@@ -1485,6 +1486,21 @@ def create_app(
         )
     app.state.learning_observability_service = learning_observability_service
 
+    # --- V7 chunk 6: Self-Review + Change Impact Simulator ----------------------
+    # Assembly over the SAME derivations this root already made (catalog
+    # tuple, scenario service, observability service) plus the admin
+    # lifecycle — exists ONLY when an admin surface exists (it reviews and
+    # proposes through admin machinery, 20 §4). NEVER calls publish.
+    self_review_service: SelfReviewService | None = None
+    if admin is not None:
+        self_review_service = SelfReviewService(
+            admin_service=admin.service,
+            catalog=capability_catalog,
+            scenarios=scenario_service,
+            observability=learning_observability_service,
+        )
+    app.state.self_review_service = self_review_service
+
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:
         app.include_router(
@@ -1497,6 +1513,7 @@ def create_app(
                 scenarios=scenario_service,
                 context_lab=context_lab_service,
                 learning_observability=learning_observability_service,
+                self_review=self_review_service,
             )
         )
 

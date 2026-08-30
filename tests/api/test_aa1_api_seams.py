@@ -365,9 +365,12 @@ class TestAdminGateUnderSessions:
                     path = path.replace("{plan_tenant_id}", str(uuid4()))
                     path = path.replace("{scenario_id}", str(uuid4()))
                     body = None
-                    if method == "POST" and path.endswith("/changes"):
+                    if method == "POST" and (
+                        path.endswith("/changes") or path.endswith("/changes/propose")
+                    ):
                         # Contract-valid body: FastAPI parses bodies before
-                        # handlers, so the deny must win over a 422.
+                        # handlers, so the deny must win over a 422. The V7-6
+                        # propose route shares the AdminDraftRequest contract.
                         body = {"action": "disable_model", "payload": {}}
                     if method == "POST" and path.endswith("/scenarios"):
                         # Same posture for the V7-3 save route.
@@ -923,6 +926,7 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "GET /v1/admin/providers",
         "GET /v1/admin/routing/weights",
         "GET /v1/admin/scenarios",
+        "GET /v1/admin/self-review",
         "GET /v1/admin/system",
         "GET /v1/admin/usage",
         "GET /v1/auth/session",
@@ -934,6 +938,7 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "GET /v1/webhooks",
         "POST /v1/admin/capabilities/{capability_id}/exercise",
         "POST /v1/admin/changes",
+        "POST /v1/admin/changes/propose",
         "POST /v1/admin/changes/{change_id}/preview",
         "POST /v1/admin/changes/{change_id}/publish",
         "POST /v1/admin/changes/{change_id}/rollback",

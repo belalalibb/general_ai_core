@@ -84,6 +84,7 @@ from apps.api.scenarios import (
     UnknownCheckName,
     scenario_json,
 )
+from apps.api.self_review import SelfReviewService
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
@@ -149,6 +150,7 @@ def create_admin_router(
     scenarios: ScenarioService | None = None,
     context_lab: ContextLabService | None = None,
     learning_observability: LearningObservabilityService | None = None,
+    self_review: SelfReviewService | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -413,6 +415,50 @@ def create_admin_router(
         # response cannot pretend otherwise (LearningDashboard.placeholder
         # is Literal[True]).
         return _json(LearningDashboard().model_dump(mode="json", exclude_none=True))
+
+    # --- V7 chunk 6: Self-Review + Change Impact Simulator ---------------------
+    # Absent seam = absent routes (20 §4). The self-review is a pure read
+    # assembly; a proposal composes the EXISTING draft→validate→preview
+    # lifecycle and NEVER publishes (module header) — publish stays the
+    # human act on the existing lifecycle route.
+
+    if self_review is not None:
+        review_service = self_review
+
+        @router.get("/self-review")
+        async def get_self_review(request: Request) -> Response:
+            """GET /v1/admin/self-review: the platform's evidence-backed portrait."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(review_service.self_review(admitted.tenant_id))
+
+        @router.post("/changes/propose")
+        async def propose_change(
+            request: Request, body: AdminDraftRequest
+        ) -> Response:
+            """POST /v1/admin/changes/propose: draft→validate→preview, never publish.
+
+            Reuses the AdminDraftRequest contract (the proposal IS a
+            lifecycle act); a validation refusal is an honest 200 outcome
+            (rejected proposal with the lifecycle's own reason), while an
+            inactive area is the request's fault — the existing 422.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            try:
+                result = review_service.propose_change(
+                    admitted.tenant_id,
+                    admitted.user_id,
+                    body.action,
+                    body.payload,
+                )
+            except InactiveAdminArea as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR, str(exc), details={"field": "action"}
+                )
+            return _json(result, status=201)
 
     # --- V7 chunk 5: Learning observability ("what changed since last
     # review" with evidence). Absent seam = absent routes (20 §4). Reading
