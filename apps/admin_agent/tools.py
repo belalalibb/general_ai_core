@@ -29,6 +29,7 @@ from apps.admin_agent.secrecy import scrub_object
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal
 from apps.api.capabilities import Capability, catalog_json
+from apps.api.exercise import ExerciseSurface
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
@@ -68,6 +69,10 @@ class AgentToolSurface:
     #: ``app.state.capability_catalog``). Optional (P2): absent seam =
     #: absent tool, and every pre-V7 construction stays valid verbatim.
     capabilities: tuple[Capability, ...] | None = None
+    #: V7 chunk 2 — the SAME probe registry the admin exercise route
+    #: dispatches (read it from ``app.state.exercise_surface``). Optional
+    #: (P2): absent seam = absent tools — one registry, two consumers.
+    exercise: ExerciseSurface | None = None
 
 
 def _report_row(report: ExecutionReport) -> JsonObject:
@@ -298,6 +303,55 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 description=(
                     "Honest closed-set capability catalog for THIS process "
                     "(available/inert/unavailable, with evidence)."
+                ),
+            )
+        )
+
+    # --- V7 chunk 2: exercise tools (registered ONLY when composed) -----------
+    #
+    # The SAME ExerciseSurface the POST /v1/admin/capabilities/{id}/exercise
+    # route dispatches — one probe registry, two consumers. list_exercisable
+    # is R0 (pure registry read); exercise_capability is R1 (a probe may run
+    # a REAL budget-bounded execution — same risk class as run_test_execution).
+    if surface.exercise is not None:
+        exercise_registry = surface.exercise
+
+        async def list_exercisable(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            return scrub_object({"exercisable": exercise_registry.exercisable()})
+
+        async def exercise_capability(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            capability_id = str(args.get("capability_id", ""))
+            handler = exercise_registry.get(capability_id)
+            if handler is None:
+                # Anti-enumeration: unknown and unregistered are the same
+                # answer (mirrors the route's 404 mapping).
+                return {"error": "unknown exercisable capability id"}
+            result = await handler(caller)
+            return scrub_object(
+                {"capability_id": capability_id, "result": result}
+            )
+
+        capability_specs.append(
+            ToolSpec(
+                name="list_exercisable",
+                tool_class=ToolClass.R0_READ,
+                handler=list_exercisable,
+                description="Capability ids that have a REAL exercise probe.",
+            )
+        )
+        capability_specs.append(
+            ToolSpec(
+                name="exercise_capability",
+                tool_class=ToolClass.R1_EXECUTE_TEST,
+                handler=exercise_capability,
+                allowed_args=frozenset({"capability_id"}),
+                description=(
+                    "Prove a capability by exercising it — a REAL probe over "
+                    "the real path returning record evidence."
                 ),
             )
         )
