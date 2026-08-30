@@ -37,3 +37,16 @@ class ToolNotSelectable(ToolFabricError):
     def __init__(self, tool_id: object, status: str) -> None:
         self.status = status
         super().__init__(f"tool not selectable: {tool_id} (status={status})")
+
+
+class ToolHandlerNotBound(ToolFabricError):
+    """The gate admitted the call but composition bound no handler.
+
+    A composition defect, not a verdict (11 §14 splits caller errors from
+    refusals): handlers are registered at the composition root (V3 frozen
+    definition — "handlers = apps/providers territory, never core"), so an
+    admitted tool without one is a wiring bug that must stay LOUD.
+    """
+
+    def __init__(self, tool_id: object) -> None:
+        super().__init__(f"no handler bound for tool: {tool_id}")
