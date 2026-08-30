@@ -36,6 +36,12 @@ from infrastructure.db.repositories.idempotency import PostgresIdempotencyStore
 from infrastructure.db.repositories.memory import PostgresMemoryRepository
 from infrastructure.db.repositories.outbox import PostgresOutbox
 from infrastructure.db.repositories.usage import PostgresUsageRepository
+from infrastructure.db.repositories.workspaces import (
+    PostgresProjectRepository,
+    PostgresWorkspaceRepository,
+    ProjectNotFound,
+    WorkspaceNotFound,
+)
 
 __all__ = [
     "DuplicateIdempotencyKey",
@@ -48,9 +54,13 @@ __all__ = [
     "PostgresMemoryRepository",
     "PostgresModelCatalog",
     "PostgresOutbox",
+    "PostgresProjectRepository",
     "PostgresProviderCatalog",
     "PostgresRoleCatalog",
     "PostgresSkillCatalog",
     "PostgresUsageRepository",
+    "PostgresWorkspaceRepository",
+    "ProjectNotFound",
     "RepositoryError",
+    "WorkspaceNotFound",
 ]

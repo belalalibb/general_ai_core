@@ -30,10 +30,12 @@ from infrastructure.db.repositories import (
     PostgresMemoryRepository,
     PostgresModelCatalog,
     PostgresOutbox,
+    PostgresProjectRepository,
     PostgresProviderCatalog,
     PostgresRoleCatalog,
     PostgresSkillCatalog,
     PostgresUsageRepository,
+    PostgresWorkspaceRepository,
 )
 
 URL = "postgresql+asyncpg://svc:credential-value@db.internal:5432/platform"
@@ -82,6 +84,8 @@ class TestDatabaseSettings:
         assert isinstance(bindings.skill_catalog, PostgresSkillCatalog)
         assert isinstance(bindings.model_catalog, PostgresModelCatalog)
         assert isinstance(bindings.provider_catalog, PostgresProviderCatalog)
+        assert isinstance(bindings.workspaces, PostgresWorkspaceRepository)
+        assert isinstance(bindings.projects, PostgresProjectRepository)
         # ONE shared session factory (one pool, one truth) — every
         # repository holds the same object the bindings expose.
         for repo in (
@@ -96,5 +100,7 @@ class TestDatabaseSettings:
             bindings.skill_catalog,
             bindings.model_catalog,
             bindings.provider_catalog,
+            bindings.workspaces,
+            bindings.projects,
         ):
             assert repo._sessions is bindings.session_factory  # noqa: SLF001

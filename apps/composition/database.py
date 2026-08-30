@@ -34,10 +34,12 @@ from infrastructure.db.repositories import (
     PostgresMemoryRepository,
     PostgresModelCatalog,
     PostgresOutbox,
+    PostgresProjectRepository,
     PostgresProviderCatalog,
     PostgresRoleCatalog,
     PostgresSkillCatalog,
     PostgresUsageRepository,
+    PostgresWorkspaceRepository,
 )
 
 _ENV_URL = "DATABASE_URL"
@@ -99,6 +101,10 @@ class DatabaseBindings:
     skill_catalog: PostgresSkillCatalog
     model_catalog: PostgresModelCatalog
     provider_catalog: PostgresProviderCatalog
+    # Vision V5: durable workspace/project entities (existing tables from
+    # migration 0002; core/workspace/ owns the FILE area separately).
+    workspaces: PostgresWorkspaceRepository
+    projects: PostgresProjectRepository
 
 
 def build_database_bindings(settings: DatabaseSettings) -> DatabaseBindings:
@@ -123,4 +129,6 @@ def build_database_bindings(settings: DatabaseSettings) -> DatabaseBindings:
         skill_catalog=PostgresSkillCatalog(factory),
         model_catalog=PostgresModelCatalog(factory),
         provider_catalog=PostgresProviderCatalog(factory),
+        workspaces=PostgresWorkspaceRepository(factory),
+        projects=PostgresProjectRepository(factory),
     )
