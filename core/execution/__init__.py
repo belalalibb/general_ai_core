@@ -21,6 +21,15 @@ from core.execution.errors import (
     InvalidPipeline,
 )
 from core.execution.graph_planner import GraphPlanner
+from core.execution.loop import (
+    STOP_FINAL,
+    STOP_INVALID_PROPOSAL,
+    STOP_MAX_STEPS,
+    STOP_PROPOSE_FAILED,
+    AgentLoop,
+    AgentRunReport,
+    AgentStep,
+)
 from core.execution.service import (
     PREVIOUS_OUTPUT_KEY,
     AttemptRecord,
@@ -33,8 +42,15 @@ from core.execution.workflow_ports import WorkflowRuntimePort
 
 __all__ = [
     "PREVIOUS_OUTPUT_KEY",
+    "STOP_FINAL",
+    "STOP_INVALID_PROPOSAL",
+    "STOP_MAX_STEPS",
+    "STOP_PROPOSE_FAILED",
     "AdapterNotBound",
+    "AgentLoop",
     "AgentProposal",
+    "AgentRunReport",
+    "AgentStep",
     "AgentToolBinding",
     "AttemptRecord",
     "CredentialNotConfigured",
