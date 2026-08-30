@@ -15,6 +15,7 @@ Layer rules (enforced by import-linter, 12 contracts):
   (anti-enumeration), and lists simply omit foreign rows.
 """
 
+from infrastructure.db.repositories.audit import PostgresAuditLogRepository
 from infrastructure.db.repositories.conversations import PostgresConversationRepository
 from infrastructure.db.repositories.errors import (
     DuplicateIdempotencyKey,
@@ -31,6 +32,7 @@ __all__ = [
     "DuplicateIdempotencyKey",
     "ExecutionNotFound",
     "ExecutionRecord",
+    "PostgresAuditLogRepository",
     "PostgresConversationRepository",
     "PostgresExecutionRepository",
     "PostgresMemoryRepository",
