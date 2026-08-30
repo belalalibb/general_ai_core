@@ -14,12 +14,21 @@ the SAME :class:`ExecutionNotFound` as a truly absent id — foreign
 existence must not leak (anti-enumeration: 404/NotFound, never 403).
 The tenant key comes from the stored ``Execution.tenant_id`` fact itself,
 never from caller-supplied storage-time parameters.
+
+Phase AA-1 (seam EXE-1): ``list`` — the tenant-scoped, filterable list
+read the executions surface needs. Structural tenant scoping: foreign
+rows are simply absent from the result (never an error to enumerate,
+20 §6). Newest-first order; ``limit`` keeps the newest N. The method is
+apps-level protocol growth per the T-IMPL-072 injectable pattern — a
+repository-backed binding implements the same shape.
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
+from core.contracts.execute import ExecutionStatus
 from core.execution.service import ExecutionReport
 
 
@@ -53,6 +62,42 @@ class InMemoryExecutionStore:
         if report is None or report.execution.tenant_id != tenant_id:
             raise ExecutionNotFound(execution_id)
         return report
+
+    def list(
+        self,
+        tenant_id: UUID,
+        *,
+        status: ExecutionStatus | None = None,
+        initiated_by: UUID | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        limit: int | None = None,
+    ) -> tuple[ExecutionReport, ...]:
+        """Tenant-scoped, filterable list (AA-1 seam EXE-1), newest-first.
+
+        Foreign-tenant rows are structurally ABSENT (20 §6) — an empty
+        result is honest for "no rows" and "all rows foreign" alike.
+        ``limit`` keeps the newest N of the filtered result.
+        """
+        rows = [
+            report
+            for report in self._reports.values()
+            if report.execution.tenant_id == tenant_id
+            and (status is None or report.execution.status is status)
+            and (initiated_by is None or report.execution.user_id == initiated_by)
+            and (
+                created_after is None
+                or report.execution.created_at > created_after
+            )
+            and (
+                created_before is None
+                or report.execution.created_at < created_before
+            )
+        ]
+        rows.sort(key=lambda r: r.execution.created_at, reverse=True)
+        if limit is not None:
+            rows = rows[:limit]
+        return tuple(rows)
 
     def __len__(self) -> int:
         return len(self._reports)

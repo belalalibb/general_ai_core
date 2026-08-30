@@ -370,6 +370,7 @@ class TestStructuralGuarantees:
         assert paths == {
             "/v1/execute",
             "/v1/skills",
+            "/v1/executions",  # Phase AA-1 (EXE-1): tenant-scoped list
             "/v1/executions/{execution_id}",
         }
         assert not any("tool" in p for p in paths)

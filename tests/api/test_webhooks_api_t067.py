@@ -32,7 +32,11 @@ def run(coro: Any) -> Any:
     return asyncio.run(coro)
 
 
-def make_app(*, webhooks: bool = True) -> FastAPI:
+def make_app(
+    *,
+    webhooks: bool = True,
+    subscriptions: dict[Any, Any] | None = None,
+) -> FastAPI:
     from core.execution.service import ExecutionService
     from core.routing.router import SimpleScoringRouter
 
@@ -46,6 +50,7 @@ def make_app(*, webhooks: bool = True) -> FastAPI:
         ),
         principal=Principal(tenant_id=uuid4(), user_id=uuid4()),
         webhooks=webhooks,
+        webhook_subscriptions=subscriptions,
     )
 
 
@@ -132,22 +137,51 @@ class TestWebhookRegistration:
         response = run(_post(app, {"url": "https://x.example/h"}))
         assert response.status_code == 404
 
-    def test_no_undocumented_collection_routes_exist(self) -> None:
-        """No doc defines list/update/delete — absent, not fabricated."""
+    def test_update_route_absent_and_management_routes_gated_by_seam(self) -> None:
+        """AA-1 (WBH-1): list/delete EXIST under the seam; update stays
+        absent (no doc defines it); seam off ⇒ ALL routes absent (20 §4).
+
+        This test replaced ``test_no_undocumented_collection_routes_exist``
+        when Phase AA-1 consciously added list/delete — the guard's
+        documented purpose (route growth must be a reviewed act).
+        """
         app = make_app()
         transport = httpx.ASGITransport(app=app)
 
-        async def probe() -> tuple[int, int]:
+        async def probe() -> tuple[int, int, int, int]:
             async with httpx.AsyncClient(
                 transport=transport, base_url="http://test"
             ) as c:
                 listed = await c.get("/v1/webhooks")
                 deleted = await c.delete(f"/v1/webhooks/{uuid4()}")
-                return listed.status_code, deleted.status_code
+                put = await c.put(f"/v1/webhooks/{uuid4()}", json={})
+                patch = await c.patch(f"/v1/webhooks/{uuid4()}", json={})
+                return (
+                    listed.status_code,
+                    deleted.status_code,
+                    put.status_code,
+                    patch.status_code,
+                )
 
-        get_status, delete_status = run(probe())
-        assert get_status in (404, 405)
-        assert delete_status in (404, 405)
+        get_status, delete_status, put_status, patch_status = run(probe())
+        assert get_status == 200  # WBH-1 list exists (empty tenant)
+        assert delete_status == 404  # unknown id — recorded 404 mapping
+        assert put_status == 405  # update NOT fabricated
+        assert patch_status == 405
+
+        off = make_app(webhooks=False)
+        off_transport = httpx.ASGITransport(app=off)
+
+        async def probe_off() -> tuple[int, int, int]:
+            async with httpx.AsyncClient(
+                transport=off_transport, base_url="http://test"
+            ) as c:
+                listed = await c.get("/v1/webhooks")
+                created = await c.post("/v1/webhooks", json={"url": "https://x"})
+                deleted = await c.delete(f"/v1/webhooks/{uuid4()}")
+                return listed.status_code, created.status_code, deleted.status_code
+
+        assert run(probe_off()) == (404, 404, 404)  # nothing to probe
 
 
 def test_webhooks_contract_module_does_no_io() -> None:

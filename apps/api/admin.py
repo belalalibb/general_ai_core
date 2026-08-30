@@ -32,17 +32,44 @@ T-IMPL-032 (41 §46; R049 slicing decision, binding). Recorded decisions:
   shape served with honest zero/empty values and ``placeholder: true`` —
   NO fabricated metrics; the learning lifecycle (22 §8–§11) does not exist
   in this phase and the response says so structurally.
+
+Phase AA-1 (seams AUD-1, USG-2, SYS-1) — recorded decisions:
+
+- PER-REQUEST PRINCIPAL: ``create_admin_router`` now takes a ``resolve``
+  callable instead of a frozen (tenant_id, actor_id, is_admin) triple —
+  the seam the T-IMPL-032 docstring promised ("exactly where a
+  per-request identity dependency will later bind"). ``_admit`` resolves
+  the caller THEN applies the is_admin gate, both BEFORE any parameter
+  parsing — anonymous callers get the constant 401, authenticated
+  non-admins the unchanged 403, and neither can probe id validity.
+- AUD-1 (GET /v1/admin/audit): the ``AuditLogPort.read`` result surfaced
+  VERBATIM — tenant-scoped by the admitted principal, optional closed-set
+  ``event_type`` filter (unknown names refuse loudly, 422), optional
+  ``limit`` (>=1). ``total_recorded`` rides via ``count`` so a truncated
+  page is visibly a page. Seam optional: absent ``surface.audit`` ⇒ route
+  absent entirely (nothing to probe, 20 §4).
+- USG-2 (GET /v1/admin/usage): per-execution usage drill-down over the
+  execution store's ledgers. ``ledger`` is ``null`` whenever accounting
+  was not bound for that run — NEVER fabricated (41 §49). Seam optional:
+  absent ``surface.executions`` ⇒ route absent.
+- SYS-1 (GET /v1/admin/system): the injected ``system_info`` snapshot
+  with ``scope`` FORCED to ``"process"`` — the route structurally cannot
+  claim fleet/deployment truths it does not have (41 §49). ``system_info``
+  absent ⇒ route absent.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
 from apps.api.errors import error_response
+from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
     InactiveAdminArea,
@@ -54,12 +81,18 @@ from core.admin.service import (
     RoutingWeightsPort,
     UsageConfigurationPort,
 )
+from core.audit.ports import AuditLogPort
 from core.contracts.admin import AdminDraftRequest, ConfigChange, LearningDashboard
+from core.contracts.audit import AuditEventType
+from core.contracts.base import JsonObject
 from core.contracts.errors import ErrorCode
 from core.evaluation.errors import EvaluationNotFound
 from core.evaluation.ports import EvaluationStorePort
 from core.providers.registry import ModelRegistry, ProviderRegistry
 from core.usage.errors import EntitlementNotConfigured
+
+if TYPE_CHECKING:
+    from apps.api.app import Principal
 
 
 @dataclass(frozen=True)
@@ -77,6 +110,10 @@ class AdminSurface:
     usage: UsageConfigurationPort
     routing: RoutingWeightsPort
     evaluations: EvaluationStorePort
+    # AA-1 optional seams — absent ⇒ the corresponding route is absent
+    # entirely (nothing to probe, 20 §4).
+    audit: AuditLogPort | None = None
+    executions: InMemoryExecutionStore | None = None
 
 
 def _json(payload: object, status: int = 200) -> JSONResponse:
@@ -90,26 +127,29 @@ def _change_json(change: ConfigChange) -> dict[str, object]:
 def create_admin_router(
     surface: AdminSurface,
     *,
-    tenant_id: UUID,
-    actor_id: UUID,
-    is_admin: bool,
+    resolve: Callable[[Request], Principal | JSONResponse],
+    system_info: Callable[[], JsonObject] | None = None,
 ) -> APIRouter:
-    """Build the /v1/admin/* router for one composed principal.
+    """Build the /v1/admin/* router over a per-request principal resolver.
 
-    Every handler re-checks the ``is_admin`` gate FIRST — with the current
-    fixed-principal composition the value is static, but the check sits
-    exactly where a per-request identity dependency will later bind.
+    ``resolve`` returns the caller's Principal or a ready denial response
+    (401) — the per-request identity binding the T-IMPL-032 docstring
+    reserved this exact spot for (AA-1 seam IDN-1). ``_admit`` runs the
+    resolver THEN the is_admin gate, both BEFORE any parameter parsing.
     """
     router = APIRouter(prefix="/v1/admin")
 
-    def _gate() -> JSONResponse | None:
-        """Deny-by-default admin gate (R049 boundary (e); 20 §4)."""
-        if not is_admin:
+    def _admit(request: Request) -> Principal | JSONResponse:
+        """Resolve the caller, then deny-by-default admin gate (20 §4)."""
+        caller = resolve(request)
+        if isinstance(caller, JSONResponse):
+            return caller
+        if not caller.is_admin:
             return error_response(
                 ErrorCode.UNAUTHORIZED,
                 "Admin access required.",
             )
-        return None
+        return caller
 
     def _parse_uuid(value: str, field: str) -> UUID | JSONResponse:
         try:
@@ -135,14 +175,14 @@ def create_admin_router(
     # --- config lifecycle (21 §3, surfaced verbatim) --------------------------------
 
     @router.post("/changes")
-    async def draft_change(body: AdminDraftRequest) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def draft_change(request: Request, body: AdminDraftRequest) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         try:
             change = surface.service.draft(
-                tenant_id=tenant_id,
-                actor_id=actor_id,
+                tenant_id=admitted.tenant_id,
+                actor_id=admitted.user_id,
                 action=body.action,
                 payload=body.payload,
             )
@@ -153,33 +193,34 @@ def create_admin_router(
         return _json(_change_json(change), status=201)
 
     @router.get("/changes")
-    async def list_changes() -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def list_changes(request: Request) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         return _json(
             {
                 "changes": [
-                    _change_json(c) for c in surface.service.list_changes(tenant_id)
+                    _change_json(c)
+                    for c in surface.service.list_changes(admitted.tenant_id)
                 ]
             }
         )
 
     @router.get("/changes/{change_id}")
-    async def get_change(change_id: str) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def get_change(request: Request, change_id: str) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         parsed = _parse_uuid(change_id, "change_id")
         if isinstance(parsed, JSONResponse):
             return parsed
         try:
-            change = surface.service.get(tenant_id, parsed)
+            change = surface.service.get(admitted.tenant_id, parsed)
         except ChangeNotFound:
             return _change_not_found(change_id)
         return _json(_change_json(change))
 
-    def _lifecycle_step(change_id: str, step: str) -> Response:
+    def _lifecycle_step(tenant_id: UUID, change_id: str, step: str) -> Response:
         parsed = _parse_uuid(change_id, "change_id")
         if isinstance(parsed, JSONResponse):
             return parsed
@@ -207,40 +248,40 @@ def create_admin_router(
         return _json(_change_json(change))
 
     @router.post("/changes/{change_id}/validate")
-    async def validate_change(change_id: str) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
-        return _lifecycle_step(change_id, "validate")
+    async def validate_change(request: Request, change_id: str) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
+        return _lifecycle_step(admitted.tenant_id, change_id, "validate")
 
     @router.post("/changes/{change_id}/preview")
-    async def preview_change(change_id: str) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
-        return _lifecycle_step(change_id, "preview")
+    async def preview_change(request: Request, change_id: str) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
+        return _lifecycle_step(admitted.tenant_id, change_id, "preview")
 
     @router.post("/changes/{change_id}/publish")
-    async def publish_change(change_id: str) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
-        return _lifecycle_step(change_id, "publish")
+    async def publish_change(request: Request, change_id: str) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
+        return _lifecycle_step(admitted.tenant_id, change_id, "publish")
 
     @router.post("/changes/{change_id}/rollback")
-    async def rollback_change(change_id: str) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
-        return _lifecycle_step(change_id, "rollback")
+    async def rollback_change(request: Request, change_id: str) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
+        return _lifecycle_step(admitted.tenant_id, change_id, "rollback")
 
     # --- read views over the EXISTING registries (21 §5 posture) --------------------
 
     @router.get("/models")
-    async def list_models() -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def list_models(request: Request) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         # ALL models including disabled: an admin must see what it can
         # re-enable (21 §4 Models row). Routing keeps its own ACTIVE filter.
         return _json(
@@ -253,10 +294,10 @@ def create_admin_router(
         )
 
     @router.get("/providers")
-    async def list_providers() -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def list_providers(request: Request) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         rows = []
         for key in surface.providers.all_keys():
             entry = surface.providers.get(key)
@@ -269,10 +310,10 @@ def create_admin_router(
         return _json({"providers": rows})
 
     @router.get("/plans/{plan_tenant_id}")
-    async def get_plan(plan_tenant_id: str) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def get_plan(request: Request, plan_tenant_id: str) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         parsed = _parse_uuid(plan_tenant_id, "plan_tenant_id")
         if isinstance(parsed, JSONResponse):
             return parsed
@@ -290,10 +331,10 @@ def create_admin_router(
         return _json(summary.model_dump(mode="json", exclude_none=True))
 
     @router.get("/routing/weights")
-    async def get_routing_weights() -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def get_routing_weights(request: Request) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         return _json(
             surface.routing.default_weights.model_dump(mode="json", exclude_none=True)
         )
@@ -301,15 +342,15 @@ def create_admin_router(
     # --- evaluation reads (22 §7: ADMIN sees scores/confidence/evidence) -------------
 
     @router.get("/evaluations/{evaluation_id}")
-    async def get_evaluation(evaluation_id: str) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def get_evaluation(request: Request, evaluation_id: str) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         parsed = _parse_uuid(evaluation_id, "evaluation_id")
         if isinstance(parsed, JSONResponse):
             return parsed
         try:
-            record = surface.evaluations.get(tenant_id, parsed)
+            record = surface.evaluations.get(admitted.tenant_id, parsed)
         except EvaluationNotFound:
             return error_response(
                 ErrorCode.VALIDATION_ERROR,
@@ -320,14 +361,16 @@ def create_admin_router(
         return _json(record.model_dump(mode="json", exclude_none=True))
 
     @router.get("/executions/{execution_id}/evaluations")
-    async def list_execution_evaluations(execution_id: str) -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def list_execution_evaluations(
+        request: Request, execution_id: str
+    ) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         parsed = _parse_uuid(execution_id, "execution_id")
         if isinstance(parsed, JSONResponse):
             return parsed
-        records = surface.evaluations.list_for_execution(tenant_id, parsed)
+        records = surface.evaluations.list_for_execution(admitted.tenant_id, parsed)
         # Empty is honest for unknown/foreign executions alike (20 §6
         # anti-enumeration — the port contract, surfaced unchanged).
         return _json(
@@ -341,14 +384,102 @@ def create_admin_router(
     # --- learning dashboard PLACEHOLDER (21 §7; R049 boundary (a)) -------------------
 
     @router.get("/learning/dashboard")
-    async def learning_dashboard() -> Response:
-        denied = _gate()
-        if denied is not None:
-            return denied
+    async def learning_dashboard(request: Request) -> Response:
+        admitted = _admit(request)
+        if isinstance(admitted, JSONResponse):
+            return admitted
         # Honest zeros/empties + the structural placeholder marker — the
         # learning lifecycle (22 §8-§11) is NOT built this phase and this
         # response cannot pretend otherwise (LearningDashboard.placeholder
         # is Literal[True]).
         return _json(LearningDashboard().model_dump(mode="json", exclude_none=True))
+
+    # --- AA-1 seam AUD-1: audit read (20 §9 events, port surfaced verbatim) ---------
+
+    if surface.audit is not None:
+        audit_log = surface.audit
+
+        @router.get("/audit")
+        async def read_audit(
+            request: Request,
+            event_type: str | None = None,
+            limit: int | None = None,
+        ) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed_type: AuditEventType | None = None
+            if event_type is not None:
+                try:
+                    parsed_type = AuditEventType(event_type)
+                except ValueError:
+                    # Closed 20 §9 set — unknown names refuse loudly (11 §14).
+                    return error_response(
+                        ErrorCode.VALIDATION_ERROR,
+                        "Unknown audit event type.",
+                        details={"field": "event_type"},
+                    )
+            if limit is not None and limit < 1:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "limit must be >= 1.",
+                    details={"field": "limit"},
+                )
+            events = audit_log.read(
+                admitted.tenant_id, event_type=parsed_type, limit=limit
+            )
+            return _json(
+                {
+                    "events": [
+                        e.model_dump(mode="json", exclude_none=True) for e in events
+                    ],
+                    "total_recorded": audit_log.count(admitted.tenant_id),
+                }
+            )
+
+    # --- AA-1 seam USG-2: per-execution usage drill-down (ledger read-model) --------
+
+    if surface.executions is not None:
+        execution_store = surface.executions
+
+        @router.get("/usage")
+        async def usage_drilldown(request: Request) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            rows = []
+            for report in execution_store.list(admitted.tenant_id):
+                ledger = report.usage
+                rows.append(
+                    {
+                        "execution_id": str(report.execution.id),
+                        "status": report.execution.status.value,
+                        "created_at": report.execution.created_at.isoformat(),
+                        # NEVER fabricated: null means accounting was not
+                        # bound for that run (41 §49).
+                        "ledger": (
+                            None
+                            if ledger is None
+                            else ledger.model_dump(mode="json", exclude_none=True)
+                        ),
+                    }
+                )
+            return _json({"usage": rows})
+
+    # --- AA-1 seam SYS-1: system read-model (process-local truths, labeled) ---------
+
+    if system_info is not None:
+        system_snapshot = system_info
+
+        @router.get("/system")
+        async def system_read_model(request: Request) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            snapshot = dict(system_snapshot())
+            # Forced label (41 §49): this surface reports THIS process
+            # only — it cannot claim fleet/deployment truths.
+            snapshot["scope"] = "process"
+            return _json(snapshot)
 
     return router

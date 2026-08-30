@@ -87,14 +87,48 @@ FINAL Phase 18 slice 1 (T-IMPL-067; 41 §21; 10 §6/§8) — recorded decisions:
   DEPENDENCY requiring an operator-ACCEPTED ADR); webhook DELIVERY is
   outbound I/O gated the same way. Contracts for all of them already
   exist in core/contracts/execute.py (10 §4/§11/§12). Never faked (41 §49).
+
+Phase AA-1 — API SEAMS (doc C §3; doc B §5) — recorded decisions:
+
+- IDN-1: ``create_app`` accepts EXACTLY ONE of ``principal`` (the fixed
+  dev-composition mode every existing caller uses — unchanged behavior)
+  or ``auth`` (an :class:`~apps.api.auth.AuthSurface`): passing both or
+  neither raises ``ValueError`` loudly at composition time. In auth mode
+  the /v1/auth/* router mounts and every tenant-scoped handler resolves
+  its Principal PER REQUEST from the Bearer session token; any failure is
+  the ONE constant-message ``unauthenticated`` 401 (20 §6). Identity runs
+  FIRST — before rate limiting, replay, and persistence — an anonymous
+  caller consumes no work and leaves zero state. ``is_admin`` projects
+  from the AuthSurface email allowlist (composition data — the seam a
+  real 20 §3 RBAC binding fills later; R049 boundary (e) unchanged).
+- EXE-1: GET /v1/executions — the tenant-scoped, filterable list over
+  the store's new ``list`` method. Rows are the 10 §5 status shape plus
+  ``initiated_by``/``created_at``; NO result bodies ride the list (the
+  by-id route serves those) — a list must not become a bulk-exfil
+  surface. Filter parse failures are named 422s.
+- WBH-1: GET /v1/webhooks + DELETE /v1/webhooks/{subscription_id} under
+  the SAME ``webhooks`` seam flag. Delete searches ONLY the caller
+  tenant's rows: unknown and foreign-tenant ids are byte-identical 404s
+  (20 §6; the recorded unknown-resource mapping — validation_error body,
+  HTTP 404). No update route exists (no doc defines one — absent, not
+  fabricated).
+- SYS-1: GET /healthz — opt-in (``healthz=True``), UNAUTHENTICATED BY
+  DESIGN (liveness probes cannot carry sessions), body exactly
+  ``{status, scope, time}`` with ``scope: "process"`` — process-local
+  truth only, never fleet claims (41 §49). GET /v1/admin/system rides
+  the admin router via the ``system_info`` callable (admin.py decisions).
+- Catalog reads (GET /v1/skills, GET /v1/models) stay PRINCIPAL-FREE —
+  they serve tenant-independent catalog data and carried no principal
+  before this phase; recorded decision, not an oversight.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import MutableMapping
+from collections.abc import Callable, MutableMapping
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID, uuid4
 
@@ -103,6 +137,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from apps.api.admin import AdminSurface, create_admin_router
+from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
 from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
@@ -143,6 +178,7 @@ from core.contracts.webhooks import (
     WebhookSubscriptionResponse,
 )
 from core.execution.service import ExecutionReport, ExecutionService
+from core.identity.errors import SessionInvalid
 from core.memory.errors import ConversationNotFound
 from core.memory.ports import ConversationStorePort
 from core.providers.registry import BindingRegistry, ModelRegistry
@@ -299,7 +335,8 @@ def create_app(
     router: SimpleScoringRouter,
     execution_service: ExecutionService,
     store: InMemoryExecutionStore | None = None,
-    principal: Principal,
+    principal: Principal | None = None,
+    auth: AuthSurface | None = None,
     skills: SkillRegistry | None = None,
     roles: RoleRegistry | None = None,
     conversations: ConversationStorePort | None = None,
@@ -316,6 +353,8 @@ def create_app(
     idempotency_index: MutableMapping[tuple[UUID, str], UUID] | None = None,
     webhook_subscriptions: MutableMapping[UUID, list[WebhookSubscription]]
     | None = None,
+    system_info: Callable[[], JsonObject] | None = None,
+    healthz: bool = False,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -397,6 +436,11 @@ def create_app(
       request-path mutable process state remains — asserted by the
       T-IMPL-072 statelessness suite.
     """
+    # AA-1 (IDN-1): exactly ONE identity mode — loud composition error,
+    # never a silent default (20 §4).
+    if (principal is None) == (auth is None):
+        raise ValueError("exactly one of principal / auth must be provided")
+
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
     skill_registry = skills if skills is not None else SkillRegistry()
@@ -405,6 +449,33 @@ def create_app(
     # Injectable for horizontal replicas (T-IMPL-072); default process-local.
     if idempotency_index is None:
         idempotency_index = {}
+
+    # --- AA-1 (IDN-1): per-request principal resolution -----------------------
+    if principal is not None:
+        fixed_principal = principal
+
+        def _principal(_request: Request) -> Principal | JSONResponse:
+            return fixed_principal
+
+    else:
+        assert auth is not None  # exclusivity checked above
+        auth_surface = auth
+
+        def _principal(_request: Request) -> Principal | JSONResponse:
+            token = bearer_token(_request)
+            if token is None:
+                return unauthenticated()
+            try:
+                user = auth_surface.identity.get_user_for_session(token)
+            except SessionInvalid:
+                return unauthenticated()
+            return Principal(
+                tenant_id=user.tenant_id,
+                user_id=user.id,
+                is_admin=user.email in auth_surface.admin_emails,
+            )
+
+        app.include_router(create_auth_router(auth_surface))
 
     @app.exception_handler(RequestValidationError)
     async def _validation_handler(
@@ -425,14 +496,20 @@ def create_app(
 
     @app.post("/v1/execute")
     async def execute(
+        request: Request,
         body: ExecuteRequest,
         idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     ) -> Response:
-        # --- API rate limit (41 §24; T-IMPL-070) — FIRST: a limited caller
+        # --- identity FIRST (AA-1): an anonymous caller consumes no rate-
+        # limit, replay, persistence, or composition work (zero residue).
+        caller = _principal(request)
+        if isinstance(caller, JSONResponse):
+            return caller
+        # --- API rate limit (41 §24; T-IMPL-070) — a limited caller
         # consumes no replay/persistence/composition work and leaves no state.
         if rate_limits is not None and execute_rate_limit > 0:
             within = await rate_limits.hit(
-                f"execute:{principal.tenant_id}",
+                f"execute:{caller.tenant_id}",
                 execute_rate_limit,
                 execute_rate_window_seconds,
             )
@@ -480,10 +557,10 @@ def create_app(
         # --- idempotent replay (10 §10) ----------------------------------------
         # BEFORE persistence/composition: a replay must not duplicate turns.
         if idempotency_key is not None:
-            replay_id = idempotency_index.get((principal.tenant_id, idempotency_key))
+            replay_id = idempotency_index.get((caller.tenant_id, idempotency_key))
             if replay_id is not None:
                 return _sync_response(
-                    execution_store.get(principal.tenant_id, replay_id), body
+                    execution_store.get(caller.tenant_id, replay_id), body
                 )
 
         # --- conversation admission (13 §7; module-docstring decisions) ---------
@@ -491,7 +568,7 @@ def create_app(
         if conversations is not None and conversation_id is not None:
             try:
                 conversation = conversations.get_conversation(
-                    principal.tenant_id, conversation_id
+                    caller.tenant_id, conversation_id
                 )
             except ConversationNotFound:
                 # Auto-create under the caller (recorded decision): absent
@@ -500,13 +577,13 @@ def create_app(
                 conversation = conversations.create_conversation(
                     Conversation(
                         id=conversation_id,
-                        tenant_id=principal.tenant_id,
-                        user_id=principal.user_id,
+                        tenant_id=caller.tenant_id,
+                        user_id=caller.user_id,
                         title=body.ask[:80],
                         status=ConversationStatus.ACTIVE,
                     )
                 )
-            if conversation.user_id != principal.user_id:
+            if conversation.user_id != caller.user_id:
                 # Same tenant, different user: 13 §7 — one user's history is
                 # never used for another. Named denial, not silent skip.
                 return error_response(
@@ -521,8 +598,8 @@ def create_app(
             try:
                 composed = composer.compose(
                     ContextComposeRequest(
-                        tenant_id=principal.tenant_id,
-                        user_id=principal.user_id,
+                        tenant_id=caller.tenant_id,
+                        user_id=caller.user_id,
                         ask=body.ask,
                         role_id=role.id if role is not None else None,
                         conversation_id=(
@@ -541,7 +618,7 @@ def create_app(
         # --- persist the ask (append-only history; failures keep the ask) -------
         if conversations is not None and conversation is not None:
             conversations.append_message(
-                principal.tenant_id,
+                caller.tenant_id,
                 Message(
                     id=uuid4(),
                     conversation_id=conversation.id,
@@ -592,8 +669,8 @@ def create_app(
             payload["role"] = {"id": str(role.id), "objective": role.objective}
         try:
             report = await execution_service.execute_single(
-                tenant_id=principal.tenant_id,
-                user_id=principal.user_id,
+                tenant_id=caller.tenant_id,
+                user_id=caller.user_id,
                 decision=decision,
                 operation=ProviderOperation.GENERATE_TEXT,
                 payload=payload,
@@ -618,7 +695,7 @@ def create_app(
             )
         execution_store.put(report)
         if idempotency_key is not None:
-            idempotency_index[(principal.tenant_id, idempotency_key)] = (
+            idempotency_index[(caller.tenant_id, idempotency_key)] = (
                 report.execution.id
             )
         # --- persist the assistant turn (succeeded only; same content) ----------
@@ -630,7 +707,7 @@ def create_app(
         ):
             format_hint = body.output.format if body.output is not None else None
             conversations.append_message(
-                principal.tenant_id,
+                caller.tenant_id,
                 Message(
                     id=uuid4(),
                     conversation_id=conversation.id,
@@ -717,15 +794,18 @@ def create_app(
         usage_accounting = usage
 
         @app.get("/v1/usage")
-        async def usage_summary() -> Response:
+        async def usage_summary(request: Request) -> Response:
             """GET /v1/usage (10 §8): the caller tenant's plan + budgets.
 
             Tenant-scoped by the principal (never a client-supplied tenant
             id — 20 §6 anti-enumeration); an unconfigured tenant denies
             with the same entitlement_exceeded mapping as /v1/execute.
             """
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
             try:
-                summary = usage_accounting.summary(principal.tenant_id)
+                summary = usage_accounting.summary(caller.tenant_id)
             except EntitlementNotConfigured:
                 return error_response(
                     ErrorCode.ENTITLEMENT_EXCEEDED,
@@ -744,7 +824,9 @@ def create_app(
             webhook_subscriptions = {}
 
         @app.post("/v1/webhooks", status_code=201)
-        async def register_webhook(body: WebhookSubscriptionRequest) -> Response:
+        async def register_webhook(
+            request: Request, body: WebhookSubscriptionRequest
+        ) -> Response:
             """POST /v1/webhooks: register a subscription for the caller tenant.
 
             ``events`` absent ⇒ all six documented 10 §12 types (the closed
@@ -752,6 +834,9 @@ def create_app(
             an empty explicit list is a contradiction and refuses loudly.
             Delivery is NOT performed or promised by this route (41 §49).
             """
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
             if body.events is not None and len(body.events) == 0:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
@@ -765,11 +850,11 @@ def create_app(
             )
             subscription = WebhookSubscription(
                 id=uuid4(),
-                tenant_id=principal.tenant_id,
+                tenant_id=caller.tenant_id,
                 url=body.url,
                 events=events,
             )
-            webhook_subscriptions.setdefault(principal.tenant_id, []).append(
+            webhook_subscriptions.setdefault(caller.tenant_id, []).append(
                 subscription
             )
             response = WebhookSubscriptionResponse.from_subscription(subscription)
@@ -778,8 +863,151 @@ def create_app(
                 content=response.model_dump(mode="json", exclude_none=True),
             )
 
+        # --- AA-1 seam WBH-1: list/delete over the SAME subscription map --------
+
+        @app.get("/v1/webhooks")
+        async def list_webhooks(request: Request) -> Response:
+            """GET /v1/webhooks: the caller tenant's OWN subscriptions only."""
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
+            rows = webhook_subscriptions.get(caller.tenant_id, [])
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "webhooks": [
+                        WebhookSubscriptionResponse.from_subscription(s).model_dump(
+                            mode="json", exclude_none=True
+                        )
+                        for s in rows
+                    ]
+                },
+            )
+
+        @app.delete("/v1/webhooks/{subscription_id}")
+        async def delete_webhook(request: Request, subscription_id: str) -> Response:
+            """DELETE /v1/webhooks/{id}: caller-tenant rows ONLY (20 §6).
+
+            Unknown and foreign-tenant ids are byte-identical 404s — the
+            search never leaves the caller's own subscription list.
+            """
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
+            try:
+                parsed = UUID(subscription_id)
+            except ValueError:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "subscription id must be a UUID.",
+                    details={"field": "subscription_id"},
+                )
+            rows = webhook_subscriptions.get(caller.tenant_id, [])
+            for index, subscription in enumerate(rows):
+                if subscription.id == parsed:
+                    del rows[index]
+                    return Response(status_code=204)
+            # Recorded unknown-resource mapping: validation_error body,
+            # HTTP 404 — identical for absent and foreign (20 §6).
+            return error_response(
+                ErrorCode.VALIDATION_ERROR,
+                "Unknown webhook subscription id.",
+                details={"subscription_id": subscription_id},
+                http_status=404,
+            )
+
+    @app.get("/v1/executions")
+    async def executions_list(
+        request: Request,
+        status: str | None = None,
+        initiated_by: str | None = None,
+        created_after: str | None = None,
+        created_before: str | None = None,
+        limit: int | None = None,
+    ) -> Response:
+        """GET /v1/executions (AA-1 seam EXE-1): tenant-scoped list.
+
+        Rows are the 10 §5 status shape + initiated_by/created_at; NO
+        result bodies (the by-id route serves those — a list is not a
+        bulk-exfil surface). All filter parse failures are named 422s.
+        """
+        caller = _principal(request)
+        if isinstance(caller, JSONResponse):
+            return caller
+        parsed_status: ExecutionStatus | None = None
+        if status is not None:
+            try:
+                parsed_status = ExecutionStatus(status)
+            except ValueError:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown execution status.",
+                    details={"field": "status"},
+                )
+        parsed_initiated_by: UUID | None = None
+        if initiated_by is not None:
+            try:
+                parsed_initiated_by = UUID(initiated_by)
+            except ValueError:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "initiated_by must be a UUID.",
+                    details={"field": "initiated_by"},
+                )
+
+        def _parse_time(value: str, field: str) -> datetime | JSONResponse:
+            try:
+                return datetime.fromisoformat(value)
+            except ValueError:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    f"{field} must be an ISO-8601 timestamp.",
+                    details={"field": field},
+                )
+
+        parsed_after: datetime | None = None
+        if created_after is not None:
+            after = _parse_time(created_after, "created_after")
+            if isinstance(after, JSONResponse):
+                return after
+            parsed_after = after
+        parsed_before: datetime | None = None
+        if created_before is not None:
+            before = _parse_time(created_before, "created_before")
+            if isinstance(before, JSONResponse):
+                return before
+            parsed_before = before
+        if limit is not None and limit < 1:
+            return error_response(
+                ErrorCode.VALIDATION_ERROR,
+                "limit must be >= 1.",
+                details={"field": "limit"},
+            )
+        reports = execution_store.list(
+            caller.tenant_id,
+            status=parsed_status,
+            initiated_by=parsed_initiated_by,
+            created_after=parsed_after,
+            created_before=parsed_before,
+            limit=limit,
+        )
+        rows = [
+            {
+                "execution_id": str(r.execution.id),
+                "status": r.execution.status.value,
+                "initiated_by": str(r.execution.user_id),
+                "created_at": r.execution.created_at.isoformat(),
+                "progress": _progress(r).model_dump(mode="json", exclude_none=True),
+            }
+            for r in reports
+        ]
+        return JSONResponse(status_code=200, content={"executions": rows})
+
     @app.get("/v1/executions/{execution_id}")
-    async def execution_status(execution_id: str) -> Response:
+    async def execution_status(request: Request, execution_id: str) -> Response:
+        caller = _principal(request)
+        if isinstance(caller, JSONResponse):
+            return caller
         try:
             parsed = UUID(execution_id)
         except ValueError:
@@ -791,7 +1019,7 @@ def create_app(
         try:
             # Tenant-scoped read (T-IMPL-033 IDOR fix, 20 §6): a foreign
             # tenant's execution is indistinguishable from an absent one.
-            report = execution_store.get(principal.tenant_id, parsed)
+            report = execution_store.get(caller.tenant_id, parsed)
         except ExecutionNotFound:
             # Closed 10 §9 code set has no not_found; mapping decision in
             # apps/api/errors.py — validation_error body with HTTP 404.
@@ -823,14 +1051,32 @@ def create_app(
             content=status_response.model_dump(mode="json", exclude_none=True),
         )
 
+    # --- GET /healthz (AA-1 seam SYS-1): opt-in process liveness --------------
+    if healthz:
+
+        @app.get("/healthz")
+        async def health() -> Response:
+            """Process liveness ONLY — labeled, never fleet claims (41 §49).
+
+            Unauthenticated BY DESIGN: liveness probes cannot carry
+            sessions; the body contains no tenant data.
+            """
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "status": "alive",
+                    "scope": "process",
+                    "time": utc_now().isoformat(),
+                },
+            )
+
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:
         app.include_router(
             create_admin_router(
                 admin,
-                tenant_id=principal.tenant_id,
-                actor_id=principal.user_id,
-                is_admin=principal.is_admin,
+                resolve=_principal,
+                system_info=system_info,
             )
         )
 
