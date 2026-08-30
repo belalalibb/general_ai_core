@@ -156,6 +156,7 @@ from core.contracts.conversation import (
 )
 from core.contracts.errors import ErrorCode
 from core.contracts.execute import (
+    ExecuteAsyncAccepted,
     ExecuteRequest,
     ExecuteSyncResponse,
     ExecutionProgress,
@@ -166,6 +167,7 @@ from core.contracts.execute import (
     UsageReport,
     WebhookEventType,
 )
+from core.contracts.execution import Execution, ExecutionStrategy
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
 from core.contracts.provider import ProviderError, ProviderOperation
 from core.contracts.roles import Role
@@ -189,6 +191,7 @@ from core.routing.errors import (
     NoEligibleCandidates,
 )
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
+from core.runtime.outbox import OutboxPort
 from core.runtime.ports import RateLimitPort
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 from core.usage.ports import UsageAccountingPort
@@ -234,6 +237,20 @@ def _result_from_output(output: JsonObject, format_hint: str | None) -> Executio
         content=content,
         format=format_hint,
         artifacts=[],
+    )
+
+
+def _async_accepted(execution_id: UUID) -> Response:
+    """The 10 §4 async ack: 202 + queued + poll URL (contract shape,
+    defined since the API contract landed — zero contract changes)."""
+    accepted = ExecuteAsyncAccepted(
+        execution_id=str(execution_id),
+        status=ExecutionStatus.QUEUED,
+        poll_url=f"/v1/executions/{execution_id}",
+    )
+    return JSONResponse(
+        status_code=202,
+        content=accepted.model_dump(mode="json", exclude_none=True),
     )
 
 
@@ -350,6 +367,8 @@ def create_app(
     rate_limits: RateLimitPort | None = None,
     execute_rate_limit: int = 0,
     execute_rate_window_seconds: float = 1.0,
+    outbox: OutboxPort | None = None,
+    execute_stream: str = "executions.requests",
     idempotency_index: MutableMapping[tuple[UUID, str], UUID] | None = None,
     webhook_subscriptions: MutableMapping[UUID, list[WebhookSubscription]]
     | None = None,
@@ -523,7 +542,10 @@ def create_app(
 
         # --- loud scope rejections (module docstring posture) ------------------
         policy = body.execution_policy
-        if policy is not None and policy.async_ is True:
+        if policy is not None and policy.async_ is True and outbox is None:
+            # Vision V2: async needs the outbox seam. Absent seam ⇒ the
+            # SAME loud rejection this slice always gave (never a silent
+            # fallback to sync — 20 §4).
             return error_response(
                 ErrorCode.VALIDATION_ERROR,
                 "Async execution is not available on this deployment slice.",
@@ -559,9 +581,16 @@ def create_app(
         if idempotency_key is not None:
             replay_id = idempotency_index.get((caller.tenant_id, idempotency_key))
             if replay_id is not None:
-                return _sync_response(
-                    execution_store.get(caller.tenant_id, replay_id), body
-                )
+                replayed = execution_store.get(caller.tenant_id, replay_id)
+                if replayed.execution.status in (
+                    ExecutionStatus.QUEUED,
+                    ExecutionStatus.RUNNING,
+                ):
+                    # Async execution still in flight: the honest replay is
+                    # the SAME 202 ack (10 §10 replay over the 10 §4 shape)
+                    # — never a duplicate enqueue, never a fake result.
+                    return _async_accepted(replayed.execution.id)
+                return _sync_response(replayed, body)
 
         # --- conversation admission (13 §7; module-docstring decisions) ---------
         conversation: Conversation | None = None
@@ -667,6 +696,56 @@ def create_app(
             # No composer: the admitted role's objective rides as payload
             # data (never both — recorded decision, no duplicated blocks).
             payload["role"] = {"id": str(role.id), "objective": role.objective}
+
+        # --- ASYNC path (Vision V2; 10 §4): enqueue via the outbox, ack 202 -----
+        if policy is not None and policy.async_ is True:
+            assert outbox is not None  # guarded by the loud rejection above
+            execution_id = uuid4()
+            # Durable message FIRST (40 §4.2): everything the worker needs
+            # to re-run the admitted request rides the flat payload — the
+            # request body verbatim (contract JSON), the admitted identity,
+            # and the pre-assigned execution id (the ack and the eventual
+            # record MUST agree). The worker re-routes at execution time:
+            # a RoutingDecision is a point-in-time selection; replaying a
+            # stale one after minutes in the queue would defeat 11 §16's
+            # point — the POLICY snapshot rides verbatim instead (inside
+            # the request body), which is what routing honors.
+            message_payload = {
+                "execution_id": str(execution_id),
+                "tenant_id": str(caller.tenant_id),
+                "user_id": str(caller.user_id),
+                "request": body.model_dump_json(by_alias=True, exclude_none=True),
+                "request_hash": _request_hash(body),
+            }
+            if idempotency_key is not None:
+                message_payload["idempotency_key"] = idempotency_key
+            await outbox.append(
+                execute_stream, message_payload, f"execute:{execution_id}"
+            )
+            # QUEUED placeholder so GET /v1/executions/{id} answers from
+            # the ack onward (10 §5); the worker overwrites it with the
+            # terminal report. Same store, same tenant scoping.
+            placeholder = ExecutionReport(
+                execution=Execution(
+                    id=execution_id,
+                    tenant_id=caller.tenant_id,
+                    user_id=caller.user_id,
+                    conversation_id=conversation_id,
+                    request_hash=_request_hash(body),
+                    idempotency_key=idempotency_key,
+                    status=ExecutionStatus.QUEUED,
+                    strategy=ExecutionStrategy.SINGLE,
+                    cost_snapshot={},
+                    created_at=utc_now(),
+                ),
+                nodes=(),
+                status_history=(ExecutionStatus.QUEUED,),
+            )
+            execution_store.put(placeholder)
+            if idempotency_key is not None:
+                idempotency_index[(caller.tenant_id, idempotency_key)] = execution_id
+            return _async_accepted(execution_id)
+
         try:
             report = await execution_service.execute_single(
                 tenant_id=caller.tenant_id,
