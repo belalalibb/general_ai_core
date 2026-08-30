@@ -13,6 +13,12 @@ implementation (the dev/test profile ADR-0006/0007 record). Nothing is
 ever silently half-configured.
 """
 
+from apps.composition.database import (
+    DatabaseBindings,
+    DatabaseSettings,
+    build_database_bindings,
+    database_settings_from_env,
+)
 from apps.composition.gateway import (
     GatewaySettings,
     build_gateway_adapter,
@@ -32,13 +38,17 @@ from apps.composition.storage import (
 )
 
 __all__ = [
+    "DatabaseBindings",
+    "DatabaseSettings",
     "GatewaySettings",
     "ObjectStorageSettings",
     "VaultSettings",
+    "build_database_bindings",
     "build_gateway_adapter",
     "build_object_storage",
     "build_secret_manager",
     "gateway_secret_resolver_from_secret_manager",
+    "database_settings_from_env",
     "gateway_settings_from_env",
     "route_token_resolver_from_secret_manager",
     "object_storage_settings_from_env",
