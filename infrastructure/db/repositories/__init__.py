@@ -16,6 +16,12 @@ Layer rules (enforced by import-linter, 12 contracts):
 """
 
 from infrastructure.db.repositories.audit import PostgresAuditLogRepository
+from infrastructure.db.repositories.catalog import (
+    PostgresModelCatalog,
+    PostgresProviderCatalog,
+    PostgresRoleCatalog,
+    PostgresSkillCatalog,
+)
 from infrastructure.db.repositories.conversations import PostgresConversationRepository
 from infrastructure.db.repositories.errors import (
     DuplicateIdempotencyKey,
@@ -39,6 +45,10 @@ __all__ = [
     "PostgresExecutionRepository",
     "PostgresIdempotencyStore",
     "PostgresMemoryRepository",
+    "PostgresModelCatalog",
+    "PostgresProviderCatalog",
+    "PostgresRoleCatalog",
+    "PostgresSkillCatalog",
     "PostgresUsageRepository",
     "RepositoryError",
 ]

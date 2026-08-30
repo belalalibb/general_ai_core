@@ -32,6 +32,10 @@ from infrastructure.db.repositories import (
     PostgresExecutionRepository,
     PostgresIdempotencyStore,
     PostgresMemoryRepository,
+    PostgresModelCatalog,
+    PostgresProviderCatalog,
+    PostgresRoleCatalog,
+    PostgresSkillCatalog,
     PostgresUsageRepository,
 )
 
@@ -85,6 +89,12 @@ class DatabaseBindings:
     audit: PostgresAuditLogRepository
     usage: PostgresUsageRepository
     idempotency: PostgresIdempotencyStore
+    # PRV-4 catalogs: durable truth the composition root HYDRATES the
+    # existing in-memory registries from (admission authority unchanged).
+    role_catalog: PostgresRoleCatalog
+    skill_catalog: PostgresSkillCatalog
+    model_catalog: PostgresModelCatalog
+    provider_catalog: PostgresProviderCatalog
 
 
 def build_database_bindings(settings: DatabaseSettings) -> DatabaseBindings:
@@ -104,4 +114,8 @@ def build_database_bindings(settings: DatabaseSettings) -> DatabaseBindings:
         audit=PostgresAuditLogRepository(factory),
         usage=PostgresUsageRepository(factory),
         idempotency=PostgresIdempotencyStore(factory),
+        role_catalog=PostgresRoleCatalog(factory),
+        skill_catalog=PostgresSkillCatalog(factory),
+        model_catalog=PostgresModelCatalog(factory),
+        provider_catalog=PostgresProviderCatalog(factory),
     )

@@ -28,6 +28,10 @@ from infrastructure.db.repositories import (
     PostgresExecutionRepository,
     PostgresIdempotencyStore,
     PostgresMemoryRepository,
+    PostgresModelCatalog,
+    PostgresProviderCatalog,
+    PostgresRoleCatalog,
+    PostgresSkillCatalog,
     PostgresUsageRepository,
 )
 
@@ -72,6 +76,10 @@ class TestDatabaseSettings:
         assert isinstance(bindings.audit, PostgresAuditLogRepository)
         assert isinstance(bindings.usage, PostgresUsageRepository)
         assert isinstance(bindings.idempotency, PostgresIdempotencyStore)
+        assert isinstance(bindings.role_catalog, PostgresRoleCatalog)
+        assert isinstance(bindings.skill_catalog, PostgresSkillCatalog)
+        assert isinstance(bindings.model_catalog, PostgresModelCatalog)
+        assert isinstance(bindings.provider_catalog, PostgresProviderCatalog)
         # ONE shared session factory (one pool, one truth) — every
         # repository holds the same object the bindings expose.
         for repo in (
@@ -81,5 +89,9 @@ class TestDatabaseSettings:
             bindings.audit,
             bindings.usage,
             bindings.idempotency,
+            bindings.role_catalog,
+            bindings.skill_catalog,
+            bindings.model_catalog,
+            bindings.provider_catalog,
         ):
             assert repo._sessions is bindings.session_factory  # noqa: SLF001
