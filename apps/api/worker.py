@@ -30,12 +30,27 @@ Design decisions (recorded):
     transient path).
 - Deduplication is the core Worker's duty (it checks IdempotencyPort
   BEFORE this handler runs); the handler stays single-purpose.
+- V6 chunk 3: terminal webhook events (execution.succeeded /
+  execution.failed, 10 §12) are staged AFTER the terminal report is
+  stored — both terminal-report sites (the normal path and
+  ``_store_denied``). The seams are OPTIONAL constructor kwargs
+  defaulting to ``None`` (P2 — zero behavior change when absent):
+  ``outbox`` (the SAME durable OutboxPort the delivery relay drains)
+  and ``subscriptions`` (a lookup ``tenant_id -> rows``, the SAME
+  tenant-scoped map/binding the registration route writes). Staging
+  rides ``stage_execution_event`` — URL re-admission included (P7).
+  A staging fault after the report is stored propagates → the core
+  Worker leaves the message pending → claim_stale retries; the
+  webhook idempotency key (one per subscription×event×execution)
+  makes the retry safe, and re-running the execute itself under the
+  pre-assigned id overwrites the same stored record (put is an
+  id-keyed upsert), so the retry path stays terminally convergent.
 """
 
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -43,13 +58,20 @@ from pydantic import ValidationError
 from apps.api.store import InMemoryExecutionStore
 from core.contracts.base import JsonObject, utc_now
 from core.contracts.errors import ErrorCode
-from core.contracts.execute import ExecuteRequest, ExecutionStatus
+from core.contracts.execute import (
+    ExecuteRequest,
+    ExecutionStatus,
+    WebhookEventType,
+)
 from core.contracts.execution import Execution, ExecutionStrategy
 from core.contracts.provider import ProviderOperation
 from core.contracts.routing import RoutingRequest
+from core.contracts.webhooks import WebhookSubscription
+from core.events import stage_execution_event
 from core.execution.service import ExecutionReport, ExecutionService
 from core.routing.errors import FallbackNotConfigured, NoEligibleCandidates
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
+from core.runtime.outbox import OutboxPort
 from core.runtime.ports import QueueMessage
 from core.runtime.worker import PermanentTaskError
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
@@ -64,14 +86,23 @@ class ExecutionMessageHandler:
         router: SimpleScoringRouter,
         service_factory: Callable[[UUID], ExecutionService],
         store: InMemoryExecutionStore,
+        outbox: OutboxPort | None = None,
+        subscriptions: Mapping[UUID, list[WebhookSubscription]] | None = None,
     ) -> None:
         """``service_factory`` returns an ExecutionService whose
         ``id_factory`` yields EXACTLY the given execution id — the
         composition-root bridge that keeps the acked id and the stored
-        record identical without touching core signatures."""
+        record identical without touching core signatures.
+
+        ``outbox`` + ``subscriptions`` (V6 chunk 3, both optional): when
+        BOTH are bound, terminal webhook events are staged after the
+        terminal report is stored; either absent ⇒ zero behavior change
+        (the pre-V6 handler verbatim)."""
         self._router = router
         self._service_factory = service_factory
         self._store = store
+        self._outbox = outbox
+        self._subscriptions = subscriptions
 
     async def __call__(self, message: QueueMessage) -> None:
         fields = self._parse(message)
@@ -88,7 +119,7 @@ class ExecutionMessageHandler:
         except (UnsupportedPolicyType, NoEligibleCandidates, FallbackNotConfigured) as exc:
             # The denial IS the outcome: store a FAILED terminal record so
             # the poll URL explains it, settle the message as processed.
-            self._store_denied(
+            await self._store_denied(
                 execution_id,
                 tenant_id,
                 user_id,
@@ -112,7 +143,7 @@ class ExecutionMessageHandler:
                 conversation_id=conversation_id,
             )
         except (BudgetExceeded, EntitlementNotConfigured) as exc:
-            self._store_denied(
+            await self._store_denied(
                 execution_id,
                 tenant_id,
                 user_id,
@@ -125,6 +156,14 @@ class ExecutionMessageHandler:
         # Provider failures are already a FAILED report (service taxonomy);
         # infrastructure faults propagate → core Worker leaves pending.
         self._store.put(report)
+        # V6 chunk 3: terminal event AFTER the stored truth exists (P6 —
+        # the webhook narrates the record, never precedes it).
+        event = (
+            WebhookEventType.EXECUTION_SUCCEEDED
+            if report.execution.status is ExecutionStatus.SUCCEEDED
+            else WebhookEventType.EXECUTION_FAILED
+        )
+        await self._stage_terminal_event(event, execution_id, tenant_id)
 
     # --- internals -------------------------------------------------------------
 
@@ -158,7 +197,30 @@ class ExecutionMessageHandler:
             )
         return execution_id, tenant_id, user_id, request, payload, conversation_id
 
-    def _store_denied(
+    async def _stage_terminal_event(
+        self, event: WebhookEventType, execution_id: UUID, tenant_id: UUID
+    ) -> None:
+        """Stage a 10 §12 terminal event for the tenant's subscriptions.
+
+        Both seams must be bound (constructor docstring); no matching
+        subscription ⇒ nothing staged — silence, not failure. A staging
+        fault propagates (module-header taxonomy: retry-safe by key).
+        """
+        if self._outbox is None or self._subscriptions is None:
+            return
+        rows = self._subscriptions.get(tenant_id, [])
+        if not rows:
+            return
+        await stage_execution_event(
+            self._outbox,
+            rows,
+            event=event,
+            execution_id=str(execution_id),
+            tenant_id=str(tenant_id),
+            timestamp=utc_now(),
+        )
+
+    async def _store_denied(
         self,
         execution_id: UUID,
         tenant_id: UUID,
@@ -197,3 +259,7 @@ class ExecutionMessageHandler:
             ),
         )
         self._store.put(report)
+        # V6 chunk 3: a denial is terminal truth too — execution.failed.
+        await self._stage_terminal_event(
+            WebhookEventType.EXECUTION_FAILED, execution_id, tenant_id
+        )

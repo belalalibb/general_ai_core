@@ -180,6 +180,11 @@ from core.contracts.webhooks import (
     WebhookSubscriptionRequest,
     WebhookSubscriptionResponse,
 )
+from core.events import (
+    WebhookUrlRefused,
+    stage_execution_event,
+    validate_webhook_url,
+)
 from core.execution.service import ExecutionReport, ExecutionService
 from core.identity.errors import SessionInvalid
 from core.memory.errors import ConversationNotFound
@@ -734,6 +739,25 @@ def create_app(
             await outbox.append(
                 execute_stream, message_payload, f"execute:{execution_id}"
             )
+            # V6 chunk 3: stage execution.queued (10 §12) for the caller
+            # tenant's matching subscriptions — SAME outbox, SAME durability
+            # posture as the execute message itself (40 §4.2). No matching
+            # subscription ⇒ nothing staged (silence is correct, not a
+            # failure). Rows were URL-admitted at registration; staging
+            # re-judges them (stage_execution_event validates again, P7).
+            if webhook_subscriptions is not None:
+                tenant_subscriptions = webhook_subscriptions.get(
+                    caller.tenant_id, []
+                )
+                if tenant_subscriptions:
+                    await stage_execution_event(
+                        outbox,
+                        tenant_subscriptions,
+                        event=WebhookEventType.EXECUTION_QUEUED,
+                        execution_id=str(execution_id),
+                        tenant_id=str(caller.tenant_id),
+                        timestamp=utc_now(),
+                    )
             # QUEUED placeholder so GET /v1/executions/{id} answers from
             # the ack onward (10 §5); the worker overwrites it with the
             # terminal report. Same store, same tenant scoping.
@@ -923,11 +947,25 @@ def create_app(
             ``events`` absent ⇒ all six documented 10 §12 types (the closed
             set is the universe — recorded in core/contracts/webhooks.py);
             an empty explicit list is a contradiction and refuses loudly.
-            Delivery is NOT performed or promised by this route (41 §49).
+            Delivery itself rides the V6 outbox chain when composed.
+
+            V6 chunk 3: the URL passes SSRF admission (validate_webhook_url,
+            core/events) AT REGISTRATION — an inadmissible target is refused
+            with a NAMED 422 before any row exists (P7; the validator runs
+            AGAIN at staging and at delivery — this gate is the first of
+            three, not the only one).
             """
             caller = _principal(request)
             if isinstance(caller, JSONResponse):
                 return caller
+            try:
+                validate_webhook_url(body.url)
+            except WebhookUrlRefused as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    f"webhook url refused: {exc.reason}",
+                    details={"field": "url"},
+                )
             if body.events is not None and len(body.events) == 0:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
