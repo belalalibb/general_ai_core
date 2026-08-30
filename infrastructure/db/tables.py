@@ -771,3 +771,19 @@ audit_events = Table(
     ),
     Index("ix_audit_events_tenant_id", "tenant_id"),
 )
+
+# --- Vision V1: worker idempotency (40 §4.3) ---------------------------------
+# NOT a contract entity (like memory_embeddings): the processed-key registry
+# behind core/runtime/worker.py IdempotencyPort ("durable binding is
+# PostgreSQL" — the port docstring's recorded decision). The in-memory
+# binding is a set[str]; the durable minimum is ONE column whose PRIMARY KEY
+# is the unique constraint that makes at-least-once delivery exactly-once in
+# effect (40 §4.1 durable truth). Keys are opaque strings the worker mints
+# (String(512) — the established bounded-identifier width, e.g.
+# executions.idempotency_key). No timestamp/tenant column is invented: the
+# port carries neither; retention policy belongs to a later, justified slice.
+worker_idempotency_keys = Table(
+    "worker_idempotency_keys",
+    metadata,
+    Column("key", String(512), primary_key=True),
+)

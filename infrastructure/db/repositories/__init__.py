@@ -26,7 +26,9 @@ from infrastructure.db.repositories.executions import (
     ExecutionRecord,
     PostgresExecutionRepository,
 )
+from infrastructure.db.repositories.idempotency import PostgresIdempotencyStore
 from infrastructure.db.repositories.memory import PostgresMemoryRepository
+from infrastructure.db.repositories.usage import PostgresUsageRepository
 
 __all__ = [
     "DuplicateIdempotencyKey",
@@ -35,6 +37,8 @@ __all__ = [
     "PostgresAuditLogRepository",
     "PostgresConversationRepository",
     "PostgresExecutionRepository",
+    "PostgresIdempotencyStore",
     "PostgresMemoryRepository",
+    "PostgresUsageRepository",
     "RepositoryError",
 ]
