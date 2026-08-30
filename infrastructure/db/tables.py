@@ -219,6 +219,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
+from core.contracts.audit import AuditEventType
 from core.contracts.conversation import ConversationStatus, MessageRole
 from core.contracts.domain import (
     CredentialStatus,
@@ -739,4 +740,34 @@ credentials = Table(
         name="status_closed_set",
     ),
     Index("ix_credentials_provider_id", "provider_id"),
+)
+
+audit_events = Table(
+    "audit_events",
+    metadata,
+    Column("id", UUID(as_uuid=True), primary_key=True),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column("event_type", String(32), nullable=False),
+    # None = system-initiated (contract): no users FK — the actor may be a
+    # policy job that has no user row; the reference stays a recorded id.
+    Column("actor_id", UUID(as_uuid=True), nullable=True),
+    Column("occurred_at", TIMESTAMP(timezone=True), nullable=False),
+    # 20 §5: details must never contain secret values — opaque refs only
+    # (enforced at the appending boundary, same rule as the contract).
+    Column("details", JSONB, nullable=False, server_default="{}"),
+    # 21 §8 AdminChangeRecord — nullable JSONB: present IFF event_type is an
+    # admin change (validated by the binding at append, mirroring
+    # core/audit/memory.py; a CHECK cannot express the frozenset without
+    # duplicating ADMIN_CHANGE_EVENT_TYPES — the closed set stays in core).
+    Column("admin_change", JSONB, nullable=True),
+    CheckConstraint(
+        f"event_type IN ({_enum_values(AuditEventType)})",
+        name="event_type_closed_set",
+    ),
+    Index("ix_audit_events_tenant_id", "tenant_id"),
 )
