@@ -75,6 +75,7 @@ from apps.api.context_lab import (
     ConversationNotAdmitted,
 )
 from apps.api.errors import error_response
+from apps.api.learning_observability import LearningObservabilityService
 from apps.api.exercise import ExerciseSurface
 from apps.api.scenarios import (
     ScenarioNotFound,
@@ -147,6 +148,7 @@ def create_admin_router(
     exercise: ExerciseSurface | None = None,
     scenarios: ScenarioService | None = None,
     context_lab: ContextLabService | None = None,
+    learning_observability: LearningObservabilityService | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -411,6 +413,31 @@ def create_admin_router(
         # response cannot pretend otherwise (LearningDashboard.placeholder
         # is Literal[True]).
         return _json(LearningDashboard().model_dump(mode="json", exclude_none=True))
+
+    # --- V7 chunk 5: Learning observability ("what changed since last
+    # review" with evidence). Absent seam = absent routes (20 §4). Reading
+    # the report is a pure read; marking a review is the one state change.
+
+    if learning_observability is not None:
+        observability = learning_observability
+
+        @router.get("/learning/changes-since-review")
+        async def changes_since_review(request: Request) -> Response:
+            """GET .../changes-since-review: window facts WITH evidence rows."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(observability.changes_since_review(admitted.tenant_id))
+
+        @router.post("/learning/mark-reviewed")
+        async def mark_reviewed(request: Request) -> Response:
+            """POST .../mark-reviewed: the explicit review ACT (self-evidencing)."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(
+                observability.mark_reviewed(admitted.tenant_id, admitted.user_id)
+            )
 
     # --- AA-1 seam AUD-1: audit read (20 §9 events, port surfaced verbatim) ---------
 

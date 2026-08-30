@@ -140,6 +140,7 @@ from apps.api.admin import AdminSurface, create_admin_router
 from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
 from apps.api.capabilities import Capability, CapabilityState
 from apps.api.context_lab import ContextLabService
+from apps.api.learning_observability import LearningObservabilityService
 from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
@@ -1472,6 +1473,18 @@ def create_app(
         )
     app.state.context_lab_service = context_lab_service
 
+    # --- V7 chunk 5: Learning observability -------------------------------------
+    # Composed over the SAME audit log and admin service the admin surface
+    # carries (P1 — one store, two consumers); exists ONLY when an admin
+    # surface exists (it is an admin review instrument, 20 §4).
+    learning_observability_service: LearningObservabilityService | None = None
+    if admin is not None:
+        learning_observability_service = LearningObservabilityService(
+            audit=admin.audit,
+            admin_service=admin.service,
+        )
+    app.state.learning_observability_service = learning_observability_service
+
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:
         app.include_router(
@@ -1483,6 +1496,7 @@ def create_app(
                 exercise=exercise_surface,
                 scenarios=scenario_service,
                 context_lab=context_lab_service,
+                learning_observability=learning_observability_service,
             )
         )
 

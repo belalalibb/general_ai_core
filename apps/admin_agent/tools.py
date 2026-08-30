@@ -35,6 +35,7 @@ from apps.api.context_lab import (
     ConversationNotAdmitted,
 )
 from apps.api.exercise import ExerciseSurface
+from apps.api.learning_observability import LearningObservabilityService
 from apps.api.scenarios import (
     SCENARIO_CHECKS,
     ScenarioNotFound,
@@ -93,6 +94,10 @@ class AgentToolSurface:
     #: dispatch (read it from ``app.state.context_lab_service``). Optional
     #: (P2): absent composer = absent lab = absent tools.
     context_lab: ContextLabService | None = None
+    #: V7 chunk 5 — the SAME observability service the /v1/admin/learning/*
+    #: review routes dispatch (read it from
+    #: ``app.state.learning_observability_service``). Optional (P2).
+    learning_observability: LearningObservabilityService | None = None
 
 
 def _report_row(report: ExecutionReport) -> JsonObject:
@@ -372,6 +377,49 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 description=(
                     "Prove a capability by exercising it — a REAL probe over "
                     "the real path returning record evidence."
+                ),
+            )
+        )
+
+    # --- V7 chunk 5: learning-observability tools (registered ONLY when
+    # composed) — the SAME service the /v1/admin/learning/* review routes
+    # dispatch. Reading the report is R0 (pure read over stores); MARKING a
+    # review is a state change — R1 (recorded: bounded, reversible ops act;
+    # R2 stays the config lifecycle's tier).
+    if surface.learning_observability is not None:
+        observability = surface.learning_observability
+
+        async def changes_since_review(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            return scrub_object(
+                observability.changes_since_review(caller.tenant_id)
+            )
+
+        async def mark_reviewed(caller: Principal, args: JsonObject) -> JsonObject:
+            return scrub_object(
+                observability.mark_reviewed(caller.tenant_id, caller.user_id)
+            )
+
+        capability_specs.append(
+            ToolSpec(
+                name="changes_since_review",
+                tool_class=ToolClass.R0_READ,
+                handler=changes_since_review,
+                description=(
+                    "What changed since the last review — audit/config "
+                    "windows WITH evidence rows; never fabricates metrics."
+                ),
+            )
+        )
+        capability_specs.append(
+            ToolSpec(
+                name="mark_reviewed",
+                tool_class=ToolClass.R1_EXECUTE_TEST,
+                handler=mark_reviewed,
+                description=(
+                    "Record the explicit review act; returns the new and "
+                    "previous markers (self-evidencing)."
                 ),
             )
         )
