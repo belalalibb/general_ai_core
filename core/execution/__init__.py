@@ -6,6 +6,14 @@ Architecture invariant: Router decides; Execution executes (02 §2 #5);
 the durable Workflow Runtime owns state — Core never builds its own engine.
 """
 
+from core.execution.agent import (
+    AgentProposal,
+    AgentToolBinding,
+    FinalProposal,
+    InvalidAgentProposal,
+    ToolCallProposal,
+    parse_agent_proposal,
+)
 from core.execution.errors import (
     AdapterNotBound,
     CredentialNotConfigured,
@@ -26,14 +34,20 @@ from core.execution.workflow_ports import WorkflowRuntimePort
 __all__ = [
     "PREVIOUS_OUTPUT_KEY",
     "AdapterNotBound",
+    "AgentProposal",
+    "AgentToolBinding",
     "AttemptRecord",
     "CredentialNotConfigured",
     "ExecutionReport",
     "ExecutionService",
     "ExecutionServiceError",
+    "FinalProposal",
     "GraphPlanner",
+    "InvalidAgentProposal",
     "InvalidPipeline",
     "NodeReport",
     "PipelineStage",
+    "ToolCallProposal",
     "WorkflowRuntimePort",
+    "parse_agent_proposal",
 ]
