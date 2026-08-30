@@ -218,6 +218,7 @@ class TestAdminCannotBreak:
             for method in operations
         )
         assert admin_paths == [
+            "GET /v1/admin/capabilities",
             "GET /v1/admin/changes",
             "GET /v1/admin/changes/{change_id}",
             "GET /v1/admin/evaluations/{evaluation_id}",

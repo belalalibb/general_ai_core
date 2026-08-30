@@ -138,6 +138,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from apps.api.admin import AdminSurface, create_admin_router
 from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
+from apps.api.capabilities import Capability, CapabilityState
 from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
@@ -1246,6 +1247,90 @@ def create_app(
                 },
             )
 
+    # --- Capability Catalog derivation (Vision V7 chunk 1) --------------------
+    # Derived HERE because create_app is the only place that knows which
+    # seams were actually composed (module header of apps/api/capabilities).
+    # Each row's state comes from the SAME variable that mounted (or did
+    # not mount) the corresponding surface above — honesty by construction.
+    def _cap(cap_id: str, available: bool, evidence: str) -> Capability:
+        return Capability(
+            id=cap_id,
+            state=CapabilityState.AVAILABLE if available else CapabilityState.INERT,
+            evidence=evidence,
+        )
+
+    capability_catalog: tuple[Capability, ...] = (
+        _cap("execute.sync", True, "POST /v1/execute (always mounted)"),
+        _cap(
+            "execute.async",
+            outbox is not None,
+            "outbox seam -> 202 path (V2); core/runtime/outbox.py",
+        ),
+        # Recorded UNAVAILABLE (V6-2): inline token streaming needs
+        # streaming provider adapters, which do not exist in the repo.
+        Capability(
+            id="execute.token_streaming",
+            state=CapabilityState.UNAVAILABLE,
+            evidence="no streaming provider adapters exist (R115/V6-2 record)",
+        ),
+        _cap(
+            "executions.progress_sse",
+            sse,
+            "sse seam -> GET /v1/executions/{id}/events (V6-2)",
+        ),
+        _cap(
+            "conversations.persistence",
+            conversations is not None,
+            "conversations seam; core/memory/ports.py",
+        ),
+        _cap(
+            "context.composition",
+            composer is not None,
+            "composer seam; core/context (13 §5)",
+        ),
+        _cap(
+            "models.listing",
+            models is not None and bindings is not None,
+            "models+bindings seams -> GET /v1/models (10 §6)",
+        ),
+        _cap("skills.listing", True, "GET /v1/skills over the skill registry"),
+        _cap(
+            "usage.reporting",
+            usage is not None,
+            "usage seam -> GET /v1/usage (10 §8)",
+        ),
+        _cap(
+            "webhooks.registration",
+            webhooks,
+            "webhooks seam -> POST /v1/webhooks (41 §21)",
+        ),
+        _cap(
+            "webhooks.delivery_staging",
+            webhooks and outbox is not None,
+            "webhooks+outbox seams -> execution.queued staging (V6-3)",
+        ),
+        _cap(
+            "admin.control_plane",
+            admin is not None,
+            "admin seam -> /v1/admin/* (T-IMPL-032)",
+        ),
+        _cap(
+            "rate_limits.execute",
+            rate_limits is not None and execute_rate_limit > 0,
+            "rate_limits seam + configured limit (T-IMPL-070)",
+        ),
+        _cap(
+            "auth.sessions",
+            auth is not None,
+            "auth seam -> /v1/auth/* (AA-1 IDN-1)",
+        ),
+        _cap("health.liveness", healthz, "healthz seam -> GET /healthz (SYS-1)"),
+    )
+    # One derivation, two consumers (module header): the admin route below
+    # AND the composition root (which hands the SAME tuple to the agent's
+    # AgentToolSurface) read this attribute — zero parallel derivations.
+    app.state.capability_catalog = capability_catalog
+
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:
         app.include_router(
@@ -1253,6 +1338,7 @@ def create_app(
                 admin,
                 resolve=_principal,
                 system_info=system_info,
+                capabilities=capability_catalog,
             )
         )
 

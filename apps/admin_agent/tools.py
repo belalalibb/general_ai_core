@@ -1,4 +1,8 @@
-"""AA-2 shipped tool set — 7 × R0 reads + 1 × R1 test execution.
+"""Admin agent tool set — R0 reads + R1 test execution + R2 lifecycle drafts.
+
+AA-2 shipped 7 × R0 + 1 × R1; AA-3 added 3 × R2 lifecycle tools; Vision V7
+chunk 1 added the optional R0 ``list_capabilities`` (registered only when
+the composition root hands the surface a derived catalog).
 
 Every tool is a thin surface over EXISTING platform machinery (registries,
 stores, ports) — the agent adds no parallel state (doc A §3.2 rule 3).
@@ -24,6 +28,7 @@ from apps.admin_agent.dispatcher import ToolRegistry, ToolSpec
 from apps.admin_agent.secrecy import scrub_object
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal
+from apps.api.capabilities import Capability, catalog_json
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
@@ -58,6 +63,11 @@ class AgentToolSurface:
     admin: AdminSurface
     usage: InMemoryUsageAccounting
     audit: AuditLogPort
+    #: V7 chunk 1 — the SAME derived catalog create_app hands the admin
+    #: route (one derivation, two consumers; read it from
+    #: ``app.state.capability_catalog``). Optional (P2): absent seam =
+    #: absent tool, and every pre-V7 construction stays valid verbatim.
+    capabilities: tuple[Capability, ...] | None = None
 
 
 def _report_row(report: ExecutionReport) -> JsonObject:
@@ -265,9 +275,37 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
     async def preview_change(caller: Principal, args: JsonObject) -> JsonObject:
         return _lifecycle_tool_step(caller, args, "preview")
 
+    # --- V7 chunk 1: R0 capability catalog (registered ONLY when composed) ----
+    #
+    # ``catalog_json`` is validated once here (completeness + duplicates fail
+    # at registry construction, never mid-dispatch) and the frozen payload is
+    # what every call renders — the agent reads composition truth, it cannot
+    # invent capability claims (P6: narration follows stored truth).
+    capability_specs: list[ToolSpec] = []
+    if surface.capabilities is not None:
+        capability_payload = catalog_json(surface.capabilities)
+
+        async def list_capabilities(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            return scrub_object(capability_payload)
+
+        capability_specs.append(
+            ToolSpec(
+                name="list_capabilities",
+                tool_class=ToolClass.R0_READ,
+                handler=list_capabilities,
+                description=(
+                    "Honest closed-set capability catalog for THIS process "
+                    "(available/inert/unavailable, with evidence)."
+                ),
+            )
+        )
+
     return ToolRegistry(
         registrable=AA3_REGISTRABLE_CLASSES,
         specs=[
+            *capability_specs,
             ToolSpec(
                 name="list_models",
                 tool_class=ToolClass.R0_READ,

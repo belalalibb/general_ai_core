@@ -68,6 +68,7 @@ from uuid import UUID
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
+from apps.api.capabilities import Capability, catalog_json
 from apps.api.errors import error_response
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
@@ -129,6 +130,7 @@ def create_admin_router(
     *,
     resolve: Callable[[Request], Principal | JSONResponse],
     system_info: Callable[[], JsonObject] | None = None,
+    capabilities: tuple[Capability, ...] | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -465,6 +467,27 @@ def create_admin_router(
                     }
                 )
             return _json({"usage": rows})
+
+    # --- V7 chunk 1: Capability Catalog (honest closed-set, derived) ----------------
+
+    if capabilities is not None:
+        # Serialize ONCE at mount time: the derivation is composition-time
+        # truth and cannot change per request; completeness/duplicate
+        # violations fail HERE, loudly, at composition (never mid-request).
+        catalog_payload = catalog_json(capabilities)
+
+        @router.get("/capabilities")
+        async def capability_catalog(request: Request) -> Response:
+            """GET /v1/admin/capabilities: what THIS process can actually do.
+
+            Admin-gated like every /v1/admin/* route (deny-by-default).
+            States are derived from composition facts in create_app — the
+            same variables that mounted (or didn't mount) each surface.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(catalog_payload)
 
     # --- AA-1 seam SYS-1: system read-model (process-local truths, labeled) ---------
 

@@ -906,6 +906,7 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "DELETE /v1/webhooks/{subscription_id}",
         "GET /healthz",
         "GET /v1/admin/audit",
+        "GET /v1/admin/capabilities",
         "GET /v1/admin/changes",
         "GET /v1/admin/changes/{change_id}",
         "GET /v1/admin/evaluations/{evaluation_id}",
