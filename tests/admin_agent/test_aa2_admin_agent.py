@@ -35,6 +35,7 @@ from pydantic import ValidationError
 
 from apps.admin_agent.contracts import (
     AA2_REGISTRABLE_CLASSES,
+    AA3_REGISTRABLE_CLASSES,
     AgentClaim,
     DiagnosisTier,
     EvidenceKind,
@@ -52,12 +53,14 @@ from apps.admin_agent.secrecy import scrub_json, scrub_text
 from apps.admin_agent.tools import AGENT_LABEL_KEY, AgentToolSurface, build_registry
 from apps.api import InMemoryExecutionStore, Principal, create_app
 from apps.api.auth import AuthSurface
+from apps.api.skills_import import SkillReviewSurface
 from apps.composition.admin_console import UI_DIR, attach_admin_console
-from core.audit.memory import InMemoryAuditLog
 from core.contracts.audit import AuditEventType
 from core.contracts.base import JsonObject
 from core.contracts.provider import ProviderError, ProviderErrorCategory
 from core.execution.service import ExecutionService
+from core.roles.registry import SkillRegistry
+from core.skills.importing import SkillImportService
 from tests.api.test_aa1_api_seams import (
     ADMIN_EMAIL,
     PASSWORD,
@@ -86,7 +89,10 @@ class AgentWorld:
         self.adapter = ScriptedAdapter(script)
         self.world.adapter = self.adapter
 
-        self.audit = InMemoryAuditLog()
+        # Composition-root agreement duty (AA-3): ONE audit log — the same
+        # instance the AdminConfigService publishes into serves auth, the
+        # dispatcher, the admin surface and the notification read-model.
+        self.audit = self.world.audit
         self.store = InMemoryExecutionStore()
         self.execution_service = ExecutionService(
             adapters={self.world.provider.id: self.adapter},
@@ -132,8 +138,16 @@ class AgentWorld:
             usage=self.world.usage,
             audit=self.audit,
         )
+        self.skill_registry = SkillRegistry()
+        self.skill_review = SkillReviewSurface(
+            importing=SkillImportService(), registry=self.skill_registry
+        )
         self.service = attach_admin_console(
-            self.app, surface=self.surface, auth=self.auth, ui=False
+            self.app,
+            surface=self.surface,
+            auth=self.auth,
+            ui=False,
+            skill_review=self.skill_review,
         )
         self.registry = build_registry(self.surface)
         self.dispatcher = ToolDispatcher(self.registry, audit=self.audit)
@@ -216,7 +230,7 @@ async def _noop_handler(caller: Principal, args: JsonObject) -> JsonObject:
 
 
 class TestDispatcherDeterminism:
-    def test_r2_r3_r4_classes_refused_at_construction(self) -> None:
+    def test_r2_r3_r4_classes_refused_at_default_construction(self) -> None:
         """AA-2 structural rule: nothing above R1 can even be registered."""
         for tool_class in (
             ToolClass.R2_CONFIG_CHANGE,
@@ -234,12 +248,29 @@ class TestDispatcherDeterminism:
             ToolClass.R1_EXECUTE_TEST,
         }
 
-    def test_shipped_registry_is_r0_r1_only_with_no_mutation_names(self) -> None:
+    def test_aa3_registrable_set_adds_exactly_r2(self) -> None:
+        assert AA3_REGISTRABLE_CLASSES == AA2_REGISTRABLE_CLASSES | {
+            ToolClass.R2_CONFIG_CHANGE
+        }
+
+    def test_r3_r4_never_registrable_even_with_widest_set(self) -> None:
+        """Doc C §5: publish is a human act; R3/R4 are UNCONDITIONALLY out —
+        even a registry constructed with EVERY class as registrable refuses
+        them (the NEVER set beats the caller's parameter)."""
+        for tool_class in (ToolClass.R3_SOURCE_CHANGE, ToolClass.R4_FORBIDDEN):
+            with pytest.raises(ToolClassNotRegistrable):
+                ToolRegistry(
+                    [ToolSpec(name="evil", tool_class=tool_class, handler=_noop_handler)],
+                    registrable=frozenset(ToolClass),
+                )
+
+    def test_shipped_registry_is_r0_r1_r2_with_no_publish_or_rollback(self) -> None:
+        """Doc C §5 criterion 2 (structural): NO publish/rollback tool exists."""
         world = AgentWorld()
         for entry in world.registry.describe():
-            assert entry["class"] in {"r0_read", "r1_execute_test"}
+            assert entry["class"] in {"r0_read", "r1_execute_test", "r2_config_change"}
         joined = " ".join(world.registry.names())
-        for forbidden in ("draft", "publish", "validate", "rollback", "enable", "disable"):
+        for forbidden in ("publish", "rollback", "enable", "disable"):
             assert forbidden not in joined
 
     @pytest.mark.parametrize(
@@ -644,7 +675,8 @@ class TestAgentHttpSurface:
             tools = response.json()["tools"]
             names = {t["name"] for t in tools}
             assert "run_test_execution" in names
-            assert all(t["class"] in {"r0_read", "r1_execute_test"} for t in tools)
+            allowed = {"r0_read", "r1_execute_test", "r2_config_change"}
+            assert all(t["class"] in allowed for t in tools)
 
         run(check())
 
@@ -717,8 +749,8 @@ class TestAgentHttpSurface:
 
         run(check())
 
-    def test_route_surface_delta_is_exactly_the_aa2_set(self) -> None:
-        """30 AA-1 ops + exactly 4 /v1/agent ops = 34, pinned by command."""
+    def test_route_surface_delta_is_exactly_the_aa2_plus_aa3_set(self) -> None:
+        """34 AA-2 ops + 2 NTF-1 ops + 7 SKL-1 ops = 43, pinned by command."""
         world = AgentWorld()
         ops = openapi_ops(world.app)
         agent_ops = [op for op in ops if "/v1/agent" in op]
@@ -728,7 +760,22 @@ class TestAgentHttpSurface:
             "GET /v1/agent/tools",
             "POST /v1/agent/converse",
         ]
-        assert len(ops) == 34
+        notif_ops = [op for op in ops if "/v1/admin/notifications" in op]
+        assert notif_ops == [
+            "GET /v1/admin/notifications",
+            "POST /v1/admin/notifications/{notification_id}/ack",
+        ]
+        skill_ops = [op for op in ops if "/v1/admin/skills" in op]
+        assert skill_ops == [
+            "GET /v1/admin/skills/imports",
+            "POST /v1/admin/skills/import",
+            "POST /v1/admin/skills/imports/{skill_id}/activate",
+            "POST /v1/admin/skills/imports/{skill_id}/approve",
+            "POST /v1/admin/skills/imports/{skill_id}/review",
+            "POST /v1/admin/skills/imports/{skill_id}/scan",
+            "POST /v1/admin/skills/imports/{skill_id}/validate",
+        ]
+        assert len(ops) == 43
 
 
 # --- registry construction ---------------------------------------------------------------
@@ -740,9 +787,15 @@ class TestRegistryConstruction:
         with pytest.raises(DuplicateTool):
             ToolRegistry([spec, spec])
 
-    def test_shipped_registry_has_exactly_eight_tools(self) -> None:
+    def test_shipped_registry_has_exactly_eleven_tools(self) -> None:
         world = AgentWorld()
-        assert len(world.registry.names()) == 8
+        assert len(world.registry.names()) == 11
+        r2_names = {
+            entry["name"]
+            for entry in world.registry.describe()
+            if entry["class"] == "r2_config_change"
+        }
+        assert r2_names == {"draft_change", "validate_change", "preview_change"}
 
 
 # --- reasoning failure honesty -------------------------------------------------------------
@@ -813,7 +866,17 @@ class TestUIHonestyChecklist:
         ):
             allowed.update(member.value for member in enum_cls)
         # healthz literal + agent ToolClass values (both backend-produced).
-        allowed.update({"alive", ToolClass.R0_READ.value, ToolClass.R1_EXECUTE_TEST.value})
+        from apps.api.notifications import NotificationCategory
+
+        allowed.update(
+            {
+                "alive",
+                ToolClass.R0_READ.value,
+                ToolClass.R1_EXECUTE_TEST.value,
+                ToolClass.R2_CONFIG_CHANGE.value,
+            }
+        )
+        allowed.update(member.value for member in NotificationCategory)
 
         raw = (UI_DIR / "app.js").read_text(encoding="utf-8")
         match = re.search(r"const STATUS_CLASSES = \{(.*?)\n\};", raw, re.DOTALL)
@@ -851,11 +914,11 @@ class TestUIHonestyChecklist:
         code = _js_code()
         assert "claim refused: no evidence citation" in code
 
-    def test_no_write_paths_exactly_two_posts(self) -> None:
-        """Read-only UI: the ONLY POSTs are login and converse."""
+    def test_write_paths_are_exactly_the_sanctioned_four_posts(self) -> None:
+        """AA-3: the ONLY POSTs are login, converse, lifecycle act, ack."""
         code = _js_code()
         posts = re.findall(r"method:\s*\"POST\"", code)
-        assert len(posts) == 2
+        assert len(posts) == 4
         for banned in ("DELETE", "PUT", "PATCH"):
             assert f'"{banned}"' not in code
 

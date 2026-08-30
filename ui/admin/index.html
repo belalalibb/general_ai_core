@@ -30,6 +30,7 @@
     <button class="rail-item" data-surface="executions">Executions</button>
     <button class="rail-item" data-surface="catalog">Catalog</button>
     <button class="rail-item" data-surface="changes">Changes &amp; Audit</button>
+    <button class="rail-item" data-surface="notifications">Notifications <span id="notif-unread" class="badge info" hidden></span></button>
     <button class="rail-item" data-surface="usage">Tenants &amp; Usage</button>
     <button class="rail-item" data-surface="system">System</button>
   </nav>
@@ -93,14 +94,27 @@
     <!-- Surface 5: Changes & Audit -->
     <section id="surface-changes" class="surface" hidden>
       <h2>Changes &amp; Audit</h2>
+      <p class="muted">Publish and rollback are explicit admin acts — the Agent can only draft, validate and preview.</p>
       <h3>Config changes</h3>
       <table class="data-table" id="changes-table">
-        <thead><tr><th>ID</th><th>Area</th><th>Action</th><th>State</th><th>Created</th></tr></thead>
+        <thead><tr><th>ID</th><th>Area</th><th>Action</th><th>State</th><th>Validation</th><th>Created</th><th>Act</th></tr></thead>
         <tbody></tbody>
       </table>
+      <div id="lifecycle-error" class="error-box" hidden></div>
       <h3>Audit events</h3>
       <table class="data-table" id="audit-table">
         <thead><tr><th>ID</th><th>Type</th><th>Occurred</th><th>Details</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Surface: Notifications (NTF-1, doc A §12 — derived read-model, poll-based) -->
+    <section id="surface-notifications" class="surface" hidden>
+      <h2>Notifications</h2>
+      <p class="muted">Derived on read from audit, execution and change records — poll-based; nothing here exists without a backing record.</p>
+      <button id="notif-refresh" type="button">Refresh</button>
+      <table class="data-table" id="notif-table">
+        <thead><tr><th>Category</th><th>Title</th><th>Occurred</th><th>Evidence</th><th>Read</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>
@@ -142,6 +156,9 @@
     <div id="global-error" class="error-box" hidden></div>
   </main>
 </div>
+
+<!-- Transient toasts: operation feedback only — never the only record. -->
+<div id="toast-region" class="toast-region" aria-live="polite"></div>
 
 <script src="app.js"></script>
 </body>

@@ -19,13 +19,19 @@ import json
 from dataclasses import dataclass
 from uuid import UUID
 
-from apps.admin_agent.contracts import ToolClass
+from apps.admin_agent.contracts import AA3_REGISTRABLE_CLASSES, ToolClass
 from apps.admin_agent.dispatcher import ToolRegistry, ToolSpec
 from apps.admin_agent.secrecy import scrub_object
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal
 from apps.api.store import InMemoryExecutionStore
+from core.admin.errors import (
+    ChangeNotFound,
+    InactiveAdminArea,
+    InvalidLifecycleTransition,
+)
 from core.audit.ports import AuditLogPort
+from core.contracts.admin import AdminAction, ConfigChange
 from core.contracts.base import JsonObject
 from core.contracts.provider import ProviderOperation
 from core.contracts.routing import RoutingRequest
@@ -147,19 +153,23 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
         ]
         return scrub_object({"events": rows})
 
+    def _change_row(change: ConfigChange) -> JsonObject:
+        row: JsonObject = {
+            "change_id": str(change.id),
+            "area": change.area.value,
+            "action": change.action.value,
+            "state": change.state.value,
+            "created_at": change.created_at.isoformat(),
+        }
+        if change.validation_result is not None:
+            row["validation_result"] = change.validation_result
+        if change.impact_preview is not None:
+            row["impact_preview"] = change.impact_preview
+        return row
+
     async def list_changes(caller: Principal, args: JsonObject) -> JsonObject:
         changes = surface.admin.service.list_changes(caller.tenant_id)
-        rows = [
-            {
-                "change_id": str(c.id),
-                "area": c.area.value,
-                "action": c.action.value,
-                "state": c.state.value,
-                "created_at": c.created_at.isoformat(),
-            }
-            for c in changes
-        ]
-        return scrub_object({"changes": rows})
+        return scrub_object({"changes": [_change_row(c) for c in changes]})
 
     async def run_test_execution(caller: Principal, args: JsonObject) -> JsonObject:
         """R1: a REAL, budget-bounded, labeled execution over the real path."""
@@ -201,8 +211,63 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
         surface.execution_store.put(report)
         return scrub_object(_report_row(report))
 
+    # --- R2 tools (AA-3, doc C §5): the EXISTING lifecycle, used verbatim ------
+    #
+    # These handlers call the SAME AdminConfigService the /v1/admin HTTP
+    # routes call — an Agent-drafted change is structurally the same record
+    # as a form-drafted one (criterion 1). Publish and rollback have NO
+    # handler and NO ToolSpec here: they are explicit human UI acts
+    # (criterion 2, proven structurally — the tool does not exist).
+
+    async def draft_change(caller: Principal, args: JsonObject) -> JsonObject:
+        raw_action = str(args.get("action", ""))
+        try:
+            action = AdminAction(raw_action)
+        except ValueError:
+            return {"error": f"unknown admin action: {raw_action[:100]}"}
+        payload = args.get("payload") or {}
+        if not isinstance(payload, dict):
+            return {"error": "payload must be a JSON object"}
+        try:
+            change = surface.admin.service.draft(
+                tenant_id=caller.tenant_id,
+                actor_id=caller.user_id,
+                action=action,
+                payload=payload,
+            )
+        except InactiveAdminArea as exc:
+            return {"error": str(exc)}
+        return scrub_object(_change_row(change))
+
+    def _lifecycle_tool_step(
+        caller: Principal, args: JsonObject, step: str
+    ) -> JsonObject:
+        raw = args.get("change_id")
+        try:
+            change_id = UUID(str(raw))
+        except ValueError:
+            return {"error": "unknown change id"}
+        try:
+            if step == "validate":
+                change = surface.admin.service.validate(caller.tenant_id, change_id)
+            else:
+                change = surface.admin.service.preview(caller.tenant_id, change_id)
+        except ChangeNotFound:
+            # Anti-enumeration: absent and foreign-tenant are the same answer.
+            return {"error": "unknown change id"}
+        except InvalidLifecycleTransition as exc:
+            return {"error": str(exc)}
+        return scrub_object(_change_row(change))
+
+    async def validate_change(caller: Principal, args: JsonObject) -> JsonObject:
+        return _lifecycle_tool_step(caller, args, "validate")
+
+    async def preview_change(caller: Principal, args: JsonObject) -> JsonObject:
+        return _lifecycle_tool_step(caller, args, "preview")
+
     return ToolRegistry(
-        [
+        registrable=AA3_REGISTRABLE_CLASSES,
+        specs=[
             ToolSpec(
                 name="list_models",
                 tool_class=ToolClass.R0_READ,
@@ -253,5 +318,29 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 allowed_args=frozenset({"ask", "purpose"}),
                 description="One REAL budget-bounded labeled test execution.",
             ),
-        ]
+            ToolSpec(
+                name="draft_change",
+                tool_class=ToolClass.R2_CONFIG_CHANGE,
+                handler=draft_change,
+                allowed_args=frozenset({"action", "payload"}),
+                description=(
+                    "Draft a config change through the existing lifecycle "
+                    "(publish is a human UI act, never a tool)."
+                ),
+            ),
+            ToolSpec(
+                name="validate_change",
+                tool_class=ToolClass.R2_CONFIG_CHANGE,
+                handler=validate_change,
+                allowed_args=frozenset({"change_id"}),
+                description="Run lifecycle validation on a drafted change.",
+            ),
+            ToolSpec(
+                name="preview_change",
+                tool_class=ToolClass.R2_CONFIG_CHANGE,
+                handler=preview_change,
+                allowed_args=frozenset({"change_id"}),
+                description="Attach the impact preview to a validated change.",
+            ),
+        ],
     )

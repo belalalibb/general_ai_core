@@ -1,7 +1,9 @@
-"""Admin Agent (AA-2, doc C §4 AGT-1) — R0/R1 tools + conversation loop."""
+"""Admin Agent (AA-2/AA-3, doc C §4–§5) — R0/R1/R2 tools + conversation loop."""
 
 from apps.admin_agent.contracts import (
     AA2_REGISTRABLE_CLASSES,
+    AA3_REGISTRABLE_CLASSES,
+    NEVER_REGISTRABLE_CLASSES,
     AgentAnswer,
     AgentClaim,
     Diagnosis,
@@ -25,6 +27,7 @@ from apps.admin_agent.tools import AGENT_LABEL_KEY, AgentToolSurface, build_regi
 
 __all__ = [
     "AA2_REGISTRABLE_CLASSES",
+    "AA3_REGISTRABLE_CLASSES",
     "AGENT_LABEL_KEY",
     "AdminAgentService",
     "AgentAnswer",
@@ -36,6 +39,7 @@ __all__ = [
     "EvidenceKind",
     "EvidenceRef",
     "ExecutionTrace",
+    "NEVER_REGISTRABLE_CLASSES",
     "ToolCallRecord",
     "ToolClass",
     "ToolClassNotRegistrable",

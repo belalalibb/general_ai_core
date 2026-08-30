@@ -134,6 +134,22 @@ h3 { color: var(--text-muted); font-size: 14px; text-transform: uppercase; lette
   font-size: 13px;
 }
 
+/* Lifecycle acts (publish/rollback) — loud, deliberate buttons. */
+button.danger { background: var(--err); color: #fff; }
+
+/* Toasts — transient operation feedback, never the only record. */
+.toast-region {
+  position: fixed; right: 16px; bottom: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 50; max-width: 340px;
+}
+.toast {
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 14px; font-size: 13px;
+}
+.toast.ok { border-color: var(--ok); }
+.toast.err { border-color: var(--err); }
+
 @media (max-width: 720px) {
   .layout { grid-template-columns: 1fr; }
   .rail { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); }

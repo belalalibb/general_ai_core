@@ -1,4 +1,4 @@
-/* Admin Console — AA-2 UI shell (doc D honesty rules as component contracts).
+/* Admin Console — AA-2/AA-3 UI shell (doc D honesty rules as component contracts).
  *
  * HONESTY CONTRACTS enforced in this file:
  * - STATUS_CLASSES contains ONLY backend contract enum values; anything
@@ -9,7 +9,11 @@
  * - Claims without evidence citations render as refusals, never as facts.
  * - Ledger null renders "no ledger (accounting unbound)" — never invented.
  * - The amnesia banner is set in the store layer (api()) on first success.
- * - Exactly 2 POSTs exist (login, converse); no mutation paths.
+ * - Exactly 4 POSTs exist (login, converse, lifecycle act, notification ack);
+ *   publish/rollback are explicit human acts here — never agent tools.
+ * - Lifecycle denials render VERBATIM via renderError (doc C §5 criterion 3).
+ * - Notifications are a derived read-model polled by explicit Refresh —
+ *   no setInterval, no push theater; toasts are feedback, never the record.
  */
 "use strict";
 
@@ -53,6 +57,14 @@ const STATUS_CLASSES = {
   /* agent ToolClass values */
   r0_read: "info",
   r1_execute_test: "warn",
+  r2_config_change: "warn",
+  /* NotificationCategory (NTF-1, doc A §12) */
+  success: "ok",
+  info: "info",
+  warning: "warn",
+  error: "err",
+  security: "err",
+  change: "info",
 };
 
 function statusBadge(value) {
@@ -144,10 +156,22 @@ function loadSurface(name) {
     executions: loadExecutions,
     catalog: loadCatalog,
     changes: loadChanges,
+    notifications: loadNotifications,
     usage: loadUsage,
     system: loadSystem,
   };
   loaders[name]();
+}
+
+/* --- toasts (transient feedback only — never the only record) ---------------- */
+
+function toast(text, kind) {
+  const region = document.getElementById("toast-region");
+  const el = document.createElement("div");
+  el.className = `toast ${kind}`;
+  el.textContent = text;
+  region.appendChild(el);
+  setTimeout(() => el.remove(), 6000);
 }
 
 /* --- Surface: Agent ----------------------------------------------------------- */
@@ -401,6 +425,21 @@ async function loadCatalog() {
 
 /* --- Surface: Changes & Audit ------------------------------------------------------ */
 
+async function lifecycleAct(changeId, step) {
+  /* Explicit human act (doc C §5): publish/rollback exist ONLY here —
+     denials from the backend render verbatim (criterion 3). */
+  const errorBox = document.getElementById("lifecycle-error");
+  errorBox.hidden = true;
+  const result = await api(`/v1/admin/changes/${changeId}/${step}`, { method: "POST" });
+  if (!result.ok) {
+    renderError(errorBox, result.body);
+    toast(`${step} refused`, "err");
+  } else {
+    toast(`${step}: ${result.body.state}`, "ok");
+  }
+  loadChanges();
+}
+
 async function loadChanges() {
   const [changes, audit] = await Promise.all([
     api("/v1/admin/changes"),
@@ -415,8 +454,26 @@ async function loadChanges() {
       const area = document.createElement("td"); area.textContent = c.area;
       const action = document.createElement("td"); action.textContent = c.action;
       const stateCell = document.createElement("td"); stateCell.appendChild(statusBadge(c.state));
+      const validation = document.createElement("td");
+      validation.textContent = c.validation_result || "\u2014";
       const created = document.createElement("td"); created.textContent = c.created_at;
-      tr.append(id, area, action, stateCell, created);
+      const act = document.createElement("td");
+      if (c.state === "validated" && c.impact_preview !== undefined) {
+        const btn = document.createElement("button");
+        btn.className = "danger";
+        btn.textContent = "Publish";
+        btn.addEventListener("click", () => lifecycleAct(c.id, "publish"));
+        act.appendChild(btn);
+      } else if (c.state === "published") {
+        const btn = document.createElement("button");
+        btn.className = "danger";
+        btn.textContent = "Rollback";
+        btn.addEventListener("click", () => lifecycleAct(c.id, "rollback"));
+        act.appendChild(btn);
+      } else {
+        act.textContent = "\u2014";
+      }
+      tr.append(id, area, action, stateCell, validation, created, act);
       changesBody.appendChild(tr);
     }
   }
@@ -435,6 +492,44 @@ async function loadChanges() {
     }
   }
 }
+
+/* --- Surface: Notifications (NTF-1 read-model, manual poll) --------------------------- */
+
+async function loadNotifications() {
+  const result = await api("/v1/admin/notifications");
+  const badge = document.getElementById("notif-unread");
+  const tbody = document.querySelector("#notif-table tbody");
+  tbody.textContent = "";
+  if (!result.ok) { renderError(document.getElementById("global-error"), result.body); return; }
+  badge.textContent = String(result.body.unread);
+  badge.hidden = result.body.unread === 0;
+  for (const n of result.body.notifications || []) {
+    const tr = document.createElement("tr");
+    const category = document.createElement("td"); category.appendChild(statusBadge(n.category));
+    const title = document.createElement("td"); title.textContent = n.title;
+    const occurred = document.createElement("td"); occurred.textContent = n.occurred_at;
+    /* Criterion 4: every notification links its evidence record. */
+    const evidence = document.createElement("td"); evidence.className = "mono";
+    evidence.textContent = `${n.evidence.kind}: ${n.evidence.ref}`;
+    const read = document.createElement("td");
+    if (n.read) {
+      read.textContent = "read";
+    } else {
+      const btn = document.createElement("button");
+      btn.textContent = "Mark read";
+      btn.addEventListener("click", async () => {
+        const ack = await api(`/v1/admin/notifications/${encodeURIComponent(n.id)}/ack`, { method: "POST" });
+        if (!ack.ok) { renderError(document.getElementById("global-error"), ack.body); return; }
+        loadNotifications();
+      });
+      read.appendChild(btn);
+    }
+    tr.append(category, title, occurred, evidence, read);
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById("notif-refresh").addEventListener("click", loadNotifications);
 
 /* --- Surface: Tenants & Usage -------------------------------------------------------- */
 

@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 
 from apps.admin_agent.contracts import (
     AA2_REGISTRABLE_CLASSES,
+    NEVER_REGISTRABLE_CLASSES,
     ToolCallRecord,
     ToolClass,
 )
@@ -54,15 +55,30 @@ class ToolSpec:
 
 
 class ToolRegistry:
-    """Closed R0/R1 tool set — refuses unsafe classes at construction."""
+    """Closed tool set — refuses unsafe classes at construction.
 
-    def __init__(self, specs: Iterable[ToolSpec]) -> None:
+    ``registrable`` is the phase's closed admission set (defaults to the
+    AA-2 R0/R1 set; AA-3 passes ``AA3_REGISTRABLE_CLASSES`` to admit R2
+    lifecycle-proposal tools). ``NEVER_REGISTRABLE_CLASSES`` (R3/R4) is
+    enforced UNCONDITIONALLY — no parameter can widen past config changes.
+    """
+
+    def __init__(
+        self,
+        specs: Iterable[ToolSpec],
+        *,
+        registrable: frozenset[ToolClass] = AA2_REGISTRABLE_CLASSES,
+    ) -> None:
         self._specs: dict[str, ToolSpec] = {}
         for spec in specs:
-            if spec.tool_class not in AA2_REGISTRABLE_CLASSES:
+            if (
+                spec.tool_class in NEVER_REGISTRABLE_CLASSES
+                or spec.tool_class not in registrable
+            ):
+                allowed = sorted(c.value for c in registrable)
                 msg = (
                     f"tool {spec.name!r} has class {spec.tool_class.value!r}; "
-                    "AA-2 registers R0/R1 ONLY"
+                    f"this registry admits {allowed} ONLY"
                 )
                 raise ToolClassNotRegistrable(msg)
             if spec.name in self._specs:
@@ -106,7 +122,7 @@ class ToolDispatcher:
                 tool_name,
                 ToolClass.R4_FORBIDDEN,
                 arguments,
-                refusal="tool is not in the registered R0/R1 set",
+                refusal="tool is not in the registered tool set",
             )
         if not caller.is_admin:
             return self._record(

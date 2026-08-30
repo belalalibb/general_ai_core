@@ -47,6 +47,21 @@ AA2_REGISTRABLE_CLASSES: frozenset[ToolClass] = frozenset(
     {ToolClass.R0_READ, ToolClass.R1_EXECUTE_TEST}
 )
 
+#: AA-3 closed scope (doc C §5): R2 config-change tools join the registry —
+#: draft/validate/preview THROUGH the existing lifecycle ONLY. Publish and
+#: rollback are NEVER agent tools (an explicit human UI act, criterion 2);
+#: R3/R4 remain structurally unregistrable at any scope.
+AA3_REGISTRABLE_CLASSES: frozenset[ToolClass] = AA2_REGISTRABLE_CLASSES | {
+    ToolClass.R2_CONFIG_CHANGE
+}
+
+#: Classes that can NEVER register regardless of the phase's registrable set
+#: (source changes are the operator-gated AA-4 track; R4 is forbidden by
+#: definition). Enforced at registry construction unconditionally.
+NEVER_REGISTRABLE_CLASSES: frozenset[ToolClass] = frozenset(
+    {ToolClass.R3_SOURCE_CHANGE, ToolClass.R4_FORBIDDEN}
+)
+
 
 # --- Evidence (doc A §7: every platform-fact claim cites records) ------------------
 
