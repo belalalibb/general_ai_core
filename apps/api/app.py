@@ -134,7 +134,7 @@ from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Header, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from apps.api.admin import AdminSurface, create_admin_router
 from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
@@ -144,6 +144,7 @@ from apps.api.errors import (
     execution_failure_detail,
 )
 from apps.api.store import ExecutionNotFound, InMemoryExecutionStore
+from apps.api.streaming import Sleeper, event_stream
 from core.context.composer import ContextComposer
 from core.context.errors import ContextBudgetExceeded
 from core.contracts.base import JsonObject, utc_now
@@ -374,6 +375,10 @@ def create_app(
     | None = None,
     system_info: Callable[[], JsonObject] | None = None,
     healthz: bool = False,
+    sse: bool = False,
+    sse_poll_interval_seconds: float = 0.5,
+    sse_timeout_seconds: float = 60.0,
+    sse_sleeper: Sleeper | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -1136,6 +1141,53 @@ def create_app(
             status_code=200,
             content=status_response.model_dump(mode="json", exclude_none=True),
         )
+
+    # --- GET /v1/executions/{id}/events (Vision V6): SSE progress -------------
+    # Opt-in seam (``sse=True``) — absent, the route does not exist at all
+    # (20 §4). Emits the EXISTING 10 §11 StreamEvent shapes DERIVED from
+    # the stored report (apps/api/streaming.py decisions); tenant scoping
+    # and the 404 mapping are byte-identical to the status route above.
+    if sse:
+
+        @app.get("/v1/executions/{execution_id}/events")
+        async def execution_events(request: Request, execution_id: str) -> Response:
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
+            try:
+                parsed = UUID(execution_id)
+            except ValueError:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "execution id must be a UUID.",
+                    details={"field": "execution_id"},
+                )
+            tenant_id = caller.tenant_id
+            try:
+                # Existence + tenant scoping decided BEFORE any stream
+                # starts — the 404 is a plain JSON error, never a stream.
+                execution_store.get(tenant_id, parsed)
+            except ExecutionNotFound:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown execution id.",
+                    details={"execution_id": execution_id},
+                    http_status=404,
+                )
+
+            def _load() -> ExecutionReport:
+                return execution_store.get(tenant_id, parsed)
+
+            return StreamingResponse(
+                event_stream(
+                    _load,
+                    poll_interval_seconds=sse_poll_interval_seconds,
+                    timeout_seconds=sse_timeout_seconds,
+                    sleeper=sse_sleeper,
+                ),
+                media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache"},
+            )
 
     # --- GET /healthz (AA-1 seam SYS-1): opt-in process liveness --------------
     if healthz:
