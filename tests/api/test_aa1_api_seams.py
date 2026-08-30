@@ -363,11 +363,15 @@ class TestAdminGateUnderSessions:
                     path = path.replace("{evaluation_id}", str(uuid4()))
                     path = path.replace("{execution_id}", str(uuid4()))
                     path = path.replace("{plan_tenant_id}", str(uuid4()))
+                    path = path.replace("{scenario_id}", str(uuid4()))
                     body = None
                     if method == "POST" and path.endswith("/changes"):
                         # Contract-valid body: FastAPI parses bodies before
                         # handlers, so the deny must win over a 422.
                         body = {"action": "disable_model", "payload": {}}
+                    if method == "POST" and path.endswith("/scenarios"):
+                        # Same posture for the V7-3 save route.
+                        body = {"name": "denied", "ask": "denied"}
                     response = await c.request(
                         method, path, json=body, headers=bearer(token)
                     )
@@ -917,6 +921,7 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "GET /v1/admin/plans/{plan_tenant_id}",
         "GET /v1/admin/providers",
         "GET /v1/admin/routing/weights",
+        "GET /v1/admin/scenarios",
         "GET /v1/admin/system",
         "GET /v1/admin/usage",
         "GET /v1/auth/session",
@@ -932,6 +937,9 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "POST /v1/admin/changes/{change_id}/publish",
         "POST /v1/admin/changes/{change_id}/rollback",
         "POST /v1/admin/changes/{change_id}/validate",
+        "POST /v1/admin/scenarios",
+        "POST /v1/admin/scenarios/regression-pack",
+        "POST /v1/admin/scenarios/{scenario_id}/replay",
         "POST /v1/auth/login",
         "POST /v1/auth/logout",
         "POST /v1/execute",

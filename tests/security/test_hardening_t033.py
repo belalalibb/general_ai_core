@@ -229,12 +229,16 @@ class TestAdminCannotBreak:
             "GET /v1/admin/plans/{plan_tenant_id}",
             "GET /v1/admin/providers",
             "GET /v1/admin/routing/weights",
+            "GET /v1/admin/scenarios",
             "POST /v1/admin/capabilities/{capability_id}/exercise",
             "POST /v1/admin/changes",
             "POST /v1/admin/changes/{change_id}/preview",
             "POST /v1/admin/changes/{change_id}/publish",
             "POST /v1/admin/changes/{change_id}/rollback",
             "POST /v1/admin/changes/{change_id}/validate",
+            "POST /v1/admin/scenarios",
+            "POST /v1/admin/scenarios/regression-pack",
+            "POST /v1/admin/scenarios/{scenario_id}/replay",
         ]
 
 

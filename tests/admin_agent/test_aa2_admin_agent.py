@@ -750,7 +750,7 @@ class TestAgentHttpSurface:
         run(check())
 
     def test_route_surface_delta_is_exactly_the_aa2_plus_aa3_set(self) -> None:
-        """34 AA-2 + 2 NTF-1 + 7 SKL-1 + 3 V7 capability ops = 46, pinned."""
+        """34 AA-2 + 2 NTF-1 + 7 SKL-1 + 3 V7 capability + 4 V7 scenario ops = 50, pinned."""
         world = AgentWorld()
         ops = openapi_ops(world.app)
         agent_ops = [op for op in ops if "/v1/agent" in op]
@@ -775,9 +775,10 @@ class TestAgentHttpSurface:
             "POST /v1/admin/skills/imports/{skill_id}/scan",
             "POST /v1/admin/skills/imports/{skill_id}/validate",
         ]
-        assert len(ops) == 46
+        assert len(ops) == 50
         assert "POST /v1/admin/capabilities/{capability_id}/exercise" in ops  # V7-2
         assert "GET /v1/admin/capabilities" in ops  # V7 chunk 1
+        assert "POST /v1/admin/scenarios/regression-pack" in ops  # V7 chunk 3
 
 
 # --- registry construction ---------------------------------------------------------------
