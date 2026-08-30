@@ -34,6 +34,7 @@ from infrastructure.db.repositories.executions import (
 )
 from infrastructure.db.repositories.idempotency import PostgresIdempotencyStore
 from infrastructure.db.repositories.memory import PostgresMemoryRepository
+from infrastructure.db.repositories.outbox import PostgresOutbox
 from infrastructure.db.repositories.usage import PostgresUsageRepository
 
 __all__ = [
@@ -46,6 +47,7 @@ __all__ = [
     "PostgresIdempotencyStore",
     "PostgresMemoryRepository",
     "PostgresModelCatalog",
+    "PostgresOutbox",
     "PostgresProviderCatalog",
     "PostgresRoleCatalog",
     "PostgresSkillCatalog",

@@ -204,11 +204,13 @@ from __future__ import annotations
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Column,
     Float,
     ForeignKey,
+    Identity,
     Index,
     Integer,
     MetaData,
@@ -786,4 +788,40 @@ worker_idempotency_keys = Table(
     "worker_idempotency_keys",
     metadata,
     Column("key", String(512), primary_key=True),
+)
+
+# --- Vision V2: transactional outbox (40 §4.2) --------------------------------
+# NOT a contract entity (same standing as worker_idempotency_keys): the
+# staging table behind core/runtime/outbox.py OutboxPort — its module
+# docstring records "the real binding writes the outbox row in the SAME
+# PostgreSQL transaction as the state change"; this is that table.
+# - ``id`` BIGINT IDENTITY: insertion order IS the "oldest first" order
+#   ``pending`` promises (a monotone sequence, no timestamp parsing).
+# - ``payload`` JSONB holding the port's flat Mapping[str, str] (values are
+#   strings by port constraint; JSONB stores the map verbatim).
+# - ``dispatched`` flag settles a record after successful publish
+#   (mark_dispatched). Dispatched rows are retained as delivery evidence;
+#   retention/pruning belongs to a later, justified slice.
+# - No tenant_id: messages are platform runtime traffic keyed by stream;
+#   tenant scoping lives INSIDE payloads where the consumer needs it
+#   (20 §6 applies to tenant-scoped ENTITY tables).
+# - Partial index on pending rows only — the relay polls "WHERE NOT
+#   dispatched ORDER BY id" and must not scan settled history.
+outbox_records = Table(
+    "outbox_records",
+    metadata,
+    Column("id", BigInteger, Identity(always=True), primary_key=True),
+    Column("stream", String(512), nullable=False),
+    Column("payload", JSONB, nullable=False),
+    Column("idempotency_key", String(512), nullable=False),
+    Column("dispatched", Boolean, nullable=False, server_default="false"),
+)
+
+# Partial index declared AFTER the table so the predicate references the
+# REAL column object (an inline Column("dispatched") would create a second,
+# unbound column). Pending rows only: the relay's poll never scans history.
+Index(
+    "ix_outbox_records_pending",
+    outbox_records.c.id,
+    postgresql_where=~outbox_records.c.dispatched,
 )

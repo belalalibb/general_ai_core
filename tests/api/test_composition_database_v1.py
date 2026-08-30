@@ -29,6 +29,7 @@ from infrastructure.db.repositories import (
     PostgresIdempotencyStore,
     PostgresMemoryRepository,
     PostgresModelCatalog,
+    PostgresOutbox,
     PostgresProviderCatalog,
     PostgresRoleCatalog,
     PostgresSkillCatalog,
@@ -76,6 +77,7 @@ class TestDatabaseSettings:
         assert isinstance(bindings.audit, PostgresAuditLogRepository)
         assert isinstance(bindings.usage, PostgresUsageRepository)
         assert isinstance(bindings.idempotency, PostgresIdempotencyStore)
+        assert isinstance(bindings.outbox, PostgresOutbox)
         assert isinstance(bindings.role_catalog, PostgresRoleCatalog)
         assert isinstance(bindings.skill_catalog, PostgresSkillCatalog)
         assert isinstance(bindings.model_catalog, PostgresModelCatalog)
@@ -89,6 +91,7 @@ class TestDatabaseSettings:
             bindings.audit,
             bindings.usage,
             bindings.idempotency,
+            bindings.outbox,
             bindings.role_catalog,
             bindings.skill_catalog,
             bindings.model_catalog,

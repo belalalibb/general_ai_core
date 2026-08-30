@@ -33,6 +33,7 @@ from infrastructure.db.repositories import (
     PostgresIdempotencyStore,
     PostgresMemoryRepository,
     PostgresModelCatalog,
+    PostgresOutbox,
     PostgresProviderCatalog,
     PostgresRoleCatalog,
     PostgresSkillCatalog,
@@ -89,6 +90,9 @@ class DatabaseBindings:
     audit: PostgresAuditLogRepository
     usage: PostgresUsageRepository
     idempotency: PostgresIdempotencyStore
+    # Vision V2: durable transactional outbox (40 §4.2) — the async
+    # execute path stages messages here; the relay drains onto the bus.
+    outbox: PostgresOutbox
     # PRV-4 catalogs: durable truth the composition root HYDRATES the
     # existing in-memory registries from (admission authority unchanged).
     role_catalog: PostgresRoleCatalog
@@ -114,6 +118,7 @@ def build_database_bindings(settings: DatabaseSettings) -> DatabaseBindings:
         audit=PostgresAuditLogRepository(factory),
         usage=PostgresUsageRepository(factory),
         idempotency=PostgresIdempotencyStore(factory),
+        outbox=PostgresOutbox(factory),
         role_catalog=PostgresRoleCatalog(factory),
         skill_catalog=PostgresSkillCatalog(factory),
         model_catalog=PostgresModelCatalog(factory),
