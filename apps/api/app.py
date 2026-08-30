@@ -715,10 +715,17 @@ def create_app(
                 "tenant_id": str(caller.tenant_id),
                 "user_id": str(caller.user_id),
                 "request": body.model_dump_json(by_alias=True, exclude_none=True),
+                # The COMPOSED execution payload (ask + output + context/
+                # role) — composition ran HERE, under this request's
+                # admission; the worker consumes it verbatim and never
+                # re-implements composition (P1/P2).
+                "payload": json.dumps(payload, sort_keys=True),
                 "request_hash": _request_hash(body),
             }
             if idempotency_key is not None:
                 message_payload["idempotency_key"] = idempotency_key
+            if conversation_id is not None:
+                message_payload["conversation_id"] = str(conversation_id)
             await outbox.append(
                 execute_stream, message_payload, f"execute:{execution_id}"
             )

@@ -107,6 +107,9 @@ def test_async_stages_exactly_one_durable_message() -> None:
     # re-validates and re-routes from THIS, not from a stale decision.
     assert '"ask":"durable?"' in record.payload["request"].replace(" ", "")
     assert "request_hash" in record.payload
+    # The COMPOSED execution payload rides too: composition ran at the
+    # API under this request's admission; the worker consumes verbatim.
+    assert '"ask": "durable?"' in record.payload["payload"]
 
 
 def test_status_endpoint_answers_queued_from_the_ack_onward() -> None:
