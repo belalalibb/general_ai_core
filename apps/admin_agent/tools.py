@@ -30,6 +30,13 @@ from apps.api.admin import AdminSurface
 from apps.api.app import Principal
 from apps.api.capabilities import Capability, catalog_json
 from apps.api.exercise import ExerciseSurface
+from apps.api.scenarios import (
+    SCENARIO_CHECKS,
+    ScenarioNotFound,
+    ScenarioService,
+    UnknownCheckName,
+    scenario_json,
+)
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
@@ -73,6 +80,10 @@ class AgentToolSurface:
     #: dispatches (read it from ``app.state.exercise_surface``). Optional
     #: (P2): absent seam = absent tools — one registry, two consumers.
     exercise: ExerciseSurface | None = None
+    #: V7 chunk 3 — the SAME scenario service the /v1/admin/scenarios
+    #: routes dispatch (read it from ``app.state.scenario_service``).
+    #: Optional (P2): absent seam = absent tools — one store, two consumers.
+    scenarios: ScenarioService | None = None
 
 
 def _report_row(report: ExecutionReport) -> JsonObject:
@@ -352,6 +363,111 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 description=(
                     "Prove a capability by exercising it — a REAL probe over "
                     "the real path returning record evidence."
+                ),
+            )
+        )
+
+    # --- V7 chunk 3: scenario tools (registered ONLY when composed) -----------
+    #
+    # The SAME ScenarioService the /v1/admin/scenarios routes dispatch — one
+    # scenario store, two consumers. Recorded design decision: a scenario is
+    # TEST DATA, not platform config — saving one is R1 (same risk class as
+    # run_test_execution), NOT R2 (no config lifecycle to route through).
+    # Replay and the regression pack run REAL budget-bounded executions — R1.
+    if surface.scenarios is not None:
+        scenario_service = surface.scenarios
+
+        async def list_scenarios(caller: Principal, args: JsonObject) -> JsonObject:
+            rows = scenario_service.list(caller.tenant_id)
+            return scrub_object(
+                {"scenarios": [scenario_json(s) for s in rows]}
+            )
+
+        async def save_scenario(caller: Principal, args: JsonObject) -> JsonObject:
+            name = str(args.get("name", "")).strip()
+            ask = str(args.get("ask", "")).strip()
+            if not name or not ask:
+                return {"error": "name and ask are both required"}
+            raw_checks = args.get("checks")
+            if raw_checks is None:
+                checks: tuple[str, ...] = tuple(sorted(SCENARIO_CHECKS))
+            elif isinstance(raw_checks, list) and raw_checks:
+                checks = tuple(str(c) for c in raw_checks)
+            else:
+                return {"error": "checks must be a non-empty list of check names"}
+            try:
+                scenario = scenario_service.save(
+                    caller.tenant_id, name=name, ask=ask, checks=checks
+                )
+            except UnknownCheckName as exc:
+                # The closed-set refusal, verbatim — honest, never silent.
+                return {"error": str(exc)}
+            return scrub_object(scenario_json(scenario))
+
+        async def replay_scenario(caller: Principal, args: JsonObject) -> JsonObject:
+            raw = args.get("scenario_id")
+            try:
+                scenario_id = UUID(str(raw))
+            except ValueError:
+                return {"error": "unknown scenario id"}
+            try:
+                result = await scenario_service.replay(
+                    caller.tenant_id, caller.user_id, scenario_id
+                )
+            except ScenarioNotFound:
+                # Anti-enumeration: absent and foreign-tenant are the same.
+                return {"error": "unknown scenario id"}
+            return scrub_object(result)
+
+        async def run_regression_pack(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            result = await scenario_service.regression_pack(
+                caller.tenant_id, caller.user_id
+            )
+            return scrub_object(result)
+
+        capability_specs.append(
+            ToolSpec(
+                name="list_scenarios",
+                tool_class=ToolClass.R0_READ,
+                handler=list_scenarios,
+                description="The caller's tenant's saved test scenarios.",
+            )
+        )
+        capability_specs.append(
+            ToolSpec(
+                name="save_scenario",
+                tool_class=ToolClass.R1_EXECUTE_TEST,
+                handler=save_scenario,
+                allowed_args=frozenset({"name", "ask", "checks"}),
+                description=(
+                    "Save a named, replayable test scenario (closed "
+                    "deterministic check set)."
+                ),
+            )
+        )
+        capability_specs.append(
+            ToolSpec(
+                name="replay_scenario",
+                tool_class=ToolClass.R1_EXECUTE_TEST,
+                handler=replay_scenario,
+                allowed_args=frozenset({"scenario_id"}),
+                description=(
+                    "Replay a saved scenario — a REAL labeled execution "
+                    "graded by its stored checks."
+                ),
+            )
+        )
+        capability_specs.append(
+            ToolSpec(
+                name="run_regression_pack",
+                tool_class=ToolClass.R1_EXECUTE_TEST,
+                handler=run_regression_pack,
+                allowed_args=frozenset(),
+                description=(
+                    "Replay every saved scenario — the Regression Center "
+                    "pack with one honest regression_pass verdict."
                 ),
             )
         )

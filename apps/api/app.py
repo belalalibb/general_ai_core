@@ -145,6 +145,7 @@ from apps.api.errors import (
     execution_failure_detail,
 )
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
+from apps.api.scenarios import ScenarioService
 from apps.api.store import ExecutionNotFound, InMemoryExecutionStore
 from apps.api.streaming import Sleeper, event_stream
 from core.context.composer import ContextComposer
@@ -1446,6 +1447,17 @@ def create_app(
     exercise_surface = ExerciseSurface(exercise_handlers)
     app.state.exercise_surface = exercise_surface
 
+    # --- V7 chunk 3: Test Scenarios → Regression Center -----------------------
+    # Composed with the SAME router/execution service/store user traffic
+    # rides (P1): a scenario replay is a real, labeled, billed execution.
+    # One service, two consumers (admin routes + agent tools, P3).
+    scenario_service = ScenarioService(
+        router=router,
+        execution_service=execution_service,
+        execution_store=execution_store,
+    )
+    app.state.scenario_service = scenario_service
+
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:
         app.include_router(
@@ -1455,6 +1467,7 @@ def create_app(
                 system_info=system_info,
                 capabilities=capability_catalog,
                 exercise=exercise_surface,
+                scenarios=scenario_service,
             )
         )
 

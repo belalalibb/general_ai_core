@@ -71,6 +71,13 @@ from fastapi.responses import JSONResponse, Response
 from apps.api.capabilities import Capability, catalog_json
 from apps.api.errors import error_response
 from apps.api.exercise import ExerciseSurface
+from apps.api.scenarios import (
+    ScenarioNotFound,
+    ScenarioSaveRequest,
+    ScenarioService,
+    UnknownCheckName,
+    scenario_json,
+)
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
@@ -133,6 +140,7 @@ def create_admin_router(
     system_info: Callable[[], JsonObject] | None = None,
     capabilities: tuple[Capability, ...] | None = None,
     exercise: ExerciseSurface | None = None,
+    scenarios: ScenarioService | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -529,6 +537,87 @@ def create_admin_router(
                 )
             result = await handler(admitted)
             return _json({"capability_id": capability_id, "result": result})
+
+    # --- V7 chunk 3: Test Scenarios → Regression Center (absent seam = absent
+    # routes, 20 §4). A scenario is TEST DATA, not platform config — saving one
+    # is an R1-style act (recorded design decision), so no draft/approve cycle.
+
+    if scenarios is not None:
+        scenario_service = scenarios
+
+        def _scenario_not_found(scenario_id: str) -> JSONResponse:
+            """One answer for absent, foreign, and malformed ids (20 §6)."""
+            return error_response(
+                ErrorCode.VALIDATION_ERROR,
+                "Unknown scenario id.",
+                details={"scenario_id": scenario_id[:100]},
+                http_status=404,
+            )
+
+        @router.get("/scenarios")
+        async def list_scenarios(request: Request) -> Response:
+            """GET /v1/admin/scenarios: the caller's tenant's saved scenarios."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            rows = scenario_service.list(admitted.tenant_id)
+            return _json({"scenarios": [scenario_json(s) for s in rows]})
+
+        @router.post("/scenarios")
+        async def save_scenario(
+            request: Request, body: ScenarioSaveRequest
+        ) -> Response:
+            """POST /v1/admin/scenarios: save a named, replayable scenario.
+
+            The check set is CLOSED (the platform's own deterministic
+            checks, P1) — an unknown name is a loud 422, never silent data.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            try:
+                scenario = scenario_service.save(
+                    admitted.tenant_id,
+                    name=body.name,
+                    ask=body.ask,
+                    checks=tuple(body.checks),
+                )
+            except UnknownCheckName as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "checks"},
+                    http_status=422,
+                )
+            return _json(scenario_json(scenario), status=201)
+
+        @router.post("/scenarios/{scenario_id}/replay")
+        async def replay_scenario(request: Request, scenario_id: str) -> Response:
+            """POST /v1/admin/scenarios/{id}/replay: a REAL labeled execution."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(scenario_id, "scenario_id")
+            if isinstance(parsed, JSONResponse):
+                return _scenario_not_found(scenario_id)
+            try:
+                result = await scenario_service.replay(
+                    admitted.tenant_id, admitted.user_id, parsed
+                )
+            except ScenarioNotFound:
+                return _scenario_not_found(scenario_id)
+            return _json(result)
+
+        @router.post("/scenarios/regression-pack")
+        async def run_regression_pack(request: Request) -> Response:
+            """POST /v1/admin/scenarios/regression-pack: replay them ALL."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            result = await scenario_service.regression_pack(
+                admitted.tenant_id, admitted.user_id
+            )
+            return _json(result)
 
     # --- AA-1 seam SYS-1: system read-model (process-local truths, labeled) ---------
 
