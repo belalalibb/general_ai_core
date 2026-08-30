@@ -75,8 +75,8 @@ from apps.api.context_lab import (
     ConversationNotAdmitted,
 )
 from apps.api.errors import error_response
-from apps.api.learning_observability import LearningObservabilityService
 from apps.api.exercise import ExerciseSurface
+from apps.api.learning_observability import LearningObservabilityService
 from apps.api.scenarios import (
     ScenarioNotFound,
     ScenarioSaveRequest,
