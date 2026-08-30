@@ -139,13 +139,13 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from apps.api.admin import AdminSurface, create_admin_router
 from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
 from apps.api.capabilities import Capability, CapabilityState
+from apps.api.context_lab import ContextLabService
 from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
     execution_failure_detail,
 )
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
-from apps.api.context_lab import ContextLabService
 from apps.api.scenarios import ScenarioService
 from apps.api.store import ExecutionNotFound, InMemoryExecutionStore
 from apps.api.streaming import Sleeper, event_stream
