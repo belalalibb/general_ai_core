@@ -1,0 +1,144 @@
+/* Admin Console — dark-first design tokens (doc D §3).
+   Honesty rule: UNKNOWN is a distinct first-class color (loud violet),
+   never gray-washed into "probably fine". */
+
+:root {
+  --bg: #0e1116;
+  --bg-raised: #161b22;
+  --bg-input: #0a0d12;
+  --border: #2b3340;
+  --text: #e6e8ec;
+  --text-muted: #9aa4b2;
+  --accent: #4f8cff;
+  --ok: #3fb950;
+  --err: #f85149;
+  --warn: #d29922;
+  --info: #58a6ff;
+  --neutral: #8b949e;
+  --unknown: #a06fd9; /* loud violet — non-contract value indicator */
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.banner {
+  background: #3a2d10;
+  color: #e8d28b;
+  border-bottom: 1px solid #5c4a1a;
+  padding: 6px 16px;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Login */
+.login-wrap { display: flex; min-height: 100vh; align-items: center; justify-content: center; }
+.login-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px;
+  width: min(360px, 92vw);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.login-card h1 { margin: 0; font-size: 20px; }
+.login-card label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-muted); }
+input, textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+}
+button {
+  background: var(--accent);
+  border: none; border-radius: 6px;
+  color: #fff; padding: 8px 14px;
+  font: inherit; cursor: pointer;
+}
+button:hover { filter: brightness(1.1); }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 180px 1fr; min-height: 100vh; }
+.rail {
+  background: var(--bg-raised);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 2px; padding: 12px 8px;
+}
+.rail-item {
+  background: transparent; color: var(--text-muted);
+  text-align: left; border-radius: 6px; padding: 8px 10px;
+}
+.rail-item:hover { background: var(--bg-input); color: var(--text); }
+.rail-item.active { background: var(--bg-input); color: var(--text); border-left: 3px solid var(--accent); }
+
+.content { padding: 20px 24px; max-width: 1100px; }
+.surface h2 { margin-top: 0; }
+h3 { color: var(--text-muted); font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Tables */
+.data-table { width: 100%; border-collapse: collapse; margin: 8px 0 20px; font-size: 13px; }
+.data-table th {
+  text-align: left; color: var(--text-muted); font-weight: 600;
+  border-bottom: 1px solid var(--border); padding: 6px 8px;
+}
+.data-table td { border-bottom: 1px solid var(--border); padding: 6px 8px; vertical-align: top; }
+.data-table tr:hover td { background: rgba(255,255,255,.02); }
+
+/* Status badges — 1:1 with contract enums; UNKNOWN stands out. */
+.badge {
+  display: inline-block; border-radius: 10px; padding: 1px 9px;
+  font-size: 12px; font-weight: 600;
+}
+.badge.ok      { background: rgba(63,185,80,.15);  color: var(--ok); }
+.badge.err     { background: rgba(248,81,73,.15);  color: var(--err); }
+.badge.warn    { background: rgba(210,153,34,.15); color: var(--warn); }
+.badge.info    { background: rgba(88,166,255,.15); color: var(--info); }
+.badge.neutral { background: rgba(139,148,158,.15); color: var(--neutral); }
+.badge.unknown { background: rgba(160,111,217,.25); color: var(--unknown); border: 1px dashed var(--unknown); }
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.card { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.card h3 { margin-top: 0; }
+
+/* Agent */
+.agent-form { display: flex; gap: 8px; margin: 14px 0; }
+.agent-form textarea { flex: 1; resize: vertical; }
+.agent-log { display: flex; flex-direction: column; gap: 10px; }
+.turn { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.turn .who { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.claim { margin: 6px 0; }
+.claim .evidence { font-size: 12px; color: var(--info); }
+.claim.refused { color: var(--warn); font-style: italic; }
+.tool-row { font-size: 12px; font-family: ui-monospace, monospace; margin: 2px 0; }
+.tool-row.refused { color: var(--err); }
+
+/* Tabs */
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin-top: 16px; }
+.tab { background: transparent; color: var(--text-muted); border-radius: 6px 6px 0 0; }
+.tab.active { color: var(--text); border-bottom: 2px solid var(--accent); }
+.tab-body { padding: 12px 4px; }
+
+/* Misc */
+.muted { color: var(--text-muted); }
+.mono { font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; }
+.error-box {
+  background: rgba(248,81,73,.12); border: 1px solid var(--err);
+  color: var(--err); border-radius: 8px; padding: 10px 12px; margin: 10px 0;
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .layout { grid-template-columns: 1fr; }
+  .rail { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

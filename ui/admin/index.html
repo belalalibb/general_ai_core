@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Console — AI Orchestration Platform</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- Amnesia banner (doc D §4.3): registries are in-memory; honesty first. -->
+<div id="amnesia-banner" class="banner" hidden>
+  Data shown is <strong>since process start</strong> — in-memory registries, no persistence layer bound.
+</div>
+
+<div id="login-view" class="login-wrap">
+  <form id="login-form" class="login-card">
+    <h1>Admin Console</h1>
+    <p class="muted">Sign in with an admin account.</p>
+    <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
+    <label>Password <input type="password" id="login-password" required autocomplete="current-password"></label>
+    <button type="submit">Sign in</button>
+    <div id="login-error" class="error-box" hidden></div>
+  </form>
+</div>
+
+<div id="console-view" class="layout" hidden>
+  <nav class="rail" aria-label="Surfaces">
+    <button class="rail-item active" data-surface="agent">Agent</button>
+    <button class="rail-item" data-surface="overview">Overview</button>
+    <button class="rail-item" data-surface="executions">Executions</button>
+    <button class="rail-item" data-surface="catalog">Catalog</button>
+    <button class="rail-item" data-surface="changes">Changes &amp; Audit</button>
+    <button class="rail-item" data-surface="usage">Tenants &amp; Usage</button>
+    <button class="rail-item" data-surface="system">System</button>
+  </nav>
+
+  <main class="content">
+    <!-- Surface 1: Agent -->
+    <section id="surface-agent" class="surface">
+      <h2>Agent</h2>
+      <details open>
+        <summary>Registered tools (R0/R1 only — configuration data)</summary>
+        <table class="data-table" id="tools-table">
+          <thead><tr><th>Name</th><th>Class</th><th>Arguments</th><th>Description</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </details>
+      <form id="agent-form" class="agent-form">
+        <textarea id="agent-message" rows="3" placeholder="Ask about platform facts…" required></textarea>
+        <button type="submit">Send</button>
+      </form>
+      <div id="agent-log" class="agent-log" aria-live="polite"></div>
+    </section>
+
+    <!-- Surface 2: Overview -->
+    <section id="surface-overview" class="surface" hidden>
+      <h2>Overview</h2>
+      <div id="overview-body" class="cards"></div>
+    </section>
+
+    <!-- Surface 3: Executions (with post-hoc Trace / Diagnosis tabs) -->
+    <section id="surface-executions" class="surface" hidden>
+      <h2>Executions</h2>
+      <table class="data-table" id="executions-table">
+        <thead><tr><th>ID</th><th>Status</th><th>Created</th><th>Ledger</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="execution-detail" hidden>
+        <div class="tabs">
+          <button class="tab active" data-tab="trace">Trace (as recorded)</button>
+          <button class="tab" data-tab="diagnosis">Diagnosis</button>
+        </div>
+        <div id="tab-trace" class="tab-body"></div>
+        <div id="tab-diagnosis" class="tab-body" hidden></div>
+      </div>
+    </section>
+
+    <!-- Surface 4: Catalog -->
+    <section id="surface-catalog" class="surface" hidden>
+      <h2>Catalog</h2>
+      <h3>Models</h3>
+      <table class="data-table" id="models-table">
+        <thead><tr><th>Key</th><th>Name</th><th>Tier</th><th>Status</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <h3>Providers</h3>
+      <table class="data-table" id="providers-table">
+        <thead><tr><th>Key</th><th>Name</th><th>Status</th><th>Template</th><th>Routable</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Surface 5: Changes & Audit -->
+    <section id="surface-changes" class="surface" hidden>
+      <h2>Changes &amp; Audit</h2>
+      <h3>Config changes</h3>
+      <table class="data-table" id="changes-table">
+        <thead><tr><th>ID</th><th>Area</th><th>Action</th><th>State</th><th>Created</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <h3>Audit events</h3>
+      <table class="data-table" id="audit-table">
+        <thead><tr><th>ID</th><th>Type</th><th>Occurred</th><th>Details</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Surface 6: Tenants & Usage -->
+    <section id="surface-usage" class="surface" hidden>
+      <h2>Tenants &amp; Usage</h2>
+      <table class="data-table" id="usage-table">
+        <thead><tr><th>Execution</th><th>Status</th><th>Created</th><th>Ledger</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <h3>Webhooks</h3>
+      <table class="data-table" id="webhooks-table">
+        <thead><tr><th>Subscription</th><th>URL host</th><th>Events</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Surface 7: System -->
+    <section id="surface-system" class="surface" hidden>
+      <h2>System</h2>
+      <div class="cards">
+        <div class="card">
+          <h3>Health <span class="badge neutral">scope: process</span></h3>
+          <div id="system-health"></div>
+        </div>
+        <div class="card">
+          <h3>Learning</h3>
+          <!-- doc A honesty rule: Learned = NOTHING today. -->
+          <p><span class="badge err">NOT OPERATIONAL</span> Learning is a placeholder; no learned state exists.</p>
+        </div>
+        <div class="card">
+          <h3>System info</h3>
+          <pre id="system-info" class="mono"></pre>
+        </div>
+      </div>
+    </section>
+
+    <div id="global-error" class="error-box" hidden></div>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
