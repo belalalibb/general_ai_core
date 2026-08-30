@@ -145,6 +145,7 @@ from apps.api.errors import (
     execution_failure_detail,
 )
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
+from apps.api.context_lab import ContextLabService
 from apps.api.scenarios import ScenarioService
 from apps.api.store import ExecutionNotFound, InMemoryExecutionStore
 from apps.api.streaming import Sleeper, event_stream
@@ -1458,6 +1459,19 @@ def create_app(
     )
     app.state.scenario_service = scenario_service
 
+    # --- V7 chunk 4: Context Validation Lab ------------------------------------
+    # Exists ONLY when a composer is composed (nothing to validate without
+    # one — 20 §4 absent seam). Dry-runs the SAME composer instance the
+    # execute path composes with; conversation ownership is admitted through
+    # the SAME conversations store (13 §7). One lab, two consumers (P3).
+    context_lab_service: ContextLabService | None = None
+    if composer is not None:
+        context_lab_service = ContextLabService(
+            composer=composer,
+            conversations=conversations,
+        )
+    app.state.context_lab_service = context_lab_service
+
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:
         app.include_router(
@@ -1468,6 +1482,7 @@ def create_app(
                 capabilities=capability_catalog,
                 exercise=exercise_surface,
                 scenarios=scenario_service,
+                context_lab=context_lab_service,
             )
         )
 

@@ -69,6 +69,11 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
 from apps.api.capabilities import Capability, catalog_json
+from apps.api.context_lab import (
+    ContextLabRequest,
+    ContextLabService,
+    ConversationNotAdmitted,
+)
 from apps.api.errors import error_response
 from apps.api.exercise import ExerciseSurface
 from apps.api.scenarios import (
@@ -141,6 +146,7 @@ def create_admin_router(
     capabilities: tuple[Capability, ...] | None = None,
     exercise: ExerciseSurface | None = None,
     scenarios: ScenarioService | None = None,
+    context_lab: ContextLabService | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -617,6 +623,49 @@ def create_admin_router(
             result = await scenario_service.regression_pack(
                 admitted.tenant_id, admitted.user_id
             )
+            return _json(result)
+
+    # --- V7 chunk 4: Context Validation Lab (absent seam = absent routes,
+    # 20 §4 — no composer means there is nothing to validate). A dry-run
+    # READ surface: it composes for real but executes nothing, writes nothing.
+
+    if context_lab is not None:
+        lab_service = context_lab
+
+        @router.get("/context-lab/checks")
+        async def list_lab_checks(request: Request) -> Response:
+            """GET /v1/admin/context-lab/checks: the closed lab-check set."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json({"checks": lab_service.checks()})
+
+        @router.post("/context-lab/validate")
+        async def validate_context(
+            request: Request, body: ContextLabRequest
+        ) -> Response:
+            """POST /v1/admin/context-lab/validate: dry-run the REAL composer.
+
+            Returns the composed blocks + named exclusions + closed lab
+            verdicts. Composition failures (impossible budget, refused
+            role) are honest ``validated: False`` DATA; only an
+            unadmitted conversation id is a transport 404 (absent and
+            foreign answer identically, 20 §6).
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            try:
+                result = lab_service.validate(
+                    admitted.tenant_id, admitted.user_id, body
+                )
+            except ConversationNotAdmitted:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown conversation id.",
+                    details={"field": "conversation_id"},
+                    http_status=404,
+                )
             return _json(result)
 
     # --- AA-1 seam SYS-1: system read-model (process-local truths, labeled) ---------

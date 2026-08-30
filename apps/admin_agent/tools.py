@@ -29,6 +29,11 @@ from apps.admin_agent.secrecy import scrub_object
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal
 from apps.api.capabilities import Capability, catalog_json
+from apps.api.context_lab import (
+    ContextLabRequest,
+    ContextLabService,
+    ConversationNotAdmitted,
+)
 from apps.api.exercise import ExerciseSurface
 from apps.api.scenarios import (
     SCENARIO_CHECKS,
@@ -84,6 +89,10 @@ class AgentToolSurface:
     #: routes dispatch (read it from ``app.state.scenario_service``).
     #: Optional (P2): absent seam = absent tools — one store, two consumers.
     scenarios: ScenarioService | None = None
+    #: V7 chunk 4 — the SAME lab service the /v1/admin/context-lab routes
+    #: dispatch (read it from ``app.state.context_lab_service``). Optional
+    #: (P2): absent composer = absent lab = absent tools.
+    context_lab: ContextLabService | None = None
 
 
 def _report_row(report: ExecutionReport) -> JsonObject:
@@ -363,6 +372,69 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 description=(
                     "Prove a capability by exercising it — a REAL probe over "
                     "the real path returning record evidence."
+                ),
+            )
+        )
+
+    # --- V7 chunk 4: context-lab tools (registered ONLY when composed) --------
+    #
+    # The SAME ContextLabService the /v1/admin/context-lab routes dispatch —
+    # one composer, two consumers. BOTH tools are R0: the lab composes for
+    # real but executes nothing, bills nothing, writes nothing — a dry-run
+    # read over stores the caller already owns (unlike scenario replay,
+    # which runs a real billed execution and is therefore R1).
+    if surface.context_lab is not None:
+        lab_service = surface.context_lab
+
+        async def list_lab_checks(caller: Principal, args: JsonObject) -> JsonObject:
+            return scrub_object({"checks": lab_service.checks()})
+
+        async def validate_context(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            raw_ask = str(args.get("ask", "")).strip()
+            if not raw_ask:
+                return {"error": "ask is required"}
+            request_fields: dict[str, object] = {"ask": raw_ask}
+            if args.get("role_id") is not None:
+                request_fields["role_id"] = str(args["role_id"])
+            if args.get("conversation_id") is not None:
+                request_fields["conversation_id"] = str(args["conversation_id"])
+            if args.get("context_budget") is not None:
+                request_fields["context_budget"] = args["context_budget"]
+            try:
+                request = ContextLabRequest.model_validate(request_fields)
+            except ValueError as exc:
+                # Pydantic's named refusal crosses as honest content.
+                return {"error": f"invalid lab request: {exc}"}
+            try:
+                result = lab_service.validate(
+                    caller.tenant_id, caller.user_id, request
+                )
+            except ConversationNotAdmitted:
+                # Anti-enumeration: absent and foreign are the same answer.
+                return {"error": "unknown conversation id"}
+            return scrub_object(result)
+
+        capability_specs.append(
+            ToolSpec(
+                name="list_lab_checks",
+                tool_class=ToolClass.R0_READ,
+                handler=list_lab_checks,
+                description="The closed context-lab check name set.",
+            )
+        )
+        capability_specs.append(
+            ToolSpec(
+                name="validate_context",
+                tool_class=ToolClass.R0_READ,
+                handler=validate_context,
+                allowed_args=frozenset(
+                    {"ask", "role_id", "conversation_id", "context_budget"}
+                ),
+                description=(
+                    "Dry-run the REAL context composer: blocks, named "
+                    "exclusions, closed lab verdicts — executes nothing."
                 ),
             )
         )
