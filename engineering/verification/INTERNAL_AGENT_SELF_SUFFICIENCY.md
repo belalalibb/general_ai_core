@@ -173,3 +173,26 @@ authority (R3 authoritative apply) and platform-repo work until R3 activation.
 
 **EXTERNAL EXECUTOR HANDOFF COMPLETE — INTERNAL AGENT IS NOW THE PRIMARY
 EXECUTOR FOR THE INTENDED PLATFORM WORKFLOWS.**
+
+## 12. Closure amendment (post-handoff, operator-verified gaps)
+
+Two residual platform gaps identified after the R148 handoff were closed
+on this branch (both live-verified over real HTTP):
+
+- **GAP 1 — Workspace/Project surface (f804d2e).** The 03 §2 entities and
+  their V5 Postgres repositories existed with zero consumer routes.
+  Closed: `/v1/workspaces` + `/v1/projects` (8 ops; no update route — no
+  doc defines one), ExecutionStorePort seam posture (in-memory defaults +
+  bridged durable adapters in `apps/composition/workspaces.py`), tenant
+  from session only, absent==foreign `validation_error` 404 (20 §6), FK
+  RESTRICT ⇒ loud 409. +20 hermetic tests; conscious pins aa1 (+8 ops) and
+  aa2 (65→73). Live cycle: 201/201/200/409/204/204/404.
+- **GAP 2 — external consumer proof (`examples/minimal-platform-app/`).**
+  A one-file stdlib-only client (zero platform imports) exercising the
+  public surface end to end: health → profile probe → workspace → linked
+  project → sync execute → execution fetch → RESTRICT refusal → ordered
+  cleanup. Live run against `python3 -m apps.main` (in-memory profile):
+  ALL STEPS PASSED. Durable profile supported via `PLATFORM_TOKEN`.
+
+Verdict unchanged: the platform is self-sufficient for intended
+workflows; R3 authoritative apply remains §14-gated by design.
