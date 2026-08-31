@@ -689,6 +689,9 @@ def build_runtime_profile(
         usage=usage,
         routing=router,
         audit_log=audit,
+        # REGISTER_MODEL binding seam — the SAME BindingRegistry the Router
+        # and ExecutionService read (instance-agreement duty).
+        bindings=binding_registry,
     )
     admin = AdminSurface(
         service=admin_service,
