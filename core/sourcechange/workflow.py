@@ -50,6 +50,7 @@ from core.sourcechange.sandbox import (
     SandboxPort,
     VerificationSuite,
 )
+from core.sourcechange.snapshot import SourceSnapshot
 from core.sourcechange.store import ProposalStorePort, SnapshotStorePort
 
 __all__ = ["AuthoritativeApplierPort", "SourceChangeWorkflow"]
@@ -124,6 +125,23 @@ class SourceChangeWorkflow:
                 },
             )
         )
+
+    # --- workshop material ------------------------------------------------------------
+
+    def register_base_snapshot(
+        self, tenant_id: UUID, snapshot: SourceSnapshot
+    ) -> SourceSnapshot:
+        """Store a base snapshot proposals can anchor to (workshop intake).
+
+        Recorded design decision (R129 plan): the admin router holds ONE
+        object — the workflow — so snapshot intake delegates to the store
+        THROUGH the workflow rather than exposing the store separately.
+        Integrity is enforced by the store on save (criterion 1); the
+        stored, verified snapshot is returned so the caller can echo its
+        content address as evidence.
+        """
+        self._snapshots.save_snapshot(tenant_id, snapshot)
+        return self._snapshots.get_snapshot(tenant_id, snapshot.snapshot_id)
 
     # --- lifecycle acts ---------------------------------------------------------------
 

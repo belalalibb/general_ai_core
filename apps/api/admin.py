@@ -85,6 +85,15 @@ from apps.api.scenarios import (
     scenario_json,
 )
 from apps.api.self_review import SelfReviewService
+from apps.api.source_changes import (
+    ApproveRequest,
+    ProposeRequest,
+    RejectRequest,
+    SnapshotCreateRequest,
+    build_patch,
+    build_snapshot,
+    proposal_json,
+)
 from apps.api.store import InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
@@ -105,7 +114,17 @@ from core.contracts.errors import ErrorCode
 from core.evaluation.errors import EvaluationNotFound
 from core.evaluation.ports import EvaluationStorePort
 from core.providers.registry import ModelRegistry, ProviderRegistry
+from core.sourcechange.errors import (
+    ApprovalHashMismatch,
+    InvalidTransition,
+    MalformedPatch,
+    ProposalNotFound,
+    UnknownSnapshot,
+)
+from core.sourcechange.proposal import ChangeProposal
+from core.sourcechange.workflow import SourceChangeWorkflow
 from core.usage.errors import EntitlementNotConfigured
+from core.workspace.errors import InvalidWorkspacePath
 
 if TYPE_CHECKING:
     from apps.api.app import Principal
@@ -151,6 +170,7 @@ def create_admin_router(
     context_lab: ContextLabService | None = None,
     learning_observability: LearningObservabilityService | None = None,
     self_review: SelfReviewService | None = None,
+    source_changes: SourceChangeWorkflow | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -740,6 +760,256 @@ def create_admin_router(
                     http_status=404,
                 )
             return _json(result)
+
+    # --- V8 chunk 6: R3 Source-Change Workflow surface (ADR-0009) --------------------
+    # Absent seam = absent routes (20 §4). HUMAN-ONLY: the agent gains NO
+    # tools here — R3 stays never-registrable (AA-3). Every response carries
+    # the §14 authoritative_apply posture; proposal JSON carries operation
+    # metadata + hashes, NEVER file bytes (criterion 9 secret boundary).
+
+    if source_changes is not None:
+        sc_workflow = source_changes
+
+        def _proposal_not_found(proposal_id: str) -> JSONResponse:
+            """One answer for absent, foreign, and malformed ids (20 §6)."""
+            return error_response(
+                ErrorCode.VALIDATION_ERROR,
+                "Unknown proposal id.",
+                details={"proposal_id": proposal_id[:100]},
+                http_status=404,
+            )
+
+        def _serialize(proposal: ChangeProposal) -> JsonObject:
+            return proposal_json(
+                proposal,
+                authoritative_apply=sc_workflow.authoritative_apply_status(),
+            )
+
+        @router.post("/source-changes/snapshots")
+        async def create_source_snapshot(
+            request: Request, body: SnapshotCreateRequest
+        ) -> Response:
+            """POST snapshots: register base content — the workshop intake.
+
+            The response is EVIDENCE: the content address + derived
+            manifest (paths, hashes, sizes) — never an echo of the bytes.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            try:
+                snapshot = build_snapshot(body.files)
+            except (MalformedPatch, InvalidWorkspacePath) as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "files"},
+                    http_status=422,
+                )
+            stored = sc_workflow.register_base_snapshot(
+                admitted.tenant_id, snapshot
+            )
+            return _json(
+                {
+                    "snapshot_id": stored.snapshot_id,
+                    "manifest": [
+                        {"path": path, "content_sha256": digest, "size_bytes": size}
+                        for path, digest, size in stored.manifest()
+                    ],
+                    "authoritative_apply": sc_workflow.authoritative_apply_status(),
+                },
+                status=201,
+            )
+
+        @router.get("/source-changes")
+        async def list_source_changes(request: Request) -> Response:
+            """GET: the caller's tenant's proposals — metadata + hashes only."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(
+                {
+                    "proposals": [
+                        _serialize(p) for p in sc_workflow.list(admitted.tenant_id)
+                    ]
+                }
+            )
+
+        @router.post("/source-changes")
+        async def propose_source_change(
+            request: Request, body: ProposeRequest
+        ) -> Response:
+            """POST: create a DRAFT proposal anchored to a stored base."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            try:
+                patch = build_patch(body.operations)
+            except (MalformedPatch, InvalidWorkspacePath) as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "operations"},
+                    http_status=422,
+                )
+            try:
+                proposal = sc_workflow.propose(
+                    admitted.tenant_id,
+                    admitted.user_id,
+                    base_snapshot_id=body.base_snapshot_id,
+                    patch=patch,
+                    rationale=body.rationale,
+                )
+            except UnknownSnapshot:
+                # Anti-enumeration (20 §6): absent and foreign snapshot ids
+                # answer identically — same posture as _proposal_not_found.
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown snapshot id.",
+                    details={"field": "base_snapshot_id"},
+                    http_status=404,
+                )
+            return _json(_serialize(proposal), status=201)
+
+        @router.get("/source-changes/{proposal_id}")
+        async def get_source_change(request: Request, proposal_id: str) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(proposal_id, "proposal_id")
+            if isinstance(parsed, JSONResponse):
+                return _proposal_not_found(proposal_id)
+            try:
+                proposal = sc_workflow.get(admitted.tenant_id, parsed)
+            except ProposalNotFound:
+                return _proposal_not_found(proposal_id)
+            return _json(_serialize(proposal))
+
+        def _sc_act(
+            tenant_id: UUID,
+            actor_id: UUID,
+            proposal_id: str,
+            act: str,
+            *,
+            cited_hash: str | None = None,
+            reason: str | None = None,
+        ) -> Response:
+            """One lifecycle-act driver — parse, dispatch, map refusals."""
+            parsed = _parse_uuid(proposal_id, "proposal_id")
+            if isinstance(parsed, JSONResponse):
+                return _proposal_not_found(proposal_id)
+            try:
+                if act == "verify":
+                    proposal = sc_workflow.verify(tenant_id, parsed)
+                elif act == "approve":
+                    assert cited_hash is not None
+                    proposal = sc_workflow.approve(
+                        tenant_id, parsed, actor_id, cited_hash
+                    )
+                elif act == "reject":
+                    assert reason is not None
+                    proposal = sc_workflow.reject(
+                        tenant_id, parsed, actor_id, reason
+                    )
+                elif act == "apply":
+                    proposal = sc_workflow.apply(tenant_id, parsed)
+                else:
+                    proposal = sc_workflow.rollback(tenant_id, parsed)
+            except ProposalNotFound:
+                return _proposal_not_found(proposal_id)
+            except ApprovalHashMismatch as exc:
+                # Criterion 7 refusal — the message already names BOTH
+                # hashes, so the refusal is auditable as returned.
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "cited_hash"},
+                    http_status=422,
+                )
+            except InvalidTransition as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "state"},
+                    http_status=422,
+                )
+            except UnknownSnapshot as exc:
+                # rollback-before-apply surfaces here (no applied snapshot
+                # recorded) — a state refusal, named.
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "state"},
+                    http_status=422,
+                )
+            return _json(_serialize(proposal))
+
+        @router.post("/source-changes/{proposal_id}/verify")
+        async def verify_source_change(
+            request: Request, proposal_id: str
+        ) -> Response:
+            """POST verify: the differential run — DRAFT -> VERIFIED | FAILED."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _sc_act(
+                admitted.tenant_id, admitted.user_id, proposal_id, "verify"
+            )
+
+        @router.post("/source-changes/{proposal_id}/approve")
+        async def approve_source_change(
+            request: Request, proposal_id: str, body: ApproveRequest
+        ) -> Response:
+            """POST approve: MUST cite the exact patch_hash (criterion 7)."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _sc_act(
+                admitted.tenant_id,
+                admitted.user_id,
+                proposal_id,
+                "approve",
+                cited_hash=body.cited_hash,
+            )
+
+        @router.post("/source-changes/{proposal_id}/reject")
+        async def reject_source_change(
+            request: Request, proposal_id: str, body: RejectRequest
+        ) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _sc_act(
+                admitted.tenant_id,
+                admitted.user_id,
+                proposal_id,
+                "reject",
+                reason=body.reason,
+            )
+
+        @router.post("/source-changes/{proposal_id}/apply")
+        async def apply_source_change(
+            request: Request, proposal_id: str
+        ) -> Response:
+            """POST apply: snapshot-store space ONLY — §14 posture rides the
+            response; authoritative source is structurally unreachable."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _sc_act(
+                admitted.tenant_id, admitted.user_id, proposal_id, "apply"
+            )
+
+        @router.post("/source-changes/{proposal_id}/rollback")
+        async def rollback_source_change(
+            request: Request, proposal_id: str
+        ) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _sc_act(
+                admitted.tenant_id, admitted.user_id, proposal_id, "rollback"
+            )
 
     # --- AA-1 seam SYS-1: system read-model (process-local truths, labeled) ---------
 

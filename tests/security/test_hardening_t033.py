@@ -232,6 +232,8 @@ class TestAdminCannotBreak:
             "GET /v1/admin/routing/weights",
             "GET /v1/admin/scenarios",
             "GET /v1/admin/self-review",
+            "GET /v1/admin/source-changes",
+            "GET /v1/admin/source-changes/{proposal_id}",
             "POST /v1/admin/capabilities/{capability_id}/exercise",
             "POST /v1/admin/changes",
             "POST /v1/admin/changes/propose",
@@ -243,6 +245,13 @@ class TestAdminCannotBreak:
             "POST /v1/admin/scenarios",
             "POST /v1/admin/scenarios/regression-pack",
             "POST /v1/admin/scenarios/{scenario_id}/replay",
+            "POST /v1/admin/source-changes",
+            "POST /v1/admin/source-changes/snapshots",
+            "POST /v1/admin/source-changes/{proposal_id}/apply",
+            "POST /v1/admin/source-changes/{proposal_id}/approve",
+            "POST /v1/admin/source-changes/{proposal_id}/reject",
+            "POST /v1/admin/source-changes/{proposal_id}/rollback",
+            "POST /v1/admin/source-changes/{proposal_id}/verify",
         ]
 
 

@@ -364,6 +364,7 @@ class TestAdminGateUnderSessions:
                     path = path.replace("{execution_id}", str(uuid4()))
                     path = path.replace("{plan_tenant_id}", str(uuid4()))
                     path = path.replace("{scenario_id}", str(uuid4()))
+                    path = path.replace("{proposal_id}", str(uuid4()))
                     body = None
                     if method == "POST" and (
                         path.endswith("/changes") or path.endswith("/changes/propose")
@@ -375,6 +376,29 @@ class TestAdminGateUnderSessions:
                     if method == "POST" and path.endswith("/scenarios"):
                         # Same posture for the V7-3 save route.
                         body = {"name": "denied", "ask": "denied"}
+                    # V8 source-change routes with bodies (same posture).
+                    if method == "POST" and path.endswith("/source-changes"):
+                        body = {
+                            "base_snapshot_id": "0" * 64,
+                            "operations": [
+                                {"kind": "delete_file", "path": "denied.py"}
+                            ],
+                            "rationale": "denied",
+                        }
+                    if method == "POST" and path.endswith("/source-changes/snapshots"):
+                        body = {"files": {"denied.py": ""}}
+                    if (
+                        method == "POST"
+                        and "/source-changes/" in path
+                        and path.endswith("/approve")
+                    ):
+                        body = {"cited_hash": "0" * 64}
+                    if (
+                        method == "POST"
+                        and "/source-changes/" in path
+                        and path.endswith("/reject")
+                    ):
+                        body = {"reason": "denied"}
                     response = await c.request(
                         method, path, json=body, headers=bearer(token)
                     )
@@ -927,6 +951,8 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "GET /v1/admin/routing/weights",
         "GET /v1/admin/scenarios",
         "GET /v1/admin/self-review",
+        "GET /v1/admin/source-changes",
+        "GET /v1/admin/source-changes/{proposal_id}",
         "GET /v1/admin/system",
         "GET /v1/admin/usage",
         "GET /v1/auth/session",
@@ -947,6 +973,13 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "POST /v1/admin/scenarios",
         "POST /v1/admin/scenarios/regression-pack",
         "POST /v1/admin/scenarios/{scenario_id}/replay",
+        "POST /v1/admin/source-changes",
+        "POST /v1/admin/source-changes/snapshots",
+        "POST /v1/admin/source-changes/{proposal_id}/apply",
+        "POST /v1/admin/source-changes/{proposal_id}/approve",
+        "POST /v1/admin/source-changes/{proposal_id}/reject",
+        "POST /v1/admin/source-changes/{proposal_id}/rollback",
+        "POST /v1/admin/source-changes/{proposal_id}/verify",
         "POST /v1/auth/login",
         "POST /v1/auth/logout",
         "POST /v1/execute",

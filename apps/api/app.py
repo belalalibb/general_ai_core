@@ -205,6 +205,12 @@ from core.routing.errors import (
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
 from core.runtime.outbox import OutboxPort
 from core.runtime.ports import RateLimitPort
+from core.sourcechange.sandbox import (
+    SOURCE_VERIFICATION_CHECKS as _SOURCE_CHECKS,
+)
+from core.sourcechange.sandbox import HermeticSandbox, VerificationSuite
+from core.sourcechange.store import InMemoryProposalStore, InMemorySnapshotStore
+from core.sourcechange.workflow import SourceChangeWorkflow
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 from core.usage.ports import UsageAccountingPort
 
@@ -1501,6 +1507,28 @@ def create_app(
         )
     app.state.self_review_service = self_review_service
 
+    # --- V8: R3 Source-Change Workflow (ADR-0009) --------------------------------
+    # Composed ONLY when an admin surface exists (a human-only admin
+    # instrument, 20 §4). Hermetic end to end: in-memory stores, in-process
+    # sandbox, and — THE §14 GATE — authoritative_applier=None. That None
+    # is deliberate and operator-gated: no AuthoritativeApplierPort
+    # implementation exists anywhere in this repository, so applied
+    # proposals live in the snapshot store's space only and can never
+    # touch authoritative source. Activation later = implement + compose
+    # the port (a composition act, criterion 12) — after the operator
+    # clears the 5 open credential items.
+    source_change_workflow: SourceChangeWorkflow | None = None
+    if admin is not None:
+        source_change_workflow = SourceChangeWorkflow(
+            proposals=InMemoryProposalStore(),
+            snapshots=InMemorySnapshotStore(),
+            sandbox=HermeticSandbox(),
+            suite=VerificationSuite(name="default", checks=_SOURCE_CHECKS),
+            audit=admin.audit,
+            authoritative_applier=None,  # §14 OPERATOR GATE — never wired in V8
+        )
+    app.state.source_change_workflow = source_change_workflow
+
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:
         app.include_router(
@@ -1514,6 +1542,7 @@ def create_app(
                 context_lab=context_lab_service,
                 learning_observability=learning_observability_service,
                 self_review=self_review_service,
+                source_changes=source_change_workflow,
             )
         )
 
