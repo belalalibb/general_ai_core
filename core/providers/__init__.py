@@ -21,6 +21,11 @@ from core.providers.errors import (
     ProviderNotEligible,
     ProviderNotRegistered,
 )
+from core.providers.onboarding import (
+    OnboardingRefused,
+    OnboardingReport,
+    ProviderOnboardingService,
+)
 from core.providers.ports import (
     ProviderAccountLifecyclePort,
     ProviderAdapterPort,
@@ -38,6 +43,9 @@ from core.providers.registry import (
 
 __all__ = [
     "LEASE_RESOURCE_PREFIX",
+    "OnboardingRefused",
+    "OnboardingReport",
+    "ProviderOnboardingService",
     "TEMPLATE_DISABLED_STATUS",
     "AccountPool",
     "AccountPoolManager",
