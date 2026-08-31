@@ -39,6 +39,11 @@ dependencies = [
     # composition seam depend on it in production; core stays HTTP-free
     # (contract below). Also remains the hermetic ASGI test client.
     "httpx>=0.27",
+    # ASGI server — P-B runtime composition (apps/main.py entrypoint).
+    # Promoted to a RUNTIME dependency at local-runtime time: the ONE
+    # process that serves the API needs a server. Confined to apps/
+    # (imported only inside apps.main.main(), never by core/providers).
+    "uvicorn>=0.30",
 ]
 
 [project.optional-dependencies]

@@ -84,6 +84,26 @@ class AsyncBridge:
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
         return future.result(timeout=self._timeout_s)
 
+    async def run_async(self, coro: Coroutine[Any, Any, _T]) -> _T:
+        """Execute ``coro`` on the bridge loop from ANOTHER running loop.
+
+        P-B extension (same primitive, second doorway): asyncpg pools are
+        loop-bound, so once durable connections live on the bridge loop,
+        EVERY durable call must run there — including calls that originate
+        inside the server's own event loop (the async-execute outbox
+        append, the worker's idempotency checks). Awaiting the wrapped
+        concurrent future keeps the CALLER loop free (no blocking) while
+        the work executes on the bridge loop. Exceptions re-raise
+        verbatim, exactly like :meth:`run`.
+        """
+        if self._closed:
+            coro.close()
+            raise BridgeClosed("AsyncBridge is closed")
+        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        return await asyncio.wait_for(
+            asyncio.wrap_future(future), timeout=self._timeout_s
+        )
+
     def close(self) -> None:
         """Stop the loop and join the thread (idempotent)."""
         if self._closed:

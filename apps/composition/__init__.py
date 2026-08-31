@@ -35,6 +35,10 @@ from apps.composition.identity import (
     DurableIdentityService,
     build_durable_identity_service,
 )
+from apps.composition.runtime import (
+    RuntimeProfile,
+    build_runtime_profile,
+)
 from apps.composition.secrets import (
     VaultSettings,
     build_secret_manager,
@@ -60,6 +64,8 @@ __all__ = [
     "DurableIdentityService",
     "DurableProposalStore",
     "DurableSnapshotStore",
+    "RuntimeProfile",
+    "build_runtime_profile",
     "build_durable_execution_store",
     "build_durable_identity_service",
     "build_durable_sourcechange_stores",

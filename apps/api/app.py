@@ -213,7 +213,12 @@ from core.sourcechange.sandbox import (
     SOURCE_VERIFICATION_CHECKS as _SOURCE_CHECKS,
 )
 from core.sourcechange.sandbox import HermeticSandbox, VerificationSuite
-from core.sourcechange.store import InMemoryProposalStore, InMemorySnapshotStore
+from core.sourcechange.store import (
+    InMemoryProposalStore,
+    InMemorySnapshotStore,
+    ProposalStorePort,
+    SnapshotStorePort,
+)
 from core.sourcechange.workflow import SourceChangeWorkflow
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 from core.usage.ports import UsageAccountingPort
@@ -400,6 +405,8 @@ def create_app(
     sse_poll_interval_seconds: float = 0.5,
     sse_timeout_seconds: float = 60.0,
     sse_sleeper: Sleeper | None = None,
+    source_proposals: ProposalStorePort | None = None,
+    source_snapshots: SnapshotStorePort | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -1521,11 +1528,24 @@ def create_app(
     # touch authoritative source. Activation later = implement + compose
     # the port (a composition act, criterion 12) — after the operator
     # clears the 5 open credential items.
+    # P-B seam (ADR-0010 "persisting is not applying"): the STORES are
+    # injectable so the composition root can bind the durable P-A.3
+    # implementations; absent, the in-memory defaults keep this slice
+    # byte-identical. The applier gate below is NOT a parameter and
+    # remains None regardless of what stores are bound.
     source_change_workflow: SourceChangeWorkflow | None = None
     if admin is not None:
         source_change_workflow = SourceChangeWorkflow(
-            proposals=InMemoryProposalStore(),
-            snapshots=InMemorySnapshotStore(),
+            proposals=(
+                source_proposals
+                if source_proposals is not None
+                else InMemoryProposalStore()
+            ),
+            snapshots=(
+                source_snapshots
+                if source_snapshots is not None
+                else InMemorySnapshotStore()
+            ),
             sandbox=HermeticSandbox(),
             suite=VerificationSuite(name="default", checks=_SOURCE_CHECKS),
             audit=admin.audit,
