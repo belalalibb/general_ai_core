@@ -40,6 +40,11 @@ from apps.composition.secrets import (
     build_secret_manager,
     vault_settings_from_env,
 )
+from apps.composition.sourcechange import (
+    DurableProposalStore,
+    DurableSnapshotStore,
+    build_durable_sourcechange_stores,
+)
 from apps.composition.storage import (
     ObjectStorageSettings,
     build_object_storage,
@@ -53,8 +58,11 @@ __all__ = [
     "DatabaseSettings",
     "DurableExecutionStore",
     "DurableIdentityService",
+    "DurableProposalStore",
+    "DurableSnapshotStore",
     "build_durable_execution_store",
     "build_durable_identity_service",
+    "build_durable_sourcechange_stores",
     "GatewaySettings",
     "ObjectStorageSettings",
     "VaultSettings",

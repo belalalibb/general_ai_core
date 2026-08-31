@@ -874,3 +874,40 @@ email_verification_tokens = Table(
     Column("email", String(512), nullable=False),
     Column("created_at", TIMESTAMP(timezone=True), nullable=False),
 )
+
+# --- source-change durability (P-A.3, migration 0017, ADR-0010) ----------------
+# Durable RECORDS for the V8 sync ports (core/sourcechange/store.py) — §14
+# scope guard: persisting a proposal is NOT applying it. Tenant-scoped via
+# composite PKs (20 §6 — foreign rows structurally invisible). Snapshot
+# files ride JSONB as {path: base64(bytes)}; integrity is RE-DERIVED at the
+# store layer on save AND read (ADR-0010), never trusted from rows.
+source_snapshots = Table(
+    "source_snapshots",
+    metadata,
+    Column("tenant_id", UUID(as_uuid=True), primary_key=True),
+    Column("snapshot_id", Text, primary_key=True),
+    Column("files", JSONB, nullable=False),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=False),
+)
+
+source_change_proposals = Table(
+    "source_change_proposals",
+    metadata,
+    Column("tenant_id", UUID(as_uuid=True), primary_key=True),
+    Column("proposal_id", UUID(as_uuid=True), primary_key=True),
+    Column("actor_id", UUID(as_uuid=True), nullable=False),
+    Column("base_snapshot_id", Text, nullable=False),
+    Column("rationale", Text, nullable=False),
+    Column("state", String(32), nullable=False),
+    Column("patch_hash", Text, nullable=False),
+    Column("patch", JSONB, nullable=False),
+    Column("inverse_patch", JSONB, nullable=True),
+    Column("approval", JSONB, nullable=True),
+    Column("applied_snapshot_id", Text, nullable=True),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=False),
+    CheckConstraint(
+        "state IN ('draft', 'verified', 'failed_verification', 'approved',"
+        " 'rejected', 'applied', 'rolled_back')",
+        name="state_closed_set",
+    ),
+)
