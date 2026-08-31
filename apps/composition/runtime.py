@@ -52,10 +52,12 @@ import os
 import sys
 from collections.abc import Callable, Mapping, MutableMapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TextIO
 from uuid import UUID, uuid4, uuid5
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from apps.api.admin import AdminSurface
@@ -157,6 +159,9 @@ DEFAULT_PLAN_ID = uuid5(UUID("00000000-0000-0000-0000-000000000000"), DEFAULT_PL
 #: Composition DATA (41 §19 posture — no doc defines numeric defaults, the
 #: root opts in): generous local budget; VPS operators change env instead.
 DEFAULT_TASK_UNITS = 1_000_000.0
+#: repo_root/ui/app — the P-D.2 end-user static shell (the PROVEN
+#: ui/admin StaticFiles posture, apps/composition/admin_console.py).
+UI_APP_DIR = Path(__file__).resolve().parents[2] / "ui" / "app"
 _ENV_ADMIN_EMAILS = "ADMIN_EMAILS"
 _ENV_GROQ_KEY = "GROQ_API_KEY"
 _ENV_GSK_KEY = "GSK_API_KEY"
@@ -706,6 +711,17 @@ def build_runtime_profile(
         source_proposals=proposals,
         source_snapshots=snapshots,
     )
+
+    # --- end-user UI (P-D.2): the PROVEN ui/admin StaticFiles posture -----
+    # Static shell mounted at /app AFTER every API route exists (mount is
+    # additive; no route shadowing — /v1/* and /healthz stay untouched).
+    # Absent directory ⇒ no mount at all, never a broken route (20 §4).
+    if UI_APP_DIR.is_dir():
+        app.mount(
+            "/app",
+            StaticFiles(directory=str(UI_APP_DIR), html=True),
+            name="end_user_ui",
+        )
 
     # --- worker + relay (caller-driven bodies; main.py owns cadence) ---------
     queue = InMemoryQueue()

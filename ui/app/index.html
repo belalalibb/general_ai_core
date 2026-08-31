@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Orchestration Platform</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<!-- Honesty banners (doc D §4.3 posture, carried from ui/admin):
+     exactly one of these shows once the profile is probed. -->
+<div id="demo-banner" class="banner" hidden>
+  <strong>Demo profile</strong> — in-memory runtime with a shared demo
+  principal; no sign-up, nothing survives a restart.
+</div>
+<div id="durable-banner" class="banner" hidden>
+  Durable profile — accounts and executions survive restarts.
+  Verification tokens are printed on the <strong>server console</strong>
+  (no real email is sent).
+</div>
+
+<!-- Auth view (durable profile only; demo profile skips straight in). -->
+<div id="auth-view" class="login-wrap" hidden>
+  <div class="login-card">
+    <h1>AI Orchestration Platform</h1>
+    <div class="tab-row">
+      <button id="tab-login" class="tab active" type="button">Sign in</button>
+      <button id="tab-register" class="tab" type="button">Create account</button>
+    </div>
+
+    <form id="login-form">
+      <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
+      <label>Password <input type="password" id="login-password" required autocomplete="current-password"></label>
+      <button type="submit">Sign in</button>
+      <div id="login-error" class="error-box" hidden></div>
+    </form>
+
+    <form id="register-form" hidden>
+      <label>Email <input type="email" id="register-email" required autocomplete="username"></label>
+      <label>Password <input type="password" id="register-password" required autocomplete="new-password"></label>
+      <button type="submit">Create account</button>
+      <p class="muted">After registering, copy the verification token from
+      the <strong>server console</strong> and paste it below.</p>
+      <label>Verification token <input type="text" id="verify-token" autocomplete="off"></label>
+      <button type="button" id="verify-button">Verify email</button>
+      <div id="register-error" class="error-box" hidden></div>
+      <div id="register-info" class="info-box" hidden></div>
+    </form>
+  </div>
+</div>
+
+<!-- Main view -->
+<div id="main-view" class="layout" hidden>
+  <nav class="rail" aria-label="Surfaces">
+    <button class="rail-item active" data-surface="ask">Ask</button>
+    <button class="rail-item" data-surface="executions">Executions</button>
+    <button class="rail-item" data-surface="models">Models</button>
+    <button class="rail-item" data-surface="usage">Usage</button>
+    <div class="rail-footer">
+      <span id="health-dot" class="badge neutral" title="GET /healthz">health: ?</span>
+      <span id="who" class="muted"></span>
+      <button id="logout-button" type="button" hidden>Sign out</button>
+    </div>
+  </nav>
+
+  <main class="content">
+    <section id="surface-ask" class="surface">
+      <h2>Ask</h2>
+      <form id="ask-form">
+        <textarea id="ask-input" rows="4" placeholder="Ask anything…" required></textarea>
+        <div class="ask-controls">
+          <label class="inline"><input type="checkbox" id="ask-async"> run async (202 + live progress)</label>
+          <button type="submit" id="ask-submit">Send</button>
+        </div>
+      </form>
+      <div id="ask-error" class="error-box" hidden></div>
+      <div id="ask-progress" class="progress-log" hidden></div>
+      <div id="ask-result" class="result-card" hidden>
+        <div class="result-head">
+          <span id="ask-result-status"></span>
+          <span id="ask-result-id" class="muted mono"></span>
+        </div>
+        <pre id="ask-result-content" class="mono"></pre>
+      </div>
+    </section>
+
+    <section id="surface-executions" class="surface" hidden>
+      <h2>Executions <button id="executions-refresh" type="button">Refresh</button></h2>
+      <table class="table">
+        <thead><tr><th>ID</th><th>Status</th><th>Created</th><th></th></tr></thead>
+        <tbody id="executions-rows"></tbody>
+      </table>
+      <div id="execution-detail" class="result-card" hidden>
+        <div class="result-head">
+          <span id="execution-detail-status"></span>
+          <span id="execution-detail-id" class="muted mono"></span>
+        </div>
+        <pre id="execution-detail-body" class="mono"></pre>
+      </div>
+      <div id="executions-error" class="error-box" hidden></div>
+    </section>
+
+    <section id="surface-models" class="surface" hidden>
+      <h2>Models <button id="models-refresh" type="button">Refresh</button></h2>
+      <table class="table">
+        <thead><tr><th>Name</th><th>Tier</th><th>Capabilities</th><th>Availability</th></tr></thead>
+        <tbody id="models-rows"></tbody>
+      </table>
+      <div id="models-error" class="error-box" hidden></div>
+    </section>
+
+    <section id="surface-usage" class="surface" hidden>
+      <h2>Usage <button id="usage-refresh" type="button">Refresh</button></h2>
+      <div id="usage-card" class="result-card" hidden>
+        <pre id="usage-body" class="mono"></pre>
+      </div>
+      <div id="usage-error" class="error-box" hidden></div>
+    </section>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
