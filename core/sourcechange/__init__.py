@@ -54,12 +54,17 @@ from core.sourcechange.store import (
     ProposalStorePort,
     SnapshotStorePort,
 )
+from core.sourcechange.workflow import (
+    AuthoritativeApplierPort,
+    SourceChangeWorkflow,
+)
 
 __all__ = [
     "PROPOSAL_TRANSITIONS",
     "SOURCE_VERIFICATION_CHECKS",
     "ApprovalHashMismatch",
     "ApprovalRecord",
+    "AuthoritativeApplierPort",
     "ChangeProposal",
     "CheckResult",
     "DifferentialReport",
@@ -81,6 +86,7 @@ __all__ = [
     "SnapshotIntegrityError",
     "SnapshotStorePort",
     "SourceChangeError",
+    "SourceChangeWorkflow",
     "SourceCheck",
     "SourcePatch",
     "SourceSnapshot",
