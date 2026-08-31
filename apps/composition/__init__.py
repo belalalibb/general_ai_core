@@ -31,6 +31,10 @@ from apps.composition.gateway import (
     gateway_settings_from_env,
     route_token_resolver_from_secret_manager,
 )
+from apps.composition.identity import (
+    DurableIdentityService,
+    build_durable_identity_service,
+)
 from apps.composition.secrets import (
     VaultSettings,
     build_secret_manager,
@@ -48,7 +52,9 @@ __all__ = [
     "DatabaseBindings",
     "DatabaseSettings",
     "DurableExecutionStore",
+    "DurableIdentityService",
     "build_durable_execution_store",
+    "build_durable_identity_service",
     "GatewaySettings",
     "ObjectStorageSettings",
     "VaultSettings",

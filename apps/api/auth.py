@@ -42,7 +42,7 @@ from core.audit.ports import AuditLogPort
 from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.errors import ErrorCode
 from core.identity.errors import AuthenticationFailed, SessionInvalid
-from core.identity.service import InMemoryIdentityService
+from core.identity.ports import IdentityServicePort
 
 #: One constant client-facing message for EVERY auth failure (20 §6).
 _AUTH_FAILED_MESSAGE = "Authentication failed."
@@ -57,7 +57,7 @@ class AuthSurface:
     events are not recorded, never faked (41 §49).
     """
 
-    identity: InMemoryIdentityService
+    identity: IdentityServicePort
     admin_emails: frozenset[str] = frozenset()
     audit: AuditLogPort | None = None
 

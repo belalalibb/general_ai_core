@@ -825,3 +825,52 @@ Index(
     outbox_records.c.id,
     postgresql_where=~outbox_records.c.dispatched,
 )
+
+# --- identity durability (P-A.2, migration 0016) -------------------------------
+# NOT contract entities (03 defines none of these) — identity-infrastructure
+# state behind InMemoryIdentityService semantics (core/identity/service.py).
+# 20 §5: password_hash is the OPAQUE hasher-port output; session and
+# verification tokens are stored ONLY as SHA-256 digests — a database leak
+# exposes no replayable bearer token. Logout/redeem DELETE rows (revocation
+# = absence, deny-by-default). sessions.tenant_id is denormalized so one
+# read resolves (user_id, tenant_id) and can never cross tenants (20 §6).
+user_credentials = Table(
+    "user_credentials",
+    metadata,
+    Column(
+        "user_id",
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("password_hash", Text, nullable=False),
+    Column("updated_at", TIMESTAMP(timezone=True), nullable=False),
+)
+
+sessions = Table(
+    "sessions",
+    metadata,
+    Column("token_sha256", String(64), primary_key=True),
+    Column(
+        "user_id",
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    ),
+    Column(
+        "tenant_id",
+        UUID(as_uuid=True),
+        ForeignKey("tenants.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=False),
+    Index("ix_sessions_user_id", "user_id"),
+)
+
+email_verification_tokens = Table(
+    "email_verification_tokens",
+    metadata,
+    Column("token_sha256", String(64), primary_key=True),
+    Column("email", String(512), nullable=False),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=False),
+)

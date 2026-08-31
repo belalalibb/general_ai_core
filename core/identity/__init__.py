@@ -12,13 +12,18 @@ from core.identity.errors import (
     SessionInvalid,
     VerificationFailed,
 )
-from core.identity.ports import EmailVerificationPort, PasswordHasherPort
+from core.identity.ports import (
+    EmailVerificationPort,
+    IdentityServicePort,
+    PasswordHasherPort,
+)
 from core.identity.service import InMemoryIdentityService, Session
 
 __all__ = [
     "AuthenticationFailed",
     "EmailVerificationPort",
     "IdentityError",
+    "IdentityServicePort",
     "InMemoryIdentityService",
     "PasswordHasherPort",
     "RegistrationError",

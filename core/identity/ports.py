@@ -19,7 +19,13 @@ Security posture:
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:  # service/contract types for the port surface only
+    from uuid import UUID
+
+    from core.contracts.identity import Tenant, User
+    from core.identity.service import Session
 
 
 class PasswordHasherPort(Protocol):
@@ -48,3 +54,31 @@ class EmailVerificationPort(Protocol):
     def send_verification(self, email: str, token: str) -> None:
         """Deliver ``token`` to ``email`` out-of-band."""
         ...
+
+
+class IdentityServicePort(Protocol):
+    """The full identity service surface (P-A.2 durability seam).
+
+    Exactly the shape ``InMemoryIdentityService`` has always exposed —
+    extracted as a Protocol so the composition root can swap in a
+    durable binding WITHOUT touching the auth router or resolvers
+    (the "persistence (PostgreSQL) is a later-phase binding" this
+    package's docstrings promised).  Structural typing: BOTH the
+    in-memory service and the durable service satisfy this as-is.
+    """
+
+    def register(
+        self, email: str, password: str, preferred_language: str
+    ) -> User: ...
+
+    def verify_email(self, token: str) -> User: ...
+
+    def login(self, email: str, password: str) -> Session: ...
+
+    def resolve_session(self, token: str) -> Session: ...
+
+    def logout(self, token: str) -> None: ...
+
+    def get_user_for_session(self, token: str) -> User: ...
+
+    def get_tenant(self, tenant_id: UUID, *, session_token: str) -> Tenant: ...
