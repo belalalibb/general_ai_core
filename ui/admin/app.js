@@ -182,6 +182,7 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
   }
   document.getElementById("login-view").hidden = true;
   document.getElementById("console-view").hidden = false;
+  collapseAgentPanelIfNarrow();
   refreshHealth();
   loadAgent();
   loadSurface("overview");
@@ -234,6 +235,17 @@ document.getElementById("agent-toggle").addEventListener("click", () => {
   const collapsed = panel.classList.toggle("collapsed");
   btn.setAttribute("aria-pressed", String(!collapsed));
 });
+
+/* Responsive layout DECISION: below 1180px the panel overlays the content,
+   so it starts (and returns to) collapsed — opened explicitly via the
+   toggle. Event-driven media query, no polling. */
+const narrowViewport = window.matchMedia("(max-width: 1180px)");
+function collapseAgentPanelIfNarrow() {
+  if (!narrowViewport.matches) return;
+  document.getElementById("agent-panel").classList.add("collapsed");
+  document.getElementById("agent-toggle").setAttribute("aria-pressed", "false");
+}
+narrowViewport.addEventListener("change", collapseAgentPanelIfNarrow);
 
 /* --- toasts (transient feedback only — never the only record) ------------------ */
 
