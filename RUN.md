@@ -27,6 +27,24 @@ curl -s -X POST localhost:8000/v1/execute \
      -H 'Content-Type: application/json' -d '{"ask": "hello"}'
 ```
 
+## End-user web UI (P-D)
+
+Open **`http://127.0.0.1:8000/app/`** — a static shell (no build step)
+served by the same process:
+
+- the shell PROBES the profile (`GET /v1/auth/session`): in-memory ⇒ an
+  honest **demo banner** and straight in; durable ⇒ sign-in / create-account;
+- **Ask** runs sync (labeled echo/real content rendered verbatim) or async
+  (202 + the real `/events` SSE progress frames);
+- **Executions / Models / Usage** are explicit-refresh read surfaces; the
+  health badge reads `/healthz`.
+
+On the durable profile the UI's *Create account* tab drives
+`POST /v1/auth/register` → the verification token prints on the **server
+console** → paste it in the *Verify email* field (`POST /v1/auth/verify`)
+→ sign in. Registration rate limiting: `REGISTER_RATE_LIMIT=N` (global
+fixed window, default off).
+
 ## Real providers (optional, independent of the database)
 
 | Variable       | Effect                                                        |
@@ -60,6 +78,7 @@ python3 -m apps.main
 
 Optional: `ADMIN_EMAILS=a@x.com,b@y.com` grants the admin surface to those
 accounts; `EXECUTE_RATE_LIMIT=N` enables the per-tenant execute gate;
+`REGISTER_RATE_LIMIT=N` enables the global registration gate (P-D.1);
 `HOST`/`PORT`/`LOG_LEVEL` control the server; `DATABASE_ECHO=1` logs SQL.
 
 ## Operator notes
