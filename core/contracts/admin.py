@@ -140,6 +140,15 @@ class AdminAction(StrEnum):
     DISABLE_SKILL = "disable_skill"
     ENABLE_TOOL = "enable_tool"
     DISABLE_TOOL = "disable_tool"
+    # Provider/model REGISTRATION verbs (21 §4 rows 'Providers: add, enable,
+    # disable, credentials policy' and 'Models: add, enable, disable...' —
+    # the 'add' verb, previously startup-only in apps/composition/runtime.py).
+    # Registration rides the SAME 21 §3 lifecycle over the SAME registries;
+    # payloads carry contract JSON (Provider+ProviderManifest / Model+bindings)
+    # and NEVER credential material (20 §5 — credentials stay in the
+    # secret-manager flow, referenced by opaque refs only).
+    REGISTER_PROVIDER = "register_provider"
+    REGISTER_MODEL = "register_model"
 
 
 # Each action belongs to EXACTLY ONE area (mismatch = invalid change).
@@ -154,6 +163,8 @@ ACTION_AREA: dict[AdminAction, AdminArea] = {
     AdminAction.DISABLE_SKILL: AdminArea.SKILLS,
     AdminAction.ENABLE_TOOL: AdminArea.TOOLS,
     AdminAction.DISABLE_TOOL: AdminArea.TOOLS,
+    AdminAction.REGISTER_PROVIDER: AdminArea.PROVIDERS,
+    AdminAction.REGISTER_MODEL: AdminArea.MODELS,
 }
 
 

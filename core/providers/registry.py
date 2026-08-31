@@ -127,6 +127,19 @@ class ProviderRegistry:
         self._by_key[provider.provider_key] = entry
         self._by_id[provider.id] = entry
 
+    def remove(self, provider_key: str) -> None:
+        """Remove a registration (admin rollback of REGISTER_PROVIDER).
+
+        Rollback must restore reality (21 §8): rolling back a published
+        registration means the row is GONE again, never merely disabled.
+        Unknown key raises — removal of nothing would fake a rollback.
+        """
+        entry = self._by_key.get(provider_key)
+        if entry is None:
+            raise ProviderNotRegistered(provider_key)
+        del self._by_key[provider_key]
+        del self._by_id[entry.provider.id]
+
     # -- lookup -----------------------------------------------------------------
 
     def get(self, provider_key: str) -> RegisteredProvider:
@@ -228,6 +241,17 @@ class ModelRegistry:
         self._by_key[model.model_key] = model
         self._by_id[model.id] = model
 
+    def remove(self, model_key: str) -> None:
+        """Remove a registration (admin rollback of REGISTER_MODEL).
+
+        Same 21 §8 posture as :meth:`ProviderRegistry.remove`.
+        """
+        model = self._by_key.get(model_key)
+        if model is None:
+            raise ModelNotRegistered(model_key)
+        del self._by_key[model_key]
+        del self._by_id[model.id]
+
     def get(self, model_key: str) -> Model:
         model = self._by_key.get(model_key)
         if model is None:
@@ -306,6 +330,13 @@ class BindingRegistry:
             msg = f"binding already registered: {key}"
             raise DuplicateRegistration(msg)
         self._bindings[key] = binding
+
+    def remove(self, provider_id: UUID, model_id: UUID) -> None:
+        """Remove a binding (admin rollback of REGISTER_MODEL bindings)."""
+        key = (provider_id, model_id)
+        if key not in self._bindings:
+            raise BindingNotFound(f"{key}")
+        del self._bindings[key]
 
     def get(self, provider_id: UUID, model_id: UUID) -> ProviderModelBinding:
         binding = self._bindings.get((provider_id, model_id))

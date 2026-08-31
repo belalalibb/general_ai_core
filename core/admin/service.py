@@ -63,13 +63,21 @@ from core.contracts.admin import (
 )
 from core.contracts.audit import AdminChangeRecord, AuditEvent, AuditEventType
 from core.contracts.base import JsonObject
-from core.contracts.domain import ModelStatus, ProviderStatus
+from core.contracts.domain import (
+    BindingAvailability,
+    Model,
+    ModelStatus,
+    Provider,
+    ProviderModelBinding,
+    ProviderStatus,
+)
+from core.contracts.provider import ProviderManifest
 from core.contracts.routing import ScoringWeights
 from core.contracts.skills import SkillStatus
 from core.contracts.tools import ToolStatus
 from core.contracts.usage import UsageSummary
 from core.providers.errors import ModelNotRegistered, ProviderNotRegistered
-from core.providers.registry import ModelRegistry, ProviderRegistry
+from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.roles.errors import SkillNotRegistered
 from core.roles.registry import SkillRegistry
 from core.tools.errors import ToolNotRegistered
@@ -119,6 +127,7 @@ class AdminConfigService:
         audit_log: AuditLogPort,
         skills: SkillRegistry | None = None,
         tools: ToolRegistry | None = None,
+        bindings: BindingRegistry | None = None,
         active_areas: frozenset[AdminArea] = MVP_ACTIVE_ADMIN_AREAS,
     ) -> None:
         """FINAL Phase 19 widening (T-IMPL-068) — recorded decisions:
@@ -138,6 +147,11 @@ class AdminConfigService:
         self._audit = audit_log
         self._skills = skills
         self._tools = tools
+        # REGISTER_MODEL binding seam — the SAME BindingRegistry instance the
+        # Router reads (no parallel state); a REGISTER_MODEL change that
+        # names bindings while this seam is absent FAILS VALIDATION loudly
+        # (the skills/tools absent-seam posture, applied verbatim).
+        self._bindings = bindings
         self._active_areas = active_areas
         # Lifecycle records, physically keyed by (tenant, id) — foreign
         # changes are unaddressable by construction (20 §6).
@@ -313,6 +327,13 @@ class AdminConfigService:
             value = payload.get(key)
             if isinstance(value, str):
                 return value
+        # Registration payloads nest the key inside the contract object.
+        for parent, key in (("provider", "provider_key"), ("model", "model_key")):
+            nested = payload.get(parent)
+            if isinstance(nested, dict):
+                value = nested.get(key)
+                if isinstance(value, str):
+                    return value
         return "default"
 
     # -- per-action validation (21 §3 Validate; deny-by-default) --------------------------
@@ -380,6 +401,10 @@ class AdminConfigService:
             except ToolNotRegistered:
                 return f"tool not registered: {payload['tool_id']}"
             return None
+        if action is AdminAction.REGISTER_PROVIDER:
+            return self._register_provider_problem(payload)
+        if action is AdminAction.REGISTER_MODEL:
+            return self._register_model_problem(payload)
         if action is AdminAction.SET_PLAN:
             target = payload.get("target_tenant_id")
             plan = payload.get("plan")
@@ -404,6 +429,76 @@ class AdminConfigService:
             ScoringWeights.model_validate(weights)
         except ValueError:
             return "'weights' is not a valid ScoringWeights object"
+        return None
+
+    def _register_provider_problem(self, payload: JsonObject) -> str | None:
+        """REGISTER_PROVIDER validation — contract-parse + duplicate + 20 §5.
+
+        The payload carries the SAME contract objects startup composition
+        registers (Provider + ProviderManifest) as JSON. Secrets NEVER ride
+        this payload: the contracts hold no secret fields by construction;
+        credential custody stays in the secret-manager flow (opaque refs).
+        """
+        raw_provider = payload.get("provider")
+        raw_manifest = payload.get("manifest")
+        if not isinstance(raw_provider, dict):
+            return "payload requires a 'provider' object (03 §4 Provider contract)"
+        if not isinstance(raw_manifest, dict):
+            return "payload requires a 'manifest' object (30 §7 ProviderManifest)"
+        try:
+            provider = Provider.model_validate(raw_provider)
+        except ValueError as exc:
+            return f"'provider' is not a valid Provider contract: {exc}"
+        try:
+            ProviderManifest.model_validate(raw_manifest)
+        except ValueError as exc:
+            return f"'manifest' is not a valid ProviderManifest contract: {exc}"
+        try:
+            self._providers.get(provider.provider_key)
+        except ProviderNotRegistered:
+            return None
+        return f"provider already registered: {provider.provider_key}"
+
+    def _register_model_problem(self, payload: JsonObject) -> str | None:
+        """REGISTER_MODEL validation — contract-parse + duplicate + binding seam."""
+        raw_model = payload.get("model")
+        if not isinstance(raw_model, dict):
+            return "payload requires a 'model' object (03 §4 Model contract)"
+        try:
+            model = Model.model_validate(raw_model)
+        except ValueError as exc:
+            return f"'model' is not a valid Model contract: {exc}"
+        try:
+            self._models.get(model.model_key)
+            return f"model already registered: {model.model_key}"
+        except ModelNotRegistered:
+            pass
+        raw_bindings = payload.get("bindings", [])
+        if not isinstance(raw_bindings, list):
+            return "'bindings' must be a list when given"
+        if raw_bindings and self._bindings is None:
+            return "bindings registry seam is not bound in this composition"
+        for row in raw_bindings:
+            if not isinstance(row, dict):
+                return "each binding requires an object"
+            provider_key = row.get("provider_key")
+            name = row.get("provider_model_name")
+            if not isinstance(provider_key, str) or not provider_key:
+                return "each binding requires a non-empty 'provider_key'"
+            if not isinstance(name, str) or not name:
+                return "each binding requires a non-empty 'provider_model_name'"
+            try:
+                self._providers.get(provider_key)
+            except ProviderNotRegistered:
+                return f"binding names an unregistered provider: {provider_key}"
+            availability = row.get("availability", BindingAvailability.AVAILABLE.value)
+            if not isinstance(availability, str) or availability not in {
+                a.value for a in BindingAvailability
+            }:
+                return (
+                    "binding 'availability' is not a BindingAvailability: "
+                    f"{availability}"
+                )
         return None
 
     @staticmethod
@@ -452,6 +547,18 @@ class AdminConfigService:
             )
         if action is AdminAction.ENABLE_TOOL:
             return f"tool {self._subject(change)} becomes admissible to the call gate"
+        if action is AdminAction.REGISTER_PROVIDER:
+            return (
+                f"provider '{self._subject(change)}' is registered; routing "
+                "eligibility still requires ACTIVE status + functional "
+                "manifest (31 §10) — registration alone routes nothing"
+            )
+        if action is AdminAction.REGISTER_MODEL:
+            return (
+                f"model '{self._subject(change)}' is registered with its "
+                "declared bindings; only ACTIVE models are routing "
+                "candidates (03 §4)"
+            )
         return "router default scoring weights replaced (11 §6 versioned weights)"
 
     # -- snapshot / apply / restore (the registry-mutating core) ---------------------------
@@ -479,6 +586,9 @@ class AdminConfigService:
             assert self._tools is not None  # validated pre-publish
             tool = self._tools.get(UUID(str(change.payload["tool_id"])))
             return {"tool_status": tool.status}
+        if action in (AdminAction.REGISTER_PROVIDER, AdminAction.REGISTER_MODEL):
+            # Pre-publish state is ABSENCE — rollback removes the rows again.
+            return {"registered": False}
         return {"weights": self._routing.default_weights}
 
     def _apply(self, change: ConfigChange) -> None:
@@ -531,6 +641,36 @@ class AdminConfigService:
             )
             self._set_tool_status(UUID(str(change.payload["tool_id"])), tool_status)
             return
+        if action is AdminAction.REGISTER_PROVIDER:
+            provider = Provider.model_validate(change.payload["provider"])
+            manifest = ProviderManifest.model_validate(change.payload["manifest"])
+            self._providers.register(provider, manifest)
+            return
+        if action is AdminAction.REGISTER_MODEL:
+            model = Model.model_validate(change.payload["model"])
+            self._models.register(model)
+            raw_bindings = change.payload.get("bindings", [])
+            assert isinstance(raw_bindings, list)  # validated pre-publish
+            for row in raw_bindings:
+                assert isinstance(row, dict)  # validated pre-publish
+                assert self._bindings is not None  # validated pre-publish
+                entry = self._providers.get(str(row["provider_key"]))
+                self._bindings.register(
+                    ProviderModelBinding(
+                        provider_id=entry.provider.id,
+                        model_id=model.id,
+                        provider_model_name=str(row["provider_model_name"]),
+                        availability=BindingAvailability(
+                            str(
+                                row.get(
+                                    "availability",
+                                    BindingAvailability.AVAILABLE.value,
+                                )
+                            )
+                        ),
+                    )
+                )
+            return
         weights_payload = change.payload["weights"]
         self._routing.set_default_weights(ScoringWeights.model_validate(weights_payload))
 
@@ -572,6 +712,21 @@ class AdminConfigService:
             tool_status = snapshot["tool_status"]
             assert isinstance(tool_status, ToolStatus)
             self._set_tool_status(UUID(str(change.payload["tool_id"])), tool_status)
+            return
+        if action is AdminAction.REGISTER_PROVIDER:
+            provider = Provider.model_validate(change.payload["provider"])
+            self._providers.remove(provider.provider_key)
+            return
+        if action is AdminAction.REGISTER_MODEL:
+            model = Model.model_validate(change.payload["model"])
+            raw_bindings = change.payload.get("bindings", [])
+            assert isinstance(raw_bindings, list)
+            for row in raw_bindings:
+                assert isinstance(row, dict)
+                assert self._bindings is not None
+                entry = self._providers.get(str(row["provider_key"]))
+                self._bindings.remove(entry.provider.id, model.id)
+            self._models.remove(model.model_key)
             return
         weights = snapshot["weights"]
         assert isinstance(weights, ScoringWeights)
