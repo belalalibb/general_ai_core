@@ -331,7 +331,7 @@ class TestAudit:
         }
         published = world.publish(AdminAction.REGISTER_PROVIDER, payload)
         world.admin.rollback(TENANT, published.id)
-        events = world.audit.events_for_tenant(TENANT)
+        events = world.audit.read(TENANT)
         whats = [e.admin_change.what for e in events if e.admin_change is not None]
         assert any("register_provider: acme" in w for w in whats)
         assert any("rollback register_provider: acme" in w for w in whats)
