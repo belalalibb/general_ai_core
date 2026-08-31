@@ -11,9 +11,14 @@ Real R3 activation remains operator-gated.
 """
 
 from core.sourcechange.errors import (
+    ApprovalHashMismatch,
+    InvalidTransition,
     MalformedPatch,
     PatchNotApplicable,
+    ProposalNotFound,
+    SnapshotIntegrityError,
     SourceChangeError,
+    UnknownSnapshot,
 )
 from core.sourcechange.patch import (
     PatchOperation,
@@ -23,16 +28,41 @@ from core.sourcechange.patch import (
     invert_patch,
     patch_hash,
 )
+from core.sourcechange.proposal import (
+    PROPOSAL_TRANSITIONS,
+    ApprovalRecord,
+    ChangeProposal,
+    ProposalState,
+)
 from core.sourcechange.snapshot import SourceSnapshot, file_content_hash
+from core.sourcechange.store import (
+    InMemoryProposalStore,
+    InMemorySnapshotStore,
+    ProposalStorePort,
+    SnapshotStorePort,
+)
 
 __all__ = [
+    "PROPOSAL_TRANSITIONS",
+    "ApprovalHashMismatch",
+    "ApprovalRecord",
+    "ChangeProposal",
+    "InMemoryProposalStore",
+    "InMemorySnapshotStore",
+    "InvalidTransition",
     "MalformedPatch",
     "PatchNotApplicable",
     "PatchOpKind",
     "PatchOperation",
+    "ProposalNotFound",
+    "ProposalState",
+    "ProposalStorePort",
+    "SnapshotIntegrityError",
+    "SnapshotStorePort",
     "SourceChangeError",
     "SourcePatch",
     "SourceSnapshot",
+    "UnknownSnapshot",
     "apply_patch",
     "file_content_hash",
     "invert_patch",
