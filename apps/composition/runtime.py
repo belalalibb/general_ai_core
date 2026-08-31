@@ -76,6 +76,7 @@ from apps.composition.database import (
 from apps.composition.durability import build_durable_execution_store
 from apps.composition.identity import build_durable_identity_service
 from apps.composition.sourcechange import build_durable_sourcechange_stores
+from apps.composition.workspaces import build_durable_workspace_stores
 from core.admin.service import AdminConfigService
 from core.audit.memory import InMemoryAuditLog
 from core.context.composer import ContextComposer
@@ -624,6 +625,12 @@ def build_runtime_profile(
             usage=usage,
         )
         proposals, snapshots = build_durable_sourcechange_stores(bindings, bridge)
+        # Closure GAP 1: the EXISTING V5 repositories (DatabaseBindings
+        # composed them since migration 0002) reach the /v1/workspaces +
+        # /v1/projects routes — bridged, same loop-affinity posture.
+        workspace_store, project_store = build_durable_workspace_stores(
+            bindings, bridge
+        )
         # Loop affinity (recorded): the pool lives on the bridge loop —
         # server-loop callers (execute route, relay, worker) cross over.
         outbox: OutboxPort = BridgedOutbox(inner=bindings.outbox, bridge=bridge)
@@ -647,6 +654,9 @@ def build_runtime_profile(
             usage=usage,
         )
         proposals, snapshots = None, None
+        # In-memory profile: create_app's own in-memory defaults serve
+        # the same /v1/workspaces + /v1/projects surface (store posture).
+        workspace_store, project_store = None, None
         outbox = InMemoryOutbox()
         idempotency = InMemoryIdempotencyStore()
         # Local convenience: one demo principal with a budget so the API
@@ -720,6 +730,8 @@ def build_runtime_profile(
         healthz=True,
         sse=True,
         source_proposals=proposals,
+        workspaces=workspace_store,
+        projects=project_store,
         source_snapshots=snapshots,
     )
 

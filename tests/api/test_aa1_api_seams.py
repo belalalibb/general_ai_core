@@ -934,7 +934,11 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         webhooks=True,
     )
     assert openapi_ops(app) == [
+        # Closure GAP 1 (operator-verified): /v1/workspaces + /v1/projects —
+        # conscious pin update, see tests/api/test_workspaces_api_closure.py.
+        "DELETE /v1/projects/{project_id}",
         "DELETE /v1/webhooks/{subscription_id}",
+        "DELETE /v1/workspaces/{workspace_id}",
         "GET /healthz",
         "GET /v1/admin/audit",
         "GET /v1/admin/capabilities",
@@ -959,9 +963,13 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "GET /v1/executions",
         "GET /v1/executions/{execution_id}",
         "GET /v1/models",
+        "GET /v1/projects",
+        "GET /v1/projects/{project_id}",
         "GET /v1/skills",
         "GET /v1/usage",
         "GET /v1/webhooks",
+        "GET /v1/workspaces",
+        "GET /v1/workspaces/{workspace_id}",
         "POST /v1/admin/capabilities/{capability_id}/exercise",
         "POST /v1/admin/changes",
         "POST /v1/admin/changes/propose",
@@ -987,5 +995,7 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "POST /v1/auth/register",
         "POST /v1/auth/verify",
         "POST /v1/execute",
+        "POST /v1/projects",
         "POST /v1/webhooks",
+        "POST /v1/workspaces",
     ]

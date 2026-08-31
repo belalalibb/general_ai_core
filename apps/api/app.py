@@ -155,6 +155,13 @@ from apps.api.store import (
     InMemoryExecutionStore,
 )
 from apps.api.streaming import Sleeper, event_stream
+from apps.api.workspaces import (
+    InMemoryProjectStore,
+    InMemoryWorkspaceStore,
+    ProjectStorePort,
+    WorkspaceStorePort,
+    create_workspace_router,
+)
 from core.context.composer import ContextComposer
 from core.context.errors import ContextBudgetExceeded
 from core.contracts.base import JsonObject, utc_now
@@ -406,6 +413,8 @@ def create_app(
     sse_timeout_seconds: float = 60.0,
     sse_sleeper: Sleeper | None = None,
     source_proposals: ProposalStorePort | None = None,
+    workspaces: WorkspaceStorePort | None = None,
+    projects: ProjectStorePort | None = None,
     source_snapshots: SnapshotStorePort | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
@@ -545,6 +554,23 @@ def create_app(
         return error_response(
             ErrorCode.INTERNAL_ERROR, "Internal error.", retryable=False
         )
+
+    # --- /v1/workspaces + /v1/projects (closure GAP 1) -------------------------
+    # The EXISTING 03 §2 entities over HTTP — the ExecutionStorePort seam
+    # posture: in-memory defaults keep the surface present in both
+    # profiles; the composition root binds the EXISTING Postgres
+    # repositories (bridged) in the durable profile. Same per-request
+    # principal resolver, same anti-enumeration mapping as every other
+    # tenant-scoped route (apps/api/workspaces.py records the decisions).
+    app.include_router(
+        create_workspace_router(
+            workspaces=(
+                workspaces if workspaces is not None else InMemoryWorkspaceStore()
+            ),
+            projects=projects if projects is not None else InMemoryProjectStore(),
+            resolve=_principal,
+        )
+    )
 
     @app.post("/v1/execute")
     async def execute(

@@ -753,7 +753,9 @@ class TestAgentHttpSurface:
         """34 AA-2 + 2 NTF-1 + 7 SKL-1 + 3 V7 capability + 4 V7 scenario
         + 2 V7 learning-review + 2 V7 self-review + 9 V8 source-change
         + 2 P-D.1 auth (register/verify — conscious pin update, see
-        tests/api/test_auth_register_pd1.py) ops = 65, pinned."""
+        tests/api/test_auth_register_pd1.py) + 8 workspace/project
+        (closure GAP 1 — conscious pin update, see
+        tests/api/test_workspaces_api_closure.py) ops = 73, pinned."""
         world = AgentWorld()
         ops = openapi_ops(world.app)
         agent_ops = [op for op in ops if "/v1/agent" in op]
@@ -778,7 +780,9 @@ class TestAgentHttpSurface:
             "POST /v1/admin/skills/imports/{skill_id}/scan",
             "POST /v1/admin/skills/imports/{skill_id}/validate",
         ]
-        assert len(ops) == 65
+        assert len(ops) == 73
+        assert "POST /v1/workspaces" in ops  # closure GAP 1
+        assert "POST /v1/projects" in ops  # closure GAP 1
         assert "POST /v1/admin/capabilities/{capability_id}/exercise" in ops  # V7-2
         assert "GET /v1/admin/capabilities" in ops  # V7 chunk 1
         assert "POST /v1/admin/scenarios/regression-pack" in ops  # V7 chunk 3
