@@ -60,11 +60,13 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
+from apps.admin_agent.tools import AgentToolSurface
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal, create_app
 from apps.api.auth import AuthSurface
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
+from apps.composition.admin_console import attach_admin_console
 from apps.composition.bridge import AsyncBridge
 from apps.composition.database import (
     DatabaseBindings,
@@ -710,6 +712,35 @@ def build_runtime_profile(
         sse=True,
         source_proposals=proposals,
         source_snapshots=snapshots,
+    )
+
+    # --- admin console (P-D follow-up): the EXISTING attach_admin_console
+    # over the SAME already-composed instances — nothing rebuilt, nothing
+    # new. /v1/agent + /v1/admin/notifications + the /admin static shell
+    # become part of the local runtime in BOTH profiles. The optional V7
+    # seams are read back from app.state (the recorded "one derivation,
+    # two consumers" duty — create_app derived them; we hand the SAME
+    # objects to the agent). skill_review stays absent (P2: absent seam =
+    # absent routes — no SkillReviewSurface is composed here today).
+    attach_admin_console(
+        app,
+        surface=AgentToolSurface(
+            providers=providers,
+            models=models,
+            router=router,
+            execution_service=execution_service,
+            execution_store=store,
+            admin=admin,
+            usage=usage,
+            audit=audit,
+            capabilities=app.state.capability_catalog,
+            exercise=app.state.exercise_surface,
+            scenarios=app.state.scenario_service,
+            context_lab=app.state.context_lab_service,
+            learning_observability=app.state.learning_observability_service,
+            self_review=app.state.self_review_service,
+        ),
+        auth=auth,
     )
 
     # --- end-user UI (P-D.2): the PROVEN ui/admin StaticFiles posture -----

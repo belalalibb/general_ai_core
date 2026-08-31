@@ -44,7 +44,7 @@ from apps.api.scenarios import (
     scenario_json,
 )
 from apps.api.self_review import SelfReviewService
-from apps.api.store import InMemoryExecutionStore
+from apps.api.store import ExecutionStorePort
 from core.admin.errors import (
     ChangeNotFound,
     InactiveAdminArea,
@@ -74,7 +74,11 @@ class AgentToolSurface:
     models: ModelRegistry
     router: SimpleScoringRouter
     execution_service: ExecutionService
-    execution_store: InMemoryExecutionStore
+    # Widened to the structural port (P2 posture recorded in apps/api/store.py:
+    # "widen the annotation, never rewrite call sites") so the composition root
+    # can hand the SAME store instance in BOTH profiles — InMemoryExecutionStore
+    # and DurableExecutionStore each satisfy this surface verbatim.
+    execution_store: ExecutionStorePort
     admin: AdminSurface
     usage: InMemoryUsageAccounting
     audit: AuditLogPort

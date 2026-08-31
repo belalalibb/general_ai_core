@@ -40,7 +40,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
 from apps.api.errors import error_response
-from apps.api.store import InMemoryExecutionStore
+from apps.api.store import ExecutionStorePort
 from core.admin.service import AdminConfigService
 from core.audit.ports import AuditLogPort
 from core.contracts.audit import AuditEventType
@@ -85,7 +85,9 @@ class NotificationSources:
     """The EXISTING records notifications derive from — injected, never new."""
 
     audit: AuditLogPort
-    executions: InMemoryExecutionStore
+    # Structural port (same P2 widening as AgentToolSurface): notifications
+    # only ever call ``.list(tenant_id)`` — both store bindings satisfy it.
+    executions: ExecutionStorePort
     changes: AdminConfigService
 
 
