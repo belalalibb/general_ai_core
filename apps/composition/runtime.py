@@ -632,10 +632,19 @@ def build_runtime_profile(
         )
     else:
         store = InMemoryExecutionStore()
-        identity = InMemoryIdentityService(
-            hasher=hasher,
-            email_sender=email_sender,
-            default_plan_id=DEFAULT_PLAN_ID,
+        # Same BudgetGrantingIdentity posture as the durable branch (recorded
+        # decision 5, symmetric): an admin/user registering in the in-memory
+        # profile (e.g. to reach the /admin console) gets the composition-data
+        # default budget too — without it the agent's reasoning execution is
+        # refused (EntitlementNotConfigured; proven live in the handoff
+        # review). The demo principal keeps its explicit grant below.
+        identity = BudgetGrantingIdentity(
+            inner=InMemoryIdentityService(
+                hasher=hasher,
+                email_sender=email_sender,
+                default_plan_id=DEFAULT_PLAN_ID,
+            ),
+            usage=usage,
         )
         proposals, snapshots = None, None
         outbox = InMemoryOutbox()

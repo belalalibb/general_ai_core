@@ -630,7 +630,8 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 allowed_args=frozenset({"name", "ask", "checks"}),
                 description=(
                     "Save a named, replayable test scenario (closed "
-                    "deterministic check set)."
+                    "deterministic check set). 'checks' is optional — "
+                    "omit it to use every check."
                 ),
             )
         )
@@ -720,7 +721,10 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 allowed_args=frozenset({"action", "payload"}),
                 description=(
                     "Draft a config change through the existing lifecycle "
-                    "(publish is a human UI act, never a tool)."
+                    "(publish is a human UI act, never a tool). "
+                    "'action' must be one of: "
+                    + ", ".join(sorted(a.value for a in AdminAction))
+                    + "."
                 ),
             ),
             ToolSpec(

@@ -57,6 +57,26 @@ from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 #: Flood bound: a single turn may dispatch at most this many tool calls.
 _MAX_TOOL_CALLS_PER_TURN = 8
 
+#: The proposal protocol, stated to the model verbatim. Without this framing
+#: a real model answers in prose and the loop is honestly inert (proven live
+#: during the handoff review) — the parser refuses non-JSON, nothing
+#: dispatches. The framing is pure composition data: the contract the parser
+#: already enforces plus the registry's own describe() output. No new
+#: capability, no relaxation of parsing/evidence rules.
+_PROPOSAL_PROTOCOL = (
+    "You are the platform's admin agent. Respond with ONLY one raw JSON "
+    "object (no markdown fences, no prose before or after) of the shape:\n"
+    '{"tool_calls": [{"tool": "<name>", "arguments": {...}}], '
+    '"claims": [{"text": "<statement>", "evidence": '
+    '[{"kind": "<kind>", "ref": "<id from THIS turn\'s tool results>"}]}]}\n'
+    "Rules: use only the tools listed below with only their allowed "
+    "arguments; at most {max_calls} tool calls; every claim must cite "
+    "evidence refs that appear in this turn's tool results, otherwise the "
+    "claim is refused; if no tool applies, return empty lists.\n"
+    "Available tools:\n{tools}\n"
+    "Admin message:\n{message}"
+)
+
 #: Result-record keys that establish citable evidence, mapped to kinds.
 _REF_KEYS: dict[str, EvidenceKind] = {
     "execution_id": EvidenceKind.EXECUTION,
@@ -161,8 +181,14 @@ class AdminAgentService:
         self, caller: Principal, message: str
     ) -> tuple[str | None, UUID | None]:
         """The agent's model call — through the platform's OWN execute path."""
+        ask = _PROPOSAL_PROTOCOL.replace(
+            "{max_calls}", str(_MAX_TOOL_CALLS_PER_TURN)
+        ).replace(
+            "{tools}",
+            json.dumps(self._registry.describe(), ensure_ascii=False),
+        ).replace("{message}", message)
         payload: JsonObject = {
-            "ask": message,
+            "ask": ask,
             "context": {
                 "metadata": {
                     AGENT_LABEL_KEY: {
@@ -204,8 +230,17 @@ class AdminAgentService:
 
     @staticmethod
     def _parse_proposals(raw: str) -> tuple[JsonObject | None, str | None]:
+        # Deterministic fence-stripping ONLY (real models routinely wrap JSON
+        # in ```json fences — observed live). No repair, no guessing: if the
+        # unfenced text is not valid JSON the proposal is refused exactly as
+        # before.
+        text = raw.strip()
+        if text.startswith("```"):
+            first_newline = text.find("\n")
+            if first_newline != -1 and text.endswith("```"):
+                text = text[first_newline + 1 : -3].strip()
         try:
-            parsed = json.loads(raw)
+            parsed = json.loads(text)
         except (json.JSONDecodeError, TypeError):
             return None, "model output was not a valid proposal; nothing dispatched"
         if not isinstance(parsed, dict):
