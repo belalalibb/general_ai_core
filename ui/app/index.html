@@ -7,23 +7,45 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<!-- Honesty banners (doc D §4.3 posture, carried from ui/admin):
-     exactly one of these shows once the profile is probed. -->
-<div id="demo-banner" class="banner" hidden>
-  <strong>Demo profile</strong> — in-memory runtime with a shared demo
-  principal; no sign-up, nothing survives a restart.
+<!-- ============================================================
+     SUBSTRATE — AI-native workspace shell (UI/UX directive).
+     Honesty posture (non-negotiable, carried + strengthened):
+     · profile is PROBED (/v1/auth/session), never assumed;
+     · runs are EXECUTIONS — no fake chat-thread persistence (§13);
+     · activity = REAL SSE frames only; no invented progress;
+     · unknown stays loudly unknown; refusals render verbatim;
+     · verification tokens live on the SERVER CONSOLE — said, not faked.
+     ============================================================ -->
+
+<!-- Profile banners: exactly one shows after the probe. -->
+<div id="demo-banner" class="banner banner-demo" hidden>
+  <span class="banner-dot"></span>
+  <strong>Demo profile</strong>&nbsp;— in-memory runtime, shared demo
+  principal; nothing survives a restart.
 </div>
-<div id="durable-banner" class="banner" hidden>
+<div id="durable-banner" class="banner banner-durable" hidden>
+  <span class="banner-dot"></span>
   Durable profile — accounts and executions survive restarts.
-  Verification tokens are printed on the <strong>server console</strong>
+  Verification tokens print on the <strong>server console</strong>
   (no real email is sent).
 </div>
 
-<!-- Auth view (durable profile only; demo profile skips straight in). -->
-<div id="auth-view" class="login-wrap" hidden>
-  <div class="login-card">
+<!-- ===================== AUTH (durable only) ===================== -->
+<div id="auth-view" class="auth-stage" hidden>
+  <div class="auth-card">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 48 48" width="44" height="44">
+        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.5"/>
+        <circle cx="24" cy="24" r="11" fill="none" stroke="var(--accent)" stroke-width="2"/>
+        <circle cx="24" cy="24" r="3.5" fill="var(--accent)"/>
+        <circle cx="24" cy="4"  r="2.5" fill="var(--accent-2)"/>
+        <circle cx="41" cy="33" r="2.5" fill="var(--accent-2)"/>
+        <circle cx="7"  cy="33" r="2.5" fill="var(--accent-2)"/>
+      </svg>
+    </div>
     <h1>AI Orchestration Platform</h1>
-    <div class="tab-row">
+    <p class="muted">Sign in to your intelligent workspace.</p>
+    <div class="tab-row" role="tablist">
       <button id="tab-login" class="tab active" type="button">Sign in</button>
       <button id="tab-register" class="tab" type="button">Create account</button>
     </div>
@@ -31,92 +53,216 @@
     <form id="login-form">
       <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
       <label>Password <input type="password" id="login-password" required autocomplete="current-password"></label>
-      <button type="submit">Sign in</button>
+      <button type="submit" class="btn-primary">Sign in</button>
       <div id="login-error" class="error-box" hidden></div>
     </form>
 
     <form id="register-form" hidden>
       <label>Email <input type="email" id="register-email" required autocomplete="username"></label>
       <label>Password <input type="password" id="register-password" required autocomplete="new-password"></label>
-      <button type="submit">Create account</button>
-      <p class="muted">After registering, copy the verification token from
+      <button type="submit" class="btn-primary">Create account</button>
+      <p class="muted small">After registering, copy the verification token from
       the <strong>server console</strong> and paste it below.</p>
       <label>Verification token <input type="text" id="verify-token" autocomplete="off"></label>
-      <button type="button" id="verify-button">Verify email</button>
+      <button type="button" id="verify-button" class="btn-ghost">Verify email</button>
       <div id="register-error" class="error-box" hidden></div>
       <div id="register-info" class="info-box" hidden></div>
     </form>
   </div>
 </div>
 
-<!-- Main view -->
-<div id="main-view" class="layout" hidden>
-  <nav class="rail" aria-label="Surfaces">
-    <button class="rail-item active" data-surface="ask">Ask</button>
-    <button class="rail-item" data-surface="executions">Executions</button>
-    <button class="rail-item" data-surface="models">Models</button>
-    <button class="rail-item" data-surface="usage">Usage</button>
-    <div class="rail-footer">
-      <span id="health-dot" class="badge neutral" title="GET /healthz">health: ?</span>
-      <span id="who" class="muted"></span>
-      <button id="logout-button" type="button" hidden>Sign out</button>
+<!-- ===================== MAIN SHELL ===================== -->
+<div id="main-view" class="shell" hidden>
+
+  <!-- Top bar: identity + command + health -->
+  <header class="topbar">
+    <button id="nav-toggle" class="icon-btn" type="button" aria-label="Toggle navigation">☰</button>
+    <div class="brand">
+      <svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true">
+        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--accent)" stroke-width="3" opacity="0.5"/>
+        <circle cx="24" cy="24" r="10" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <circle cx="24" cy="24" r="4" fill="var(--accent)"/>
+      </svg>
+      <span class="brand-name">Substrate</span>
+      <span class="brand-sub">workspace</span>
     </div>
-  </nav>
+    <button id="cmdk-open" class="cmdk-trigger" type="button">
+      <span class="cmdk-glyph">⌘</span> Search &amp; commands
+      <kbd>Ctrl K</kbd>
+    </button>
+    <div class="topbar-right">
+      <span id="health-dot" class="badge neutral" title="GET /healthz">health: ?</span>
+      <span id="who" class="who muted"></span>
+      <button id="logout-button" class="btn-ghost small" type="button" hidden>Sign out</button>
+    </div>
+  </header>
 
-  <main class="content">
-    <section id="surface-ask" class="surface">
-      <h2>Ask</h2>
-      <form id="ask-form">
-        <textarea id="ask-input" rows="4" placeholder="Ask anything…" required></textarea>
-        <div class="ask-controls">
-          <label class="inline"><input type="checkbox" id="ask-async"> run async (202 + live progress)</label>
-          <button type="submit" id="ask-submit">Send</button>
-        </div>
-      </form>
-      <div id="ask-error" class="error-box" hidden></div>
-      <div id="ask-progress" class="progress-log" hidden></div>
-      <div id="ask-result" class="result-card" hidden>
-        <div class="result-head">
-          <span id="ask-result-status"></span>
-          <span id="ask-result-id" class="muted mono"></span>
-        </div>
-        <pre id="ask-result-content" class="mono"></pre>
+  <div class="body">
+    <!-- ============ LEFT: project / workspace tree ============ -->
+    <nav id="side-nav" class="sidenav" aria-label="Navigation">
+      <div class="nav-section">
+        <button class="nav-item active" data-view="home">
+          <span class="nav-glyph">◈</span> Home
+        </button>
+        <button class="nav-item" data-view="runs">
+          <span class="nav-glyph">▸</span> Runs
+        </button>
+        <button class="nav-item" data-view="models">
+          <span class="nav-glyph">⬡</span> Models
+        </button>
+        <button class="nav-item" data-view="usage">
+          <span class="nav-glyph">◔</span> Usage
+        </button>
       </div>
-    </section>
 
-    <section id="surface-executions" class="surface" hidden>
-      <h2>Executions <button id="executions-refresh" type="button">Refresh</button></h2>
-      <table class="table">
-        <thead><tr><th>ID</th><th>Status</th><th>Created</th><th></th></tr></thead>
-        <tbody id="executions-rows"></tbody>
-      </table>
-      <div id="execution-detail" class="result-card" hidden>
-        <div class="result-head">
-          <span id="execution-detail-status"></span>
-          <span id="execution-detail-id" class="muted mono"></span>
+      <div class="nav-section grow">
+        <div class="nav-head">
+          <span>Workspaces</span>
+          <button id="ws-new-btn" class="icon-btn small" type="button" title="New workspace">+</button>
         </div>
-        <pre id="execution-detail-body" class="mono"></pre>
+        <div id="ws-tree" class="ws-tree" aria-live="polite"></div>
+        <div id="ws-tree-error" class="error-box small" hidden></div>
       </div>
-      <div id="executions-error" class="error-box" hidden></div>
-    </section>
 
-    <section id="surface-models" class="surface" hidden>
-      <h2>Models <button id="models-refresh" type="button">Refresh</button></h2>
-      <table class="table">
-        <thead><tr><th>Name</th><th>Tier</th><th>Capabilities</th><th>Availability</th></tr></thead>
-        <tbody id="models-rows"></tbody>
-      </table>
-      <div id="models-error" class="error-box" hidden></div>
-    </section>
-
-    <section id="surface-usage" class="surface" hidden>
-      <h2>Usage <button id="usage-refresh" type="button">Refresh</button></h2>
-      <div id="usage-card" class="result-card" hidden>
-        <pre id="usage-body" class="mono"></pre>
+      <div class="nav-foot muted small">
+        Runs are platform <strong>executions</strong> — each run stands
+        alone; there is no persistent chat thread.
       </div>
-      <div id="usage-error" class="error-box" hidden></div>
-    </section>
-  </main>
+    </nav>
+
+    <!-- ============ CENTER: view stack ============ -->
+    <main class="stage">
+
+      <!-- ---------- VIEW: HOME (workspace-first landing) ---------- -->
+      <section id="view-home" class="view">
+        <div class="view-head">
+          <h2>Workspace</h2>
+          <span id="home-context" class="context-chip muted">no workspace selected</span>
+        </div>
+
+        <!-- Composer: idea → context → run -->
+        <div class="composer">
+          <textarea id="ask-input" rows="3"
+            placeholder="Describe what you want done… (Ctrl+Enter to run)"
+            required></textarea>
+          <div class="composer-row">
+            <div class="composer-context">
+              <label class="select-wrap">
+                <span class="muted small">Project</span>
+                <select id="ask-project"><option value="">— none —</option></select>
+              </label>
+              <label class="inline small">
+                <input type="checkbox" id="ask-async"> live activity
+                <span class="muted">(async + real event stream)</span>
+              </label>
+            </div>
+            <button type="button" id="ask-submit" class="btn-primary">Run ▸</button>
+          </div>
+          <div id="ask-error" class="error-box" hidden></div>
+        </div>
+
+        <!-- Active run: real events only -->
+        <div id="run-live" class="run-live" hidden>
+          <div class="run-live-head">
+            <span class="pulse" aria-hidden="true"></span>
+            <span class="mono" id="run-live-id"></span>
+            <span class="muted small">real event stream — frames render as received</span>
+          </div>
+          <ol id="run-timeline" class="run-timeline"></ol>
+        </div>
+
+        <div id="ask-result" class="result-card" hidden>
+          <div class="result-head">
+            <span id="ask-result-status"></span>
+            <span id="ask-result-id" class="mono muted"></span>
+            <button id="result-to-runs" class="btn-ghost small" type="button">Open in Runs</button>
+          </div>
+          <pre id="ask-result-content" class="result-body"></pre>
+        </div>
+
+        <!-- Workspace detail: what am I working on? -->
+        <div id="ws-detail" class="ws-detail" hidden>
+          <div class="panel">
+            <div class="panel-head">
+              <h3 id="ws-detail-name"></h3>
+              <button id="ws-delete-btn" class="btn-danger small" type="button">Delete workspace</button>
+            </div>
+            <div class="panel-sub muted small">
+              <span class="mono" id="ws-detail-id"></span>
+            </div>
+            <div class="panel-head">
+              <h4>Projects</h4>
+              <button id="prj-new-btn" class="btn-ghost small" type="button">+ New project</button>
+            </div>
+            <div id="prj-list" class="prj-list"></div>
+            <div id="ws-detail-error" class="error-box small" hidden></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- VIEW: RUNS ---------- -->
+      <section id="view-runs" class="view" hidden>
+        <div class="view-head">
+          <h2>Runs</h2>
+          <button id="runs-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <p class="muted small">Every run is a platform execution record —
+        listed as the API reports it, nothing synthesized.</p>
+        <div id="runs-error" class="error-box" hidden></div>
+        <div id="runs-list" class="runs-list"></div>
+        <div id="run-detail" class="panel" hidden>
+          <div class="panel-head">
+            <h3>Run detail</h3>
+            <span id="run-detail-status"></span>
+          </div>
+          <div class="mono muted small" id="run-detail-id"></div>
+          <pre id="run-detail-body" class="result-body"></pre>
+        </div>
+      </section>
+
+      <!-- ---------- VIEW: MODELS ---------- -->
+      <section id="view-models" class="view" hidden>
+        <div class="view-head">
+          <h2>Models</h2>
+          <button id="models-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <div id="models-error" class="error-box" hidden></div>
+        <div id="models-grid" class="models-grid"></div>
+      </section>
+
+      <!-- ---------- VIEW: USAGE ---------- -->
+      <section id="view-usage" class="view" hidden>
+        <div class="view-head">
+          <h2>Usage</h2>
+          <button id="usage-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <div id="usage-error" class="error-box" hidden></div>
+        <div id="usage-body" class="usage-body"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ===================== COMMAND PALETTE ===================== -->
+<div id="cmdk" class="cmdk-overlay" hidden>
+  <div class="cmdk-panel" role="dialog" aria-label="Command palette">
+    <input id="cmdk-input" type="text" placeholder="Type a command or search… (Esc to close)"
+           autocomplete="off">
+    <div id="cmdk-results" class="cmdk-results"></div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div id="modal" class="modal-overlay" hidden>
+  <div class="modal-panel" role="dialog">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button id="modal-cancel" class="btn-ghost" type="button">Cancel</button>
+      <button id="modal-ok" class="btn-primary" type="button">OK</button>
+    </div>
+    <div id="modal-error" class="error-box small" hidden></div>
+  </div>
 </div>
 
 <script src="app.js"></script>
