@@ -638,7 +638,15 @@ def build_runtime_profile(
         # profile ONLY — the durable profile always authenticates).
         demo_principal = Principal(tenant_id=uuid4(), user_id=uuid4())
 
-    auth = AuthSurface(identity=identity, admin_emails=admin_emails, audit=audit)
+    # P-D.1: registration admission control is composition DATA — same
+    # env posture as EXECUTE_RATE_LIMIT (0 ⇒ disabled, byte-identical).
+    auth = AuthSurface(
+        identity=identity,
+        admin_emails=admin_emails,
+        audit=audit,
+        rate_limits=InMemoryRateLimiter(),
+        register_rate_limit=int(env.get("REGISTER_RATE_LIMIT", "0") or "0"),
+    )
 
     # --- budgets (composition DATA; recorded decision 5) ---------------------
     if demo_principal is not None:

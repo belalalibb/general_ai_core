@@ -982,6 +982,10 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "POST /v1/admin/source-changes/{proposal_id}/verify",
         "POST /v1/auth/login",
         "POST /v1/auth/logout",
+        # P-D.1 (operator-authorized): self-serve registration surface —
+        # conscious pin update, see tests/api/test_auth_register_pd1.py.
+        "POST /v1/auth/register",
+        "POST /v1/auth/verify",
         "POST /v1/execute",
         "POST /v1/webhooks",
     ]
