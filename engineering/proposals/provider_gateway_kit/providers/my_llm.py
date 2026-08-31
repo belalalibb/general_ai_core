@@ -10,8 +10,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from app import ProviderContext, ok, err
-
+from app import ProviderContext, err, ok
 
 DEFINITION: dict[str, Any] = {
     "display_name": "My LLM (example)",
@@ -30,8 +29,8 @@ def generate_text(ctx: ProviderContext) -> Any:
     ask = ctx.payload.get("ask", "")
     if not ask:
         return err("bad_request", "empty ask")
-    gen = ctx.payload.get("generation", {})
-    timeout_s = ctx.timeout_ms / 1000.0
+    gen = ctx.payload.get("generation", {})  # noqa: F841 — blueprint placeholder for the real call
+    timeout_s = ctx.timeout_ms / 1000.0  # noqa: F841 — blueprint placeholder for the real call
 
     started = time.monotonic()
     # --- نداؤك الحقيقي (مثال؛ استبدل الـ stub) ---

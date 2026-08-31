@@ -11,8 +11,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from app import ProviderContext, ok, err
-
+from app import ProviderContext, err, ok
 
 DEFINITION: dict[str, Any] = {
     "display_name": "OpenAI (example)",
