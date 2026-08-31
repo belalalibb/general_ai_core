@@ -7,154 +7,326 @@
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<!-- Amnesia banner (doc D §4.3): registries are in-memory; honesty first. -->
-<div id="amnesia-banner" class="banner" hidden>
-  Data shown is <strong>since process start</strong> — in-memory registries, no persistence layer bound.
+<!-- ============================================================
+     SUBSTRATE / CONTROL — the admin counterpart of the /app shell
+     (UI/UX directive Chunk 2). Honesty posture carried verbatim:
+     · amnesia banner (doc D §4.3): in-memory data says so, loudly;
+     · traces render ONLY as recorded — no liveness theater;
+     · claims without evidence citations render as refusals;
+     · writes are EXACTLY the sanctioned four POSTs (login, converse,
+       lifecycle act, notification ack) — everything new reads;
+     · Learning is NOT OPERATIONAL and says so;
+     · unknown stays loudly unknown.
+     ============================================================ -->
+
+<!-- Amnesia banner: registries are in-memory; honesty first. -->
+<div id="amnesia-banner" class="banner banner-amnesia" hidden>
+  <span class="banner-dot"></span>
+  Data shown is <strong>since process start</strong> — in-memory
+  registries, no persistence layer bound.
 </div>
 
-<div id="login-view" class="login-wrap">
-  <form id="login-form" class="login-card">
+<!-- ===================== AUTH ===================== -->
+<div id="login-view" class="auth-stage">
+  <form id="login-form" class="auth-card">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 48 48" width="44" height="44">
+        <rect x="8" y="8" width="32" height="32" rx="7" fill="none" stroke="var(--accent)" stroke-width="2" opacity="0.5"/>
+        <rect x="16" y="16" width="16" height="16" rx="4" fill="none" stroke="var(--accent)" stroke-width="2"/>
+        <circle cx="24" cy="24" r="3" fill="var(--accent)"/>
+        <circle cx="40" cy="8"  r="2.5" fill="var(--accent-2)"/>
+        <circle cx="8"  cy="40" r="2.5" fill="var(--accent-2)"/>
+      </svg>
+    </div>
     <h1>Admin Console</h1>
     <p class="muted">Sign in with an admin account.</p>
     <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
     <label>Password <input type="password" id="login-password" required autocomplete="current-password"></label>
-    <button type="submit">Sign in</button>
+    <button type="submit" class="btn-primary">Sign in</button>
     <div id="login-error" class="error-box" hidden></div>
   </form>
 </div>
 
-<div id="console-view" class="layout" hidden>
-  <nav class="rail" aria-label="Surfaces">
-    <button class="rail-item active" data-surface="agent">Agent</button>
-    <button class="rail-item" data-surface="overview">Overview</button>
-    <button class="rail-item" data-surface="executions">Executions</button>
-    <button class="rail-item" data-surface="catalog">Catalog</button>
-    <button class="rail-item" data-surface="changes">Changes &amp; Audit</button>
-    <button class="rail-item" data-surface="notifications">Notifications <span id="notif-unread" class="badge info" hidden></span></button>
-    <button class="rail-item" data-surface="usage">Tenants &amp; Usage</button>
-    <button class="rail-item" data-surface="system">System</button>
-  </nav>
+<!-- ===================== CONTROL SHELL ===================== -->
+<div id="console-view" class="shell" hidden>
 
-  <main class="content">
-    <!-- Surface 1: Agent -->
-    <section id="surface-agent" class="surface">
-      <h2>Agent</h2>
-      <details open>
-        <summary>Registered tools (R0/R1 only — configuration data)</summary>
-        <table class="data-table" id="tools-table">
-          <thead><tr><th>Name</th><th>Class</th><th>Arguments</th><th>Description</th></tr></thead>
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" width="22" height="22" aria-hidden="true">
+        <rect x="8" y="8" width="32" height="32" rx="7" fill="none" stroke="var(--accent)" stroke-width="3" opacity="0.5"/>
+        <rect x="16" y="16" width="16" height="16" rx="4" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <circle cx="24" cy="24" r="3.5" fill="var(--accent)"/>
+      </svg>
+      <span class="brand-name">Substrate</span>
+      <span class="brand-sub">control</span>
+    </div>
+    <div class="topbar-right">
+      <span id="health-dot" class="badge neutral" title="GET /healthz">health: ?</span>
+      <button id="agent-toggle" class="btn-ghost small" type="button"
+        aria-pressed="true" title="Toggle the agent companion panel">◨ Agent</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- ============ RAIL: grouped surfaces ============ -->
+    <nav class="rail" aria-label="Surfaces">
+      <div class="rail-group">
+        <div class="rail-head">Attention</div>
+        <button class="rail-item active" data-surface="overview">
+          <span class="rail-glyph">◎</span> Overview
+        </button>
+        <button class="rail-item" data-surface="notifications">
+          <span class="rail-glyph">◍</span> Notifications
+          <span id="notif-unread" class="badge info" hidden></span>
+        </button>
+      </div>
+      <div class="rail-group">
+        <div class="rail-head">Operations</div>
+        <button class="rail-item" data-surface="executions">
+          <span class="rail-glyph">▸</span> Executions
+        </button>
+        <button class="rail-item" data-surface="usage">
+          <span class="rail-glyph">◔</span> Tenants &amp; Usage
+        </button>
+      </div>
+      <div class="rail-group">
+        <div class="rail-head">Catalog</div>
+        <button class="rail-item" data-surface="catalog">
+          <span class="rail-glyph">⬡</span> Models &amp; Providers
+        </button>
+      </div>
+      <div class="rail-group">
+        <div class="rail-head">Intelligence</div>
+        <button class="rail-item" data-surface="intelligence">
+          <span class="rail-glyph">✦</span> Capabilities &amp; Scenarios
+        </button>
+      </div>
+      <div class="rail-group">
+        <div class="rail-head">Governance</div>
+        <button class="rail-item" data-surface="changes">
+          <span class="rail-glyph">⎈</span> Changes &amp; Audit
+        </button>
+        <button class="rail-item" data-surface="source">
+          <span class="rail-glyph">⌥</span> Source Changes
+        </button>
+      </div>
+      <div class="rail-group">
+        <div class="rail-head">System</div>
+        <button class="rail-item" data-surface="system">
+          <span class="rail-glyph">⚙</span> System
+        </button>
+      </div>
+    </nav>
+
+    <!-- ============ CENTER: surface stack ============ -->
+    <main class="content">
+
+      <!-- Surface: Overview — a synthesized ATTENTION center. Every number
+           on this surface is a real endpoint read; nothing is invented. -->
+      <section id="surface-overview" class="surface">
+        <div class="surface-head">
+          <h2>Overview</h2>
+          <button id="overview-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <p class="muted small">Attention synthesis — every figure below is
+        read live from a platform endpoint; counts are since process start
+        on the in-memory profile.</p>
+        <div id="overview-body" class="cards"></div>
+        <div id="overview-error" class="error-box" hidden></div>
+      </section>
+
+      <!-- Surface: Executions (post-hoc Trace / Diagnosis) -->
+      <section id="surface-executions" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Executions</h2>
+          <button id="executions-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <table class="data-table" id="executions-table">
+          <thead><tr><th>ID</th><th>Status</th><th>Created</th><th>Ledger</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="execution-detail" class="panel" hidden>
+          <div class="tabs">
+            <button class="tab active" data-tab="trace">Trace (as recorded)</button>
+            <button class="tab" data-tab="diagnosis">Diagnosis</button>
+          </div>
+          <div id="tab-trace" class="tab-body"></div>
+          <div id="tab-diagnosis" class="tab-body" hidden></div>
+        </div>
+      </section>
+
+      <!-- Surface: Catalog — models, providers, routing weights.
+           Read-only REAL state; provider credentials are env-bound
+           composition data (no API exists to edit them — said, not faked). -->
+      <section id="surface-catalog" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Models &amp; Providers</h2>
+          <button id="catalog-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <h3>Models</h3>
+        <table class="data-table" id="models-table">
+          <thead><tr><th>Key</th><th>Name</th><th>Tier</th><th>Scores (q/s/c/r)</th><th>Status</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3>Providers</h3>
+        <p class="muted small">Provider credentials are environment-bound
+        composition data — there is no credential-editing API; enable/disable
+        travels through the config-change lifecycle (Governance).</p>
+        <table class="data-table" id="providers-table">
+          <thead><tr><th>Key</th><th>Name</th><th>Status</th><th>Auth</th><th>Template</th><th>Routable</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3>Routing weights</h3>
+        <div id="routing-weights" class="panel"></div>
+      </section>
+
+      <!-- Surface: Intelligence — capabilities, scenarios, self-review,
+           context lab, learning review. All reads; probes run through the
+           agent's sanctioned tools, never ad-hoc UI writes. -->
+      <section id="surface-intelligence" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Capabilities &amp; Scenarios</h2>
+          <button id="intelligence-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <h3>Capabilities <span class="muted small">(closed set — state is composition truth)</span></h3>
+        <div id="exercisable-note" class="muted small"></div>
+        <table class="data-table" id="capabilities-table">
+          <thead><tr><th>Capability</th><th>State</th><th>Evidence</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3>Scenarios <span class="muted small">(replays are REAL executions — run them via the agent)</span></h3>
+        <table class="data-table" id="scenarios-table">
+          <thead><tr><th>Name</th><th>Ask</th><th>Checks</th><th>Created</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3>Self-review</h3>
+        <div id="self-review-body" class="cards"></div>
+        <h3>Changes since last learning review</h3>
+        <div id="learning-review" class="panel"></div>
+        <h3>Context-lab checks</h3>
+        <div id="lab-checks" class="panel muted small"></div>
+      </section>
+
+      <!-- Surface: Changes & Audit — publish/rollback are explicit HUMAN
+           acts; the agent can only draft/validate/preview. -->
+      <section id="surface-changes" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Changes &amp; Audit</h2>
+          <button id="changes-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <p class="muted small">Publish and rollback are explicit admin acts —
+        the Agent can only draft, validate and preview. Denials render verbatim.</p>
+        <h3>Config changes</h3>
+        <table class="data-table" id="changes-table">
+          <thead><tr><th>ID</th><th>Area</th><th>Action</th><th>State</th><th>Validation</th><th>Created</th><th>Act</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div id="lifecycle-error" class="error-box" hidden></div>
+        <h3>Audit events</h3>
+        <table class="data-table" id="audit-table">
+          <thead><tr><th>ID</th><th>Type</th><th>Occurred</th><th>Details</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Surface: Source changes — the ADR-0009 governed pipeline.
+           Approvals cite exact patch hashes; authoritative apply stays
+           §14-gated (visible below, never hidden). -->
+      <section id="surface-source" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Source Changes</h2>
+          <button id="source-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <p class="muted small">Proposal lifecycle (draft → verified → approved
+        → applied, with terminal refusal states). Approval cites the exact
+        patch hash. Authoritative apply is §14-gated: snapshot-space only.</p>
+        <table class="data-table" id="source-table">
+          <thead><tr><th>ID</th><th>State</th><th>Patch hash</th><th>Rationale</th><th>Approval</th><th>Created</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Surface: Notifications (derived read-model, explicit poll) -->
+      <section id="surface-notifications" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Notifications</h2>
+          <button id="notif-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <p class="muted small">Derived on read from audit, execution and
+        change records — poll-based; nothing here exists without a backing
+        record.</p>
+        <table class="data-table" id="notif-table">
+          <thead><tr><th>Category</th><th>Title</th><th>Occurred</th><th>Evidence</th><th>Read</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Surface: Tenants & Usage -->
+      <section id="surface-usage" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Tenants &amp; Usage</h2>
+          <button id="usage-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <table class="data-table" id="usage-table">
+          <thead><tr><th>Execution</th><th>Status</th><th>Created</th><th>Ledger</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3>Webhooks</h3>
+        <table class="data-table" id="webhooks-table">
+          <thead><tr><th>Subscription</th><th>URL host</th><th>Events</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Surface: System -->
+      <section id="surface-system" class="surface" hidden>
+        <div class="surface-head">
+          <h2>System</h2>
+          <button id="system-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <div class="cards">
+          <div class="card">
+            <h3>Health <span class="badge neutral">scope: process</span></h3>
+            <div id="system-health"></div>
+          </div>
+          <div class="card">
+            <h3>Learning</h3>
+            <!-- doc A honesty rule: Learned = NOTHING today. -->
+            <p><span class="badge err">NOT OPERATIONAL</span> Learning is a
+            placeholder; no learned state exists.</p>
+          </div>
+          <div class="card">
+            <h3>System info</h3>
+            <pre id="system-info" class="mono"></pre>
+          </div>
+        </div>
+      </section>
+
+      <div id="global-error" class="error-box" hidden></div>
+    </main>
+
+    <!-- ============ RIGHT: persistent Agent companion (§9 hybrid) ========= -->
+    <aside id="agent-panel" class="agent-panel" aria-label="Agent companion">
+      <div class="agent-head">
+        <h3>Agent</h3>
+        <span class="muted small">evidence-cited claims only</span>
+      </div>
+      <details class="agent-tools">
+        <summary>Registered tools (R0/R1/R2-draft — configuration data)</summary>
+        <table class="data-table small" id="tools-table">
+          <thead><tr><th>Name</th><th>Class</th><th>Args</th></tr></thead>
           <tbody></tbody>
         </table>
       </details>
-      <form id="agent-form" class="agent-form">
-        <textarea id="agent-message" rows="3" placeholder="Ask about platform facts…" required></textarea>
-        <button type="submit">Send</button>
-      </form>
       <div id="agent-log" class="agent-log" aria-live="polite"></div>
-    </section>
-
-    <!-- Surface 2: Overview -->
-    <section id="surface-overview" class="surface" hidden>
-      <h2>Overview</h2>
-      <div id="overview-body" class="cards"></div>
-    </section>
-
-    <!-- Surface 3: Executions (with post-hoc Trace / Diagnosis tabs) -->
-    <section id="surface-executions" class="surface" hidden>
-      <h2>Executions</h2>
-      <table class="data-table" id="executions-table">
-        <thead><tr><th>ID</th><th>Status</th><th>Created</th><th>Ledger</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div id="execution-detail" hidden>
-        <div class="tabs">
-          <button class="tab active" data-tab="trace">Trace (as recorded)</button>
-          <button class="tab" data-tab="diagnosis">Diagnosis</button>
-        </div>
-        <div id="tab-trace" class="tab-body"></div>
-        <div id="tab-diagnosis" class="tab-body" hidden></div>
-      </div>
-    </section>
-
-    <!-- Surface 4: Catalog -->
-    <section id="surface-catalog" class="surface" hidden>
-      <h2>Catalog</h2>
-      <h3>Models</h3>
-      <table class="data-table" id="models-table">
-        <thead><tr><th>Key</th><th>Name</th><th>Tier</th><th>Status</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <h3>Providers</h3>
-      <table class="data-table" id="providers-table">
-        <thead><tr><th>Key</th><th>Name</th><th>Status</th><th>Template</th><th>Routable</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- Surface 5: Changes & Audit -->
-    <section id="surface-changes" class="surface" hidden>
-      <h2>Changes &amp; Audit</h2>
-      <p class="muted">Publish and rollback are explicit admin acts — the Agent can only draft, validate and preview.</p>
-      <h3>Config changes</h3>
-      <table class="data-table" id="changes-table">
-        <thead><tr><th>ID</th><th>Area</th><th>Action</th><th>State</th><th>Validation</th><th>Created</th><th>Act</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div id="lifecycle-error" class="error-box" hidden></div>
-      <h3>Audit events</h3>
-      <table class="data-table" id="audit-table">
-        <thead><tr><th>ID</th><th>Type</th><th>Occurred</th><th>Details</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- Surface: Notifications (NTF-1, doc A §12 — derived read-model, poll-based) -->
-    <section id="surface-notifications" class="surface" hidden>
-      <h2>Notifications</h2>
-      <p class="muted">Derived on read from audit, execution and change records — poll-based; nothing here exists without a backing record.</p>
-      <button id="notif-refresh" type="button">Refresh</button>
-      <table class="data-table" id="notif-table">
-        <thead><tr><th>Category</th><th>Title</th><th>Occurred</th><th>Evidence</th><th>Read</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- Surface 6: Tenants & Usage -->
-    <section id="surface-usage" class="surface" hidden>
-      <h2>Tenants &amp; Usage</h2>
-      <table class="data-table" id="usage-table">
-        <thead><tr><th>Execution</th><th>Status</th><th>Created</th><th>Ledger</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <h3>Webhooks</h3>
-      <table class="data-table" id="webhooks-table">
-        <thead><tr><th>Subscription</th><th>URL host</th><th>Events</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
-
-    <!-- Surface 7: System -->
-    <section id="surface-system" class="surface" hidden>
-      <h2>System</h2>
-      <div class="cards">
-        <div class="card">
-          <h3>Health <span class="badge neutral">scope: process</span></h3>
-          <div id="system-health"></div>
-        </div>
-        <div class="card">
-          <h3>Learning</h3>
-          <!-- doc A honesty rule: Learned = NOTHING today. -->
-          <p><span class="badge err">NOT OPERATIONAL</span> Learning is a placeholder; no learned state exists.</p>
-        </div>
-        <div class="card">
-          <h3>System info</h3>
-          <pre id="system-info" class="mono"></pre>
-        </div>
-      </div>
-    </section>
-
-    <div id="global-error" class="error-box" hidden></div>
-  </main>
+      <form id="agent-form" class="agent-form">
+        <textarea id="agent-message" rows="3"
+          placeholder="Ask about platform facts… (claims must cite evidence)"
+          required></textarea>
+        <button type="submit" class="btn-primary">Send</button>
+      </form>
+    </aside>
+  </div>
 </div>
 
 <!-- Transient toasts: operation feedback only — never the only record. -->
