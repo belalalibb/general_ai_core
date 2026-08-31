@@ -13,11 +13,16 @@ implementation (the dev/test profile ADR-0006/0007 record). Nothing is
 ever silently half-configured.
 """
 
+from apps.composition.bridge import AsyncBridge, BridgeClosed
 from apps.composition.database import (
     DatabaseBindings,
     DatabaseSettings,
     build_database_bindings,
     database_settings_from_env,
+)
+from apps.composition.durability import (
+    DurableExecutionStore,
+    build_durable_execution_store,
 )
 from apps.composition.gateway import (
     GatewaySettings,
@@ -38,8 +43,12 @@ from apps.composition.storage import (
 )
 
 __all__ = [
+    "AsyncBridge",
+    "BridgeClosed",
     "DatabaseBindings",
     "DatabaseSettings",
+    "DurableExecutionStore",
+    "build_durable_execution_store",
     "GatewaySettings",
     "ObjectStorageSettings",
     "VaultSettings",

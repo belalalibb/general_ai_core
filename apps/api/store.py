@@ -26,10 +26,38 @@ repository-backed binding implements the same shape.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Protocol
 from uuid import UUID
 
 from core.contracts.execute import ExecutionStatus
 from core.execution.service import ExecutionReport
+
+
+class ExecutionStorePort(Protocol):
+    """Structural surface every ExecutionStore binding satisfies (P-A.1).
+
+    Exactly the shape ``InMemoryExecutionStore`` has always exposed —
+    extracted as a Protocol so the composition root can swap in the
+    repository-backed ``DurableExecutionStore`` WITHOUT touching route
+    handlers or the worker (the swap this module's docstring promised).
+    ``InMemoryExecutionStore`` itself is unchanged and satisfies this
+    structurally (P2 — widen the annotation, never rewrite call sites).
+    """
+
+    def put(self, report: ExecutionReport) -> None: ...
+
+    def get(self, tenant_id: UUID, execution_id: UUID) -> ExecutionReport: ...
+
+    def list(
+        self,
+        tenant_id: UUID,
+        *,
+        status: ExecutionStatus | None = None,
+        initiated_by: UUID | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        limit: int | None = None,
+    ) -> tuple[ExecutionReport, ...]: ...
 
 
 class ExecutionNotFound(KeyError):

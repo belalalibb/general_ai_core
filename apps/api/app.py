@@ -149,7 +149,11 @@ from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurfa
 from apps.api.learning_observability import LearningObservabilityService
 from apps.api.scenarios import ScenarioService
 from apps.api.self_review import SelfReviewService
-from apps.api.store import ExecutionNotFound, InMemoryExecutionStore
+from apps.api.store import (
+    ExecutionNotFound,
+    ExecutionStorePort,
+    InMemoryExecutionStore,
+)
 from apps.api.streaming import Sleeper, event_stream
 from core.context.composer import ContextComposer
 from core.context.errors import ContextBudgetExceeded
@@ -369,7 +373,7 @@ def create_app(
     *,
     router: SimpleScoringRouter,
     execution_service: ExecutionService,
-    store: InMemoryExecutionStore | None = None,
+    store: ExecutionStorePort | None = None,
     principal: Principal | None = None,
     auth: AuthSurface | None = None,
     skills: SkillRegistry | None = None,

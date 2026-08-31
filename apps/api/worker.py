@@ -55,7 +55,7 @@ from uuid import UUID
 
 from pydantic import ValidationError
 
-from apps.api.store import InMemoryExecutionStore
+from apps.api.store import ExecutionStorePort
 from core.contracts.base import JsonObject, utc_now
 from core.contracts.errors import ErrorCode
 from core.contracts.execute import (
@@ -85,7 +85,7 @@ class ExecutionMessageHandler:
         *,
         router: SimpleScoringRouter,
         service_factory: Callable[[UUID], ExecutionService],
-        store: InMemoryExecutionStore,
+        store: ExecutionStorePort,
         outbox: OutboxPort | None = None,
         subscriptions: Mapping[UUID, list[WebhookSubscription]] | None = None,
     ) -> None:

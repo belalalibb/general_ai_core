@@ -50,7 +50,7 @@ from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    from apps.api.store import InMemoryExecutionStore
+    from apps.api.store import ExecutionStorePort
 
 #: The metadata key that labels scenario-replay executions — same
 #: machine-checkable posture as the R1 and exercise labels.
@@ -131,7 +131,7 @@ class ScenarioService:
 
     router: SimpleScoringRouter
     execution_service: ExecutionService
-    execution_store: InMemoryExecutionStore
+    execution_store: ExecutionStorePort
     _scenarios: dict[UUID, dict[UUID, Scenario]] = field(default_factory=dict)
 
     # --- store (data only) --------------------------------------------------
