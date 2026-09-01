@@ -590,7 +590,10 @@ def create_admin_router(
                 return _json(lifecycle.sample_report(admitted.tenant_id, parsed))
             except SampleNotFound:
                 return error_response(
-                    ErrorCode.NOT_FOUND, "Learning sample not found."
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown learning sample id.",
+                    details={"sample_id": sample_id[:100]},
+                    http_status=404,
                 )
 
         @router.post("/learning/samples/{sample_id}/sanitize")
@@ -610,7 +613,10 @@ def create_admin_router(
                 )
             except SampleNotFound:
                 return error_response(
-                    ErrorCode.NOT_FOUND, "Learning sample not found."
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown learning sample id.",
+                    details={"sample_id": sample_id[:100]},
+                    http_status=404,
                 )
             return _json(sample.model_dump(mode="json"))
 
@@ -635,7 +641,10 @@ def create_admin_router(
                 )
             except SampleNotFound:
                 return error_response(
-                    ErrorCode.NOT_FOUND, "Learning sample not found."
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown learning sample id.",
+                    details={"sample_id": sample_id[:100]},
+                    http_status=404,
                 )
             except NotEligibleForTraining as exc:
                 return _json({"admitted": False, "reason": str(exc)})
@@ -663,7 +672,10 @@ def create_admin_router(
                 )
             except SampleNotFound:
                 return error_response(
-                    ErrorCode.NOT_FOUND, "Learning sample not found."
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown learning sample id.",
+                    details={"sample_id": sample_id[:100]},
+                    http_status=404,
                 )
             except (PromotionDenied, LearningError) as exc:
                 return _json({"promoted": False, "reason": str(exc)})
