@@ -633,3 +633,83 @@ def test_without_composer_role_rides_payload_and_no_context_block() -> None:
     payload = world.adapter.requests[0].payload
     assert "context" not in payload
     assert payload["role"]["objective"] == "Design and review software architecture."
+
+
+# --- POST /v1/execute skills selection (chunk 5; 10 §7 + 41 §16) ------------------------
+#
+# Pins: explicit manifest-id selection admits only the registry's selectable
+# set (the SAME rule GET /v1/skills lists by — one admission rule); unknown,
+# non-selectable, and duplicate ids refuse loudly BEFORE routing/execution;
+# admitted selections ride the provider payload as id/name/version DATA only
+# (tools stay inert — 03 §8); absent field ⇒ payload carries no skills key.
+
+
+def test_execute_with_selectable_skill_rides_payload_as_data() -> None:
+    world = World()
+    world.skills.register(make_skill(manifest_id="code_review"))
+    body = {"ask": "review this", "skills": ["code_review"]}
+    response = run(_post(world.app(), body))
+    assert response.status_code == 200
+    sent = world.adapter.requests[0].payload
+    assert sent["skills"] == [
+        {"id": "code_review", "name": "code_review", "version": "1.0.0"}
+    ]
+
+
+def test_execute_without_skills_field_sends_no_skills_key() -> None:
+    world = World()
+    world.skills.register(make_skill(manifest_id="code_review"))
+    response = run(_post(world.app(), {"ask": "hi"}))
+    assert response.status_code == 200
+    assert "skills" not in world.adapter.requests[0].payload
+
+
+def test_unknown_skill_refused_before_execution() -> None:
+    world = World()
+    response = run(_post(world.app(), {"ask": "hi", "skills": ["ghost"]}))
+    assert response.status_code == 422
+    payload = response.json()
+    assert payload["error"]["code"] == "validation_error"
+    assert payload["error"]["details"]["field"] == "skills"
+    assert world.adapter.requests == []  # refused BEFORE any provider call
+
+
+def test_non_selectable_skill_same_denial_as_unknown() -> None:
+    # 20 §6 anti-enumeration: reviewed-but-not-active and imported-non-local
+    # produce the SAME refusal an unknown id gets.
+    world = World()
+    world.skills.register(
+        make_skill(manifest_id="still_reviewed", status=SkillStatus.REVIEWED)
+    )
+    world.skills.register(
+        make_skill(manifest_id="foreign", source=SkillSource.IMPORTED)
+    )
+    for requested in ("still_reviewed", "foreign", "ghost"):
+        response = run(_post(world.app(), {"ask": "hi", "skills": [requested]}))
+        assert response.status_code == 422, requested
+        detail = response.json()["error"]
+        assert detail["code"] == "validation_error"
+        assert detail["message"] == f"skill is not selectable: {requested}"
+
+
+def test_duplicate_skill_selection_refused() -> None:
+    world = World()
+    world.skills.register(make_skill(manifest_id="code_review"))
+    response = run(
+        _post(world.app(), {"ask": "hi", "skills": ["code_review", "code_review"]})
+    )
+    assert response.status_code == 422
+    assert "twice" in response.json()["error"]["message"]
+
+
+def test_multiple_selectable_skills_ride_in_request_order() -> None:
+    world = World()
+    world.skills.register(make_skill(manifest_id="beta_skill"))
+    world.skills.register(make_skill(manifest_id="alpha_skill"))
+    body = {"ask": "hi", "skills": ["beta_skill", "alpha_skill"]}
+    response = run(_post(world.app(), body))
+    assert response.status_code == 200
+    sent = world.adapter.requests[0].payload["skills"]
+    # Request order preserved (NOT registry name-order) — the caller's
+    # explicit priority is respected verbatim.
+    assert [row["id"] for row in sent] == ["beta_skill", "alpha_skill"]
