@@ -138,6 +138,10 @@ class AdminAction(StrEnum):
     # Phase-13 SkillImportService pipeline, never duplicated here).
     ENABLE_SKILL = "enable_skill"
     DISABLE_SKILL = "disable_skill"
+    # Chunk-4 verb (21 §4 'Skills: import' control row): WHERE imports may
+    # come from is admin-governed configuration — the 41 §16 source list
+    # becomes replaceable data via the SkillSourceCatalog.
+    SET_SKILL_SOURCES = "set_skill_sources"
     ENABLE_TOOL = "enable_tool"
     DISABLE_TOOL = "disable_tool"
     # Provider/model REGISTRATION verbs (21 §4 rows 'Providers: add, enable,
@@ -161,6 +165,7 @@ ACTION_AREA: dict[AdminAction, AdminArea] = {
     AdminAction.SET_ROUTING_WEIGHTS: AdminArea.ROUTING_POLICIES,
     AdminAction.ENABLE_SKILL: AdminArea.SKILLS,
     AdminAction.DISABLE_SKILL: AdminArea.SKILLS,
+    AdminAction.SET_SKILL_SOURCES: AdminArea.SKILLS,
     AdminAction.ENABLE_TOOL: AdminArea.TOOLS,
     AdminAction.DISABLE_TOOL: AdminArea.TOOLS,
     AdminAction.REGISTER_PROVIDER: AdminArea.PROVIDERS,

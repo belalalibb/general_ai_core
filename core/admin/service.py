@@ -74,6 +74,7 @@ from core.contracts.domain import (
 from core.contracts.provider import ProviderManifest
 from core.contracts.routing import ScoringWeights
 from core.contracts.skills import SkillStatus
+from core.skills.sources import InvalidSourceUrl, SkillSourceCatalog, SkillSourceEntry
 from core.contracts.tools import ToolStatus
 from core.contracts.usage import UsageSummary
 from core.providers.errors import ModelNotRegistered, ProviderNotRegistered
@@ -126,6 +127,7 @@ class AdminConfigService:
         routing: RoutingWeightsPort,
         audit_log: AuditLogPort,
         skills: SkillRegistry | None = None,
+        skill_sources: SkillSourceCatalog | None = None,
         tools: ToolRegistry | None = None,
         bindings: BindingRegistry | None = None,
         active_areas: frozenset[AdminArea] = MVP_ACTIVE_ADMIN_AREAS,
@@ -146,6 +148,9 @@ class AdminConfigService:
         self._routing = routing
         self._audit = audit_log
         self._skills = skills
+        # Chunk-4 seam: the SAME catalog instance the SkillImportService
+        # reads (source_prefixes) — SET_SKILL_SOURCES publishes into it.
+        self._skill_sources = skill_sources
         self._tools = tools
         # REGISTER_MODEL binding seam — the SAME BindingRegistry instance the
         # Router reads (no parallel state); a REGISTER_MODEL change that
@@ -390,6 +395,26 @@ class AdminConfigService:
                     "scan/review (21 §4, 14 §3)"
                 )
             return None
+        if action is AdminAction.SET_SKILL_SOURCES:
+            if self._skill_sources is None:
+                return "skill-source catalog seam is not bound in this composition"
+            urls = payload.get("urls")
+            if not isinstance(urls, list) or not urls:
+                return "payload requires a non-empty 'urls' list (priority order)"
+            disabled = payload.get("disabled", [])
+            if not isinstance(disabled, list):
+                return "'disabled' must be a list of urls when given"
+            # Dry-run the catalog's own admission (https-only, no dupes,
+            # disabled ⊆ urls) on a THROWAWAY instance — same rules, one
+            # place, zero mutation of the live catalog before publish.
+            try:
+                SkillSourceCatalog([str(u) for u in urls]).set_sources(
+                    [str(u) for u in urls],
+                    disabled=[str(d) for d in disabled],
+                )
+            except InvalidSourceUrl as exc:
+                return f"source list rejected: {exc}"
+            return None
         if action in (AdminAction.ENABLE_TOOL, AdminAction.DISABLE_TOOL):
             if self._tools is None:
                 return "tools registry seam is not bound in this composition"
@@ -559,6 +584,12 @@ class AdminConfigService:
                 "declared bindings; only ACTIVE models are routing "
                 "candidates (03 §4)"
             )
+        if action is AdminAction.SET_SKILL_SOURCES:
+            return (
+                "skill import-source allowlist replaced (order = priority); "
+                "imports admit only against the new list (14 §3 references, "
+                "never dereferenced)"
+            )
         return "router default scoring weights replaced (11 §6 versioned weights)"
 
     # -- snapshot / apply / restore (the registry-mutating core) ---------------------------
@@ -589,6 +620,9 @@ class AdminConfigService:
         if action in (AdminAction.REGISTER_PROVIDER, AdminAction.REGISTER_MODEL):
             # Pre-publish state is ABSENCE — rollback removes the rows again.
             return {"registered": False}
+        if action is AdminAction.SET_SKILL_SOURCES:
+            assert self._skill_sources is not None  # validated pre-publish
+            return {"skill_sources": self._skill_sources.entries()}
         return {"weights": self._routing.default_weights}
 
     def _apply(self, change: ConfigChange) -> None:
@@ -640,6 +674,17 @@ class AdminConfigService:
                 else ToolStatus.DISABLED
             )
             self._set_tool_status(UUID(str(change.payload["tool_id"])), tool_status)
+            return
+        if action is AdminAction.SET_SKILL_SOURCES:
+            assert self._skill_sources is not None  # validated pre-publish
+            raw_urls = change.payload["urls"]
+            assert isinstance(raw_urls, list)  # validated pre-publish
+            raw_disabled = change.payload.get("disabled", [])
+            assert isinstance(raw_disabled, list)  # validated pre-publish
+            self._skill_sources.set_sources(
+                [str(u) for u in raw_urls],
+                disabled=[str(d) for d in raw_disabled],
+            )
             return
         if action is AdminAction.REGISTER_PROVIDER:
             provider = Provider.model_validate(change.payload["provider"])
@@ -712,6 +757,14 @@ class AdminConfigService:
             tool_status = snapshot["tool_status"]
             assert isinstance(tool_status, ToolStatus)
             self._set_tool_status(UUID(str(change.payload["tool_id"])), tool_status)
+            return
+        if action is AdminAction.SET_SKILL_SOURCES:
+            assert self._skill_sources is not None
+            entries = snapshot["skill_sources"]
+            assert isinstance(entries, tuple)
+            self._skill_sources.restore(
+                tuple(e for e in entries if isinstance(e, SkillSourceEntry))
+            )
             return
         if action is AdminAction.REGISTER_PROVIDER:
             provider = Provider.model_validate(change.payload["provider"])

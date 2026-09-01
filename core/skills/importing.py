@@ -69,6 +69,7 @@ from __future__ import annotations
 
 import hashlib
 from datetime import datetime
+from typing import Protocol
 from uuid import UUID
 
 from core.contracts.skills import (
@@ -86,6 +87,14 @@ from core.skills.errors import (
     ScanFindingsBlock,
     UnknownImportSource,
 )
+
+class SourcePrefixProvider(Protocol):
+    """Live allowlist seam (the SkillSourceCatalog duck type)."""
+
+    def allowed_prefixes(self) -> tuple[str, ...]:
+        """ENABLED source URL prefixes, priority order."""
+        ...
+
 
 #: 41 §16 import sources, verbatim — configuration DATA, never dereferenced.
 IMPORT_SOURCES: tuple[str, ...] = (
@@ -116,8 +125,20 @@ def content_checksum(content: str) -> str:
 class SkillImportService:
     """The 14 §3 import lifecycle as explicit, ordered, pure steps."""
 
-    def __init__(self, *, allowed_sources: tuple[str, ...] = IMPORT_SOURCES) -> None:
+    def __init__(
+        self,
+        *,
+        allowed_sources: tuple[str, ...] = IMPORT_SOURCES,
+        source_prefixes: "SourcePrefixProvider | None" = None,
+    ) -> None:
+        """``source_prefixes`` (chunk 4): a LIVE provider of the allowlist —
+        the SkillSourceCatalog seam. Bound, it supersedes the static
+        ``allowed_sources`` tuple so admin SET_SKILL_SOURCES takes effect
+        without recomposition (one source of truth, P2). Absent, the
+        frozen 41 §16 default holds (existing behavior unchanged).
+        """
         self._allowed_sources = allowed_sources
+        self._source_prefixes = source_prefixes
 
     # --- entry: external content becomes an imported record ------------------
 
@@ -139,7 +160,12 @@ class SkillImportService:
         ``imported_at`` is caller-supplied so the pipeline stays
         deterministic (injectable time, same posture as the runtime fakes).
         """
-        if not any(source_url.startswith(source) for source in self._allowed_sources):
+        prefixes = (
+            self._source_prefixes.allowed_prefixes()
+            if self._source_prefixes is not None
+            else self._allowed_sources
+        )
+        if not any(source_url.startswith(source) for source in prefixes):
             raise UnknownImportSource(source_url)
         checksum = content_checksum(content)
         if expected_checksum is not None and checksum != expected_checksum:
