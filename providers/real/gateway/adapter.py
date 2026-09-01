@@ -87,6 +87,12 @@ CREDENTIAL_MODE_USER_KEY = "user_key"
 CREDENTIAL_MODE_PLATFORM = "platform"
 _CREDENTIAL_MODES = frozenset({CREDENTIAL_MODE_USER_KEY, CREDENTIAL_MODE_PLATFORM})
 
+#: S2 pool bounds — one adapter instance == one remote provider route; a
+#: modest pool keeps connection reuse without letting a single provider
+#: monopolize sockets under fan-out.
+_POOL_MAX_CONNECTIONS = 32
+_POOL_MAX_KEEPALIVE = 8
+
 #: Gateway wire bound for timeout_ms (RequestEnvelope: ge=1, le=600_000).
 _TIMEOUT_MS_MIN = 1
 _TIMEOUT_MS_MAX = 600_000
@@ -194,6 +200,22 @@ class RemoteGatewayAdapter:
         self._transport = transport
         self._default_timeout_ms = default_timeout_ms
         self._clock = clock
+        # S2: ONE long-lived pooled client per adapter instance (connection
+        # reuse across attempts/requests) instead of a fresh client per
+        # attempt. Created lazily on first use; ``aclose`` releases it.
+        self._pooled_client: httpx.AsyncClient | None = None
+        self._pool_limits = httpx.Limits(
+            max_connections=_POOL_MAX_CONNECTIONS,
+            max_keepalive_connections=_POOL_MAX_KEEPALIVE,
+        )
+
+    # -- lifecycle (S2) ---------------------------------------------------------------
+
+    async def aclose(self) -> None:
+        """Release the pooled HTTP client (idempotent; safe to call twice)."""
+        client, self._pooled_client = self._pooled_client, None
+        if client is not None:
+            await client.aclose()
 
     # -- declarative surface --------------------------------------------------------
 
@@ -205,12 +227,23 @@ class RemoteGatewayAdapter:
 
     # -- HTTP plumbing (transport injectable; secrets used at the last moment) ------
 
-    def _client(self, timeout_seconds: float) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            base_url=self._base_url,
-            transport=self._transport,
-            timeout=timeout_seconds,
-        )
+    def _client(self) -> httpx.AsyncClient:
+        """The pooled client, (re)created lazily if absent or closed (S2).
+
+        Per-request timeouts ride the request call (``timeout=``), so one
+        pooled client serves every operation's own deadline. httpx clients
+        are safe for concurrent use from one event loop; no lock needed.
+        """
+        client = self._pooled_client
+        if client is None or client.is_closed:
+            client = httpx.AsyncClient(
+                base_url=self._base_url,
+                transport=self._transport,
+                timeout=self._default_timeout_ms / 1000.0,
+                limits=self._pool_limits,
+            )
+            self._pooled_client = client
+        return client
 
     def _headers(self, secret: GatewaySecret, route_token: str) -> dict[str, str]:
         # The ONLY place the secret/route token are materialized: headers.
@@ -250,8 +283,9 @@ class RemoteGatewayAdapter:
         secret = self._resolve_gateway_secret()  # fresh per attempt (rotation)
         route_token = self._resolve_route_token()
         headers = self._headers(secret, route_token)
-        async with self._client(timeout_seconds) as client:
-            return await client.request(method, path, headers=headers, json=json_body)
+        return await self._client().request(
+            method, path, headers=headers, json=json_body, timeout=timeout_seconds
+        )
 
     # -- credential validation (30 §8.1) ---------------------------------------------
 

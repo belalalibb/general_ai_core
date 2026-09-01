@@ -88,6 +88,12 @@ class InvalidJudgePolicy(MultiModelError):
     """judge_policy that would nest multi-model execution — refused."""
 
 
+#: S3 default in-flight bound for parallel compare. Small on purpose: the
+#: compare set is operator-declared (a handful of models), and provider
+#: rate limits punish bursts more than latency rewards them.
+DEFAULT_MAX_PARALLEL = 4
+
+
 class CompareRefused(MultiModelError):
     """parallel_compare could not satisfy the policy (allow_partial=False)."""
 
@@ -147,9 +153,17 @@ class MultiModelExecutor:
         *,
         router: SimpleScoringRouter,
         execution: ExecutionService,
+        max_parallel: int = DEFAULT_MAX_PARALLEL,
     ) -> None:
+        if max_parallel < 1:
+            msg = "max_parallel must be >= 1"
+            raise ValueError(msg)
         self._router = router
         self._execution = execution
+        # S3: bounded fan-out for PARALLEL_COMPARE. Every branch still runs,
+        # results stay in policy order, allow_partial/failure semantics are
+        # unchanged; only how many provider calls are in flight is capped.
+        self._max_parallel = max_parallel
 
     async def execute(
         self,
@@ -323,7 +337,15 @@ class MultiModelExecutor:
                 timeout_ms=timeout_ms,
             )
 
-        reports = await asyncio.gather(*(_run(d) for _, d in eligible))
+        # S3: bounded concurrency. gather() preserves input order so the
+        # policy-order rebuild below is unchanged.
+        semaphore = asyncio.Semaphore(self._max_parallel)
+
+        async def _bounded(decision: RoutingDecision) -> ExecutionReport:
+            async with semaphore:
+                return await _run(decision)
+
+        reports = await asyncio.gather(*(_bounded(d) for _, d in eligible))
 
         # Rebuild the full branch list in policy order.
         reports_iter = iter(reports)
