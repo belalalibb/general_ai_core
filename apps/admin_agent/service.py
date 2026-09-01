@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 
@@ -44,15 +44,25 @@ from apps.admin_agent.dispatcher import ToolDispatcher, ToolRegistry
 from apps.admin_agent.secrecy import scrub_text
 from apps.admin_agent.tools import AGENT_LABEL_KEY, AgentToolSurface
 from apps.api.app import Principal
+from core.audit.memory import InMemoryAuditLog
 from core.contracts.base import JsonObject
 from core.contracts.execute import ExecutionStatus
 from core.contracts.provider import ProviderOperation
 from core.contracts.routing import RoutingRequest
+from core.contracts.security import ActorKind
+from core.contracts.tools import Tool
+from core.execution.agent import AgentToolBinding
+from core.execution.loop import AgentLoop
 from core.execution.service import ExecutionReport
+from core.identity.devices import DeviceRegistry
 from core.providers.errors import ModelNotRegistered, ProviderNotRegistered
 from core.routing.errors import FallbackNotConfigured, NoEligibleCandidates
 from core.routing.router import UnsupportedPolicyType
+from core.security.firewall import CapabilityFirewall, TenantPolicy
+from core.tools import ToolCallGate, ToolExecutor
+from core.tools import ToolRegistry as CoreToolRegistry
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
+from core.usage.memory import InMemoryUsageAccounting
 
 #: Flood bound: a single ROUND may dispatch at most this many tool calls.
 _MAX_TOOL_CALLS_PER_TURN = 8
@@ -125,6 +135,33 @@ class _EvidenceIndex:
         return (ref.kind, ref.ref) in self._seen
 
 
+#: The synthetic per-turn tool through which the shared AgentLoop runs one
+#: ROUND of admin tool calls. It grants nothing: every real call inside the
+#: round still passes the ToolDispatcher's admission individually.
+_ROUND_TOOL_NAME = "admin_round"
+_ROUND_PERMISSION = "admin_agent.round.dispatch"
+_ROUND_ENTITLEMENT = "admin_agent"
+
+
+class _ReasoningFailed(Exception):
+    """Internal: propose-seam signal that the reasoning execution failed."""
+
+
+class _TurnState:
+    """Mutable accumulation for ONE converse turn (bridge <-> handler)."""
+
+    def __init__(self) -> None:
+        self.index = _EvidenceIndex()
+        self.transcript: list[ToolCallRecord] = []
+        self.claims: list[AgentClaim] = []
+        self.reasoning_ids: list[UUID] = []
+        self.refused_claims = 0
+        self.note: str | None = None
+        self.rounds = 0
+        self.stop_reason = "final"
+        self.pending_final = False
+
+
 class AdminAgentService:
     """Conversation loop + trace + diagnosis over injected platform seams."""
 
@@ -141,92 +178,243 @@ class AdminAgentService:
     # --- conversation --------------------------------------------------------
 
     async def converse(self, caller: Principal, message: str) -> AgentAnswer:
-        """Bounded reason→act→observe→reassess loop (mandate §8).
+        """Bounded reason→act→observe→reassess loop (mandate §8) — R156:
+        driven by the SHARED :class:`core.execution.loop.AgentLoop`, so the
+        same agent capability is consumable by future surfaces (IDE/SaaS)
+        without copying loop logic. This service contributes ONLY:
 
-        Round 1 is the historical single-turn behavior verbatim. The model
-        OPTS INTO iteration by returning ``"continue": true`` next to tool
-        calls; deterministic code disposes: continuation requires at least
-        one dispatched tool call this round and a remaining round budget.
-        The next round's ask carries the (already scrubbed) observations,
-        so the second action can genuinely change because of the first
-        result. Termination is structural: ``_MAX_ROUNDS``.
+        - the propose seam (``_reason`` through the platform's own execute
+          path + the admin wire-protocol parse + the historical disposal
+          rules), and
+        - ONE act handler that dispatches a whole round's batched tool
+          calls through the EXISTING ToolDispatcher — which remains the
+          single admission authority for real tools (registry membership,
+          admin gate, arg check, audit). The V3 gate/executor the shared
+          loop requires is per-turn plumbing over one synthetic
+          round-dispatch tool; it grants nothing beyond reaching that
+          handler, and its audit/usage ports are turn-private so the
+          OBSERVABLE audit and billing streams stay exactly the historical
+          ones (dispatcher audit + reasoning executions).
+
+        Behavior is pinned verbatim: max ``_MAX_ROUNDS`` model rounds,
+        per-round flood bound, explicit ``"continue": true`` opt-in,
+        observations feeding the next round's ask, the closed stop-reason
+        vocabulary, evidence-gated claim admission, scrubbing unchanged.
         """
-        index = _EvidenceIndex()
-        transcript: list[ToolCallRecord] = []
-        claims: list[AgentClaim] = []
-        reasoning_ids: list[UUID] = []
-        observations: list[JsonObject] = []
-        refused_claims = 0
-        note: str | None = None
-        rounds = 0
-        stop_reason = "final"
-
-        for round_no in range(1, _MAX_ROUNDS + 1):
-            rounds = round_no
-            raw, reasoning_id = await self._reason(
-                caller, message, observations=observations, round_no=round_no
+        state = _TurnState()
+        loop = self._build_loop(caller, message, state)
+        payload: JsonObject = {"message": message}
+        try:
+            await loop.execute(
+                tenant_id=caller.tenant_id,
+                user_id=caller.user_id,
+                request=payload,
+                request_hash=hashlib.sha256(
+                    json.dumps(payload, sort_keys=True).encode("utf-8")
+                ).hexdigest(),
+                actor=ActorKind.USER,
+                actor_id=caller.user_id,
             )
-            if reasoning_id is not None:
-                reasoning_ids.append(reasoning_id)
-            if raw is None:
-                note = "reasoning execution failed; nothing to report"
-                stop_reason = "reasoning_failed"
-                break
-            proposals, parse_note = self._parse_proposals(raw)
-            if proposals is None:
-                note = parse_note
-                stop_reason = "invalid_proposal"
-                break
+        except _ReasoningFailed:
+            # Already recorded on state by the propose seam; the shared
+            # loop treated it as a propose fault and stopped — historical
+            # outcome shape preserved below.
+            pass
 
-            round_results: list[JsonObject] = []
-            for call in proposals.get("tool_calls", [])[:_MAX_TOOL_CALLS_PER_TURN]:
-                if not isinstance(call, dict):
-                    continue
-                tool = str(call.get("tool", ""))
-                arguments = call.get("arguments")
-                if not isinstance(arguments, dict):
-                    arguments = {}
-                record = await self._dispatcher.dispatch(caller, tool, arguments)
-                transcript.append(record)
-                if record.ok:
-                    index.absorb(record.result)
-                # Observation = the record's own (already scrubbed) data.
-                observation: JsonObject = {"tool": record.tool, "ok": record.ok}
-                if record.result is not None:
-                    observation["result"] = record.result
-                if record.refusal is not None:
-                    observation["refusal"] = record.refusal
-                round_results.append(observation)
-
-            for raw_claim in proposals.get("claims", []):
-                admitted = self._admit_claim(raw_claim, index)
-                if admitted is None:
-                    refused_claims += 1
-                else:
-                    claims.append(admitted)
-
-            # --- deterministic disposal of the continuation request ----------
-            if proposals.get("continue") is not True:
-                stop_reason = "final"
-                break
-            if not round_results:
-                stop_reason = "continue_without_tools"
-                break
-            if round_no == _MAX_ROUNDS:
-                stop_reason = "max_rounds"
-                break
-            observations.append({"round": round_no, "results": round_results})
-
-        if note is None and refused_claims:
-            note = f"{refused_claims} claim(s) refused: missing or unverifiable evidence"
+        note = state.note
+        if note is None and state.refused_claims:
+            note = (
+                f"{state.refused_claims} claim(s) refused: "
+                "missing or unverifiable evidence"
+            )
         return AgentAnswer(
-            claims=claims,
-            tool_calls=transcript,
-            reasoning_execution_ids=reasoning_ids,
+            claims=state.claims,
+            tool_calls=state.transcript,
+            reasoning_execution_ids=state.reasoning_ids,
             note=note,
-            rounds=rounds,
-            stop_reason=stop_reason,
+            rounds=state.rounds,
+            stop_reason=state.stop_reason,
         )
+
+    def _build_loop(
+        self, caller: Principal, message: str, state: _TurnState
+    ) -> AgentLoop:
+        """Compose one turn's shared AgentLoop over the V3 gated runtime.
+
+        The synthetic ``admin_round`` tool exists ONLY so every act passes
+        the shared loop's gated executor; real authority is unchanged —
+        each proposed call inside a round still goes through
+        ``self._dispatcher.dispatch`` (the admin Tool Gate) individually.
+        """
+        round_tool = Tool.model_validate(
+            {
+                "id": uuid4(),
+                "name": _ROUND_TOOL_NAME,
+                "version": "1.0.0",
+                "location": "server",
+                "permissions": [_ROUND_PERMISSION],
+                "approval_policy": {_ROUND_PERMISSION: "none"},
+                "status": "active",
+            }
+        )
+        core_registry = CoreToolRegistry()
+        core_registry.register(round_tool)
+        firewall = CapabilityFirewall()
+        firewall.set_tenant_policy(
+            caller.tenant_id,
+            TenantPolicy(
+                granted_permissions=frozenset({_ROUND_PERMISSION}),
+                granted_entitlements=frozenset({_ROUND_ENTITLEMENT}),
+            ),
+        )
+        usage = InMemoryUsageAccounting()
+        usage.configure_tenant(
+            caller.tenant_id, plan="admin_agent_turn", task_units_limit=1.0
+        )
+
+        async def dispatch_round(arguments: JsonObject) -> JsonObject:
+            """One round's acts: batched calls through the REAL dispatcher."""
+            calls = arguments.get("calls")
+            round_results: list[JsonObject] = []
+            if isinstance(calls, list):
+                for call in calls[:_MAX_TOOL_CALLS_PER_TURN]:
+                    if not isinstance(call, dict):
+                        continue
+                    tool = str(call.get("tool", ""))
+                    call_args = call.get("arguments")
+                    if not isinstance(call_args, dict):
+                        call_args = {}
+                    record = await self._dispatcher.dispatch(
+                        caller, tool, call_args
+                    )
+                    state.transcript.append(record)
+                    if record.ok:
+                        state.index.absorb(record.result)
+                    observation: JsonObject = {
+                        "tool": record.tool,
+                        "ok": record.ok,
+                    }
+                    if record.result is not None:
+                        observation["result"] = record.result
+                    if record.refusal is not None:
+                        observation["refusal"] = record.refusal
+                    round_results.append(observation)
+            claims = arguments.get("claims")
+            if isinstance(claims, list):
+                for raw_claim in claims:
+                    admitted = self._admit_claim(raw_claim, state.index)
+                    if admitted is None:
+                        state.refused_claims += 1
+                    else:
+                        state.claims.append(admitted)
+            return {"round": state.rounds, "results": round_results}
+
+        executor = ToolExecutor(
+            gate=ToolCallGate(
+                tools=core_registry,
+                firewall=firewall,
+                devices=DeviceRegistry(),
+            ),
+            handlers={round_tool.id: dispatch_round},
+            audit=InMemoryAuditLog(),  # turn-private plumbing (see docstring)
+            usage=usage,
+        )
+        binding = AgentToolBinding(
+            tool_id=round_tool.id,
+            permission=_ROUND_PERMISSION,
+            resource="admin_agent:round",
+            scope="tenant",
+            entitlement=_ROUND_ENTITLEMENT,
+            risk_level="low",
+        )
+
+        async def propose(payload: JsonObject) -> JsonObject:
+            return await self._propose_round(caller, message, state, payload)
+
+        return AgentLoop(
+            propose=propose,
+            tools=executor,
+            bindings={_ROUND_TOOL_NAME: binding},
+            # Worst case: _MAX_ROUNDS act steps + the terminal final step.
+            max_steps=_MAX_ROUNDS + 1,
+        )
+
+    async def _propose_round(
+        self,
+        caller: Principal,
+        message: str,
+        state: _TurnState,
+        payload: JsonObject,
+    ) -> JsonObject:
+        """The loop's propose seam — model call + deterministic disposal.
+
+        Emits the shared loop's closed proposal vocabulary. The disposal
+        decision (continue / finalize / bound) is computed HERE from the
+        admin wire protocol, exactly as the historical inline loop did;
+        the shared loop enforces the step bound and runs the act.
+        """
+        if state.pending_final:
+            # The previous round chose (or was bounded into) finalization;
+            # its acts already ran — terminate the run without a model call.
+            return {"action": "final", "output": {"stop": state.stop_reason}}
+
+        # Rebuild the historical observations shape from the LOOP's own
+        # observation stream (the round handler returns {"round","results"}).
+        raw_observations = payload.get("observations")
+        observations: list[JsonObject] = []
+        if isinstance(raw_observations, list):
+            for entry in raw_observations:
+                if isinstance(entry, dict) and isinstance(
+                    entry.get("result"), dict
+                ):
+                    observations.append(entry["result"])
+
+        round_no = state.rounds + 1
+        raw, reasoning_id = await self._reason(
+            caller, message, observations=observations, round_no=round_no
+        )
+        state.rounds = round_no
+        if reasoning_id is not None:
+            state.reasoning_ids.append(reasoning_id)
+        if raw is None:
+            state.note = "reasoning execution failed; nothing to report"
+            state.stop_reason = "reasoning_failed"
+            raise _ReasoningFailed(state.note)
+        proposals, parse_note = self._parse_proposals(raw)
+        if proposals is None:
+            state.note = parse_note
+            state.stop_reason = "invalid_proposal"
+            # Deliberately outside the closed action vocabulary: the shared
+            # validator refuses it and the loop stops — honest, contained.
+            return {"action": "invalid_admin_proposal"}
+
+        calls = proposals.get("tool_calls")
+        calls = calls if isinstance(calls, list) else []
+        dispatchable = sum(
+            1
+            for call in calls[:_MAX_TOOL_CALLS_PER_TURN]
+            if isinstance(call, dict)
+        )
+
+        # --- deterministic disposal (verbatim historical rules) ------------
+        if proposals.get("continue") is not True:
+            state.stop_reason = "final"
+            state.pending_final = True
+        elif dispatchable == 0:
+            state.stop_reason = "continue_without_tools"
+            state.pending_final = True
+        elif round_no == _MAX_ROUNDS:
+            state.stop_reason = "max_rounds"
+            state.pending_final = True
+
+        return {
+            "action": "tool_call",
+            "tool": _ROUND_TOOL_NAME,
+            "arguments": {
+                "calls": calls,
+                "claims": proposals.get("claims", []),
+            },
+        }
 
     async def _reason(
         self,
