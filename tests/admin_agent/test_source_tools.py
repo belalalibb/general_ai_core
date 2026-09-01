@@ -41,7 +41,7 @@ def world_with_source(repo: Path, script: list[object] | None = None) -> AgentWo
     """AgentWorld whose surface carries a SourceReader (rebuilt seams)."""
     world = AgentWorld(script)
     world.surface = dataclasses.replace(
-        world.surface, source=SourceReader(root=repo)
+        world.surface, repo_reader=SourceReader(root=repo)
     )
     world.registry = build_registry(world.surface)
     world.dispatcher = ToolDispatcher(world.registry, audit=world.audit)

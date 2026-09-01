@@ -113,7 +113,7 @@ class AgentToolSurface:
     #: (P2): absent reader = absent tools — no composition is forced to
     #: expose its filesystem. The reader's own jail/denylist/caps hold;
     #: every result additionally passes scrub_object like all other tools.
-    source: SourceReader | None = None
+    repo_reader: SourceReader | None = None
 
 
 def _report_row(report: ExecutionReport) -> JsonObject:
@@ -353,8 +353,8 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
     # R0 read-only. The SourceReader enforces the jail, denylist, and byte/
     # entry caps; refusals surface as typed DATA (never a crash) so the
     # model can adapt to them within the round budget.
-    if surface.source is not None:
-        source_reader = surface.source
+    if surface.repo_reader is not None:
+        source_reader = surface.repo_reader
 
         async def read_source_file(caller: Principal, args: JsonObject) -> JsonObject:
             try:

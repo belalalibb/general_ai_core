@@ -837,7 +837,7 @@ def build_runtime_profile(
             # env: AGENT_SOURCE_ROOT names the directory the agent may
             # inspect (jailed, denylisted, byte/entry-capped by the
             # SourceReader itself). Absent/invalid ⇒ absent tools (P2).
-            source=_source_reader(env.get("AGENT_SOURCE_ROOT", "")),
+            repo_reader=_source_reader(env.get("AGENT_SOURCE_ROOT", "")),
         ),
         auth=auth,
         # Gap 1c: the onboarding route exists ONLY when the gateway binding
