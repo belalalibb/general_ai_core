@@ -14,6 +14,7 @@ from core.admin.errors import (
 )
 from core.admin.service import (
     AdminConfigService,
+    AdminPersistencePort,
     RoutingWeightsPort,
     UsageConfigurationPort,
 )
@@ -21,6 +22,7 @@ from core.admin.service import (
 __all__ = [
     "AdminConfigService",
     "AdminError",
+    "AdminPersistencePort",
     "ChangeNotFound",
     "InactiveAdminArea",
     "InvalidLifecycleTransition",

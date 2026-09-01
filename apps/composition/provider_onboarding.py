@@ -47,6 +47,7 @@ from core.contracts.provider import (
     ProviderManifest,
     ProviderOperation,
 )
+from core.providers.errors import ModelNotRegistered, ProviderNotRegistered
 from core.providers.onboarding import ProviderOnboardingService
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
@@ -135,6 +136,21 @@ class CatalogPersistence:
 
     def persist_binding(self, binding: ProviderModelBinding) -> None:
         self._bridge.run(self._bindings.binding_catalog.upsert(binding))
+
+    # -- Gap 2 widening: the SAME doorway serves AdminPersistencePort --------
+    # (one persistence object, two consumers — onboarding walker + admin
+    # lifecycle — so durable behavior can never fork between them).
+
+    def delete_provider(self, provider_id: UUID) -> None:
+        self._bridge.run(self._bindings.provider_catalog.delete(provider_id))
+
+    def delete_model(self, model_id: UUID) -> None:
+        self._bridge.run(self._bindings.model_catalog.delete(model_id))
+
+    def delete_binding(self, provider_id: UUID, model_id: UUID) -> None:
+        self._bridge.run(
+            self._bindings.binding_catalog.delete(provider_id, model_id)
+        )
 
 
 def build_onboarding_surface(
@@ -245,6 +261,51 @@ def hydrate_gateway_providers(
     return hydrated
 
 
+def replay_admin_status_overrides(
+    *,
+    database: DatabaseBindings,
+    bridge: AsyncBridge,
+    providers: ProviderRegistry,
+    models: ModelRegistry,
+) -> list[str]:
+    """Replay durably persisted admin STATUS onto the live registries (Gap 2).
+
+    The write side (AdminPersistencePort write-through) is only honest if
+    a restart READS it back: for every persisted provider/model row whose
+    natural key is already registered in-memory (code-shipped entities;
+    gateway providers were hydrated before this call), apply the DURABLE
+    status over the composed default. Matching is by NATURAL key — the
+    same key the catalogs upsert on — because code-shipped in-memory ids
+    are per-boot. Rows without an in-memory counterpart are SKIPPED, not
+    invented: a durable row alone carries no manifest/adapter, and
+    registering it would fabricate an executable provider (41 §49);
+    gateway rows get their full hydration path separately.
+
+    Returns the natural keys whose status was overridden (observability).
+    """
+    overridden: list[str] = []
+    for provider_row in bridge.run(database.provider_catalog.load_all()):
+        try:
+            entry = providers.get(provider_row.provider_key)
+        except ProviderNotRegistered:
+            continue  # durable-only row — skipped, never invented (docstring)
+        if entry.provider.status is not provider_row.status:
+            providers.replace(
+                entry.provider.model_copy(update={"status": provider_row.status}),
+                entry.manifest,
+            )
+            overridden.append(provider_row.provider_key)
+    for model_row in bridge.run(database.model_catalog.load_all()):
+        try:
+            current = models.get(model_row.model_key)
+        except ModelNotRegistered:
+            continue  # durable-only row — skipped, never invented
+        if current.status is not model_row.status:
+            models.replace(current.model_copy(update={"status": model_row.status}))
+            overridden.append(model_row.model_key)
+    return overridden
+
+
 __all__ = [
     "PLATFORM_TENANT_ID",
     "CatalogPersistence",
@@ -252,4 +313,5 @@ __all__ = [
     "build_onboarding_surface",
     "hydrate_gateway_providers",
     "manifest_from_definition",
+    "replay_admin_status_overrides",
 ]

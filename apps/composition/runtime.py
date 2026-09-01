@@ -77,8 +77,10 @@ from apps.composition.durability import build_durable_execution_store
 from apps.composition.gateway import gateway_settings_from_env
 from apps.composition.identity import build_durable_identity_service
 from apps.composition.provider_onboarding import (
+    CatalogPersistence,
     build_onboarding_surface,
     hydrate_gateway_providers,
+    replay_admin_status_overrides,
 )
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
@@ -644,6 +646,16 @@ def build_runtime_profile(
             secrets=onboarding_secrets,
         )
         provider_keys = [*provider_keys, *hydrated_keys]
+        # Gap 2 read side: replay durably persisted admin status flips onto
+        # the SAME registries (natural-key match; AFTER gateway hydration so
+        # onboarded providers get their overrides too). Without this the
+        # write-through above would be write-only — dishonest durability.
+        replay_admin_status_overrides(
+            database=bindings,
+            bridge=bridge,
+            providers=providers,
+            models=models,
+        )
         store = build_durable_execution_store(bindings, bridge)
         identity = BudgetGrantingIdentity(
             inner=build_durable_identity_service(
@@ -723,6 +735,16 @@ def build_runtime_profile(
         # REGISTER_MODEL binding seam — the SAME BindingRegistry the Router
         # and ExecutionService read (instance-agreement duty).
         bindings=binding_registry,
+        # Gap 2: on the durable profile every published/rolled-back admin
+        # change writes through to the entity catalogs (the SAME
+        # CatalogPersistence doorway the onboarding walker uses — one
+        # persistence object, no forked durable behavior). In-memory
+        # profile leaves the seam unbound (store posture).
+        persistence=(
+            CatalogPersistence(bindings, bridge)
+            if bindings is not None and bridge is not None
+            else None
+        ),
     )
     admin = AdminSurface(
         service=admin_service,

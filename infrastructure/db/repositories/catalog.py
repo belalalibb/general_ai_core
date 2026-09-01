@@ -42,7 +42,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -284,14 +284,36 @@ class PostgresModelCatalog(_CatalogBase):
         return [_row_to_model(row) for row in rows]
 
     async def upsert(self, model: Model) -> None:
+        """Insert-or-update keyed on the NATURAL key ``model_key`` (Gap 2).
+
+        The durable row's id is FIRST-WRITER-WINS: a later upsert for the
+        same key updates every column EXCEPT id, so FK references (bindings)
+        stay valid. This serves both consumers — onboarding (stable ids ⇒
+        same row either way) and admin status write-through for code-shipped
+        entities whose in-memory ids are per-boot (the id-keyed conflict
+        would violate the model_key UNIQUE constraint across boots).
+        """
         values = _model_values(model)
         stmt = pg_insert(models).values(**values)
         update_cols = {k: v for k, v in values.items() if k != "id"}
         async with self._sessions() as session:
             async with session.begin():
                 await session.execute(
-                    stmt.on_conflict_do_update(index_elements=["id"], set_=update_cols)
+                    stmt.on_conflict_do_update(
+                        index_elements=["model_key"], set_=update_cols
+                    )
                 )
+
+    async def delete(self, model_id: Any) -> None:
+        """Remove one model row (Gap 2: REGISTER_MODEL rollback).
+
+        Absent id is a no-op DELETE (idempotent rollback — restoring
+        pre-publish ABSENCE twice is still absence). FK RESTRICT from
+        provider_model_bindings guards ordering: bindings first.
+        """
+        async with self._sessions() as session:
+            async with session.begin():
+                await session.execute(delete(models).where(models.c.id == model_id))
 
 
 class PostgresProviderCatalog(_CatalogBase):
@@ -310,13 +332,34 @@ class PostgresProviderCatalog(_CatalogBase):
         return [_row_to_provider(row) for row in rows]
 
     async def upsert(self, provider: Provider) -> None:
+        """Insert-or-update keyed on the NATURAL key ``provider_key`` (Gap 2).
+
+        Same first-writer-wins id posture as the model catalog: the id
+        column never changes on conflict, so bindings/gateway-registration
+        FKs stay valid across per-boot in-memory id churn.
+        """
         values = _provider_values(provider)
         stmt = pg_insert(providers).values(**values)
         update_cols = {k: v for k, v in values.items() if k != "id"}
         async with self._sessions() as session:
             async with session.begin():
                 await session.execute(
-                    stmt.on_conflict_do_update(index_elements=["id"], set_=update_cols)
+                    stmt.on_conflict_do_update(
+                        index_elements=["provider_key"], set_=update_cols
+                    )
+                )
+
+    async def delete(self, provider_id: Any) -> None:
+        """Remove one provider row (Gap 2: REGISTER_PROVIDER rollback).
+
+        Idempotent (absent id ⇒ no-op). FK RESTRICT from bindings and
+        gateway registrations refuses loudly if dependents still exist —
+        the caller must remove those first (memory-order mirrored).
+        """
+        async with self._sessions() as session:
+            async with session.begin():
+                await session.execute(
+                    delete(providers).where(providers.c.id == provider_id)
                 )
 
 
@@ -352,6 +395,17 @@ class PostgresBindingCatalog(_CatalogBase):
                     stmt.on_conflict_do_update(
                         index_elements=["provider_id", "model_id"],
                         set_=update_cols,
+                    )
+                )
+
+    async def delete(self, provider_id: Any, model_id: Any) -> None:
+        """Remove one binding row by its composite key (Gap 2 rollback)."""
+        async with self._sessions() as session:
+            async with session.begin():
+                await session.execute(
+                    delete(provider_model_bindings).where(
+                        (provider_model_bindings.c.provider_id == provider_id)
+                        & (provider_model_bindings.c.model_id == model_id)
                     )
                 )
 

@@ -86,6 +86,46 @@ from core.tools.registry import ToolRegistry
 from core.usage.errors import EntitlementNotConfigured
 
 
+class AdminPersistencePort(Protocol):
+    """Gap 2 write-through doorway to the durable entity catalogs.
+
+    OPTIONAL seam (composition binds it over the Postgres catalogs when a
+    database is configured; hermetic/in-memory compositions leave it
+    unbound — prior behavior exactly). Called AFTER the in-memory apply/
+    restore succeeds so a refused change never leaves a durable row; a
+    durable failure re-raises verbatim (loud — the operator sees the
+    publish fail rather than a silent memory/durability split).
+
+    Provider MANIFESTS are deliberately absent: they stay code-derived
+    (the recorded catalog decision) — only entity/status rows and
+    bindings persist here.
+    """
+
+    def persist_provider(self, provider: Provider) -> None:
+        """Upsert the provider ENTITY row (status included)."""
+        ...
+
+    def persist_model(self, model: Model) -> None:
+        """Upsert one model row (status included)."""
+        ...
+
+    def persist_binding(self, binding: ProviderModelBinding) -> None:
+        """Upsert one provider-model binding row."""
+        ...
+
+    def delete_provider(self, provider_id: UUID) -> None:
+        """Remove one provider row (REGISTER_PROVIDER rollback)."""
+        ...
+
+    def delete_model(self, model_id: UUID) -> None:
+        """Remove one model row (REGISTER_MODEL rollback)."""
+        ...
+
+    def delete_binding(self, provider_id: UUID, model_id: UUID) -> None:
+        """Remove one binding row (REGISTER_MODEL rollback)."""
+        ...
+
+
 class UsageConfigurationPort(Protocol):
     """The 21 §5 plan seam this service publishes through.
 
@@ -130,6 +170,7 @@ class AdminConfigService:
         skill_sources: SkillSourceCatalog | None = None,
         tools: ToolRegistry | None = None,
         bindings: BindingRegistry | None = None,
+        persistence: AdminPersistencePort | None = None,
         active_areas: frozenset[AdminArea] = MVP_ACTIVE_ADMIN_AREAS,
     ) -> None:
         """FINAL Phase 19 widening (T-IMPL-068) — recorded decisions:
@@ -157,6 +198,12 @@ class AdminConfigService:
         # names bindings while this seam is absent FAILS VALIDATION loudly
         # (the skills/tools absent-seam posture, applied verbatim).
         self._bindings = bindings
+        # Gap 2 write-through seam: entity-catalog persistence for the
+        # actions that mutate DURABLE entity state (status flips + the
+        # register verbs). Optional — unbound keeps prior behavior; bound
+        # means a published/rolled-back change survives restart. Called
+        # AFTER the in-memory mutation so refusals never leave rows.
+        self._persistence = persistence
         self._active_areas = active_areas
         # Lifecycle records, physically keyed by (tenant, id) — foreign
         # changes are unaddressable by construction (20 §6).
@@ -690,31 +737,42 @@ class AdminConfigService:
             provider = Provider.model_validate(change.payload["provider"])
             manifest = ProviderManifest.model_validate(change.payload["manifest"])
             self._providers.register(provider, manifest)
+            # Gap 2 write-through AFTER in-memory success (entity row only;
+            # the manifest stays code-derived — recorded catalog decision).
+            if self._persistence is not None:
+                self._persistence.persist_provider(provider)
             return
         if action is AdminAction.REGISTER_MODEL:
             model = Model.model_validate(change.payload["model"])
             self._models.register(model)
+            registered_bindings: list[ProviderModelBinding] = []
             raw_bindings = change.payload.get("bindings", [])
             assert isinstance(raw_bindings, list)  # validated pre-publish
             for row in raw_bindings:
                 assert isinstance(row, dict)  # validated pre-publish
                 assert self._bindings is not None  # validated pre-publish
                 entry = self._providers.get(str(row["provider_key"]))
-                self._bindings.register(
-                    ProviderModelBinding(
-                        provider_id=entry.provider.id,
-                        model_id=model.id,
-                        provider_model_name=str(row["provider_model_name"]),
-                        availability=BindingAvailability(
-                            str(
-                                row.get(
-                                    "availability",
-                                    BindingAvailability.AVAILABLE.value,
-                                )
+                binding = ProviderModelBinding(
+                    provider_id=entry.provider.id,
+                    model_id=model.id,
+                    provider_model_name=str(row["provider_model_name"]),
+                    availability=BindingAvailability(
+                        str(
+                            row.get(
+                                "availability",
+                                BindingAvailability.AVAILABLE.value,
                             )
-                        ),
-                    )
+                        )
+                    ),
                 )
+                self._bindings.register(binding)
+                registered_bindings.append(binding)
+            # Gap 2 write-through AFTER the FULL in-memory apply succeeded
+            # (model + every binding) — a mid-apply refusal leaves no rows.
+            if self._persistence is not None:
+                self._persistence.persist_model(model)
+                for binding in registered_bindings:
+                    self._persistence.persist_binding(binding)
             return
         weights_payload = change.payload["weights"]
         self._routing.set_default_weights(ScoringWeights.model_validate(weights_payload))
@@ -769,6 +827,10 @@ class AdminConfigService:
         if action is AdminAction.REGISTER_PROVIDER:
             provider = Provider.model_validate(change.payload["provider"])
             self._providers.remove(provider.provider_key)
+            # Gap 2: rollback removes the durable row too — memory and
+            # catalog agree after restore (honest removal, both layers).
+            if self._persistence is not None:
+                self._persistence.delete_provider(provider.id)
             return
         if action is AdminAction.REGISTER_MODEL:
             model = Model.model_validate(change.payload["model"])
@@ -779,7 +841,11 @@ class AdminConfigService:
                 assert self._bindings is not None
                 entry = self._providers.get(str(row["provider_key"]))
                 self._bindings.remove(entry.provider.id, model.id)
+                if self._persistence is not None:
+                    self._persistence.delete_binding(entry.provider.id, model.id)
             self._models.remove(model.model_key)
+            if self._persistence is not None:
+                self._persistence.delete_model(model.id)
             return
         weights = snapshot["weights"]
         assert isinstance(weights, ScoringWeights)
@@ -787,13 +853,20 @@ class AdminConfigService:
 
     def _set_model_status(self, model_key: str, status: ModelStatus) -> None:
         model = self._models.get(model_key)
-        self._models.replace(model.model_copy(update={"status": status}))
+        updated = model.model_copy(update={"status": status})
+        self._models.replace(updated)
+        # Gap 2: a status flip is durable entity state — write through AFTER
+        # the in-memory replace succeeded. Serves publish AND rollback (both
+        # route here), so restore also lands durably.
+        if self._persistence is not None:
+            self._persistence.persist_model(updated)
 
     def _set_provider_status(self, provider_key: str, status: ProviderStatus) -> None:
         entry = self._providers.get(provider_key)
-        self._providers.replace(
-            entry.provider.model_copy(update={"status": status}), entry.manifest
-        )
+        updated = entry.provider.model_copy(update={"status": status})
+        self._providers.replace(updated, entry.manifest)
+        if self._persistence is not None:
+            self._persistence.persist_provider(updated)
 
     def _set_skill_status(self, skill_id: UUID, status: SkillStatus) -> None:
         # Entity and embedded manifest advance TOGETHER (the registry's

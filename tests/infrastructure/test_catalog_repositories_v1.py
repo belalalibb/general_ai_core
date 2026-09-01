@@ -190,34 +190,40 @@ class TestHermetic:
         assert restored.auth_types == [AuthType.API_KEY]
 
     def test_upsert_sql_compiles_for_postgresql(self) -> None:
+        # Conflict keys mirror what each catalog ACTUALLY upserts on:
+        # roles/skills conflict on id; models/providers conflict on their
+        # NATURAL key (Gap 2 — admin write-through must update the durable
+        # row for code-shipped entities whose in-memory ids are per-boot).
         from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-        for table, values in (
-            (roles, _role_values(make_role())),
-            (skills, _skill_values(make_skill())),
-            (models, _model_values(make_model())),
-            (providers, _provider_values(make_provider())),
+        for table, values, conflict_col in (
+            (roles, _role_values(make_role()), "id"),
+            (skills, _skill_values(make_skill()), "id"),
+            (models, _model_values(make_model()), "model_key"),
+            (providers, _provider_values(make_provider()), "provider_key"),
         ):
             stmt = pg_insert(table).values(**values)
             update_cols = {k: v for k, v in values.items() if k != "id"}
             compiled = str(
                 stmt.on_conflict_do_update(
-                    index_elements=["id"], set_=update_cols
+                    index_elements=[conflict_col], set_=update_cols
                 ).compile(dialect=postgresql.dialect())
             )
-            assert "ON CONFLICT (id) DO UPDATE" in compiled, table.name
+            assert f"ON CONFLICT ({conflict_col}) DO UPDATE" in compiled, table.name
 
     def test_catalog_surfaces_are_exactly_load_all_and_upsert(self) -> None:
         # Hydration + write-through ONLY: admission stays in the in-memory
-        # registries (PRV-4 recorded decision) — no select/list/delete here.
-        for cls in (
-            PostgresRoleCatalog,
-            PostgresSkillCatalog,
-            PostgresModelCatalog,
-            PostgresProviderCatalog,
-        ):
+        # registries (PRV-4 recorded decision) — no select/list here.
+        # Gap 2 widening (deliberate): model/provider catalogs additionally
+        # carry ``delete`` — the AdminPersistencePort rollback verb for the
+        # REGISTER_* actions (a rolled-back registration removes its durable
+        # row; restore reality, 21 §8). Role/skill catalogs stay unwidened.
+        for cls in (PostgresRoleCatalog, PostgresSkillCatalog):
             public = {n for n in dir(cls) if not n.startswith("_")}
             assert public == {"load_all", "upsert"}, cls.__name__
+        for cls in (PostgresModelCatalog, PostgresProviderCatalog):
+            public = {n for n in dir(cls) if not n.startswith("_")}
+            assert public == {"load_all", "upsert", "delete"}, cls.__name__
 
 
 # --- Live layer -----------------------------------------------------------------
