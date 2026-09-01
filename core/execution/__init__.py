@@ -30,6 +30,18 @@ from core.execution.loop import (
     AgentRunReport,
     AgentStep,
 )
+from core.execution.multi_model import (
+    JUDGE_CANDIDATES_KEY,
+    SUPPORTED_STRATEGIES,
+    BranchResult,
+    CompareRefused,
+    InvalidJudgePolicy,
+    MultiModelError,
+    MultiModelExecutor,
+    MultiModelReport,
+    UnsupportedStrategy,
+    resolve_node_policy,
+)
 from core.execution.service import (
     PREVIOUS_OUTPUT_KEY,
     AttemptRecord,
@@ -41,6 +53,16 @@ from core.execution.service import (
 from core.execution.workflow_ports import WorkflowRuntimePort
 
 __all__ = [
+    "JUDGE_CANDIDATES_KEY",
+    "SUPPORTED_STRATEGIES",
+    "BranchResult",
+    "CompareRefused",
+    "InvalidJudgePolicy",
+    "MultiModelError",
+    "MultiModelExecutor",
+    "MultiModelReport",
+    "UnsupportedStrategy",
+    "resolve_node_policy",
     "PREVIOUS_OUTPUT_KEY",
     "STOP_FINAL",
     "STOP_INVALID_PROPOSAL",
