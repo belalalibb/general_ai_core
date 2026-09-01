@@ -52,7 +52,12 @@ from core.contracts.routing import RoutingRequest
 from core.contracts.security import ActorKind
 from core.contracts.tools import Tool
 from core.execution.agent import AgentToolBinding
-from core.execution.loop import AgentLoop
+from core.execution.loop import (
+    STOP_MAX_STEPS,
+    STOP_VERIFICATION_FAILED,
+    AgentLoop,
+    AgentRunReport,
+)
 from core.execution.service import ExecutionReport
 from core.identity.devices import DeviceRegistry
 from core.providers.errors import ModelNotRegistered, ProviderNotRegistered
@@ -204,8 +209,9 @@ class AdminAgentService:
         state = _TurnState()
         loop = self._build_loop(caller, message, state)
         payload: JsonObject = {"message": message}
+        report: AgentRunReport | None = None
         try:
-            await loop.execute(
+            report = await loop.execute(
                 tenant_id=caller.tenant_id,
                 user_id=caller.user_id,
                 request=payload,
@@ -227,14 +233,39 @@ class AdminAgentService:
                 f"{state.refused_claims} claim(s) refused: "
                 "missing or unverifiable evidence"
             )
+        stop_reason = state.stop_reason
+        verification: JsonObject | None = None
+        if report is not None:
+            verification = report.verification
+            # The shared loop's own terminal outcomes surface verbatim when
+            # they are the REAL reason the turn ended (closed vocabulary).
+            if report.stop_reason in (STOP_VERIFICATION_FAILED, STOP_MAX_STEPS):
+                stop_reason = report.stop_reason
         return AgentAnswer(
             claims=state.claims,
             tool_calls=state.transcript,
             reasoning_execution_ids=state.reasoning_ids,
             note=note,
             rounds=state.rounds,
-            stop_reason=state.stop_reason,
+            stop_reason=stop_reason,
+            verification=verification,
+            reasoning_trace=self._reasoning_traces(caller, state.reasoning_ids),
         )
+
+    def _reasoning_traces(
+        self, caller: Principal, execution_ids: list[UUID]
+    ) -> list[ExecutionTrace]:
+        """Per-round traces from the SAME store + converter trace() uses."""
+        traces: list[ExecutionTrace] = []
+        for execution_id in execution_ids:
+            try:
+                report = self._surface.execution_store.get(
+                    caller.tenant_id, execution_id
+                )
+            except KeyError:
+                continue  # never fabricate a trace for an unrecorded id
+            traces.append(self._trace_report(report))
+        return traces
 
     def _build_loop(
         self, caller: Principal, message: str, state: _TurnState
@@ -331,13 +362,57 @@ class AdminAgentService:
         async def propose(payload: JsonObject) -> JsonObject:
             return await self._propose_round(caller, message, state, payload)
 
+        async def verify(_request: JsonObject, _output: JsonObject) -> JsonObject:
+            return self._verify_turn(state)
+
         return AgentLoop(
             propose=propose,
             tools=executor,
             bindings={_ROUND_TOOL_NAME: binding},
             # Worst case: _MAX_ROUNDS act steps + the terminal final step.
             max_steps=_MAX_ROUNDS + 1,
+            # R159: the shared deterministic Verify stage (R157) now guards
+            # THIS consumer's finalization too — the admin agent inherits the
+            # strongest existing loop behavior instead of bypassing it.
+            verify=verify,
         )
+
+    @staticmethod
+    def _verify_turn(state: _TurnState) -> JsonObject:
+        """Deterministic finalization verdict over THIS turn's own records.
+
+        Code, never the model (P4). The admin turn's final output is the
+        set of admitted claims + transcript already accumulated on
+        ``state``; the verdict therefore judges the EVIDENCE POSTURE of the
+        turn, not prose. It rejects exactly one condition: the model made
+        claims and EVERY one was refused for missing/invented evidence
+        while tools DID surface results — i.e. the model finalized against
+        its own evidence. Turns with no claims (pure tool runs, honest
+        "nothing to report") and turns where at least one claim was
+        admitted are verified. The terminal admin step is the loop's last
+        step by construction (max_steps = rounds + 1), so a rejection is
+        the closed ``verification_failed`` stop — bounded, no extra model
+        call, the verdict rides the answer as evidence (P6).
+        """
+        claims_admitted = len(state.claims)
+        claims_refused = state.refused_claims
+        tools_ok = sum(1 for r in state.transcript if r.ok)
+        verified = not (
+            claims_admitted == 0 and claims_refused > 0 and tools_ok > 0
+        )
+        verdict: JsonObject = {
+            "verified": verified,
+            "claims_admitted": claims_admitted,
+            "claims_refused": claims_refused,
+            "tool_calls_ok": tools_ok,
+            "tool_calls_total": len(state.transcript),
+        }
+        if not verified:
+            verdict["reason"] = (
+                "all claims refused for missing or invented evidence while "
+                "tool results were available"
+            )
+        return verdict
 
     async def _propose_round(
         self,
@@ -547,6 +622,10 @@ class AdminAgentService:
             report = self._surface.execution_store.get(caller.tenant_id, execution_id)
         except KeyError:
             return None
+        return self._trace_report(report)
+
+    def _trace_report(self, report: ExecutionReport) -> ExecutionTrace:
+        """ONE ExecutionReport -> ExecutionTrace derivation (two consumers)."""
         stages: list[TraceStage] = []
         for node_report in report.nodes:
             attempts = [
@@ -575,6 +654,13 @@ class AdminAgentService:
                 )
             )
         execution = report.execution
+        ledger: JsonObject | None = None
+        if report.usage is not None:
+            ledger = {
+                "status": report.usage.status.value,
+                "units_reserved": report.usage.units_reserved,
+                "units_settled": report.usage.units_settled,
+            }
         return ExecutionTrace(
             execution_id=execution.id,
             status=execution.status.value,
@@ -582,6 +668,7 @@ class AdminAgentService:
             created_at=execution.created_at,
             completed_at=execution.completed_at,
             stages=stages,
+            ledger=ledger,
         )
 
     # --- diagnosis (doc A §7, deterministic tiers) ----------------------------

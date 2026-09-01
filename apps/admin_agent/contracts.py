@@ -113,8 +113,17 @@ class AgentAnswer(ContractModel):
     #: How many bounded reason→act→observe rounds this turn ran.
     rounds: int = 1
     #: Closed stop vocabulary: final / max_rounds / continue_without_tools /
-    #: invalid_proposal / reasoning_failed — deterministic disposal, data.
+    #: invalid_proposal / reasoning_failed / verification_failed / max_steps
+    #: — deterministic disposal, data.
     stop_reason: BoundedStr = "final"
+    #: R159 — the shared loop's LAST deterministic verification verdict
+    #: (``verified`` + counts + reason). None only when no final was ever
+    #: proposed (reasoning_failed / invalid_proposal paths).
+    verification: JsonObject | None = None
+    #: R159 — per-round reasoning execution traces: the SAME derivation the
+    #: /executions/{id}/trace route returns (model, provider, attempts,
+    #: latency, ledger) — one converter, two consumers. Order = rounds.
+    reasoning_trace: list[ExecutionTrace] = Field(default_factory=list)
 
 
 # --- Diagnosis (doc A §7: tiered, evidence-cited, deterministic) -------------------
@@ -178,4 +187,8 @@ class ExecutionTrace(ContractModel):
     created_at: datetime
     completed_at: datetime | None = None
     stages: list[TraceStage] = Field(default_factory=list)
+    #: R159 — resolved 03 §7 ledger (status/units) when usage accounting is
+    #: bound; ``None`` = settlement pending / not bound (ledger-null honest,
+    #: same shape as the executions-list row).
+    ledger: JsonObject | None = None
     as_recorded: Literal[True] = True
