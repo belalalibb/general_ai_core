@@ -187,10 +187,15 @@ from core.contracts.execute import (
 )
 from core.contracts.execution import Execution, ExecutionStrategy
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
-from core.contracts.model_policy import AgentNodeMappingPolicy, ExplicitModelsPolicy
+from core.contracts.model_policy import (
+    AgentNodeMappingPolicy,
+    ExplicitModelsPolicy,
+    NodeModelPolicy,
+)
 from core.contracts.provider import ProviderError, ProviderOperation
+from core.contracts.role_profile import RoleProfile
 from core.contracts.roles import Role
-from core.contracts.routing import RoutingRequest
+from core.contracts.routing import RoutingDecision, RoutingRequest, TaskAnalysis
 from core.contracts.skills import SkillListEntry, SkillsListResponse
 from core.contracts.usage import UsageLedger
 from core.contracts.webhooks import (
@@ -210,7 +215,11 @@ from core.execution.multi_model import (
     UnsupportedStrategy,
     resolve_node_policy,
 )
-from core.execution.service import ExecutionReport, ExecutionService
+from core.execution.service import (
+    ExecutionReport,
+    ExecutionService,
+    PipelineStage,
+)
 from core.identity.errors import SessionInvalid
 from core.memory.errors import ConversationNotFound
 from core.memory.ports import ConversationStorePort
@@ -224,6 +233,7 @@ from core.routing.errors import (
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
 from core.runtime.outbox import OutboxPort
 from core.runtime.ports import RateLimitPort
+from core.skills import SkillResolver
 from core.sourcechange.sandbox import (
     SOURCE_VERIFICATION_CHECKS as _SOURCE_CHECKS,
 )
@@ -685,6 +695,39 @@ def create_app(
                         "version": skill.version,
                     }
                 )
+        elif role is not None:
+            # --- AUTO skill resolution (41 §16) when the caller selected
+            # nothing. EXPLICIT WINS: this branch never runs when body.skills
+            # is supplied. The EXISTING SkillResolver chain (Task + Role +
+            # Context → selectable candidates → compatibility → ranking)
+            # decides — same registry admission rule as the explicit path
+            # (ACTIVE/selectable only), same DATA-ONLY posture (a selected
+            # skill's tools stay inert; the tool gate is untouched). The
+            # role is REQUIRED input to the chain (compatibility gates on
+            # role identity) — no admitted role ⇒ no auto selection, which
+            # keeps the prior behavior for role-less asks. TaskAnalysis is
+            # derived from THIS request honestly: generate_text task, no
+            # invented capability requirements (an empty requirement set
+            # gates nothing; ranking still orders by the role's preferred
+            # skills). Auto-selected skills ride the payload in the SAME
+            # id/name/version shape the explicit path uses.
+            resolution = SkillResolver(skill_registry).resolve(
+                task=TaskAnalysis(
+                    task_type="generate_text",
+                    complexity="unknown",
+                    risk_level="unknown",
+                ),
+                role=RoleProfile(role=role),
+                limit=1,
+            )
+            admitted_skills.extend(
+                {
+                    "id": skill.manifest.id,
+                    "name": skill.name,
+                    "version": skill.version,
+                }
+                for skill in resolution.selected
+            )
 
         # --- idempotent replay (10 §10) ----------------------------------------
         # BEFORE persistence/composition: a replay must not duplicate turns.
@@ -767,12 +810,28 @@ def create_app(
                 ),
             )
 
-        # --- resolve 10 §13.5 agent_node_mapping for the single node ------------
+        # --- resolve 10 §13.5 agent_node_mapping --------------------------------
         # Resolution order verbatim (node > agent default > request policy >
-        # auto): the sync path runs exactly one node, key "single".
+        # auto). A mapping WITH declared node policies is a REAL straight
+        # node sequence: declaration order IS the execution order, every
+        # node routes independently through the SAME Router below, and the
+        # sequence executes via the EXISTING pipeline orchestration (each
+        # node a distinct ExecutionNode record; previous output threads
+        # forward). Richer graph semantics (branch/join/loop) are OUT of
+        # this slice — nothing here accepts them. A mapping WITHOUT node
+        # policies keeps the prior single-node behavior (key "single").
         effective_policy = body.model_policy
+        node_sequence: list[tuple[str, NodeModelPolicy | None]] = []
         if isinstance(effective_policy, AgentNodeMappingPolicy):
-            effective_policy = resolve_node_policy(effective_policy, "single")
+            mapping_policy = effective_policy
+            if mapping_policy.node_model_policies:
+                node_sequence = [
+                    (node_key, resolve_node_policy(mapping_policy, node_key))
+                    for node_key in mapping_policy.node_model_policies
+                ]
+                effective_policy = None  # routed PER NODE below
+            else:
+                effective_policy = resolve_node_policy(mapping_policy, "single")
 
         # --- 10 §13.4 explicit_models: per-branch routing happens INSIDE the
         # MultiModelExecutor (Router still decides every branch); the single
@@ -784,8 +843,49 @@ def create_app(
         )
 
         # --- route (11; Router decides) ----------------------------------------
+        # Node-mapping path: ONE routing decision PER declared node — the
+        # Router stays the single routing authority; per-node model policies
+        # (rule 1) already resolved above, agent default (rule 2) filled the
+        # gaps, None routes auto (rule 4). A node whose policy the Router
+        # refuses (e.g. explicit_models inside a node) refuses the WHOLE
+        # request loudly, named by node — never a silent downgrade.
         decision = None
-        if multi_model_policy is None:
+        node_decisions: list[tuple[str, RoutingDecision]] = []
+        if node_sequence:
+            for node_key, node_policy in node_sequence:
+                try:
+                    node_decisions.append(
+                        (
+                            node_key,
+                            router.route(
+                                RoutingRequest(
+                                    operation=ProviderOperation.GENERATE_TEXT,
+                                    model_policy=node_policy,
+                                )
+                            ),
+                        )
+                    )
+                except UnsupportedPolicyType as exc:
+                    return error_response(
+                        ErrorCode.VALIDATION_ERROR,
+                        str(exc),
+                        details={"field": "model_policy", "node": node_key},
+                    )
+                except NoEligibleCandidates as exc:
+                    return error_response(
+                        ErrorCode.MODEL_UNAVAILABLE,
+                        f"No eligible model candidates for node '{node_key}'.",
+                        details={
+                            "node": node_key,
+                            "excluded": [
+                                record.model_dump(mode="json", exclude_none=True)
+                                for record in exc.excluded
+                            ],
+                        },
+                    )
+                except FallbackNotConfigured as exc:
+                    return error_response(ErrorCode.MODEL_UNAVAILABLE, str(exc))
+        elif multi_model_policy is None:
             routing_request = RoutingRequest(
                 operation=ProviderOperation.GENERATE_TEXT,
                 model_policy=effective_policy,
@@ -834,6 +934,17 @@ def create_app(
 
         # --- ASYNC path (Vision V2; 10 §4): enqueue via the outbox, ack 202 -----
         if policy is not None and policy.async_ is True:
+            if node_decisions:
+                # The async worker re-routes a SINGLE decision at execution
+                # time; multi-node sequencing on the async path is a separate
+                # slice — refused loudly, never silently degraded (same
+                # posture as explicit_models below).
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "agent_node_mapping with node policies is not supported "
+                    "on the async path in this slice; run it synchronously.",
+                    details={"field": "model_policy"},
+                )
             if multi_model_policy is not None:
                 # The async worker re-routes a SINGLE decision at execution
                 # time; multi-model branch orchestration on the async path is
@@ -918,7 +1029,32 @@ def create_app(
             return _async_accepted(execution_id)
 
         try:
-            if multi_model_policy is not None:
+            if node_decisions:
+                # REAL node sequence: the EXISTING pipeline orchestration —
+                # one PipelineStage per mapped node, each carrying ITS OWN
+                # RoutingDecision (per-node model selection preserved);
+                # distinct ExecutionNode records, deterministic declaration
+                # order, previous output threaded forward, partial failure
+                # recorded (failed node fails the run, the rest are skipped
+                # — never hidden). No new engine; strategy=pipeline is the
+                # honest record of what ran.
+                report = await execution_service.execute_pipeline(
+                    tenant_id=caller.tenant_id,
+                    user_id=caller.user_id,
+                    stages=[
+                        PipelineStage(
+                            node_key=node_key,
+                            decision=node_decision,
+                            operation=ProviderOperation.GENERATE_TEXT,
+                            payload=payload,
+                        )
+                        for node_key, node_decision in node_decisions
+                    ],
+                    request_hash=_request_hash(body),
+                    idempotency_key=idempotency_key,
+                    conversation_id=conversation_id,
+                )
+            elif multi_model_policy is not None:
                 # 10 §13.4: branches route+execute inside the executor; the
                 # API responds with the strategy's final report (winner or
                 # judge).
