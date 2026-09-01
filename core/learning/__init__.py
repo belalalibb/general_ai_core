@@ -11,12 +11,6 @@ from core.learning.errors import (
     NotEligibleForTraining,
     PromotionDenied,
 )
-from core.learning.lifecycle import (
-    GOLD_KNOWLEDGE_SOURCE,
-    LearningLifecycleService,
-    SampleNotFound,
-    SampleSource,
-)
 from core.learning.gates import (
     PROMOTION_CONDITIONS,
     TRAINING_ELIGIBILITY_CONDITIONS,
@@ -24,6 +18,12 @@ from core.learning.gates import (
     PromotionGate,
     PromotionSignals,
     TrainingEligibilityGate,
+)
+from core.learning.lifecycle import (
+    GOLD_KNOWLEDGE_SOURCE,
+    LearningLifecycleService,
+    SampleNotFound,
+    SampleSource,
 )
 
 __all__ = [
