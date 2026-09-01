@@ -59,6 +59,7 @@ from core.execution.service import ExecutionReport, ExecutionService
 from core.providers.registry import ModelRegistry, ProviderRegistry
 from core.routing.errors import FallbackNotConfigured, NoEligibleCandidates
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
+from core.tools.source_reader import SourceReader, SourceReadRefused
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 from core.usage.memory import InMemoryUsageAccounting
 
@@ -107,6 +108,12 @@ class AgentToolSurface:
     #: /v1/admin/changes/propose routes dispatch (read it from
     #: ``app.state.self_review_service``). Optional (P2).
     self_review: SelfReviewService | None = None
+    #: Mandate §9 — bounded read-only source inspection over the shared
+    #: :class:`core.tools.source_reader.SourceReader` primitive. Optional
+    #: (P2): absent reader = absent tools — no composition is forced to
+    #: expose its filesystem. The reader's own jail/denylist/caps hold;
+    #: every result additionally passes scrub_object like all other tools.
+    source: SourceReader | None = None
 
 
 def _report_row(report: ExecutionReport) -> JsonObject:
@@ -339,6 +346,80 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                     "(available/inert/unavailable, with evidence)."
                 ),
             )
+        )
+
+    # --- mandate §9: source inspection tools (registered ONLY when composed) --
+    #
+    # R0 read-only. The SourceReader enforces the jail, denylist, and byte/
+    # entry caps; refusals surface as typed DATA (never a crash) so the
+    # model can adapt to them within the round budget.
+    if surface.source is not None:
+        source_reader = surface.source
+
+        async def read_source_file(caller: Principal, args: JsonObject) -> JsonObject:
+            try:
+                result = source_reader.read_file(str(args.get("path", "")))
+            except SourceReadRefused as refusal:
+                return scrub_object({"error": "read refused", "reason": refusal.reason})
+            return scrub_object(dict(result))
+
+        async def list_source_files(
+            caller: Principal, args: JsonObject
+        ) -> JsonObject:
+            try:
+                result = source_reader.list_files(
+                    str(args.get("path", "")), glob=str(args.get("glob", "**/*"))
+                )
+            except SourceReadRefused as refusal:
+                return scrub_object({"error": "list refused", "reason": refusal.reason})
+            return scrub_object(dict(result))
+
+        async def search_source(caller: Principal, args: JsonObject) -> JsonObject:
+            try:
+                result = source_reader.search(
+                    str(args.get("text", "")),
+                    str(args.get("path", "")),
+                    glob=str(args.get("glob", "**/*.py")),
+                )
+            except SourceReadRefused as refusal:
+                return scrub_object(
+                    {"error": "search refused", "reason": refusal.reason}
+                )
+            return scrub_object(dict(result))
+
+        capability_specs.extend(
+            [
+                ToolSpec(
+                    name="read_source_file",
+                    tool_class=ToolClass.R0_READ,
+                    handler=read_source_file,
+                    allowed_args=frozenset({"path"}),
+                    description=(
+                        "Read ONE repository file (root-jailed, byte-capped, "
+                        "credential paths denied). READ ONLY."
+                    ),
+                ),
+                ToolSpec(
+                    name="list_source_files",
+                    tool_class=ToolClass.R0_READ,
+                    handler=list_source_files,
+                    allowed_args=frozenset({"path", "glob"}),
+                    description=(
+                        "List repository files under a relative path "
+                        "(entry-capped, credential paths hidden)."
+                    ),
+                ),
+                ToolSpec(
+                    name="search_source",
+                    tool_class=ToolClass.R0_READ,
+                    handler=search_source,
+                    allowed_args=frozenset({"text", "path", "glob"}),
+                    description=(
+                        "Literal substring search across repository files "
+                        "with line numbers (match-capped, no regex)."
+                    ),
+                ),
+            ]
         )
 
     # --- V7 chunk 2: exercise tools (registered ONLY when composed) -----------
