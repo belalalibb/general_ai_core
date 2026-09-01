@@ -39,6 +39,8 @@ record — the loop raises for nothing the model can cause.
 
 from __future__ import annotations
 
+import json
+import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from uuid import UUID, uuid4
@@ -82,6 +84,14 @@ STOP_MAX_STEPS = "max_steps_exceeded"
 STOP_INVALID_PROPOSAL = "invalid_proposal"
 STOP_PROPOSE_FAILED = "propose_failed"
 STOP_VERIFICATION_FAILED = "verification_failed"
+STOP_DEADLINE_EXCEEDED = "deadline_exceeded"
+STOP_REPEATED_FAILURE = "repeated_failure"
+
+#: Reassessment bound: the SAME tool call (name + arguments) may fail at
+#: most this many times before the loop refuses to dispatch it again. The
+#: refusal is an observation naming the repetition, so the model must change
+#: its action or strategy — evidence-driven reassessment, enforced by code.
+DEFAULT_MAX_REPEATED_FAILURES = 2
 
 
 @dataclass(frozen=True)
@@ -109,6 +119,13 @@ class AgentRunReport:
     #: ``verification_failed`` (the final rejecting verdict) — evidence
     #: either way (P6).
     verification: JsonObject | None = None
+    #: Evidence ledger (P6): every SUCCEEDED tool result of the run, in step
+    #: order, so finalization and post-hoc readers can cite what the run
+    #: actually observed — never what the model claims it observed.
+    evidence: tuple[JsonObject, ...] = ()
+    #: Deterministic run summary (steps, tool outcomes, repeated-failure
+    #: refusals, elapsed ms) — the same numbers land in cost_snapshot.
+    summary: JsonObject = field(default_factory=dict)
 
     @property
     def succeeded(self) -> bool:
@@ -122,6 +139,12 @@ class _RunState:
     nodes: list[ExecutionNode] = field(default_factory=list)
     steps: list[AgentStep] = field(default_factory=list)
     observations: list[JsonObject] = field(default_factory=list)
+    evidence: list[JsonObject] = field(default_factory=list)
+    #: (tool name, canonical arguments) -> consecutive failure count.
+    failures: dict[str, int] = field(default_factory=dict)
+    tool_ok: int = 0
+    tool_failed: int = 0
+    repeated_refused: int = 0
 
 
 class AgentLoop:
@@ -136,9 +159,18 @@ class AgentLoop:
         max_steps: int,
         verify: VerifyFn | None = None,
         id_factory: Callable[[], UUID] = uuid4,
+        max_repeated_failures: int = DEFAULT_MAX_REPEATED_FAILURES,
+        deadline_ms: int | None = None,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
         if max_steps < 1:
             msg = "max_steps must be >= 1"
+            raise ValueError(msg)
+        if max_repeated_failures < 1:
+            msg = "max_repeated_failures must be >= 1"
+            raise ValueError(msg)
+        if deadline_ms is not None and deadline_ms < 1:
+            msg = "deadline_ms must be >= 1 when set"
             raise ValueError(msg)
         self._propose = propose
         self._tools = tools
@@ -146,6 +178,12 @@ class AgentLoop:
         self._max_steps = max_steps
         self._verify = verify
         self._id_factory = id_factory
+        self._max_repeated_failures = max_repeated_failures
+        # Wall-clock bound for the WHOLE run (S4): checked before every
+        # proposal; a run past its deadline stops with a closed reason
+        # instead of spending another model call. None = step-bound only.
+        self._deadline_ms = deadline_ms
+        self._clock = clock
 
     async def execute(
         self,
@@ -166,11 +204,33 @@ class AgentLoop:
         stop_reason = STOP_MAX_STEPS
         final_output: JsonObject | None = None
         verification: JsonObject | None = None
+        started = self._clock()
 
         for index in range(1, self._max_steps + 1):
+            # --- bound: wall clock (S4) -----------------------------------------
+            if self._deadline_ms is not None:
+                elapsed_ms = (self._clock() - started) * 1000.0
+                if elapsed_ms >= self._deadline_ms:
+                    state.steps.append(
+                        AgentStep(
+                            index=index,
+                            proposal_raw=None,
+                            observation={
+                                "step": index,
+                                "error": STOP_DEADLINE_EXCEEDED,
+                                "elapsed_ms": int(elapsed_ms),
+                                "deadline_ms": self._deadline_ms,
+                            },
+                        )
+                    )
+                    stop_reason = STOP_DEADLINE_EXCEEDED
+                    break
             payload: JsonObject = {
                 "request": dict(request),
                 "observations": list(state.observations),
+                # Budget awareness for the model (data only): how many
+                # proposals remain — so it can plan to finalize in time.
+                "budget": {"step": index, "max_steps": self._max_steps},
             }
 
             # --- plan: model proposes (untrusted output, P7) ------------------
@@ -294,7 +354,27 @@ class AgentLoop:
                 actor_id=actor_id,
             )
             state.observations.append(observation)
+            # A repeated-failure refusal on the LAST step is the honest stop
+            # reason (the model never changed strategy within its budget).
+            if (
+                index == self._max_steps
+                and observation.get("error", {}).get("reason") == STOP_REPEATED_FAILURE
+            ):
+                stop_reason = STOP_REPEATED_FAILURE
 
+        elapsed_total_ms = int((self._clock() - started) * 1000.0)
+        summary: JsonObject = {
+            "steps": len(state.steps),
+            "max_steps": self._max_steps,
+            "stop_reason": stop_reason,
+            "tool_calls_ok": state.tool_ok,
+            "tool_calls_failed": state.tool_failed,
+            "repeated_failure_refusals": state.repeated_refused,
+            "evidence_items": len(state.evidence),
+            "elapsed_ms": elapsed_total_ms,
+        }
+        if self._deadline_ms is not None:
+            summary["deadline_ms"] = self._deadline_ms
         status = (
             ExecutionStatus.SUCCEEDED
             if stop_reason == STOP_FINAL
@@ -309,11 +389,7 @@ class AgentLoop:
             idempotency_key=idempotency_key,
             status=status,
             strategy=ExecutionStrategy.AGENT,
-            cost_snapshot={
-                "steps": len(state.steps),
-                "max_steps": self._max_steps,
-                "stop_reason": stop_reason,
-            },
+            cost_snapshot=dict(summary),
             created_at=created_at,
             completed_at=utc_now(),
         )
@@ -329,9 +405,20 @@ class AgentLoop:
             stop_reason=stop_reason,
             final_output=final_output,
             verification=verification,
+            evidence=tuple(state.evidence),
+            summary=summary,
         )
 
     # --- internals --------------------------------------------------------------
+
+    @staticmethod
+    def _call_key(proposal: ToolCallProposal) -> str:
+        """Canonical identity of a tool call (name + sorted arguments)."""
+        try:
+            args = json.dumps(proposal.arguments, sort_keys=True, default=str)
+        except (TypeError, ValueError):
+            args = repr(proposal.arguments)
+        return f"{proposal.tool}:{args}"
 
     async def _run_verifier(
         self,
@@ -394,6 +481,41 @@ class AgentLoop:
     ) -> JsonObject:
         """One tool act; the observation is appended by the caller."""
         binding = self._bindings.get(proposal.tool)
+        call_key = self._call_key(proposal)
+        prior_failures = state.failures.get(call_key, 0)
+        if binding is not None and prior_failures >= self._max_repeated_failures:
+            # Reassessment enforced by code: the identical call already
+            # failed ``max_repeated_failures`` times this run. Nothing is
+            # dispatched; the observation names the repetition so the model
+            # must change its action or strategy (or finalize honestly).
+            state.repeated_refused += 1
+            error = {
+                "reason": STOP_REPEATED_FAILURE,
+                "detail": (
+                    f"identical call to '{proposal.tool}' already failed "
+                    f"{prior_failures} time(s); change arguments, tool, or "
+                    "strategy"
+                ),
+                "prior_failures": prior_failures,
+            }
+            self._tool_node(
+                state,
+                execution_id,
+                index,
+                proposal,
+                status=ExecutionNodeStatus.FAILED,
+                error=error,
+            )
+            observation: JsonObject = {
+                "step": index,
+                "tool": proposal.tool,
+                "status": "refused",
+                "error": error,
+            }
+            state.steps.append(
+                AgentStep(index=index, proposal_raw=raw, observation=observation)
+            )
+            return observation
         if binding is None:
             # Unknown NAME is a model mistake, observed as data — the model
             # may correct itself within the step budget; nothing executed.
@@ -435,6 +557,20 @@ class AgentLoop:
             estimated_units=binding.estimated_units,
         )
         succeeded = record.status == "succeeded"
+        if succeeded:
+            state.tool_ok += 1
+            state.failures.pop(call_key, None)
+            state.evidence.append(
+                {
+                    "step": index,
+                    "tool": proposal.tool,
+                    "arguments": dict(proposal.arguments),
+                    "result": record.result,
+                }
+            )
+        else:
+            state.tool_failed += 1
+            state.failures[call_key] = prior_failures + 1
         observation = {
             "step": index,
             "tool": proposal.tool,
