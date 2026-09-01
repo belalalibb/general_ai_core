@@ -66,11 +66,22 @@ ProposeFn = Callable[[JsonObject], Awaitable[JsonObject]]
 """Model-call seam: receives ``{"request": ..., "observations": [...]}``
 and returns the model's raw structured output (untrusted, P7)."""
 
+VerifyFn = Callable[[JsonObject, JsonObject], Awaitable[JsonObject]]
+"""Optional composition-bound verification seam (deterministic code, never
+the model): receives ``(request, proposed_final_output)`` and returns a
+verdict object. The single reserved key is ``"verified"`` — truthy admits
+finalization; anything else REJECTS it and the whole verdict is appended
+as an observation the model can correct against within the remaining step
+budget (detect failure -> correct -> verify again, all bounded by
+``max_steps``). The verifier holds no authority beyond this verdict and
+its output is recorded verbatim as a VALIDATOR node (P6: evidence)."""
+
 #: Closed stop-reason vocabulary (deterministic disposal outcomes).
 STOP_FINAL = "final"
 STOP_MAX_STEPS = "max_steps_exceeded"
 STOP_INVALID_PROPOSAL = "invalid_proposal"
 STOP_PROPOSE_FAILED = "propose_failed"
+STOP_VERIFICATION_FAILED = "verification_failed"
 
 
 @dataclass(frozen=True)
@@ -93,6 +104,11 @@ class AgentRunReport:
     status_history: tuple[ExecutionStatus, ...]
     stop_reason: str
     final_output: JsonObject | None = None
+    #: The LAST verifier verdict (composition-bound seam), when one ran.
+    #: Present on success (the admitting verdict) AND on
+    #: ``verification_failed`` (the final rejecting verdict) — evidence
+    #: either way (P6).
+    verification: JsonObject | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -118,6 +134,7 @@ class AgentLoop:
         tools: ToolExecutor,
         bindings: Mapping[str, AgentToolBinding],
         max_steps: int,
+        verify: VerifyFn | None = None,
         id_factory: Callable[[], UUID] = uuid4,
     ) -> None:
         if max_steps < 1:
@@ -127,6 +144,7 @@ class AgentLoop:
         self._tools = tools
         self._bindings: dict[str, AgentToolBinding] = dict(bindings)
         self._max_steps = max_steps
+        self._verify = verify
         self._id_factory = id_factory
 
     async def execute(
@@ -147,6 +165,7 @@ class AgentLoop:
         state = _RunState()
         stop_reason = STOP_MAX_STEPS
         final_output: JsonObject | None = None
+        verification: JsonObject | None = None
 
         for index in range(1, self._max_steps + 1):
             payload: JsonObject = {
@@ -214,6 +233,32 @@ class AgentLoop:
 
             # --- dispose: deterministic code decides (P4) ----------------------
             if isinstance(proposal, FinalProposal):
+                # Verification-before-finalization (composition-bound seam):
+                # a rejected final is an OBSERVATION the model can correct
+                # against within the remaining step budget — never a silent
+                # pass and never an unbounded retry.
+                if self._verify is not None:
+                    verdict = await self._run_verifier(
+                        state, execution_id, index, request, proposal.output
+                    )
+                    verification = verdict
+                    if not verdict.get("verified"):
+                        rejection: JsonObject = {
+                            "step": index,
+                            "verification": verdict,
+                            "final_rejected": True,
+                        }
+                        state.steps.append(
+                            AgentStep(
+                                index=index,
+                                proposal_raw=raw,
+                                observation=rejection,
+                            )
+                        )
+                        state.observations.append(rejection)
+                        if index == self._max_steps:
+                            stop_reason = STOP_VERIFICATION_FAILED
+                        continue
                 state.nodes.append(
                     ExecutionNode(
                         id=self._id_factory(),
@@ -283,9 +328,57 @@ class AgentLoop:
             ),
             stop_reason=stop_reason,
             final_output=final_output,
+            verification=verification,
         )
 
     # --- internals --------------------------------------------------------------
+
+    async def _run_verifier(
+        self,
+        state: _RunState,
+        execution_id: UUID,
+        index: int,
+        request: JsonObject,
+        output: JsonObject,
+    ) -> JsonObject:
+        """Run the composition-bound verifier; every outcome is data.
+
+        A verifier FAULT is a rejecting verdict naming the fault (P6) —
+        deterministic code failing must never silently admit a final.
+        """
+        try:
+            verdict = await self._verify(dict(request), dict(output))
+        except Exception as exc:  # noqa: BLE001 — seam fault becomes data
+            verdict = {
+                "verified": False,
+                "error": "verifier_failed",
+                "detail": f"{type(exc).__name__}: {exc}",
+            }
+        if not isinstance(verdict, dict):
+            verdict = {
+                "verified": False,
+                "error": "verifier_invalid",
+                "detail": f"verdict must be a JSON object, got {type(verdict).__name__}",
+            }
+        passed = bool(verdict.get("verified"))
+        state.nodes.append(
+            ExecutionNode(
+                id=self._id_factory(),
+                execution_id=execution_id,
+                node_key=f"verify-{index}",
+                type=ExecutionNodeType.VALIDATOR,
+                status=(
+                    ExecutionNodeStatus.SUCCEEDED
+                    if passed
+                    else ExecutionNodeStatus.FAILED
+                ),
+                input_ref=dict(output),
+                output_ref=verdict,
+                retry_count=0,
+                error=None if passed else {"reason": STOP_VERIFICATION_FAILED},
+            )
+        )
+        return verdict
 
     async def _act(
         self,
