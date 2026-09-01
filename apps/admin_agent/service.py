@@ -54,8 +54,16 @@ from core.routing.errors import FallbackNotConfigured, NoEligibleCandidates
 from core.routing.router import UnsupportedPolicyType
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 
-#: Flood bound: a single turn may dispatch at most this many tool calls.
+#: Flood bound: a single ROUND may dispatch at most this many tool calls.
 _MAX_TOOL_CALLS_PER_TURN = 8
+
+#: Iteration bound: one converse() may run at most this many reasoning
+#: rounds. Continuation is EXPLICIT (the model sets ``"continue": true``
+#: after proposing tool calls) — deterministic code disposes: no tool
+#: calls dispatched, or rounds exhausted, or a missing flag all terminate.
+#: Every round's reasoning call is itself budget-bounded, so iteration can
+#: never outrun the tenant's entitlement.
+_MAX_ROUNDS = 3
 
 #: The proposal protocol, stated to the model verbatim. Without this framing
 #: a real model answers in prose and the loop is honestly inert (proven live
@@ -73,6 +81,9 @@ _PROPOSAL_PROTOCOL = (
     "arguments; at most {max_calls} tool calls; every claim must cite "
     "evidence refs that appear in this turn's tool results, otherwise the "
     "claim is refused; if no tool applies, return empty lists.\n"
+    'Iteration: you may add "continue": true alongside tool_calls to '
+    "observe their results and act again next round (at most {max_rounds} "
+    "rounds); omit it to finalize this round.\n"
     "Available tools:\n{tools}\n"
     "Admin message:\n{message}"
 )
@@ -130,69 +141,125 @@ class AdminAgentService:
     # --- conversation --------------------------------------------------------
 
     async def converse(self, caller: Principal, message: str) -> AgentAnswer:
-        raw, reasoning_id = await self._reason(caller, message)
-        reasoning_ids = [reasoning_id] if reasoning_id is not None else []
-        if raw is None:
-            return AgentAnswer(
-                reasoning_execution_ids=reasoning_ids,
-                note="reasoning execution failed; nothing to report",
-            )
-        proposals, parse_note = self._parse_proposals(raw)
-        if proposals is None:
-            return AgentAnswer(
-                reasoning_execution_ids=reasoning_ids,
-                note=parse_note,
-            )
+        """Bounded reason→act→observe→reassess loop (mandate §8).
 
+        Round 1 is the historical single-turn behavior verbatim. The model
+        OPTS INTO iteration by returning ``"continue": true`` next to tool
+        calls; deterministic code disposes: continuation requires at least
+        one dispatched tool call this round and a remaining round budget.
+        The next round's ask carries the (already scrubbed) observations,
+        so the second action can genuinely change because of the first
+        result. Termination is structural: ``_MAX_ROUNDS``.
+        """
         index = _EvidenceIndex()
         transcript: list[ToolCallRecord] = []
-        for call in proposals.get("tool_calls", [])[:_MAX_TOOL_CALLS_PER_TURN]:
-            if not isinstance(call, dict):
-                continue
-            tool = str(call.get("tool", ""))
-            arguments = call.get("arguments")
-            if not isinstance(arguments, dict):
-                arguments = {}
-            record = await self._dispatcher.dispatch(caller, tool, arguments)
-            transcript.append(record)
-            if record.ok:
-                index.absorb(record.result)
-
         claims: list[AgentClaim] = []
+        reasoning_ids: list[UUID] = []
+        observations: list[JsonObject] = []
         refused_claims = 0
-        for raw_claim in proposals.get("claims", []):
-            admitted = self._admit_claim(raw_claim, index)
-            if admitted is None:
-                refused_claims += 1
-            else:
-                claims.append(admitted)
+        note: str | None = None
+        rounds = 0
+        stop_reason = "final"
 
-        note = None
-        if refused_claims:
+        for round_no in range(1, _MAX_ROUNDS + 1):
+            rounds = round_no
+            raw, reasoning_id = await self._reason(
+                caller, message, observations=observations, round_no=round_no
+            )
+            if reasoning_id is not None:
+                reasoning_ids.append(reasoning_id)
+            if raw is None:
+                note = "reasoning execution failed; nothing to report"
+                stop_reason = "reasoning_failed"
+                break
+            proposals, parse_note = self._parse_proposals(raw)
+            if proposals is None:
+                note = parse_note
+                stop_reason = "invalid_proposal"
+                break
+
+            round_results: list[JsonObject] = []
+            for call in proposals.get("tool_calls", [])[:_MAX_TOOL_CALLS_PER_TURN]:
+                if not isinstance(call, dict):
+                    continue
+                tool = str(call.get("tool", ""))
+                arguments = call.get("arguments")
+                if not isinstance(arguments, dict):
+                    arguments = {}
+                record = await self._dispatcher.dispatch(caller, tool, arguments)
+                transcript.append(record)
+                if record.ok:
+                    index.absorb(record.result)
+                # Observation = the record's own (already scrubbed) data.
+                observation: JsonObject = {"tool": record.tool, "ok": record.ok}
+                if record.result is not None:
+                    observation["result"] = record.result
+                if record.refusal is not None:
+                    observation["refusal"] = record.refusal
+                round_results.append(observation)
+
+            for raw_claim in proposals.get("claims", []):
+                admitted = self._admit_claim(raw_claim, index)
+                if admitted is None:
+                    refused_claims += 1
+                else:
+                    claims.append(admitted)
+
+            # --- deterministic disposal of the continuation request ----------
+            if proposals.get("continue") is not True:
+                stop_reason = "final"
+                break
+            if not round_results:
+                stop_reason = "continue_without_tools"
+                break
+            if round_no == _MAX_ROUNDS:
+                stop_reason = "max_rounds"
+                break
+            observations.append({"round": round_no, "results": round_results})
+
+        if note is None and refused_claims:
             note = f"{refused_claims} claim(s) refused: missing or unverifiable evidence"
         return AgentAnswer(
             claims=claims,
             tool_calls=transcript,
             reasoning_execution_ids=reasoning_ids,
             note=note,
+            rounds=rounds,
+            stop_reason=stop_reason,
         )
 
     async def _reason(
-        self, caller: Principal, message: str
+        self,
+        caller: Principal,
+        message: str,
+        *,
+        observations: list[JsonObject] | None = None,
+        round_no: int = 1,
     ) -> tuple[str | None, UUID | None]:
         """The agent's model call — through the platform's OWN execute path."""
         ask = _PROPOSAL_PROTOCOL.replace(
             "{max_calls}", str(_MAX_TOOL_CALLS_PER_TURN)
         ).replace(
+            "{max_rounds}", str(_MAX_ROUNDS)
+        ).replace(
             "{tools}",
             json.dumps(self._registry.describe(), ensure_ascii=False),
         ).replace("{message}", message)
+        if observations:
+            ask += (
+                "\nObservations from your previous rounds' tool calls "
+                "(JSON):\n"
+                + json.dumps(observations, ensure_ascii=False, default=str)
+                + '\nDecide: call more tools (with "continue": true) or '
+                "finalize with evidence-cited claims."
+            )
         payload: JsonObject = {
             "ask": ask,
             "context": {
                 "metadata": {
                     AGENT_LABEL_KEY: {
                         "kind": "reasoning",
+                        "round": round_no,
                         "tools": self._registry.names(),
                     }
                 }

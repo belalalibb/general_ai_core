@@ -110,6 +110,11 @@ class AgentAnswer(ContractModel):
     tool_calls: list[ToolCallRecord] = Field(default_factory=list)
     reasoning_execution_ids: list[UUID] = Field(default_factory=list)
     note: BoundedStr | None = None
+    #: How many bounded reason→act→observe rounds this turn ran.
+    rounds: int = 1
+    #: Closed stop vocabulary: final / max_rounds / continue_without_tools /
+    #: invalid_proposal / reasoning_failed — deterministic disposal, data.
+    stop_reason: BoundedStr = "final"
 
 
 # --- Diagnosis (doc A §7: tiered, evidence-cited, deterministic) -------------------
