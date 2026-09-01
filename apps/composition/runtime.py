@@ -126,6 +126,7 @@ from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
 from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
 from core.runtime.worker import IdempotencyPort, InMemoryIdempotencyStore, Worker
 from core.secrets.memory import InMemorySecretManager
+from core.tools.source_reader import SourceReader
 from core.usage.memory import InMemoryUsageAccounting
 from infrastructure.security.password import Argon2idPasswordHasher
 from providers.real.genspark_llm import (
@@ -524,6 +525,22 @@ def _bind_real_providers(
     return bound
 
 
+def _source_reader(root: str) -> SourceReader | None:
+    """Mandate §9 seam: a jailed reader over AGENT_SOURCE_ROOT, or None.
+
+    Deliberately forgiving at composition (absent/blank/invalid path means
+    NO source tools — the platform never fails to boot over an optional
+    inspection seam), while the reader itself stays strict at use.
+    """
+    candidate = root.strip()
+    if not candidate:
+        return None
+    path = Path(candidate)
+    if not path.is_dir():
+        return None
+    return SourceReader(root=path)
+
+
 def _bind_echo_provider(
     providers: ProviderRegistry,
     models: ModelRegistry,
@@ -816,6 +833,11 @@ def build_runtime_profile(
             context_lab=app.state.context_lab_service,
             learning_observability=app.state.learning_observability_service,
             self_review=app.state.self_review_service,
+            # Mandate §9 — bounded read-only source inspection. Opt-in by
+            # env: AGENT_SOURCE_ROOT names the directory the agent may
+            # inspect (jailed, denylisted, byte/entry-capped by the
+            # SourceReader itself). Absent/invalid ⇒ absent tools (P2).
+            source=_source_reader(env.get("AGENT_SOURCE_ROOT", "")),
         ),
         auth=auth,
         # Gap 1c: the onboarding route exists ONLY when the gateway binding
