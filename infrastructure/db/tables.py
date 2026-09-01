@@ -214,6 +214,7 @@ from sqlalchemy import (
     Index,
     Integer,
     MetaData,
+    PrimaryKeyConstraint,
     String,
     Table,
     Text,
@@ -224,6 +225,7 @@ from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 from core.contracts.audit import AuditEventType
 from core.contracts.conversation import ConversationStatus, MessageRole
 from core.contracts.domain import (
+    BindingAvailability,
     CredentialStatus,
     ModelStatus,
     ModelTier,
@@ -421,6 +423,74 @@ providers = Table(
     Column("auth_types", JSONB, nullable=False),
     Column("supports_account_pool", Boolean, nullable=False),
     CheckConstraint(f"status IN ({_enum_values(ProviderStatus)})", name="status_closed_set"),
+)
+
+# provider_model_bindings (migration 0018) maps the 03 §4 ProviderModelBinding
+# entity — the deferred table catalog.py's PRV-4 record explicitly reserved for
+# "the runtime binding-registration surface that needs it": that surface is the
+# admin provider-onboarding path (31 §19). PLATFORM catalog — no tenant_id
+# (03 §4 defines none; same standing as models/providers). Composite PK
+# (provider_id, model_id): the contract binds ONE model to ONE provider; the
+# same model may bind to multiple providers, so neither column alone is a key.
+# FKs RESTRICT — a binding must never orphan silently. Nested/list contract
+# fields (limits_metadata, capabilities, agent_runtime) are JSONB validated by
+# the contract at the boundary; agent_runtime nullable (None = undeclared,
+# 30 §4.3 — unknown must NOT read as supported). ``availability`` CHECK from
+# the closed BindingAvailability set — no permissive server_default; a row
+# must state its availability explicitly. NO credential material here (20 §5).
+provider_model_bindings = Table(
+    "provider_model_bindings",
+    metadata,
+    Column(
+        "provider_id",
+        UUID(as_uuid=True),
+        ForeignKey("providers.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column(
+        "model_id",
+        UUID(as_uuid=True),
+        ForeignKey("models.id", ondelete="RESTRICT"),
+        nullable=False,
+    ),
+    Column("provider_model_name", String(512), nullable=False),
+    Column("endpoint_ref", String(512), nullable=True),
+    Column("availability", String(32), nullable=False),
+    Column("limits_metadata", JSONB, nullable=False, server_default="{}"),
+    Column("capabilities", JSONB, nullable=False, server_default="{}"),
+    Column("agent_runtime", JSONB, nullable=True),
+    PrimaryKeyConstraint(
+        "provider_id", "model_id", name="pk_provider_model_bindings"
+    ),
+    CheckConstraint(
+        f"availability IN ({_enum_values(BindingAvailability)})",
+        name="availability_closed_set",
+    ),
+)
+
+# provider_gateway_registrations (migration 0018; ADR-0011) — the per-provider
+# gateway registration record: the declared surface (operations/capabilities/
+# static models) plus the OPAQUE route_token_ref / credential_ref and the
+# credential_mode, i.e. everything the composition root needs to REBUILD the
+# RemoteGatewayAdapter at startup so an onboarded provider stays EXECUTABLE
+# across restart. The ProviderManifest itself stays unpersisted (catalog.py's
+# recorded decision — a manifest is a code self-declaration); this record is
+# the OPERATOR's registration data from which build_gateway_manifest re-derives
+# it deterministically. REFS ONLY (20 §5): no secret value, ever — the refs
+# resolve through the SecretManagerPort at the last moment. DECISION 2
+# (recorded): this record exists only for canonical-gateway providers;
+# foreign/native-API providers still require an adapter/shim and never get a
+# row here. One row per provider (PK provider_id, FK RESTRICT).
+provider_gateway_registrations = Table(
+    "provider_gateway_registrations",
+    metadata,
+    Column(
+        "provider_id",
+        UUID(as_uuid=True),
+        ForeignKey("providers.id", ondelete="RESTRICT"),
+        primary_key=True,
+    ),
+    Column("definition", JSONB, nullable=False),
 )
 
 conversations = Table(

@@ -28,8 +28,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from infrastructure.db.engine import create_engine, create_session_factory
 from infrastructure.db.repositories import (
     PostgresAuditLogRepository,
+    PostgresBindingCatalog,
     PostgresConversationRepository,
     PostgresExecutionRepository,
+    PostgresGatewayRegistrationCatalog,
     PostgresIdempotencyStore,
     PostgresMemoryRepository,
     PostgresModelCatalog,
@@ -101,6 +103,13 @@ class DatabaseBindings:
     skill_catalog: PostgresSkillCatalog
     model_catalog: PostgresModelCatalog
     provider_catalog: PostgresProviderCatalog
+    # Gap 1 (migration 0018): durable provider-model bindings — the
+    # write-through + hydration seam the onboarding surface persists
+    # through so an onboarded provider survives restart.
+    binding_catalog: PostgresBindingCatalog
+    # ADR-0011: per-provider gateway registration records — the operator
+    # data (refs only, 20 §5) the root rebuilds gateway adapters from.
+    gateway_registrations: PostgresGatewayRegistrationCatalog
     # Vision V5: durable workspace/project entities (existing tables from
     # migration 0002; core/workspace/ owns the FILE area separately).
     workspaces: PostgresWorkspaceRepository
@@ -129,6 +138,8 @@ def build_database_bindings(settings: DatabaseSettings) -> DatabaseBindings:
         skill_catalog=PostgresSkillCatalog(factory),
         model_catalog=PostgresModelCatalog(factory),
         provider_catalog=PostgresProviderCatalog(factory),
+        binding_catalog=PostgresBindingCatalog(factory),
+        gateway_registrations=PostgresGatewayRegistrationCatalog(factory),
         workspaces=PostgresWorkspaceRepository(factory),
         projects=PostgresProjectRepository(factory),
     )

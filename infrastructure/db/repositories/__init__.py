@@ -17,6 +17,8 @@ Layer rules (enforced by import-linter, 12 contracts):
 
 from infrastructure.db.repositories.audit import PostgresAuditLogRepository
 from infrastructure.db.repositories.catalog import (
+    PostgresBindingCatalog,
+    PostgresGatewayRegistrationCatalog,
     PostgresModelCatalog,
     PostgresProviderCatalog,
     PostgresRoleCatalog,
@@ -48,8 +50,10 @@ __all__ = [
     "ExecutionNotFound",
     "ExecutionRecord",
     "PostgresAuditLogRepository",
+    "PostgresBindingCatalog",
     "PostgresConversationRepository",
     "PostgresExecutionRepository",
+    "PostgresGatewayRegistrationCatalog",
     "PostgresIdempotencyStore",
     "PostgresMemoryRepository",
     "PostgresModelCatalog",

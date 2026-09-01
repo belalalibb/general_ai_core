@@ -123,7 +123,7 @@ class GatewaySecret:
         return f"GatewaySecret(version={self.version}, value='[SCRUBBED]')"
 
 
-class GatewayCredentialCheckUnsupported(RuntimeError):
+class GatewayCredentialCheckUnsupported(NotImplementedError):
     """Gateway v1 exposes NO credential-validation wire surface.
 
     ``validate_credential`` raises this instead of inventing a definite
@@ -132,6 +132,11 @@ class GatewayCredentialCheckUnsupported(RuntimeError):
     In platform credential mode the upstream credential is gateway-internal
     and structurally invisible to the platform; in user_key mode v1 has no
     validation endpoint. Callers normalize via ``normalize_error``.
+
+    Base class is ``NotImplementedError`` (itself a RuntimeError, so every
+    existing catch keeps working): the onboarding walker (31 §19 step 5)
+    classifies a missing check SURFACE as an honestly UNVERIFIED step —
+    distinct from a failed check, which still refuses loudly.
     """
 
 

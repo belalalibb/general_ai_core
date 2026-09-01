@@ -27,6 +27,10 @@ from apps.api.notifications import (
     NotificationSources,
     create_notifications_router,
 )
+from apps.api.provider_onboarding import (
+    ProviderOnboardingSurface,
+    create_provider_onboarding_router,
+)
 from apps.api.skills_import import SkillReviewSurface, create_skills_import_router
 
 #: repo_root/ui/admin — the static 7-surface shell (doc D §2).
@@ -40,6 +44,7 @@ def attach_admin_console(
     auth: AuthSurface,
     ui: bool = True,
     skill_review: SkillReviewSurface | None = None,
+    provider_onboarding: ProviderOnboardingSurface | None = None,
 ) -> AdminAgentService:
     """Mount /v1/agent + AA-3 seams (+ optionally /admin static UI)."""
     registry = build_registry(surface)
@@ -61,6 +66,14 @@ def attach_admin_console(
     # SKL-1: optional seam — absent ⇒ no route exists at all (20 §4).
     if skill_review is not None:
         app.include_router(create_skills_import_router(skill_review, resolve=resolve))
+
+    # Gap 1c: provider onboarding — same optional-seam posture (20 §4).
+    # Canonical-gateway providers only (DECISION 2); absent when the
+    # gateway binding is not configured ⇒ the route does not exist.
+    if provider_onboarding is not None:
+        app.include_router(
+            create_provider_onboarding_router(provider_onboarding, resolve=resolve)
+        )
 
     if ui and UI_DIR.is_dir():
         app.mount("/admin", StaticFiles(directory=str(UI_DIR), html=True), name="admin_ui")

@@ -31,7 +31,9 @@ besides the adapter's own methods.
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from dataclasses import dataclass, field
+from typing import Protocol
 from uuid import UUID, uuid4
 
 from core.contracts.base import JsonObject
@@ -56,6 +58,27 @@ from core.contracts.provider import (
 from core.providers.errors import DuplicateRegistration, ProviderNotRegistered
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
+
+
+class OnboardingPersistencePort(Protocol):
+    """Sync write-through doorway to the durable catalogs (Gap 1b).
+
+    Bound at the composition root (e.g. over PostgresProvider/Model/
+    BindingCatalog via the AsyncBridge). Rows persisted here are the
+    durable truth startup hydration replays into the SAME registries.
+    """
+
+    def persist_provider(self, provider: Provider) -> None:
+        """Upsert the provider ENTITY row (manifest stays code-shipped)."""
+        ...
+
+    def persist_model(self, model: Model) -> None:
+        """Upsert one model row."""
+        ...
+
+    def persist_binding(self, binding: ProviderModelBinding) -> None:
+        """Upsert one provider-model binding row."""
+        ...
 
 
 class OnboardingRefused(Exception):
@@ -107,10 +130,30 @@ class ProviderOnboardingService:
         providers: ProviderRegistry,
         models: ModelRegistry,
         bindings: BindingRegistry,
+        adapters: MutableMapping[UUID, ProviderAdapterPort] | None = None,
+        credential_refs: MutableMapping[UUID, str] | None = None,
+        persistence: OnboardingPersistencePort | None = None,
     ) -> None:
+        """Remediation Gap 1 seams (all optional — prior behavior unchanged):
+
+        - ``adapters``/``credential_refs``: the SAME maps the composed
+          ExecutionService reads (instance-agreement duty). Bound, a
+          successfully onboarded provider becomes EXECUTABLE — its adapter
+          and opaque credential_ref land in the maps ``_validate_route``
+          checks. Absent, onboarding registers data only (old posture).
+        - ``persistence``: write-through to the durable catalogs
+          (PostgresProvider/Model/BindingCatalog behind a sync port) so a
+          registered provider survives restart. The write-through happens
+          AFTER in-memory registration succeeds so a refused/rolled-back
+          onboarding never leaves a durable row; hydration replays rows
+          into these same registries at startup.
+        """
         self._providers = providers
         self._models = models
         self._bindings = bindings
+        self._adapters = adapters
+        self._credential_refs = credential_refs
+        self._persistence = persistence
 
     async def onboard(
         self,
@@ -150,14 +193,26 @@ class ProviderOnboardingService:
             )
 
         # --- step 5: credential handling (opaque ref -> ACTIVE) ---------------
-        credential = await adapter.validate_credential(credential_ref)
-        if credential.status is not CredentialStatus.ACTIVE:
-            raise OnboardingRefused(
-                "step-5-credential-validation",
-                f"credential status is {credential.status.value} "
-                f"(ref={credential.credential_ref})",
+        # NotImplementedError (e.g. GatewayCredentialCheckUnsupported) is an
+        # HONEST "this adapter has no credential-check wire surface" — the
+        # step is reported UNVERIFIED, never faked as passed and never
+        # treated as a failed check (41 §49). A definite non-ACTIVE answer
+        # still refuses loudly.
+        unverified_extra: list[str] = []
+        try:
+            credential = await adapter.validate_credential(credential_ref)
+        except NotImplementedError as exc:
+            unverified_extra.append(
+                f"step-5-credential-validation (adapter has no check surface: {exc})"
             )
-        steps.append("step-5-credential-validation")
+        else:
+            if credential.status is not CredentialStatus.ACTIVE:
+                raise OnboardingRefused(
+                    "step-5-credential-validation",
+                    f"credential status is {credential.status.value} "
+                    f"(ref={credential.credential_ref})",
+                )
+            steps.append("step-5-credential-validation")
 
         # --- step 6: health check works ---------------------------------------
         health = await adapter.health_check(HealthScope.PROVIDER)
@@ -192,6 +247,15 @@ class ProviderOnboardingService:
         self._providers.register(provider, manifest)
         steps.append("step-11-register-provider")
         steps.append("step-13-provider-kept-disabled")
+
+        # --- executability (Gap 1a): SAME maps ExecutionService reads ---------
+        # Registered here so a routed candidate for this provider passes
+        # _validate_route the moment an admin enables it. The credential_ref
+        # stays OPAQUE (20 §5) — the adapter resolves it, never this walker.
+        if self._adapters is not None:
+            self._adapters[provider.id] = adapter
+        if self._credential_refs is not None:
+            self._credential_refs[provider.id] = credential_ref
 
         # --- step 12: register models + bindings ------------------------------
         prefix = model_key_prefix if model_key_prefix is not None else provider_key
@@ -228,6 +292,10 @@ class ProviderOnboardingService:
                 self._bindings.remove(provider.id, model.id)
                 self._models.remove(key)
             self._providers.remove(provider_key)
+            if self._adapters is not None:
+                self._adapters.pop(provider.id, None)
+            if self._credential_refs is not None:
+                self._credential_refs.pop(provider.id, None)
             raise OnboardingRefused(
                 "step-12-register-bindings",
                 "duplicate model key during binding registration — "
@@ -236,6 +304,20 @@ class ProviderOnboardingService:
         if registered_keys:
             steps.append("step-12-register-bindings")
 
+        # --- durability (Gap 1b): write-through AFTER in-memory success --------
+        # Rows are the durable truth hydration replays at startup; writing
+        # them only after every registry registration succeeded means a
+        # refused/rolled-back onboarding never leaves a durable row.
+        if self._persistence is not None:
+            self._persistence.persist_provider(provider)
+            for key in registered_keys:
+                model = self._models.get(key)
+                self._persistence.persist_model(model)
+                self._persistence.persist_binding(
+                    self._bindings.get(provider.id, model.id)
+                )
+            steps.append("step-durable-persistence")
+
         # --- step 14: PREPARE the admin enable draft (never publish it) --------
         enable_payload: JsonObject = {"provider_key": provider_key}
 
@@ -243,7 +325,7 @@ class ProviderOnboardingService:
             provider_id=provider.id,
             provider_key=provider_key,
             steps_passed=tuple(steps),
-            unverified=_UNVERIFIED_STEPS,
+            unverified=(*_UNVERIFIED_STEPS, *unverified_extra),
             discovered_models=tuple(d.provider_model_name for d in discovered),
             registered_model_keys=tuple(registered_keys),
             enable_draft_payload=enable_payload,

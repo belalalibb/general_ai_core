@@ -74,7 +74,12 @@ from apps.composition.database import (
     database_settings_from_env,
 )
 from apps.composition.durability import build_durable_execution_store
+from apps.composition.gateway import gateway_settings_from_env
 from apps.composition.identity import build_durable_identity_service
+from apps.composition.provider_onboarding import (
+    build_onboarding_surface,
+    hydrate_gateway_providers,
+)
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
 from core.admin.service import AdminConfigService
@@ -607,12 +612,38 @@ def build_runtime_profile(
         if e.strip()
     )
 
+    # --- gateway binding (G2) + platform secret custody for route tokens ----
+    # Half-configured gateway raises loudly inside gateway_settings_from_env;
+    # absent GATEWAY_BASE_URL ⇒ None ⇒ the onboarding route stays absent
+    # (20 §4 — optional seam, nothing to probe). The InMemorySecretManager is
+    # the same honest dev custody the real-provider env keys use; production
+    # secret custody is the Vault binding (ADR-0007) — swapped HERE only.
+    gateway_settings = gateway_settings_from_env(env_dict)
+    onboarding_secrets = InMemorySecretManager()
+
     store: ExecutionStorePort
     idempotency: IdempotencyPort
     if settings is not None:
         bridge = AsyncBridge()
         bindings = build_database_bindings(settings)
         plan_id = ensure_default_plan(bindings, bridge)
+        # Gap 1b hydration: replay durably onboarded gateway providers into
+        # the SAME registries/maps composed above (the ExecutionService and
+        # Router hold references to these exact instances — mutations are
+        # immediately visible). Without gateway settings the DATA hydrates
+        # but adapters stay honestly absent (AdapterNotBound on routing).
+        hydrated_keys = hydrate_gateway_providers(
+            database=bindings,
+            bridge=bridge,
+            providers=providers,
+            models=models,
+            bindings=binding_registry,
+            adapters=adapters,
+            credential_refs=credential_refs,
+            gateway_settings=gateway_settings,
+            secrets=onboarding_secrets,
+        )
+        provider_keys = [*provider_keys, *hydrated_keys]
         store = build_durable_execution_store(bindings, bridge)
         identity = BudgetGrantingIdentity(
             inner=build_durable_identity_service(
@@ -765,6 +796,25 @@ def build_runtime_profile(
             self_review=app.state.self_review_service,
         ),
         auth=auth,
+        # Gap 1c: the onboarding route exists ONLY when the gateway binding
+        # is configured (canonical-gateway providers only — DECISION 2;
+        # foreign/native-API providers still require an adapter/shim).
+        # Absent gateway ⇒ absent route (20 §4).
+        provider_onboarding=(
+            build_onboarding_surface(
+                providers=providers,
+                models=models,
+                bindings=binding_registry,
+                adapters=adapters,
+                credential_refs=credential_refs,
+                gateway_settings=gateway_settings,
+                secrets=onboarding_secrets,
+                database=bindings,
+                bridge=bridge,
+            )
+            if gateway_settings is not None
+            else None
+        ),
     )
 
     # --- end-user UI (P-D.2): the PROVEN ui/admin StaticFiles posture -----

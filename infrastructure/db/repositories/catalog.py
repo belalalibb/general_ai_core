@@ -22,11 +22,13 @@ repositories primitive"). Recorded design decision:
   not have would fabricate architecture. Manifests stay composition-time
   data next to the provider implementations; the catalog persists the
   Provider ENTITY (03 §4) only.
-- No provider_model_bindings table exists and none is invented here:
-  ProviderModelBinding persistence arrives WITH the runtime binding-
-  registration surface that needs it (a justified migration then, not a
-  speculative one now — same posture as the deferred conversations
-  created_at column).
+- provider_model_bindings (migration 0018) arrived WITH the runtime
+  binding-registration surface this docstring originally reserved it
+  for: the admin provider-onboarding path (31 §19, core/providers/
+  onboarding.py) persists providers/models/bindings write-through so an
+  onboarded provider survives restart — exactly the "justified
+  migration then, not a speculative one now" this record promised.
+  PostgresBindingCatalog below mirrors the shared catalog posture.
 
 Shared repository posture (all four): session FACTORY injected; rows <->
 frozen contracts at the boundary (nested contracts round-trip as JSONB
@@ -44,10 +46,23 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from core.contracts.domain import AgentCapability, Model, Provider
+from core.contracts.domain import (
+    AgentCapability,
+    AgentRuntimeBinding,
+    Model,
+    Provider,
+    ProviderModelBinding,
+)
 from core.contracts.roles import Role
 from core.contracts.skills import Skill, SkillManifest, SkillProvenance
-from infrastructure.db.tables import models, providers, roles, skills
+from infrastructure.db.tables import (
+    models,
+    provider_gateway_registrations,
+    provider_model_bindings,
+    providers,
+    roles,
+    skills,
+)
 
 
 def _row_to_role(row: Any) -> Role:
@@ -154,6 +169,40 @@ def _model_values(model: Model) -> dict[str, Any]:
         "agent_capability": (
             model.agent_capability.model_dump(mode="json")
             if model.agent_capability is not None
+            else None
+        ),
+    }
+
+
+def _row_to_binding(row: Any) -> ProviderModelBinding:
+    return ProviderModelBinding(
+        provider_id=row.provider_id,
+        model_id=row.model_id,
+        provider_model_name=row.provider_model_name,
+        endpoint_ref=row.endpoint_ref,
+        availability=row.availability,
+        limits_metadata=row.limits_metadata,
+        capabilities=row.capabilities,
+        agent_runtime=(
+            AgentRuntimeBinding.model_validate(row.agent_runtime)
+            if row.agent_runtime is not None
+            else None
+        ),
+    )
+
+
+def _binding_values(binding: ProviderModelBinding) -> dict[str, Any]:
+    return {
+        "provider_id": binding.provider_id,
+        "model_id": binding.model_id,
+        "provider_model_name": binding.provider_model_name,
+        "endpoint_ref": binding.endpoint_ref,
+        "availability": binding.availability.value,
+        "limits_metadata": dict(binding.limits_metadata),
+        "capabilities": dict(binding.capabilities),
+        "agent_runtime": (
+            binding.agent_runtime.model_dump(mode="json")
+            if binding.agent_runtime is not None
             else None
         ),
     }
@@ -268,4 +317,79 @@ class PostgresProviderCatalog(_CatalogBase):
             async with session.begin():
                 await session.execute(
                     stmt.on_conflict_do_update(index_elements=["id"], set_=update_cols)
+                )
+
+
+class PostgresBindingCatalog(_CatalogBase):
+    """Durable binding catalog over ``provider_model_bindings`` (0018).
+
+    Upsert is keyed on the COMPOSITE primary key (provider_id, model_id)
+    — the natural key the contract defines (one model bound once per
+    provider) — so re-onboarding the same pair updates in place. Rows
+    hydrate the BindingRegistry at startup exactly like the other four
+    catalogs; ordering is deterministic by the composite key.
+    """
+
+    async def load_all(self) -> list[ProviderModelBinding]:
+        async with self._sessions() as session:
+            rows = await session.execute(
+                select(provider_model_bindings).order_by(
+                    provider_model_bindings.c.provider_id,
+                    provider_model_bindings.c.model_id,
+                )
+            )
+        return [_row_to_binding(row) for row in rows]
+
+    async def upsert(self, binding: ProviderModelBinding) -> None:
+        values = _binding_values(binding)
+        stmt = pg_insert(provider_model_bindings).values(**values)
+        update_cols = {
+            k: v for k, v in values.items() if k not in ("provider_id", "model_id")
+        }
+        async with self._sessions() as session:
+            async with session.begin():
+                await session.execute(
+                    stmt.on_conflict_do_update(
+                        index_elements=["provider_id", "model_id"],
+                        set_=update_cols,
+                    )
+                )
+
+
+class PostgresGatewayRegistrationCatalog(_CatalogBase):
+    """Durable gateway registration records (0018; ADR-0011).
+
+    One JSONB ``definition`` row per gateway-backed provider: the
+    OPERATOR's registration data (declared operations/capabilities/
+    static models + the OPAQUE route_token_ref/credential_ref +
+    credential_mode) from which the composition root re-derives the
+    manifest (build_gateway_manifest) and rebuilds the adapter
+    (build_gateway_adapter) at startup — executability across restart.
+    REFS ONLY (20 §5): no secret value is ever a column or a JSON value
+    here; the refs resolve through the SecretManagerPort at the last
+    moment. The definition SHAPE is validated by the composition layer's
+    contract at the boundary (same JSONB posture as manifests in skills
+    rows). DECISION 2: canonical-gateway providers only — foreign/
+    native-API providers still require an adapter/shim.
+    """
+
+    async def load_all(self) -> list[tuple[Any, dict[str, Any]]]:
+        async with self._sessions() as session:
+            rows = await session.execute(
+                select(provider_gateway_registrations).order_by(
+                    provider_gateway_registrations.c.provider_id
+                )
+            )
+        return [(row.provider_id, dict(row.definition)) for row in rows]
+
+    async def upsert(self, provider_id: Any, definition: dict[str, Any]) -> None:
+        values = {"provider_id": provider_id, "definition": definition}
+        stmt = pg_insert(provider_gateway_registrations).values(**values)
+        async with self._sessions() as session:
+            async with session.begin():
+                await session.execute(
+                    stmt.on_conflict_do_update(
+                        index_elements=["provider_id"],
+                        set_={"definition": definition},
+                    )
                 )
