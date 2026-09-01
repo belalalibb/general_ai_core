@@ -186,9 +186,99 @@ class TestDenyByDefault:
             run(_post(app, f"{SAMPLES}/{sid}/promote", ALL_PROMOTE)),
             run(_get(app, LEARNED)),
             run(_post(app, ASK, {"key": "x"})),
+            run(_post(app, SAMPLES, {"knowledge_key": "k", "knowledge_value": {}})),
+            run(_post(app, f"{SAMPLES}/{sid}/evaluate", {"output": {}})),
         ]
         for response in probes:
             assert response.status_code == 403, response.status_code
+
+
+class TestHttpEntry:
+    """R159 — the lifecycle's HTTP entry closes the R158 recorded producer
+    gap: capture (execution-born OR external) and evaluate ride routes."""
+
+    def test_external_capture_enters_pending_pipeline(self) -> None:
+        world = World()
+        app = _app(world)
+        created = run(
+            _post(
+                app,
+                SAMPLES,
+                {"knowledge_key": "ext.rule", "knowledge_value": {"answer": 1}},
+            )
+        )
+        assert created.status_code == 201, created.text
+        body = created.json()
+        assert body["eligibility"] == "pending"
+        assert body["sanitization_state"] == "pending"
+        assert body["verification_level"] == "RAW"
+        report = run(_get(app, f"{SAMPLES}/{body['id']}"))
+        assert report.json()["source_kind"] == "external"
+        # never trusted on entry: GOLD path still gated
+        assert run(_get(app, LEARNED)).json()["keys"] == []
+
+    def test_execution_born_capture_requires_tenant_visible_execution(
+        self,
+    ) -> None:
+        world = World()
+        app = _app(world)
+        # Unknown / foreign execution id => 404 (anti-enumeration).
+        missing = run(
+            _post(
+                app,
+                SAMPLES,
+                {
+                    "knowledge_key": "k",
+                    "knowledge_value": {},
+                    "source_execution_id": str(uuid4()),
+                },
+            )
+        )
+        assert missing.status_code == 404
+        # A REAL execution through the platform's execute path => captured.
+        world.usage.configure_tenant(
+            world.principal.tenant_id, plan="pro", task_units_limit=100.0
+        )
+        transport = httpx.ASGITransport(app=app)
+
+        async def execute() -> str:
+            async with httpx.AsyncClient(
+                transport=transport, base_url="http://t"
+            ) as c:
+                r = await c.post("/v1/execute", json={"ask": "hello"})
+            assert r.status_code == 200, r.text
+            execution_id: str = r.json()["execution_id"]
+            return execution_id
+
+        execution_id = run(execute())
+        created = run(
+            _post(
+                app,
+                SAMPLES,
+                {
+                    "knowledge_key": "exec.k",
+                    "knowledge_value": {"answer": "x"},
+                    "source_execution_id": execution_id,
+                },
+            )
+        )
+        assert created.status_code == 201, created.text
+        assert created.json()["source_execution_id"] == execution_id
+        report = run(_get(app, f"{SAMPLES}/{created.json()['id']}"))
+        assert report.json()["source_kind"] == "execution"
+
+    def test_evaluate_binds_level_through_existing_grader(self) -> None:
+        world = World()
+        app = _app(world)
+        sample_id = _capture(app, world, "eval.k")
+        evaluated = run(
+            _post(app, f"{SAMPLES}/{sample_id}/evaluate", {"output": {"a": 1}})
+        )
+        assert evaluated.status_code == 200, evaluated.text
+        assert evaluated.json()["evaluated"] is True
+        assert evaluated.json()["sample"]["verification_level"] == "VALIDATED"
+        unknown = run(_post(app, f"{SAMPLES}/{uuid4()}/evaluate", {"output": {}}))
+        assert unknown.status_code == 404
 
     def test_absent_memory_seam_means_absent_routes_and_inert_catalog(
         self,

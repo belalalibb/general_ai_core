@@ -94,7 +94,7 @@ from apps.api.source_changes import (
     build_snapshot,
     proposal_json,
 )
-from apps.api.store import InMemoryExecutionStore
+from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from core.admin.errors import (
     ChangeNotFound,
     InactiveAdminArea,
@@ -227,6 +227,26 @@ class LearningAskRequest(ContractModel):
     key: BoundedStr
 
 
+class LearningCaptureRequest(ContractModel):
+    """R159 — the lifecycle's HTTP ENTRY (the R158 recorded producer gap).
+
+    ``source_execution_id`` present => execution-born candidate; the id must
+    resolve in the caller's tenant execution store (absent == foreign ==
+    404, 20 §6). Absent => external data — enters the SAME pipeline, never
+    trusted on entry (22 §8 / 41-pack).
+    """
+
+    knowledge_key: BoundedStr
+    knowledge_value: JsonObject
+    source_execution_id: UUID | None = None
+
+
+class LearningEvaluateRequest(ContractModel):
+    """R159 — grade a sample's produced output through the EXISTING grader."""
+
+    output: JsonObject
+
+
 def create_admin_router(
     surface: AdminSurface,
     *,
@@ -238,6 +258,7 @@ def create_admin_router(
     context_lab: ContextLabService | None = None,
     learning_observability: LearningObservabilityService | None = None,
     learning_lifecycle: LearningLifecycleService | None = None,
+    execution_store: ExecutionStorePort | None = None,
     self_review: SelfReviewService | None = None,
     source_changes: SourceChangeWorkflow | None = None,
 ) -> APIRouter:
@@ -573,6 +594,78 @@ def create_admin_router(
                         for s in lifecycle.list_samples(admitted.tenant_id)
                     ]
                 }
+            )
+
+        @router.post("/learning/samples")
+        async def capture_learning_sample(
+            request: Request, body: LearningCaptureRequest
+        ) -> Response:
+            """POST .../learning/samples: capture a candidate (PENDING all)."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            if body.source_execution_id is None:
+                sample = lifecycle.capture_external(
+                    admitted.tenant_id,
+                    knowledge_key=body.knowledge_key,
+                    knowledge_value=body.knowledge_value,
+                )
+                return _json(sample.model_dump(mode="json"), status=201)
+            # The SAME tenant-scoped store the /v1/executions routes read:
+            # absent id == foreign-tenant id == 404 (20 §6).
+            store = execution_store if execution_store is not None else (
+                surface.executions
+            )
+            if store is None:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "No execution store composed; execution-born capture "
+                    "unavailable.",
+                    details={"field": "source_execution_id"},
+                )
+            try:
+                store.get(admitted.tenant_id, body.source_execution_id)
+            except KeyError:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown execution id.",
+                    details={"execution_id": str(body.source_execution_id)},
+                    http_status=404,
+                )
+            sample = lifecycle.capture_from_execution(
+                admitted.tenant_id,
+                body.source_execution_id,
+                knowledge_key=body.knowledge_key,
+                knowledge_value=body.knowledge_value,
+            )
+            return _json(sample.model_dump(mode="json"), status=201)
+
+        @router.post("/learning/samples/{sample_id}/evaluate")
+        async def evaluate_learning_sample(
+            request: Request, sample_id: str, body: LearningEvaluateRequest
+        ) -> Response:
+            """POST .../evaluate: bind the verification level via the grader."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(sample_id, "sample_id")
+            if isinstance(parsed, JSONResponse):
+                return parsed
+            try:
+                sample = await lifecycle.evaluate(
+                    admitted.tenant_id, parsed, body.output
+                )
+            except SampleNotFound:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown learning sample id.",
+                    details={"sample_id": sample_id[:100]},
+                    http_status=404,
+                )
+            except LearningError as exc:
+                return _json({"evaluated": False, "reason": str(exc)})
+            return _json(
+                {"evaluated": True, "sample": sample.model_dump(mode="json")}
             )
 
         @router.get("/learning/samples/{sample_id}")

@@ -1870,6 +1870,7 @@ def create_app(
                 context_lab=context_lab_service,
                 learning_observability=learning_observability_service,
                 learning_lifecycle=learning_lifecycle_service,
+                execution_store=execution_store,
                 self_review=self_review_service,
                 source_changes=source_change_workflow,
             )
