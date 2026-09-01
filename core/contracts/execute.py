@@ -97,6 +97,11 @@ class ExecuteRequest(ContractModel):
     conversation_id: BoundedStr | None = None
     project_id: BoundedStr | None = None
     role: RoleSelector | None = None
+    # Chunk-5 field (10 §7 skills are SELECTABLE; 41 §16 'Selected Skills'):
+    # explicit skill selection by MANIFEST id — the SAME stable key the
+    # GET /v1/skills listing shows (never the registry UUID, 20 §6).
+    # Absent/empty ⇒ no skills ride the request (deny-by-default).
+    skills: list[BoundedStr] | None = None
     model_policy: ModelPolicy | None = None
     agent_policy: AgentPolicy | None = None
     execution_policy: ExecutionPolicy | None = None

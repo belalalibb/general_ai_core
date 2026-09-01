@@ -648,6 +648,44 @@ def create_app(
                 return resolved
             role = resolved
 
+        # --- skill admission (10 §7 selectable set; 41 §16 Selected Skills) -----
+        # Explicit selection by MANIFEST id — validated against the SAME
+        # registry the /v1/skills listing reads (one admission rule, P2).
+        # Unknown or non-selectable ids refuse loudly (deny-by-default);
+        # admitted skills ride the execution payload as DATA (their tools
+        # remain inert — 03 §8, enforced by the tool gate, not here).
+        admitted_skills: list[JsonObject] = []
+        if body.skills:
+            selectable = {
+                skill.manifest.id: skill
+                for skill in skill_registry.list_selectable()
+            }
+            seen_skill_ids: set[str] = set()
+            for requested in body.skills:
+                if requested in seen_skill_ids:
+                    return error_response(
+                        ErrorCode.VALIDATION_ERROR,
+                        f"skill requested twice: {requested}",
+                        details={"field": "skills"},
+                    )
+                seen_skill_ids.add(requested)
+                skill = selectable.get(requested)
+                if skill is None:
+                    # Unknown and non-selectable are indistinguishable
+                    # (20 §6 anti-enumeration — same denial for both).
+                    return error_response(
+                        ErrorCode.VALIDATION_ERROR,
+                        f"skill is not selectable: {requested}",
+                        details={"field": "skills"},
+                    )
+                admitted_skills.append(
+                    {
+                        "id": skill.manifest.id,
+                        "name": skill.name,
+                        "version": skill.version,
+                    }
+                )
+
         # --- idempotent replay (10 §10) ----------------------------------------
         # BEFORE persistence/composition: a replay must not duplicate turns.
         if idempotency_key is not None:
@@ -788,6 +826,11 @@ def create_app(
             # No composer: the admitted role's objective rides as payload
             # data (never both — recorded decision, no duplicated blocks).
             payload["role"] = {"id": str(role.id), "objective": role.objective}
+        if admitted_skills:
+            # Admitted selections ride verbatim (id/name/version only — the
+            # manifest content is registry data the executor can look up;
+            # the payload never becomes a skill-content channel).
+            payload["skills"] = admitted_skills
 
         # --- ASYNC path (Vision V2; 10 §4): enqueue via the outbox, ack 202 -----
         if policy is not None and policy.async_ is True:
