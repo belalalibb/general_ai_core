@@ -790,6 +790,7 @@ def build_runtime_profile(
         skills=skills,
         roles=roles,
         conversations=conversations,
+        memory=memory_store,  # R158: learning GOLD knowledge substrate (P1)
         composer=composer,
         admin=admin,
         models=models,

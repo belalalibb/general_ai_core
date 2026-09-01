@@ -173,6 +173,7 @@ from core.contracts.conversation import (
     MessageRole,
 )
 from core.contracts.errors import ErrorCode
+from core.contracts.evaluation import VerificationLevel
 from core.contracts.execute import (
     ExecuteAsyncAccepted,
     ExecuteRequest,
@@ -203,6 +204,8 @@ from core.contracts.webhooks import (
     WebhookSubscriptionRequest,
     WebhookSubscriptionResponse,
 )
+from core.evaluation import InMemoryEvaluationStore
+from core.evaluation.policy import EvaluationPolicyService
 from core.events import (
     WebhookUrlRefused,
     stage_execution_event,
@@ -221,8 +224,9 @@ from core.execution.service import (
     PipelineStage,
 )
 from core.identity.errors import SessionInvalid
+from core.learning import LearningLifecycleService, TrainingEligibilityGate
 from core.memory.errors import ConversationNotFound
-from core.memory.ports import ConversationStorePort
+from core.memory.ports import ConversationStorePort, MemoryStorePort
 from core.providers.registry import BindingRegistry, ModelRegistry
 from core.roles.errors import RoleNotRegistered, RoleNotSelectable
 from core.roles.registry import RoleRegistry, SkillRegistry
@@ -409,6 +413,7 @@ def create_app(
     skills: SkillRegistry | None = None,
     roles: RoleRegistry | None = None,
     conversations: ConversationStorePort | None = None,
+    memory: MemoryStorePort | None = None,
     composer: ContextComposer | None = None,
     context_budget: int = 16_000,
     admin: AdminSurface | None = None,
@@ -1611,6 +1616,12 @@ def create_app(
             "admin seam -> /v1/admin/* (T-IMPL-032)",
         ),
         _cap(
+            "learning.lifecycle",
+            admin is not None and memory is not None,
+            "learning lifecycle seam -> /v1/admin/learning/* (R158; "
+            "core/learning/lifecycle.py)",
+        ),
+        _cap(
             "rate_limits.execute",
             rate_limits is not None and execute_rate_limit > 0,
             "rate_limits seam + configured limit (T-IMPL-070)",
@@ -1777,6 +1788,25 @@ def create_app(
         )
     app.state.learning_observability_service = learning_observability_service
 
+    # --- R158: Learning lifecycle (22 §8 operator over EXISTING components) ----
+    # Composed ONLY with an admin surface (its management surface, 20 §4)
+    # AND a memory seam (the knowledge substrate). Knowledge rides the SAME
+    # memory store the context composer reads (P1: one retrieval substrate,
+    # two consumers); promotion audits into the SAME audit log the admin
+    # surface carries; evaluation delegates to a policy service over the
+    # EXISTING evaluation store.
+    learning_lifecycle_service: LearningLifecycleService | None = None
+    if admin is not None and memory is not None:
+        learning_lifecycle_service = LearningLifecycleService(
+            evaluation=EvaluationPolicyService(store=InMemoryEvaluationStore()),
+            knowledge=memory,
+            audit=admin.audit,
+            eligibility_gate=TrainingEligibilityGate(
+                minimum_level=VerificationLevel.RAW
+            ),
+        )
+    app.state.learning_lifecycle_service = learning_lifecycle_service
+
     # --- V7 chunk 6: Self-Review + Change Impact Simulator ----------------------
     # Assembly over the SAME derivations this root already made (catalog
     # tuple, scenario service, observability service) plus the admin
@@ -1839,6 +1869,7 @@ def create_app(
                 scenarios=scenario_service,
                 context_lab=context_lab_service,
                 learning_observability=learning_observability_service,
+                learning_lifecycle=learning_lifecycle_service,
                 self_review=self_review_service,
                 source_changes=source_change_workflow,
             )

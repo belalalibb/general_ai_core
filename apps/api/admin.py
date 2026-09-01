@@ -109,10 +109,19 @@ from core.admin.service import (
 from core.audit.ports import AuditLogPort
 from core.contracts.admin import AdminDraftRequest, ConfigChange, LearningDashboard
 from core.contracts.audit import AuditEventType
-from core.contracts.base import JsonObject
+from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.contracts.errors import ErrorCode
 from core.evaluation.errors import EvaluationNotFound
 from core.evaluation.ports import EvaluationStorePort
+from core.learning import (
+    EligibilitySignals,
+    LearningError,
+    LearningLifecycleService,
+    NotEligibleForTraining,
+    PromotionDenied,
+    PromotionSignals,
+    SampleNotFound,
+)
 from core.providers.registry import ModelRegistry, ProviderRegistry
 from core.sourcechange.errors import (
     ApprovalHashMismatch,
@@ -159,6 +168,65 @@ def _change_json(change: ConfigChange) -> dict[str, object]:
     return change.model_dump(mode="json", exclude_none=True)
 
 
+# --- R158 learning-lifecycle request bodies (surface-local, ContractModel) ------
+
+
+class LearningSanitizeRequest(ContractModel):
+    """The explicit sanitization verdict — no default: reviewer must decide."""
+
+    passed: bool
+
+
+class LearningAdmitRequest(ContractModel):
+    """Resolved 22 §9 signals — deny-by-default mirrors EligibilitySignals."""
+
+    privacy_policy_allows: bool = False
+    tenant_user_policy_allows: bool = False
+    sensitive_data_handled: bool = False
+    deduplicated: bool = False
+    not_poisoned: bool = False
+
+    def to_signals(self) -> EligibilitySignals:
+        return EligibilitySignals(
+            privacy_policy_allows=self.privacy_policy_allows,
+            tenant_user_policy_allows=self.tenant_user_policy_allows,
+            sensitive_data_handled=self.sensitive_data_handled,
+            deduplicated=self.deduplicated,
+            not_poisoned=self.not_poisoned,
+        )
+
+
+class LearningPromoteRequest(ContractModel):
+    """Resolved 22 §11 signals — deny-by-default mirrors PromotionSignals."""
+
+    offline_eval_pass: bool = False
+    regression_pass: bool = False
+    security_eval_pass: bool = False
+    shadow_performance_acceptable: bool = False
+    canary_performance_acceptable: bool = False
+    rollback_plan_exists: bool = False
+    approval_required: bool = True
+    admin_approved: bool = False
+
+    def to_signals(self) -> PromotionSignals:
+        return PromotionSignals(
+            offline_eval_pass=self.offline_eval_pass,
+            regression_pass=self.regression_pass,
+            security_eval_pass=self.security_eval_pass,
+            shadow_performance_acceptable=self.shadow_performance_acceptable,
+            canary_performance_acceptable=self.canary_performance_acceptable,
+            rollback_plan_exists=self.rollback_plan_exists,
+            approval_required=self.approval_required,
+            admin_approved=self.admin_approved,
+        )
+
+
+class LearningAskRequest(ContractModel):
+    """One isolated learned-capability question — a knowledge key."""
+
+    key: BoundedStr
+
+
 def create_admin_router(
     surface: AdminSurface,
     *,
@@ -169,6 +237,7 @@ def create_admin_router(
     scenarios: ScenarioService | None = None,
     context_lab: ContextLabService | None = None,
     learning_observability: LearningObservabilityService | None = None,
+    learning_lifecycle: LearningLifecycleService | None = None,
     self_review: SelfReviewService | None = None,
     source_changes: SourceChangeWorkflow | None = None,
 ) -> APIRouter:
@@ -483,6 +552,152 @@ def create_admin_router(
     # --- V7 chunk 5: Learning observability ("what changed since last
     # review" with evidence). Absent seam = absent routes (20 §4). Reading
     # the report is a pure read; marking a review is the one state change.
+
+    # --- R158: Learning lifecycle management (22 §8 operator over EXISTING
+    # components — core/learning/lifecycle.py). Absent seam = absent routes
+    # (20 §4). Every route: resolver + is_admin gate BEFORE parsing; every
+    # act tenant-scoped through the service's own (tenant, sample) keying.
+    if learning_lifecycle is not None:
+        lifecycle = learning_lifecycle
+
+        @router.get("/learning/samples")
+        async def list_learning_samples(request: Request) -> Response:
+            """GET .../learning/samples: the tenant's tracked samples."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(
+                {
+                    "samples": [
+                        s.model_dump(mode="json")
+                        for s in lifecycle.list_samples(admitted.tenant_id)
+                    ]
+                }
+            )
+
+        @router.get("/learning/samples/{sample_id}")
+        async def learning_sample_report(
+            request: Request, sample_id: str
+        ) -> Response:
+            """GET .../learning/samples/{id}: full lifecycle state + verdicts."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(sample_id, "sample_id")
+            if isinstance(parsed, JSONResponse):
+                return parsed
+            try:
+                return _json(lifecycle.sample_report(admitted.tenant_id, parsed))
+            except SampleNotFound:
+                return error_response(
+                    ErrorCode.NOT_FOUND, "Learning sample not found."
+                )
+
+        @router.post("/learning/samples/{sample_id}/sanitize")
+        async def sanitize_learning_sample(
+            request: Request, sample_id: str, body: LearningSanitizeRequest
+        ) -> Response:
+            """POST .../sanitize: the explicit reviewed sanitization ACT."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(sample_id, "sample_id")
+            if isinstance(parsed, JSONResponse):
+                return parsed
+            try:
+                sample = lifecycle.mark_sanitized(
+                    admitted.tenant_id, parsed, passed=body.passed
+                )
+            except SampleNotFound:
+                return error_response(
+                    ErrorCode.NOT_FOUND, "Learning sample not found."
+                )
+            return _json(sample.model_dump(mode="json"))
+
+        @router.post("/learning/samples/{sample_id}/admit")
+        async def admit_learning_sample(
+            request: Request, sample_id: str, body: LearningAdmitRequest
+        ) -> Response:
+            """POST .../admit: run the 22 §9 gate with resolved signals.
+
+            A refusal is an honest 200 outcome naming EVERY failed
+            condition (11 §14) — the gate's verdict IS the answer.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(sample_id, "sample_id")
+            if isinstance(parsed, JSONResponse):
+                return parsed
+            try:
+                sample = lifecycle.admit_to_training(
+                    admitted.tenant_id, parsed, body.to_signals()
+                )
+            except SampleNotFound:
+                return error_response(
+                    ErrorCode.NOT_FOUND, "Learning sample not found."
+                )
+            except NotEligibleForTraining as exc:
+                return _json({"admitted": False, "reason": str(exc)})
+            return _json(
+                {"admitted": True, "sample": sample.model_dump(mode="json")}
+            )
+
+        @router.post("/learning/samples/{sample_id}/promote")
+        async def promote_learning_sample(
+            request: Request, sample_id: str, body: LearningPromoteRequest
+        ) -> Response:
+            """POST .../promote: run the 22 §11 gate → GOLD + audit + memory."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(sample_id, "sample_id")
+            if isinstance(parsed, JSONResponse):
+                return parsed
+            try:
+                item = lifecycle.promote_to_gold(
+                    admitted.tenant_id,
+                    parsed,
+                    body.to_signals(),
+                    actor_id=admitted.user_id,
+                )
+            except SampleNotFound:
+                return error_response(
+                    ErrorCode.NOT_FOUND, "Learning sample not found."
+                )
+            except (PromotionDenied, LearningError) as exc:
+                return _json({"promoted": False, "reason": str(exc)})
+            return _json(
+                {
+                    "promoted": True,
+                    "memory_item_id": str(item.id),
+                    "knowledge_key": item.key,
+                }
+            )
+
+        @router.get("/learning/learned")
+        async def learned_knowledge_keys(request: Request) -> Response:
+            """GET .../learned: the tenant's GOLD knowledge keys."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(
+                {"keys": list(lifecycle.learned_keys(admitted.tenant_id))}
+            )
+
+        @router.post("/learning/ask")
+        async def ask_learned_capability(
+            request: Request, body: LearningAskRequest
+        ) -> Response:
+            """POST .../ask: the ISOLATED learned-capability test path.
+
+            Answers ONLY from GOLD knowledge — never touches conversation
+            or execution state (directive §19: isolated evaluation chat).
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(lifecycle.ask_learned(admitted.tenant_id, body.key))
 
     if learning_observability is not None:
         observability = learning_observability

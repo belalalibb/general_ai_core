@@ -69,6 +69,7 @@ CAPABILITY_IDS: frozenset[str] = frozenset(
         "webhooks.registration",
         "webhooks.delivery_staging",
         "admin.control_plane",
+        "learning.lifecycle",
         "rate_limits.execute",
         "auth.sessions",
         "health.liveness",
