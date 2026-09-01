@@ -187,6 +187,7 @@ from core.contracts.execute import (
 )
 from core.contracts.execution import Execution, ExecutionStrategy
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
+from core.contracts.model_policy import AgentNodeMappingPolicy, ExplicitModelsPolicy
 from core.contracts.provider import ProviderError, ProviderOperation
 from core.contracts.roles import Role
 from core.contracts.routing import RoutingRequest
@@ -201,6 +202,13 @@ from core.events import (
     WebhookUrlRefused,
     stage_execution_event,
     validate_webhook_url,
+)
+from core.execution.multi_model import (
+    CompareRefused,
+    InvalidJudgePolicy,
+    MultiModelExecutor,
+    UnsupportedStrategy,
+    resolve_node_policy,
 )
 from core.execution.service import ExecutionReport, ExecutionService
 from core.identity.errors import SessionInvalid
@@ -504,6 +512,11 @@ def create_app(
 
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
+    # 10 §13.4 explicit_models seam — composed over the SAME router and
+    # execution service (Router still decides every branch; 02 inv. 5).
+    multi_model_executor = MultiModelExecutor(
+        router=router, execution=execution_service
+    )
     skill_registry = skills if skills is not None else SkillRegistry()
     role_registry = roles if roles is not None else RoleRegistry()
     # Idempotency index (10 §10): (tenant_id, key) -> execution_id.
@@ -716,30 +729,50 @@ def create_app(
                 ),
             )
 
-        # --- route (11; Router decides) ----------------------------------------
-        routing_request = RoutingRequest(
-            operation=ProviderOperation.GENERATE_TEXT,
-            model_policy=body.model_policy,
+        # --- resolve 10 §13.5 agent_node_mapping for the single node ------------
+        # Resolution order verbatim (node > agent default > request policy >
+        # auto): the sync path runs exactly one node, key "single".
+        effective_policy = body.model_policy
+        if isinstance(effective_policy, AgentNodeMappingPolicy):
+            effective_policy = resolve_node_policy(effective_policy, "single")
+
+        # --- 10 §13.4 explicit_models: per-branch routing happens INSIDE the
+        # MultiModelExecutor (Router still decides every branch); the single
+        # up-front route below is skipped for this policy type.
+        multi_model_policy = (
+            effective_policy
+            if isinstance(effective_policy, ExplicitModelsPolicy)
+            else None
         )
-        try:
-            decision = router.route(routing_request)
-        except UnsupportedPolicyType as exc:
-            return error_response(
-                ErrorCode.VALIDATION_ERROR, str(exc), details={"field": "model_policy"}
+
+        # --- route (11; Router decides) ----------------------------------------
+        decision = None
+        if multi_model_policy is None:
+            routing_request = RoutingRequest(
+                operation=ProviderOperation.GENERATE_TEXT,
+                model_policy=effective_policy,
             )
-        except NoEligibleCandidates as exc:
-            return error_response(
-                ErrorCode.MODEL_UNAVAILABLE,
-                "No eligible model candidates for this request.",
-                details={
-                    "excluded": [
-                        record.model_dump(mode="json", exclude_none=True)
-                        for record in exc.excluded
-                    ]
-                },
-            )
-        except FallbackNotConfigured as exc:
-            return error_response(ErrorCode.MODEL_UNAVAILABLE, str(exc))
+            try:
+                decision = router.route(routing_request)
+            except UnsupportedPolicyType as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "model_policy"},
+                )
+            except NoEligibleCandidates as exc:
+                return error_response(
+                    ErrorCode.MODEL_UNAVAILABLE,
+                    "No eligible model candidates for this request.",
+                    details={
+                        "excluded": [
+                            record.model_dump(mode="json", exclude_none=True)
+                            for record in exc.excluded
+                        ]
+                    },
+                )
+            except FallbackNotConfigured as exc:
+                return error_response(ErrorCode.MODEL_UNAVAILABLE, str(exc))
 
         # --- execute (02 invariant 5: Execution executes) -----------------------
         payload: JsonObject = {"ask": body.ask}
@@ -758,6 +791,16 @@ def create_app(
 
         # --- ASYNC path (Vision V2; 10 §4): enqueue via the outbox, ack 202 -----
         if policy is not None and policy.async_ is True:
+            if multi_model_policy is not None:
+                # The async worker re-routes a SINGLE decision at execution
+                # time; multi-model branch orchestration on the async path is
+                # a separate slice — refused loudly, never silently degraded.
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "explicit_models is not supported on the async path "
+                    "in this slice; run it synchronously.",
+                    details={"field": "model_policy"},
+                )
             assert outbox is not None  # guarded by the loud rejection above
             execution_id = uuid4()
             # Durable message FIRST (40 §4.2): everything the worker needs
@@ -832,16 +875,42 @@ def create_app(
             return _async_accepted(execution_id)
 
         try:
-            report = await execution_service.execute_single(
-                tenant_id=caller.tenant_id,
-                user_id=caller.user_id,
-                decision=decision,
-                operation=ProviderOperation.GENERATE_TEXT,
-                payload=payload,
-                request_hash=_request_hash(body),
-                idempotency_key=idempotency_key,
-                conversation_id=conversation_id,
-            )
+            if multi_model_policy is not None:
+                # 10 §13.4: branches route+execute inside the executor; the
+                # API responds with the strategy's final report (winner or
+                # judge).
+                try:
+                    multi_report = await multi_model_executor.execute(
+                        tenant_id=caller.tenant_id,
+                        user_id=caller.user_id,
+                        policy=multi_model_policy,
+                        operation=ProviderOperation.GENERATE_TEXT,
+                        payload=payload,
+                        request_hash=_request_hash(body),
+                        idempotency_key=idempotency_key,
+                        conversation_id=conversation_id,
+                    )
+                except (UnsupportedStrategy, InvalidJudgePolicy) as exc:
+                    return error_response(
+                        ErrorCode.VALIDATION_ERROR,
+                        str(exc),
+                        details={"field": "model_policy"},
+                    )
+                except CompareRefused as exc:
+                    return error_response(ErrorCode.MODEL_UNAVAILABLE, str(exc))
+                report = multi_report.final_report
+            else:
+                assert decision is not None  # routed above
+                report = await execution_service.execute_single(
+                    tenant_id=caller.tenant_id,
+                    user_id=caller.user_id,
+                    decision=decision,
+                    operation=ProviderOperation.GENERATE_TEXT,
+                    payload=payload,
+                    request_hash=_request_hash(body),
+                    idempotency_key=idempotency_key,
+                    conversation_id=conversation_id,
+                )
         except BudgetExceeded as exc:
             # Denied BEFORE any provider work (03 §7; 10 §9). The accounting
             # facts explain the denial without leaking other tenants' data.

@@ -359,13 +359,17 @@ def test_streaming_is_rejected_loudly() -> None:
     assert payload["error"]["details"]["field"] == "execution_policy.stream"
 
 
-def test_unsupported_policy_type_is_validation_error() -> None:
+def test_unsupported_strategy_is_validation_error() -> None:
+    # explicit_models is now supported (10 §13.4, multi-model slice); the
+    # VALIDATION refusal moved to the strategies that still need the
+    # evaluator/agent subsystems — refused loudly, never degraded.
     world = World()
     body = {
         "ask": "hi",
         "model_policy": {
             "type": "explicit_models",
             "models": [{"model_id": "model-alpha"}],
+            "selection_strategy": "best_of_n",
         },
     }
     response = run(_post(world.app(), body))
