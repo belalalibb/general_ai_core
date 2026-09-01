@@ -88,6 +88,7 @@ from core.skills.errors import (
     UnknownImportSource,
 )
 
+
 class SourcePrefixProvider(Protocol):
     """Live allowlist seam (the SkillSourceCatalog duck type)."""
 
@@ -129,7 +130,7 @@ class SkillImportService:
         self,
         *,
         allowed_sources: tuple[str, ...] = IMPORT_SOURCES,
-        source_prefixes: "SourcePrefixProvider | None" = None,
+        source_prefixes: SourcePrefixProvider | None = None,
     ) -> None:
         """``source_prefixes`` (chunk 4): a LIVE provider of the allowlist —
         the SkillSourceCatalog seam. Bound, it supersedes the static

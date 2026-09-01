@@ -74,13 +74,13 @@ from core.contracts.domain import (
 from core.contracts.provider import ProviderManifest
 from core.contracts.routing import ScoringWeights
 from core.contracts.skills import SkillStatus
-from core.skills.sources import InvalidSourceUrl, SkillSourceCatalog, SkillSourceEntry
 from core.contracts.tools import ToolStatus
 from core.contracts.usage import UsageSummary
 from core.providers.errors import ModelNotRegistered, ProviderNotRegistered
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.roles.errors import SkillNotRegistered
 from core.roles.registry import SkillRegistry
+from core.skills.sources import InvalidSourceUrl, SkillSourceCatalog, SkillSourceEntry
 from core.tools.errors import ToolNotRegistered
 from core.tools.registry import ToolRegistry
 from core.usage.errors import EntitlementNotConfigured
