@@ -60,6 +60,9 @@ below is read from the process environment at start.
 | `GSK_API_KEY` | binds the real Genspark LLM proxy adapter (direct) | absent |
 | `GATEWAY_BASE_URL`, `GATEWAY_SECRET`, `GATEWAY_SECRET_VERSION` | binds the remote gateway adapter; enables provider onboarding routes (`/v1/admin/providers/onboard*`) | absent ⇒ onboarding routes NOT mounted (404) |
 | `AGENT_SOURCE_ROOT` | directory jail; enables the read-only source tools for agent mode | absent ⇒ 0 source tools |
+| `AGENT_WORKSPACE_ROOT` | **engineering workspace** (ADR-0012): a git checkout the shared agent may read, write, run allow-listed commands in and commit/push/merge — under Admin authorization. Refused if it is (or contains / is inside) the platform's own checkout (ADR-0009 §14) | absent ⇒ 0 engineering tools, `/v1/admin/engineering/*` NOT mounted (404) |
+| `AGENT_WORKSPACE_REMOTE` | git remote name used by `git_push` / `git_compare` | `origin` |
+| `AGENT_WORKSPACE_COMMANDS` | comma-separated executables `ws_run` may launch (allow-list; `bash`, `sh`, `curl` etc. are refused unless listed) | `python3,pytest,ruff` |
 | `VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_MOUNT` | Vault-backed `SecretManagerPort` (secret refs resolve there) | absent ⇒ env-backed refs |
 | `EXECUTE_RATE_LIMIT`, `REGISTER_RATE_LIMIT` | per-tenant / per-IP limits | recorded defaults |
 
@@ -140,6 +143,40 @@ ToolRegistry → CapabilityFirewall → DeviceRegistry (one chain, shared with t
 admin agent). **Deny by default:** with no allow-list and no skills the agent
 is offered NO tools; set `AGENT_SOURCE_ROOT` to offer the read-only source tools.
 Inspect: `GET /v1/agent-tools`, `GET /v1/agent/executions/{id}/trace` (stages + evidence ledger).
+
+### 5.1 Engineering workspace (files · commands · Git) — ADR-0012
+
+With `AGENT_WORKSPACE_ROOT` set, the SAME agent runtime offers 17 additional
+tools (visible in `GET /v1/agent-tools`): reads `ws_read ws_list ws_search
+git_status git_diff git_log git_branches git_compare`; privileged `ws_write
+ws_move ws_delete ws_apply_changes ws_run git_checkout git_commit git_push
+git_merge`. Capability ≠ authority — a privileged act needs **all three**:
+
+1. **Tenant permission** (`workspace.write`, `workspace.exec`, `git.write`) —
+   tenants are admitted with the READ permissions only; an admin grants writes:
+   `POST /v1/admin/engineering/grants {"tenant_id","permissions":[...]}`.
+2. **An Admin-issued ticket** — bounded by acts (`fs.write cmd.run git.commit
+   git.push git.merge`), uses (1–1000) and TTL (≤ 24 h):
+   `POST /v1/admin/engineering/authorizations {"acts":[...],"uses":3,"ttl_minutes":30,"note":"…"}`
+   → the agent passes `authorization_id` in the tool call; each admitted act
+   burns ONE use; `POST …/authorizations/{id}/revoke` kills it.
+3. **Policy admission** — jail (no `..`, no symlink escape), denylist
+   (`.env`, `.git/`, keys…), write cap, command allow-list, cwd inside the
+   workspace, timeout cap. Policy is checked BEFORE the ticket is touched: a
+   refused act never costs a use.
+
+Refusals are data in the trace: firewall `capability_denied/firewall_deny`
+(no permission — handler never runs); handler `execution_failed` with
+`engineering refused: authorization_id missing | authorization exhausted |
+authorization expired | invalid path … | path is denied by policy | executable
+not allowlisted`. Every issue/consume/refuse/revoke is an audit event
+(`surface=engineering_authorization`). `GET /v1/admin/engineering/status`
+shows workspace, remote, commands, tenant grants and live tickets; the admin
+console has the same panel under Governance → Engineering Authorizations.
+
+Reproducible end-to-end proof against a real checkout with a bare remote:
+`python3 docs/benchmarks/r164-self-sufficiency/live_e2e_proof.py /path/to/ws`
+(scripted model output on the composed runtime; real fs / subprocess / git).
 
 ---
 
@@ -234,6 +271,11 @@ and `infrastructure/` — a stubs gap, not a defect; install `types-boto3`/
 | `404` on learning routes | memory seam absent — the whole lifecycle is absent, not half-available |
 | `422` on auth bodies | closed shapes: use `preferred_language`, no extra fields |
 | Agent offered 0 tools | deny-by-default; set `AGENT_SOURCE_ROOT` or grant tools via skills |
+| `404` on `/v1/admin/engineering/*` | `AGENT_WORKSPACE_ROOT` unset or not a directory — engineering is absent by design (P2) |
+| Startup `WorkspaceRootRefused` | `AGENT_WORKSPACE_ROOT` is the platform's own checkout (or contains / is inside it) — ADR-0009 §14; point it at a separate clone |
+| `ws_write` refused `firewall_deny` | tenant lacks `workspace.write` — grant via `POST /v1/admin/engineering/grants` |
+| `engineering refused: authorization_id missing / exhausted / expired` | no live ticket — issue one via `POST /v1/admin/engineering/authorizations` and pass its id in the tool call |
+| `executable not allowlisted` | add it to `AGENT_WORKSPACE_COMMANDS` (shells are deliberately not in the default) |
 | `{promoted:false, stage:"knowledge_write"}` | knowledge store refused the write (secret screen / backend) — sample stays VERIFIED, nothing claimed |
 | Provider health `UNAVAILABLE: no health credential` | honest: cannot verify ≠ healthy; set the key |
 | `attached to a different loop` at shutdown | only if bypassing `apps.main` — the lifespan disposes on the bridge loop |
@@ -262,4 +304,7 @@ No email delivery; durable stores exist for executions/identity/workspaces/
 source-change but usage/audit/learning samples remain in-process; no
 distributed worker; no token streaming; gateway onboarding is untestable
 end-to-end without a gateway; authoritative self-modification is gated off
-by design.
+by design (the engineering workspace refuses the platform's own checkout —
+ADR-0009 §14 unchanged); engineering tickets/grants live in-process (lost on
+restart, re-issued by an admin); `ws_run` is a subprocess with a scrubbed
+environment and timeout, not a container sandbox.
