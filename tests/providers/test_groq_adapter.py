@@ -358,17 +358,23 @@ class TestErrorNormalization:
         assert response.error is None
         assert response.output == {"content": native, "finish_reason": "tool_use_failed"}
 
-    def test_tool_use_failed_without_generation_stays_an_error(self) -> None:
+    @pytest.mark.parametrize("code", ["tool_use_failed", "json_validate_failed"])
+    def test_generation_failures_are_retryable_not_bad_request(self, code: str) -> None:
+        """R165 (live): Groq 400s when the MODEL's sample failed its own
+        post-check (empty/invalid constrained output, stray tool call) —
+        the identical request succeeds on the next sample. That indicts
+        the generation, not the request: retryable, failover allowed."""
         adapter, _ = _adapter(
             lambda req: httpx.Response(
-                400, json={"error": {"code": "tool_use_failed", "message": "x"}}
+                400, json={"error": {"code": code, "message": "x", "failed_generation": ""}}
             )
         )
         response = run(adapter.generate(_generate_request()))
         assert response.succeeded is False
         assert response.error is not None
-        assert response.error.category is ProviderErrorCategory.BAD_REQUEST
-        assert response.error.provider_code == "tool_use_failed"
+        assert response.error.category is ProviderErrorCategory.RETRYABLE_SERVER_ERROR
+        assert response.error.retryable is True
+        assert response.error.provider_code == code
 
     def test_network_failure_maps_to_provider_unavailable(self) -> None:
         def explode(request: httpx.Request) -> httpx.Response:

@@ -56,6 +56,9 @@ GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 
 #: Generation parameters a caller may pass through ``payload["generation"]``.
 #: Whitelist (deny-by-default): unknown keys are dropped, never forwarded.
+#: Groq 400 codes that indict the sampled GENERATION, not the request.
+_GENERATION_FAILURE_CODES = frozenset({"json_validate_failed", "tool_use_failed"})
+
 _GENERATION_PARAM_WHITELIST = frozenset(
     {"temperature", "top_p", "max_tokens", "max_completion_tokens", "seed", "stop"}
 )
@@ -427,6 +430,19 @@ class GroqAdapter:
                 retryable=False,
                 provider_code=code or "http_404",
                 safe_message="requested model is not available at the provider",
+            )
+        if status == 400 and code in _GENERATION_FAILURE_CODES:
+            # R165 live: Groq answers 400 when the MODEL's output failed its
+            # own post-check (schema validation / stray native tool call)
+            # — the identical request succeeds on the next sample. That is
+            # a generation failure, not a request defect: retryable, and a
+            # different candidate may fail over (never "bad_request", which
+            # forbids both).
+            return ProviderError(
+                category=ProviderErrorCategory.RETRYABLE_SERVER_ERROR,
+                retryable=True,
+                provider_code=code,
+                safe_message="provider could not produce a valid generation",
             )
         if status in (400, 413, 422):
             # Groq reports content-policy rejections inside 400s; the error
