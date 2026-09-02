@@ -124,6 +124,7 @@ from core.learning import (
     PromotionDenied,
     PromotionSignals,
     SampleNotFound,
+    SanitizationRefused,
 )
 from core.providers.registry import ModelRegistry, ProviderRegistry
 from core.sourcechange.errors import (
@@ -692,11 +693,39 @@ def create_admin_router(
                     http_status=404,
                 )
 
+        @router.post("/learning/samples/{sample_id}/scan")
+        async def scan_learning_sample(request: Request, sample_id: str) -> Response:
+            """POST .../scan: the deterministic 22 §12 secret scan (R161).
+
+            Pure report — findings name path + label, never content. It does
+            not change the sample's state; the reviewed act consumes it.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(sample_id, "sample_id")
+            if isinstance(parsed, JSONResponse):
+                return parsed
+            try:
+                report = lifecycle.sanitize(admitted.tenant_id, parsed)
+            except SampleNotFound:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown learning sample id.",
+                    details={"sample_id": sample_id[:100]},
+                    http_status=404,
+                )
+            return _json(report.as_json())
+
         @router.post("/learning/samples/{sample_id}/sanitize")
         async def sanitize_learning_sample(
             request: Request, sample_id: str, body: LearningSanitizeRequest
         ) -> Response:
-            """POST .../sanitize: the explicit reviewed sanitization ACT."""
+            """POST .../sanitize: the explicit reviewed sanitization ACT.
+
+            R161: ``passed=true`` over unresolved scan findings is refused
+            as an honest 200 outcome carrying the findings (no content).
+            """
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
@@ -711,6 +740,14 @@ def create_admin_router(
                     "Unknown learning sample id.",
                     details={"sample_id": sample_id[:100]},
                     http_status=404,
+                )
+            except SanitizationRefused as exc:
+                return _json(
+                    {
+                        "sanitized": False,
+                        "reason": "machine scan reports findings; passed=true refused",
+                        "report": exc.report.as_json(),
+                    }
                 )
             return _json(sample.model_dump(mode="json"))
 

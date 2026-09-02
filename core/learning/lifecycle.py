@@ -383,13 +383,21 @@ class LearningLifecycleService:
     def resolve_signals(
         self, tenant_id: UUID, sample_id: UUID, asserted: EligibilitySignals
     ) -> EligibilitySignals:
-        """Merge caller assertions with derived facts — derivation only lowers."""
+        """Merge caller assertions with derived facts.
+
+        - ``deduplicated`` is DECIDED by the service (byte-identical dedup is
+          a provable fact; a caller cannot know it better). The asserted
+          value is ignored in both directions — recorded decision.
+        - ``not_poisoned`` stays a caller attestation (adversarial content
+          is a human judgement) AND-ed with the machine scan — derivation
+          only lowers.
+        """
         derived = self.derived_signals(tenant_id, sample_id)
         return EligibilitySignals(
             privacy_policy_allows=asserted.privacy_policy_allows,
             tenant_user_policy_allows=asserted.tenant_user_policy_allows,
             sensitive_data_handled=asserted.sensitive_data_handled,
-            deduplicated=asserted.deduplicated and derived["deduplicated"],
+            deduplicated=derived["deduplicated"],
             not_poisoned=asserted.not_poisoned and derived["scan_clean"],
             source_trace_intact=asserted.source_trace_intact,
         )

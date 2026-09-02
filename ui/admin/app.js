@@ -997,7 +997,11 @@ function parseJsonObject(text, what) {
 
 async function learningStep(sampleId, step, body) {
   const result = await api(`/v1/admin/learning/samples/${encodeURIComponent(sampleId)}/${step}`, { method: "POST", body });
-  if (result.ok) toast(`${step}: ${sampleId.slice(0, 8)}… → ${JSON.stringify(result.body).slice(0, 80)}`, "ok");
+  // Honest 200 outcomes: the gate's own verdict IS the answer (admitted/sanitized/evaluated=false).
+  const refusedInBody = result.ok && result.body && typeof result.body === "object"
+    && ["admitted", "sanitized", "evaluated", "promoted"].some((k) => result.body[k] === false);
+  if (result.ok && !refusedInBody) toast(`${step}: ${sampleId.slice(0, 8)}… → ${JSON.stringify(result.body).slice(0, 80)}`, "ok");
+  else if (refusedInBody) toast(`${step} refused by gate: ${result.body.reason || JSON.stringify(result.body).slice(0, 120)}`, "err");
   else toast(`${step} refused (${result.status}): ${errorText(result.body)}`, "err");
   loadLearning();
 }
@@ -1013,17 +1017,21 @@ function sampleActions(sample) {
       const output = parseJsonObject(text, "output");
       if (output) learningStep(id, "evaluate", { output });
     }),
+    actionButton("Scan", () => learningStep(id, "scan")),
     actionButton("Sanitize ✓", () => learningStep(id, "sanitize", { passed: true })),
     actionButton("Sanitize ✗", () => learningStep(id, "sanitize", { passed: false })),
     actionButton("Admit", () => {
-      // Three explicit attestations — the API's closed shape; unchecked = false.
+      // Four explicit attestations — the API's closed shape; unchecked = false.
+      // `deduplicated` is DERIVED server-side (byte-identical dedup) — not asked.
       const privacy = window.confirm("Attest: privacy policy allows training on this sample?");
       const tenant = window.confirm("Attest: tenant/user policy allows it?");
       const sensitive = window.confirm("Attest: sensitive data has been handled?");
+      const notPoisoned = window.confirm("Attest: content reviewed — not adversarial/poisoned? (AND-ed with the machine scan)");
       learningStep(id, "admit", {
         privacy_policy_allows: privacy,
         tenant_user_policy_allows: tenant,
         sensitive_data_handled: sensitive,
+        not_poisoned: notPoisoned,
       });
     }),
     actionButton("Promote", () => {
