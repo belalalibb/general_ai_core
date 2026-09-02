@@ -41,7 +41,7 @@ from apps.admin_agent.contracts import (
     TraceStage,
 )
 from apps.admin_agent.dispatcher import ToolDispatcher, ToolRegistry
-from apps.admin_agent.secrecy import scrub_text
+from apps.admin_agent.secrecy import scrub_object, scrub_text
 from apps.admin_agent.tools import AGENT_LABEL_KEY, AgentToolSurface
 from apps.api.app import Principal
 from core.agent import AgentRuntime, ReasoningFailed
@@ -612,11 +612,13 @@ class AdminAgentService:
                 )
                 for a in node_report.attempts
             ]
+            node_error = node_report.node.error
             stages.append(
                 TraceStage(
                     node_key=node_report.node.node_key,
                     status=node_report.node.status.value,
                     attempts=attempts,
+                    error=scrub_object(dict(node_error)) if node_error else None,
                 )
             )
         execution = report.execution

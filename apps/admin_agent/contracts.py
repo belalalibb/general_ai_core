@@ -170,11 +170,19 @@ class TraceAttempt(ContractModel):
 
 
 class TraceStage(ContractModel):
-    """One recorded execution node with its attempt trail."""
+    """One recorded execution node with its attempt trail.
+
+    ``error`` (R165) is the node's recorded failure object, scrubbed (R4):
+    for agent stages this is WHY a plan/act node failed (``firewall_deny``,
+    ``propose_failed`` detail, ``invalid_proposal`` reason…) — without it an
+    operator sees a failed stage and no cause. ``None`` when the node did not
+    fail or recorded nothing.
+    """
 
     node_key: BoundedStr
     status: BoundedStr
     attempts: list[TraceAttempt] = Field(default_factory=list)
+    error: JsonObject | None = None
 
 
 class ExecutionTrace(ContractModel):
