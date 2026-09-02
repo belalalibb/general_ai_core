@@ -67,6 +67,7 @@ from apps.api.auth import AuthSurface
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
 from apps.composition.admin_console import attach_admin_console
+from apps.composition.agent import ComposedAgent, build_agent, grant_agent_tenant
 from apps.composition.bridge import AsyncBridge
 from apps.composition.database import (
     DatabaseBindings,
@@ -192,12 +193,8 @@ class BridgedOutbox:
     inner: OutboxPort
     bridge: AsyncBridge
 
-    async def append(
-        self, stream: str, payload: Mapping[str, str], idempotency_key: str
-    ) -> str:
-        return await self.bridge.run_async(
-            self.inner.append(stream, payload, idempotency_key)
-        )
+    async def append(self, stream: str, payload: Mapping[str, str], idempotency_key: str) -> str:
+        return await self.bridge.run_async(self.inner.append(stream, payload, idempotency_key))
 
     async def pending(self, max_records: int = 1) -> tuple[OutboxRecord, ...]:
         return await self.bridge.run_async(self.inner.pending(max_records))
@@ -263,6 +260,10 @@ class BudgetGrantingIdentity:
 
     inner: IdentityServicePort
     usage: InMemoryUsageAccounting
+    #: R160: further first-appearance grants (the shared agent firewall's
+    #: read-only tenant policy) ride the SAME seam — one derivation of
+    #: "tenant appeared", two consumers.
+    on_tenant: list[Callable[[UUID], None]] = field(default_factory=list)
     _granted: set[UUID] = field(default_factory=set)
 
     def _grant(self, tenant_id: UUID) -> None:
@@ -272,6 +273,8 @@ class BudgetGrantingIdentity:
                 plan=DEFAULT_PLAN_NAME,
                 task_units_limit=DEFAULT_TASK_UNITS,
             )
+            for hook in self.on_tenant:
+                hook(tenant_id)
             self._granted.add(tenant_id)
 
     def register(self, email: str, password: str, preferred_language: str) -> User:
@@ -319,21 +322,15 @@ class LocalEchoAdapter:
         return self._manifest
 
     async def validate_credential(self, credential_ref: str) -> CredentialHealth:
-        return CredentialHealth(
-            credential_ref=credential_ref, status=CredentialStatus.ACTIVE
-        )
+        return CredentialHealth(credential_ref=credential_ref, status=CredentialStatus.ACTIVE)
 
-    async def discover_models(
-        self, account_id: UUID | None = None
-    ) -> list[DiscoveredModel]:
+    async def discover_models(self, account_id: UUID | None = None) -> list[DiscoveredModel]:
         return []
 
     async def get_capabilities(self) -> ProviderCapabilities:
         return self._manifest.capabilities
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         ask = request.payload.get("ask", "")
         return ProviderGenerateResponse(
             request_id=request.request_id,
@@ -348,9 +345,7 @@ class LocalEchoAdapter:
         )
 
     async def health_check(self, scope: HealthScope) -> ProviderHealth:
-        return ProviderHealth(
-            provider_id=self._manifest.id, state=ProviderHealthState.HEALTHY
-        )
+        return ProviderHealth(provider_id=self._manifest.id, state=ProviderHealthState.HEALTHY)
 
     def normalize_error(self, error: object) -> ProviderError:
         return ProviderError(
@@ -420,6 +415,8 @@ class RuntimeProfile:
     demo_principal: Principal | None = None
     # Diagnostics for the startup banner (never secrets): provider keys bound.
     provider_keys: tuple[str, ...] = field(default_factory=tuple)
+    # R160: the SHARED agent composition (surface + authority chain).
+    agent: ComposedAgent | None = None
 
 
 def ensure_default_plan(bindings: DatabaseBindings, bridge: AsyncBridge) -> UUID:
@@ -434,8 +431,7 @@ def ensure_default_plan(bindings: DatabaseBindings, bridge: AsyncBridge) -> UUID
         async with bindings.session_factory() as session:
             await session.execute(
                 text(
-                    "INSERT INTO plans (id, name) VALUES (:id, :name) "
-                    "ON CONFLICT (id) DO NOTHING"
+                    "INSERT INTO plans (id, name) VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"
                 ),
                 {"id": DEFAULT_PLAN_ID, "name": DEFAULT_PLAN_NAME},
             )
@@ -494,9 +490,7 @@ def _bind_real_providers(
 
     for provider_key, key, manifest, model_names, adapter_factory in specs:
         ref = secrets.store(platform_tenant, key)
-        adapter = adapter_factory(
-            manifest, secret_resolver=_resolver, health_credential_ref=ref
-        )
+        adapter = adapter_factory(manifest, secret_resolver=_resolver, health_credential_ref=ref)
         provider = Provider(
             id=uuid4(),
             provider_key=provider_key,
@@ -595,9 +589,7 @@ def build_runtime_profile(
         env, providers, models, binding_registry, adapters, credential_refs
     )
     if not provider_keys:
-        _bind_echo_provider(
-            providers, models, binding_registry, adapters, credential_refs
-        )
+        _bind_echo_provider(providers, models, binding_registry, adapters, credential_refs)
         provider_keys = ["local_echo"]
 
     # --- usage / audit / evaluations (in-memory across both profiles for the
@@ -626,9 +618,7 @@ def build_runtime_profile(
     hasher = Argon2idPasswordHasher()
     email_sender = ConsoleEmailSender()
     admin_emails = frozenset(
-        e.strip().lower()
-        for e in env.get(_ENV_ADMIN_EMAILS, "").split(",")
-        if e.strip()
+        e.strip().lower() for e in env.get(_ENV_ADMIN_EMAILS, "").split(",") if e.strip()
     )
 
     # --- gateway binding (G2) + platform secret custody for route tokens ----
@@ -688,15 +678,11 @@ def build_runtime_profile(
         # Closure GAP 1: the EXISTING V5 repositories (DatabaseBindings
         # composed them since migration 0002) reach the /v1/workspaces +
         # /v1/projects routes — bridged, same loop-affinity posture.
-        workspace_store, project_store = build_durable_workspace_stores(
-            bindings, bridge
-        )
+        workspace_store, project_store = build_durable_workspace_stores(bindings, bridge)
         # Loop affinity (recorded): the pool lives on the bridge loop —
         # server-loop callers (execute route, relay, worker) cross over.
         outbox: OutboxPort = BridgedOutbox(inner=bindings.outbox, bridge=bridge)
-        idempotency = BridgedIdempotency(
-            inner=bindings.idempotency, bridge=bridge
-        )
+        idempotency = BridgedIdempotency(inner=bindings.idempotency, bridge=bridge)
     else:
         store = InMemoryExecutionStore()
         # Same BudgetGrantingIdentity posture as the durable branch (recorded
@@ -740,6 +726,26 @@ def build_runtime_profile(
             demo_principal.tenant_id,
             plan=DEFAULT_PLAN_NAME,
             task_units_limit=DEFAULT_TASK_UNITS,
+        )
+
+    # --- R160: the SHARED agent runtime + offered catalog ---------------------
+    # ONE authority chain (ToolRegistry → CapabilityFirewall → DeviceRegistry)
+    # over the SAME router/execution/audit/usage/store. Read-only source tools
+    # appear ONLY when AGENT_SOURCE_ROOT is a directory (mandate §9 jail).
+    repo_reader = _source_reader(env.get("AGENT_SOURCE_ROOT", ""))
+    composed_agent = build_agent(
+        router=router,
+        execution_service=execution_service,
+        store=store,
+        audit=audit,
+        usage=usage,
+        repo_reader=repo_reader,
+    )
+    if demo_principal is not None:
+        grant_agent_tenant(composed_agent.firewall, demo_principal.tenant_id)
+    if isinstance(identity, BudgetGrantingIdentity):
+        identity.on_tenant.append(
+            lambda tenant_id: grant_agent_tenant(composed_agent.firewall, tenant_id)
         )
 
     # --- admin surface (same instances; router doubles as RoutingWeightsPort) -
@@ -807,6 +813,7 @@ def build_runtime_profile(
         workspaces=workspace_store,
         projects=project_store,
         source_snapshots=snapshots,
+        agent=composed_agent.surface,
     )
 
     # --- admin console (P-D follow-up): the EXISTING attach_admin_console
@@ -838,7 +845,7 @@ def build_runtime_profile(
             # env: AGENT_SOURCE_ROOT names the directory the agent may
             # inspect (jailed, denylisted, byte/entry-capped by the
             # SourceReader itself). Absent/invalid ⇒ absent tools (P2).
-            repo_reader=_source_reader(env.get("AGENT_SOURCE_ROOT", "")),
+            repo_reader=repo_reader,
         ),
         auth=auth,
         # Gap 1c: the onboarding route exists ONLY when the gateway binding
@@ -915,4 +922,5 @@ def build_runtime_profile(
         bindings=bindings,
         demo_principal=demo_principal,
         provider_keys=tuple(provider_keys),
+        agent=composed_agent,
     )
