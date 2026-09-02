@@ -183,18 +183,24 @@ def engineering_tool_specs(
         return {"base": base, "head": head, "diff": await git.compare(base, head)}
 
     # ---- privileged (ticketed) -------------------------------------------
+    # Policy FIRST, ticket SECOND (same order as ws_run): a jail/denylist
+    # refusal must never cost the tenant an authorization use.
     async def ws_write(args: JsonObject) -> JsonObject:
         path = _str(args, "path")
+        ws.admit(path)
         consume(args, EngineeringAct.FS_WRITE, {"op": "write", "path": path})
         return ws.write_file(path, _str(args, "content"))
 
     async def ws_move(args: JsonObject) -> JsonObject:
         path, to = _str(args, "path"), _str(args, "to_path")
+        ws.admit(path)
+        ws.admit(to)
         consume(args, EngineeringAct.FS_WRITE, {"op": "move", "path": path, "to_path": to})
         return ws.move_file(path, to)
 
     async def ws_delete(args: JsonObject) -> JsonObject:
         path = _str(args, "path")
+        ws.admit(path)
         consume(args, EngineeringAct.FS_WRITE, {"op": "delete", "path": path})
         return ws.delete_file(path)
 
@@ -202,6 +208,10 @@ def engineering_tool_specs(
         change_set = ChangeSet.model_validate(
             {"changes": args.get("changes", []), "reason": args.get("reason")}
         )
+        for change in change_set.changes:
+            ws.admit(change.path)
+            if change.to_path is not None:
+                ws.admit(change.to_path)
         consume(
             args,
             EngineeringAct.FS_WRITE,

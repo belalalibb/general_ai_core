@@ -267,3 +267,39 @@ class TestPrivilegedNeedsPermissionAndTicket:
         assert runner.calls[0].argv == ("pytest", "-q")
         # Policy refusal happened BEFORE the ticket was touched: 3 → 2 uses.
         assert ledger.list_for_tenant(TENANT)[0].uses_remaining == 2
+
+    def test_ws_write_admits_jail_and_denylist_before_burning_ticket(self, root: Path) -> None:
+        """Found by the R164 live proof: a jail/denylist refusal must not cost a use."""
+        world = AgentWorld([])
+        _grant(world, WORKSPACE_WRITE)
+        specs, ledger, _runner = _compose(world, root)
+        ticket = ledger.issue(
+            tenant_id=TENANT,
+            workspace=LABEL,
+            acts=[EngineeringAct.FS_WRITE],
+            issued_by=ADMIN,
+            uses=3,
+        )
+        tid = str(ticket.id)
+        world.adapter.script = [
+            model_says(
+                tool_call("ws_write", path="../escape.txt", content="x", authorization_id=tid)
+            ),
+            model_says(
+                tool_call("ws_write", path=".env", content="SECRET=1", authorization_id=tid)
+            ),
+            model_says(tool_call("ws_write", path="ok.txt", content="fine", authorization_id=tid)),
+            model_says(final("done", 3)),
+        ]
+        outcome = world.run(TASK, tools=specs)
+        steps = outcome.report.steps
+        assert steps[0].observation["status"] == "failed"
+        assert "invalid path" in steps[0].observation["error"]["detail"]
+        assert steps[1].observation["status"] == "failed"
+        assert "denied by policy" in steps[1].observation["error"]["detail"]
+        assert steps[2].observation["status"] == "succeeded"
+        assert (root / "ok.txt").read_text() == "fine"
+        assert not (root.parent / "escape.txt").exists()
+        assert not (root / ".env").exists()
+        # Two refusals happened BEFORE the ticket was touched: 3 → 2 uses.
+        assert ledger.list_for_tenant(TENANT)[0].uses_remaining == 2
