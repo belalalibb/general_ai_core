@@ -524,9 +524,11 @@ class TestFinalBenchmark:
         assert summary.task_units.used == pytest.approx(1.0 + 2.0 + 3.0 + 3.0)
         assert summary.task_units.remaining == pytest.approx(100.0 - 9.0)
 
-        # --- MODEL-AGNOSTIC: the loop fed the policy ONLY request+observations -
+        # --- MODEL-AGNOSTIC: the loop fed the policy ONLY request+observations
+        # (+ the R160 step budget as data — never a provider/model detail) --
         for payload in policy.calls:
-            assert set(payload) == {"request", "observations"}
+            assert set(payload) == {"request", "observations", "budget"}
+            assert set(payload["budget"]) == {"step", "max_steps"}
 
     def test_deny_by_default_blocks_undeclared_tool_capability(
         self, world: BenchmarkWorld
