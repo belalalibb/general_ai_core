@@ -137,6 +137,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from apps.api.admin import AdminSurface, create_admin_router
+from apps.api.agent import AGENT_STRATEGY, AgentSurface, AgentToolsRejected
 from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
 from apps.api.capabilities import Capability, CapabilityState
 from apps.api.context_lab import ContextLabService
@@ -439,6 +440,7 @@ def create_app(
     workspaces: WorkspaceStorePort | None = None,
     projects: ProjectStorePort | None = None,
     source_snapshots: SnapshotStorePort | None = None,
+    agent: AgentSurface | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -644,6 +646,34 @@ def create_app(
                 "Streaming is not available on this deployment slice.",
                 details={"field": "execution_policy.stream"},
             )
+        # --- agent strategy (R160): the SHARED core.agent runtime ------------
+        # Absent seam ⇒ loud rejection (never a silent single-shot). Present
+        # ⇒ the caller's ``tools`` allow-list is resolved against the
+        # composition catalog (unknown ⇒ validation error); admission per
+        # call is the Capability Firewall's, inside the runtime.
+        agent_strategy = policy is not None and policy.strategy == AGENT_STRATEGY
+        agent_tools = None
+        if agent_strategy:
+            if agent is None:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Agent strategy is not available on this deployment slice.",
+                    details={"field": "execution_policy.strategy"},
+                )
+            if policy is not None and policy.async_ is True:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Agent strategy runs synchronously in this slice.",
+                    details={"field": "execution_policy.async"},
+                )
+            try:
+                agent_tools = agent.resolve(body.tools)
+            except AgentToolsRejected as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "tools.allowed", "unknown": exc.unknown},
+                )
         conversation_id: UUID | None = None
         if body.conversation_id is not None:
             try:
@@ -1034,7 +1064,24 @@ def create_app(
             return _async_accepted(execution_id)
 
         try:
-            if node_decisions:
+            if agent_strategy:
+                assert agent is not None and agent_tools is not None
+                outcome = await agent.runtime.run(
+                    tenant_id=caller.tenant_id,
+                    user_id=caller.user_id,
+                    task=payload,
+                    tools=agent_tools,
+                    model_policy=(
+                        effective_policy
+                        if multi_model_policy is None and not node_decisions
+                        else None
+                    ),
+                    conversation_id=conversation_id,
+                    idempotency_key=idempotency_key,
+                    label={"surface": "v1.execute"},
+                )
+                report = outcome.execution_report
+            elif node_decisions:
                 # REAL node sequence: the EXISTING pipeline orchestration —
                 # one PipelineStage per mapped node, each carrying ITS OWN
                 # RoutingDecision (per-node model selection preserved);
