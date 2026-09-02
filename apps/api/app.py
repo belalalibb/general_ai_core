@@ -428,8 +428,7 @@ def create_app(
     outbox: OutboxPort | None = None,
     execute_stream: str = "executions.requests",
     idempotency_index: MutableMapping[tuple[UUID, str], UUID] | None = None,
-    webhook_subscriptions: MutableMapping[UUID, list[WebhookSubscription]]
-    | None = None,
+    webhook_subscriptions: MutableMapping[UUID, list[WebhookSubscription]] | None = None,
     system_info: Callable[[], JsonObject] | None = None,
     healthz: bool = False,
     sse: bool = False,
@@ -531,9 +530,7 @@ def create_app(
     execution_store = store if store is not None else InMemoryExecutionStore()
     # 10 §13.4 explicit_models seam — composed over the SAME router and
     # execution service (Router still decides every branch; 02 inv. 5).
-    multi_model_executor = MultiModelExecutor(
-        router=router, execution=execution_service
-    )
+    multi_model_executor = MultiModelExecutor(router=router, execution=execution_service)
     skill_registry = skills if skills is not None else SkillRegistry()
     role_registry = roles if roles is not None else RoleRegistry()
     # Idempotency index (10 §10): (tenant_id, key) -> execution_id.
@@ -569,9 +566,7 @@ def create_app(
         app.include_router(create_auth_router(auth_surface))
 
     @app.exception_handler(RequestValidationError)
-    async def _validation_handler(
-        _request: Request, exc: RequestValidationError
-    ) -> JSONResponse:
+    async def _validation_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
         return error_response(
             ErrorCode.VALIDATION_ERROR,
             "Request body failed contract validation.",
@@ -581,9 +576,7 @@ def create_app(
     @app.exception_handler(Exception)
     async def _internal_handler(_request: Request, _exc: Exception) -> JSONResponse:
         # 20 §4: internals never leak to clients.
-        return error_response(
-            ErrorCode.INTERNAL_ERROR, "Internal error.", retryable=False
-        )
+        return error_response(ErrorCode.INTERNAL_ERROR, "Internal error.", retryable=False)
 
     # --- /v1/workspaces + /v1/projects (closure GAP 1) -------------------------
     # The EXISTING 03 §2 entities over HTTP — the ExecutionStorePort seam
@@ -594,9 +587,7 @@ def create_app(
     # tenant-scoped route (apps/api/workspaces.py records the decisions).
     app.include_router(
         create_workspace_router(
-            workspaces=(
-                workspaces if workspaces is not None else InMemoryWorkspaceStore()
-            ),
+            workspaces=(workspaces if workspaces is not None else InMemoryWorkspaceStore()),
             projects=projects if projects is not None else InMemoryProjectStore(),
             resolve=_principal,
         )
@@ -701,10 +692,7 @@ def create_app(
         # remain inert — 03 §8, enforced by the tool gate, not here).
         admitted_skills: list[JsonObject] = []
         if body.skills:
-            selectable = {
-                skill.manifest.id: skill
-                for skill in skill_registry.list_selectable()
-            }
+            selectable = {skill.manifest.id: skill for skill in skill_registry.list_selectable()}
             seen_skill_ids: set[str] = set()
             for requested in body.skills:
                 if requested in seen_skill_ids:
@@ -784,9 +772,7 @@ def create_app(
         conversation: Conversation | None = None
         if conversations is not None and conversation_id is not None:
             try:
-                conversation = conversations.get_conversation(
-                    caller.tenant_id, conversation_id
-                )
+                conversation = conversations.get_conversation(caller.tenant_id, conversation_id)
             except ConversationNotFound:
                 # Auto-create under the caller (recorded decision): absent
                 # and foreign-tenant are indistinguishable (20 §6), so both
@@ -819,9 +805,7 @@ def create_app(
                         user_id=caller.user_id,
                         ask=body.ask,
                         role_id=role.id if role is not None else None,
-                        conversation_id=(
-                            conversation.id if conversation is not None else None
-                        ),
+                        conversation_id=(conversation.id if conversation is not None else None),
                         context_budget=context_budget,
                     )
                 )
@@ -872,9 +856,7 @@ def create_app(
         # MultiModelExecutor (Router still decides every branch); the single
         # up-front route below is skipped for this policy type.
         multi_model_policy = (
-            effective_policy
-            if isinstance(effective_policy, ExplicitModelsPolicy)
-            else None
+            effective_policy if isinstance(effective_policy, ExplicitModelsPolicy) else None
         )
 
         # --- route (11; Router decides) ----------------------------------------
@@ -1017,9 +999,7 @@ def create_app(
                 message_payload["idempotency_key"] = idempotency_key
             if conversation_id is not None:
                 message_payload["conversation_id"] = str(conversation_id)
-            await outbox.append(
-                execute_stream, message_payload, f"execute:{execution_id}"
-            )
+            await outbox.append(execute_stream, message_payload, f"execute:{execution_id}")
             # V6 chunk 3: stage execution.queued (10 §12) for the caller
             # tenant's matching subscriptions — SAME outbox, SAME durability
             # posture as the execute message itself (40 §4.2). No matching
@@ -1027,9 +1007,7 @@ def create_app(
             # failure). Rows were URL-admitted at registration; staging
             # re-judges them (stage_execution_event validates again, P7).
             if webhook_subscriptions is not None:
-                tenant_subscriptions = webhook_subscriptions.get(
-                    caller.tenant_id, []
-                )
+                tenant_subscriptions = webhook_subscriptions.get(caller.tenant_id, [])
                 if tenant_subscriptions:
                     await stage_execution_event(
                         outbox,
@@ -1159,9 +1137,7 @@ def create_app(
             )
         execution_store.put(report)
         if idempotency_key is not None:
-            idempotency_index[(caller.tenant_id, idempotency_key)] = (
-                report.execution.id
-            )
+            idempotency_index[(caller.tenant_id, idempotency_key)] = report.execution.id
         # --- persist the assistant turn (succeeded only; same content) ----------
         if (
             conversations is not None
@@ -1200,9 +1176,7 @@ def create_app(
             )
         # Failed execution: unified error (10 §9) carrying the execution id so
         # GET /v1/executions/{id} remains fully usable for diagnosis.
-        detail = execution_failure_detail(
-            str(report.execution.id), _last_provider_error(report)
-        )
+        detail = execution_failure_detail(str(report.execution.id), _last_provider_error(report))
         return JSONResponse(
             status_code=HTTP_STATUS_BY_CODE[detail.code],
             content={"error": detail.model_dump(mode="json", exclude_none=True)},
@@ -1217,15 +1191,35 @@ def create_app(
         surfaced, not re-implemented here.
         """
         response = SkillsListResponse(
-            skills=[
-                SkillListEntry.from_skill(skill)
-                for skill in skill_registry.list_selectable()
-            ]
+            skills=[SkillListEntry.from_skill(skill) for skill in skill_registry.list_selectable()]
         )
         return JSONResponse(
             status_code=200,
             content=response.model_dump(mode="json", exclude_none=True),
         )
+
+    # --- GET /v1/agent-tools (R160): the offered agent tool catalog ------------
+    # The external-consumption seam: what a caller MAY name in
+    # ``tools.allowed`` for ``execution_policy.strategy="agent"``. Composition
+    # DATA only (name/description/arguments/permission/risk) — per-call
+    # admission remains the Capability Firewall's. Absent agent seam ⇒ absent
+    # route (nothing to probe, 20 §4). Tenant-authenticated like every list.
+    if agent is not None:
+        agent_surface = agent
+
+        @app.get("/v1/agent-tools")
+        async def list_agent_tools(request: Request) -> Response:
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "strategy": AGENT_STRATEGY,
+                    "max_steps": agent_surface.runtime.max_steps,
+                    "tools": agent_surface.offered(),
+                },
+            )
 
     # --- GET /v1/models (10 §6; T-IMPL-067): mounted ONLY with both seams ------
     if models is not None and bindings is not None:
@@ -1242,9 +1236,7 @@ def create_app(
             """
             response = ModelsListResponse(
                 models=[
-                    ModelListEntry.from_model(
-                        model, binding_registry.bindings_for_model(model.id)
-                    )
+                    ModelListEntry.from_model(model, binding_registry.bindings_for_model(model.id))
                     for model in model_registry.active_models()
                 ]
             )
@@ -1288,9 +1280,7 @@ def create_app(
             webhook_subscriptions = {}
 
         @app.post("/v1/webhooks", status_code=201)
-        async def register_webhook(
-            request: Request, body: WebhookSubscriptionRequest
-        ) -> Response:
+        async def register_webhook(request: Request, body: WebhookSubscriptionRequest) -> Response:
             """POST /v1/webhooks: register a subscription for the caller tenant.
 
             ``events`` absent ⇒ all six documented 10 §12 types (the closed
@@ -1321,20 +1311,14 @@ def create_app(
                     "events must be omitted (all types) or non-empty.",
                     details={"field": "events"},
                 )
-            events = (
-                list(body.events)
-                if body.events is not None
-                else list(WebhookEventType)
-            )
+            events = list(body.events) if body.events is not None else list(WebhookEventType)
             subscription = WebhookSubscription(
                 id=uuid4(),
                 tenant_id=caller.tenant_id,
                 url=body.url,
                 events=events,
             )
-            webhook_subscriptions.setdefault(caller.tenant_id, []).append(
-                subscription
-            )
+            webhook_subscriptions.setdefault(caller.tenant_id, []).append(subscription)
             response = WebhookSubscriptionResponse.from_subscription(subscription)
             return JSONResponse(
                 status_code=201,
@@ -1514,9 +1498,7 @@ def create_app(
         if status is ExecutionStatus.SUCCEEDED and report.final_output is not None:
             result = _result_from_output(report.final_output, None)
         elif status is ExecutionStatus.FAILED:
-            error_detail = execution_failure_detail(
-                execution_id, _last_provider_error(report)
-            )
+            error_detail = execution_failure_detail(execution_id, _last_provider_error(report))
         status_response = ExecutionStatusResponse(
             execution_id=execution_id,
             status=status,
@@ -1665,8 +1647,7 @@ def create_app(
         _cap(
             "learning.lifecycle",
             admin is not None and memory is not None,
-            "learning lifecycle seam -> /v1/admin/learning/* (R158; "
-            "core/learning/lifecycle.py)",
+            "learning lifecycle seam -> /v1/admin/learning/* (R158; core/learning/lifecycle.py)",
         ),
         _cap(
             "rate_limits.execute",
@@ -1700,9 +1681,7 @@ def create_app(
             "context": {"metadata": {EXERCISE_LABEL_KEY: {"kind": "probe"}}},
         }
         try:
-            probe_decision = router.route(
-                RoutingRequest(operation=ProviderOperation.GENERATE_TEXT)
-            )
+            probe_decision = router.route(RoutingRequest(operation=ProviderOperation.GENERATE_TEXT))
         except (
             NoEligibleCandidates,
             FallbackNotConfigured,
@@ -1848,9 +1827,7 @@ def create_app(
             evaluation=EvaluationPolicyService(store=InMemoryEvaluationStore()),
             knowledge=memory,
             audit=admin.audit,
-            eligibility_gate=TrainingEligibilityGate(
-                minimum_level=VerificationLevel.RAW
-            ),
+            eligibility_gate=TrainingEligibilityGate(minimum_level=VerificationLevel.RAW),
         )
     app.state.learning_lifecycle_service = learning_lifecycle_service
 
@@ -1888,14 +1865,10 @@ def create_app(
     if admin is not None:
         source_change_workflow = SourceChangeWorkflow(
             proposals=(
-                source_proposals
-                if source_proposals is not None
-                else InMemoryProposalStore()
+                source_proposals if source_proposals is not None else InMemoryProposalStore()
             ),
             snapshots=(
-                source_snapshots
-                if source_snapshots is not None
-                else InMemorySnapshotStore()
+                source_snapshots if source_snapshots is not None else InMemorySnapshotStore()
             ),
             sandbox=HermeticSandbox(),
             suite=VerificationSuite(name="default", checks=_SOURCE_CHECKS),

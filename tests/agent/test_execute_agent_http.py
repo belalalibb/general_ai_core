@@ -180,3 +180,20 @@ def test_other_tenant_cannot_read_agent_record() -> None:
     created = run(_post(app, {"ask": "hi", "execution_policy": AGENT})).json()
     other_app = _app(world, tenant=uuid4(), store=store)
     assert run(_get(other_app, f"/v1/executions/{created['execution_id']}")).status_code == 404
+
+
+def test_agent_tools_listing_is_the_offered_catalog() -> None:
+    world = AgentWorld([model_says(final("x"))])
+    app = _app(world)
+    response = run(_get(app, "/v1/agent-tools"))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["strategy"] == "agent" and body["max_steps"] == 8
+    assert [t["name"] for t in body["tools"]] == ["fs", "fs_write"]
+    assert body["tools"][0]["arguments"] == {"path": "string"}
+
+
+def test_agent_tools_listing_absent_without_seam() -> None:
+    world = AgentWorld([model_says(final("x"))])
+    app = _app(world, with_agent=False)
+    assert run(_get(app, "/v1/agent-tools")).status_code == 404
