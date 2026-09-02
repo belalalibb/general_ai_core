@@ -1017,6 +1017,7 @@ function sampleActions(sample) {
       const output = parseJsonObject(text, "output");
       if (output) learningStep(id, "evaluate", { output });
     }),
+    actionButton("Report", () => showSampleReport(id)),
     actionButton("Scan", () => learningStep(id, "scan")),
     actionButton("Sanitize ✓", () => learningStep(id, "sanitize", { passed: true })),
     actionButton("Sanitize ✗", () => learningStep(id, "sanitize", { passed: false })),
@@ -1046,6 +1047,30 @@ function sampleActions(sample) {
     }),
   );
   return cell;
+}
+
+// R161 follow-up (b): the per-sample lifecycle report (verdicts, machine scan
+// findings by path+label — never content — and the DERIVED signals), rendered
+// where the reviewer acts. Read-only (GET); the acts stay explicit buttons.
+async function showSampleReport(sampleId) {
+  const out = document.getElementById("learning-sample-report");
+  const result = await api(`/v1/admin/learning/samples/${encodeURIComponent(sampleId)}`);
+  if (!result.ok) { out.textContent = `${result.status} ${JSON.stringify(result.body, null, 2)}`; return; }
+  const r = result.body;
+  const lines = [`sample ${sampleId}`, `knowledge_key: ${r.knowledge_key} · source: ${r.source_kind}`];
+  const derived = r.derived_signals || {};
+  lines.push(`derived signals — deduplicated: ${derived.deduplicated} · scan_clean: ${derived.scan_clean}`);
+  const scan = r.sanitization_report;
+  if (!scan) lines.push("machine scan: not run yet (Scan, or Sanitize ✓ runs it implicitly)");
+  else if (scan.clean) lines.push(`machine scan: CLEAN (${scan.scanned_paths} paths)`);
+  else {
+    lines.push(`machine scan: ${scan.findings.length} finding(s) over ${scan.scanned_paths} paths — Sanitize ✓ is REFUSED until resolved`);
+    for (const f of scan.findings) lines.push(`  · ${f.path} → ${f.label} (fp ${f.fingerprint})`);
+  }
+  const fmt = (v) => Object.entries(v || {}).map(([k, ok]) => `${ok ? "✓" : "✗"} ${k}`).join("  ") || "(not run)";
+  lines.push(`eligibility verdicts: ${fmt(r.eligibility_verdicts)}`);
+  lines.push(`promotion verdicts: ${fmt(r.promotion_verdicts)}`);
+  out.textContent = lines.join("\n");
 }
 
 async function loadLearning() {
@@ -1118,6 +1143,15 @@ document.getElementById("learning-retest-form").addEventListener("submit", async
   if (result.body.delta) {
     const d = result.body.delta;
     text += `\ndelta vs baseline: gained ${JSON.stringify(d.gained)} · lost ${JSON.stringify(d.lost)} · still missing ${JSON.stringify(d.still_missing)}`;
+  }
+  // R161: the PRODUCTION counterpart — which probe keys rode REAL /v1/execute
+  // model inputs (stored provenance), over a bounded, stated window.
+  const p = result.body.production;
+  if (p && p.available) {
+    text += `\nproduction reach (newest ${p.executions_examined} of window ${p.window}): reached ${JSON.stringify(p.reached)} · never reached ${JSON.stringify(p.never_reached)}`;
+    text += `\n  per key: ${Object.entries(p.reached_by_key).map(([k, n]) => `${k}=${n}`).join(" · ")}`;
+  } else if (p) {
+    text += "\nproduction reach: unavailable (execution store or memory seam not composed)";
   }
   out.textContent = text;
 });
