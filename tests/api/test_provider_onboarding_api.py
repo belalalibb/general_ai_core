@@ -81,6 +81,7 @@ class RouteWorld:
         principal: Principal | None = ADMIN,
         adapter: FakeAdapter | None = None,
         adapter_error: str | None = None,
+        describe: dict[str, object] | None | str = "absent",
     ) -> None:
         self.providers = ProviderRegistry()
         self.models = ModelRegistry()
@@ -88,8 +89,10 @@ class RouteWorld:
         self.adapters: dict[UUID, ProviderAdapterPort] = {}
         self.credential_refs: dict[UUID, str] = {}
         self.persisted: list[tuple[UUID, dict[str, object]]] = []
-        self.adapter = adapter if adapter is not None else FakeAdapter(
-            manifest=_manifest(id="gw_alpha", name="Gateway Alpha")
+        self.adapter = (
+            adapter
+            if adapter is not None
+            else FakeAdapter(manifest=_manifest(id="gw_alpha", name="Gateway Alpha"))
         )
         service = ProviderOnboardingService(
             providers=self.providers,
@@ -99,18 +102,23 @@ class RouteWorld:
             credential_refs=self.credential_refs,
         )
 
-        def _build_adapter(
-            manifest: object, body: GatewayOnboardRequest
-        ) -> ProviderAdapterPort:
+        def _build_adapter(manifest: object, body: GatewayOnboardRequest) -> ProviderAdapterPort:
             if adapter_error is not None:
                 raise ValueError(adapter_error)
             return self.adapter
+
+        self.describe_calls: list[GatewayOnboardRequest] = []
+
+        async def _describe(body: GatewayOnboardRequest) -> dict[str, object] | None:
+            self.describe_calls.append(body)
+            return None if describe is None else describe  # type: ignore[return-value]
 
         surface = ProviderOnboardingSurface(
             onboarding=service,
             build_manifest=manifest_from_definition,
             build_adapter=_build_adapter,
             persist_registration=lambda pid, d: self.persisted.append((pid, d)),
+            describe_remote=None if describe == "absent" else _describe,
         )
 
         def _resolve(request: Request) -> Principal | JSONResponse:
@@ -119,16 +127,12 @@ class RouteWorld:
             return principal
 
         self.app = FastAPI()
-        self.app.include_router(
-            create_provider_onboarding_router(surface, resolve=_resolve)
-        )
+        self.app.include_router(create_provider_onboarding_router(surface, resolve=_resolve))
 
     def post(self, body: dict[str, object]) -> httpx.Response:
         async def _go() -> httpx.Response:
             transport = httpx.ASGITransport(app=self.app)
-            async with httpx.AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
                 return await client.post("/v1/admin/providers/onboard", json=body)
 
         return run(_go())
@@ -183,9 +187,7 @@ class TestHappyPath:
         pid, definition = world.persisted[0]
         assert pid == provider_id
         # EXACTLY the request body dump (one derivation, two consumers).
-        assert definition == definition_from_request(
-            GatewayOnboardRequest.model_validate(_body())
-        )
+        assert definition == definition_from_request(GatewayOnboardRequest.model_validate(_body()))
         assert definition["credential_ref"] == "credref_alpha"
         assert definition["route_token_ref"] == "credref_route_alpha"
 
@@ -242,3 +244,85 @@ class TestManifestDerivation:
         assert first.status == "disabled"
         assert first.id == "gw_alpha"
         assert first.is_template is False
+
+
+DESCRIBED: dict[str, object] = {
+    "display_name": "Gateway Alpha",
+    "credential_mode": "platform",
+    "capabilities": {"chat": True, "code": True},
+    "operations": ["generate_text", "generate_image", "upload_asset"],
+    "models": [{"name": "alpha-large", "context_window": 128000}, {"name": "alpha-mini"}],
+    "definition_version": "2.3.0",
+    "health_supported": True,
+}
+
+
+class TestDiscovery:
+    """R160: opt-in auto-discovery via the gateway's /v1/describe — refs only."""
+
+    def test_discover_fills_only_empty_fields_and_reports_what_it_learned(self) -> None:
+        world = RouteWorld(describe=DESCRIBED)
+        response = world.post(
+            _body(discover=True, operations=[], capabilities={}, static_models=[])
+        )
+        assert response.status_code == 201, response.text
+        body = response.json()
+        assert body["discovery"]["filled"] == ["operations", "capabilities", "static_models"]
+        # OPEN-2: the excluded op is dropped AND named, never registered.
+        assert body["discovery"]["excluded_operations"] == ["upload_asset"]
+        assert body["discovery"]["definition_version"] == "2.3.0"
+        assert len(world.describe_calls) == 1
+        # The persisted definition is the FILLED one (deterministic hydration).
+        ((_, persisted),) = world.persisted
+        assert persisted["operations"] == ["generate_text", "generate_image"]
+        assert persisted["capabilities"] == {"chat": True, "code": True}
+        assert persisted["static_models"] == ["alpha-large", "alpha-mini"]
+        assert persisted["discover"] is True
+        # Refs only — no secret value anywhere.
+        assert persisted["credential_ref"] == "credref_alpha"
+        # Hydration re-derives the SAME manifest from the filled row.
+        manifest = manifest_from_definition(GatewayOnboardRequest.model_validate(persisted))
+        assert [op.value for op in manifest.operations] == ["generate_text", "generate_image"]
+
+    def test_explicit_declaration_wins_over_discovery(self) -> None:
+        world = RouteWorld(describe=DESCRIBED)
+        response = world.post(
+            _body(discover=True, operations=["generate_text"], capabilities={"chat": True})
+        )
+        assert response.status_code == 201, response.text
+        assert response.json()["discovery"]["filled"] == ["static_models"]
+        ((_, persisted),) = world.persisted
+        assert persisted["operations"] == ["generate_text"]
+        assert persisted["capabilities"] == {"chat": True}
+
+    def test_discovery_unreachable_is_a_loud_refusal_never_a_guess(self) -> None:
+        world = RouteWorld(describe=None)
+        response = world.post(_body(discover=True, operations=[]))
+        assert response.status_code == 409
+        assert "did not describe" in response.json()["error"]["message"]
+        assert world.persisted == [] and world.providers.all_keys() == []
+
+    def test_discovery_without_gateway_binding_is_409(self) -> None:
+        world = RouteWorld()  # describe seam absent
+        response = world.post(_body(discover=True, operations=[]))
+        assert response.status_code == 409
+        assert "not configured" in response.json()["error"]["message"]
+
+    def test_discovery_with_only_excluded_operations_is_422(self) -> None:
+        world = RouteWorld(describe={**DESCRIBED, "operations": ["upload_asset"]})
+        response = world.post(_body(discover=True, operations=[]))
+        assert response.status_code == 422
+        assert response.json()["error"]["details"]["discovery"]["excluded_operations"] == [
+            "upload_asset"
+        ]
+
+    def test_empty_operations_without_discover_is_422(self) -> None:
+        world = RouteWorld(describe=DESCRIBED)
+        assert world.post(_body(operations=[])).status_code == 422
+        assert world.describe_calls == []
+
+    def test_no_discover_never_calls_describe(self) -> None:
+        world = RouteWorld(describe=DESCRIBED)
+        assert world.post(_body()).status_code == 201
+        assert world.describe_calls == []
+        assert "discovery" not in world.post(_body(provider_key="gw_beta")).json()

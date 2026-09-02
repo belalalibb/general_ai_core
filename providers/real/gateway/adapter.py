@@ -74,6 +74,7 @@ HEADER_ROUTE_TOKEN = "X-Route-Token"  # header ALWAYS — never URL (OPEN-3)
 
 EXECUTE_PATH = "/v1/execute"
 MODELS_PATH = "/v1/models"
+DESCRIBE_PATH = "/v1/describe"
 HEALTH_PATH = "/v1/health"
 
 #: OPEN-2 (ADR-0008): platform operations that exist but are OUT of Gateway v1.
@@ -335,10 +336,37 @@ class RemoteGatewayAdapter:
             context_window = item.get("context_window")
             if isinstance(context_window, int):
                 limits["context_window"] = context_window
-            models.append(
-                DiscoveredModel(provider_model_name=name, limits_metadata=limits)
-            )
+            models.append(DiscoveredModel(provider_model_name=name, limits_metadata=limits))
         return models
+
+    async def describe(self) -> dict[str, Any] | None:
+        """Read the gateway's ``/v1/describe`` projection (R160 discovery).
+
+        Returns the declared surface as plain data — display_name,
+        credential_mode, capabilities, operations, models, definition_version,
+        health_supported — or ``None`` honestly when the gateway is
+        unreachable / denies / answers a non-object. Nothing is invented and
+        nothing is registered here: the caller (the onboarding control
+        plane) decides what to admit (30 §4.2).
+        """
+        try:
+            response = await self._request(
+                "GET",
+                DESCRIBE_PATH,
+                json_body=None,
+                timeout_seconds=self._default_timeout_ms / 1000.0,
+            )
+        except httpx.HTTPError:
+            return None
+        if response.status_code != 200:
+            return None
+        try:
+            declared = response.json()
+        except ValueError:
+            return None
+        if not isinstance(declared, dict):
+            return None
+        return declared
 
     # -- generation (30 §8.1; wire: POST /v1/execute) ----------------------------------
 
@@ -352,8 +380,7 @@ class RemoteGatewayAdapter:
                     retryable=False,
                     provider_code="excluded_operation_v1",
                     safe_message=(
-                        f"operation '{operation}' is excluded from gateway v1 "
-                        "(ADR-0008 OPEN-2)"
+                        f"operation '{operation}' is excluded from gateway v1 (ADR-0008 OPEN-2)"
                     ),
                 ),
             )
@@ -371,9 +398,7 @@ class RemoteGatewayAdapter:
                 ),
             )
         timeout_ms = (
-            request.timeout_ms
-            if request.timeout_ms is not None
-            else self._default_timeout_ms
+            request.timeout_ms if request.timeout_ms is not None else self._default_timeout_ms
         )
         envelope = self._build_envelope(request, timeout_ms)
         started = time.monotonic()
@@ -393,9 +418,7 @@ class RemoteGatewayAdapter:
             )
         return self._parse_execute_body(request, response, latency_ms)
 
-    def _build_envelope(
-        self, request: ProviderGenerateRequest, timeout_ms: int
-    ) -> dict[str, Any]:
+    def _build_envelope(self, request: ProviderGenerateRequest, timeout_ms: int) -> dict[str, Any]:
         """Translate the core request into the wire RequestEnvelope (Layer 3).
 
         Documented boundary translations (parity report, G2): UUIDs
@@ -537,8 +560,7 @@ class RemoteGatewayAdapter:
                 detail="gateway returned an unrecognized health status",
             )
         detail = (
-            "gateway reported UNKNOWN health (treated as unavailable: "
-            "unknown is never healthy)"
+            "gateway reported UNKNOWN health (treated as unavailable: unknown is never healthy)"
             if status == "UNKNOWN"
             else None
         )
@@ -684,9 +706,7 @@ def _parse_wire_error(raw: object) -> ProviderError | None:
     if not isinstance(retryable, bool) or not isinstance(message, str) or not message:
         return None
     retry_after_ms = raw.get("retry_after_ms")
-    if retry_after_ms is not None and (
-        not isinstance(retry_after_ms, int) or retry_after_ms < 0
-    ):
+    if retry_after_ms is not None and (not isinstance(retry_after_ms, int) or retry_after_ms < 0):
         return None
     provider_code = raw.get("provider_code")
     if provider_code is not None and not isinstance(provider_code, str):

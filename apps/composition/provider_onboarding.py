@@ -188,6 +188,19 @@ def build_onboarding_surface(
         assert database is not None and bridge is not None  # guarded below
         bridge.run(database.gateway_registrations.upsert(provider_id, definition))
 
+    async def _describe_remote(body: GatewayOnboardRequest) -> dict[str, object] | None:
+        # R160: a PROVISIONAL adapter (minimal manifest, no operations) reads
+        # /v1/describe with the request's own refs; nothing is registered.
+        probe = body.model_copy(update={"operations": ["generate_text"]})
+        adapter = adapter_from_definition(
+            gateway_settings, secrets, manifest_from_definition(probe), body
+        )
+        describe = getattr(adapter, "describe", None)
+        if describe is None:
+            return None
+        result = await describe()
+        return result if isinstance(result, dict) else None
+
     return ProviderOnboardingSurface(
         onboarding=service,
         build_manifest=manifest_from_definition,
@@ -195,6 +208,7 @@ def build_onboarding_surface(
             gateway_settings, secrets, manifest, body
         ),
         persist_registration=(_persist_registration if persistence is not None else None),
+        describe_remote=_describe_remote,
     )
 
 
