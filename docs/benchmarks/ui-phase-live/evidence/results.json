@@ -1,0 +1,162 @@
+[
+ [
+  "session-who shows email+tenant",
+  true,
+  "ops@example.com \u00b7 tenant ee6316d9\u2026"
+ ],
+ [
+  "capabilities table has 16 rows",
+  true,
+  "16"
+ ],
+ [
+  "inert renders as a badge, no UNKNOWN badges",
+  true,
+  "inert=1 unknown=0"
+ ],
+ [
+  "Exercise offered only for server-listed ids; others say so",
+  true,
+  "btn=4 not=12"
+ ],
+ [
+  "exercise execute.sync \u2192 real execution evidence",
+  true,
+  "{\n  \"capability_id\": \"execute.sync\",\n  \"result\": {\n    \"exercised\": true,\n    \"evidence\": {\n      \"kind\": \"execution\",\n "
+ ],
+ [
+  "exercise result links to the execution",
+  true,
+  ""
+ ],
+ [
+  "scenario checks rendered from closed set (2)",
+  true,
+  "2"
+ ],
+ [
+  "scenario saved and listed",
+  true,
+  "1"
+ ],
+ [
+  "empty check set \u2192 server validation_error rendered verbatim",
+  true,
+  "validation_error: Request body failed contract validation."
+ ],
+ [
+  "replay \u2192 real execution + verdict",
+  true,
+  "scenario cd4ca600-a9b6-4169-ae1d-ec8ca388d543 \u2192 execution f3fbdfa6-a3e8-4559-9587-c33184d87247 succeeded \u00b7 verdict passed\noutput_present: passed\nerror_free_outp"
+ ],
+ [
+  "regression pack \u2192 count + verdict",
+  true,
+  "1 scenario(s) \u00b7 regression passed\n\nscenario cd4ca600-a9b6-4169-ae1d-ec8ca388d543 \u2192 execution a0e96c77-199d-40db-bfa0-fc3a07960bbc succeeded \u00b7 verdict passed\nout"
+ ],
+ [
+  "lab checks listed from server",
+  true,
+  "Checks the lab runs (closed set): ask_block_present, budget_respected, deterministic_composition, exclusions_named"
+ ],
+ [
+  "lab validate \u2192 checks + blocks summary",
+  true,
+  "composition passed \u2014 dry run, no model called\n\nask_block_present: passed\nbudget_respected: passed\ndeterministic_composition: passed\nexclusions_named: passed\n1 c"
+ ],
+ [
+  "lab budget 0 \u2192 server validation_error verbatim",
+  true,
+  "validation_error: Request body failed contract validation."
+ ],
+ [
+  "executions list shows the exercise/replay executions",
+  true,
+  "3"
+ ],
+ [
+  "record tab shows status + stored result",
+  true,
+  "status: succeeded \u00b7 stage single\n\n{\n  \"type\": \"message\",\n  \"content\": \"{\\\"echo\\\": \\\"ping the echo adapter\\\", \\\"note\\\": \\"
+ ],
+ [
+  "evaluations tab honest empty",
+  true,
+  "No evaluation records stored for this execution."
+ ],
+ [
+  "action select has 13 closed verbs (+placeholder)",
+  true,
+  "14"
+ ],
+ [
+  "change drafted and listed",
+  true,
+  "0\u21921"
+ ],
+ [
+  "validate \u2192 server state shown (validated or rejected)",
+  true,
+  "9975549f-c097-4a98-a886-bc75b5ef98c0\tmodels\tdisable_model\tvalidated\tpassed\t2026-09-02T19:34:40.878158Z\tPreview"
+ ],
+ [
+  "preview \u2192 Publish offered",
+  true,
+  ""
+ ],
+ [
+  "change detail rendered verbatim",
+  true,
+  "{\n  \"id\": \"9975549f-c097-4a98-a886-bc75b5ef98c0\",\n  \"tenant_id\": \"ee6316d9-4b80-4a37-9947-dfad96c906c4\",\n  \"actor_id\": \""
+ ],
+ [
+  "snapshot created \u2192 64-char id filled",
+  true,
+  "e3daaf227804d647"
+ ],
+ [
+  "proposal listed as draft",
+  true,
+  ""
+ ],
+ [
+  "verify \u2192 verified",
+  true,
+  "6fb50e78-ec35-403f-b471-65e2d340adb8\tverified\tf1a6c758dcb5\u2026\tui-phase live proof 201832\t\u2014\t2026-09-02T19:34:48.440909+00:0"
+ ],
+ [
+  "approve (cited hash) \u2192 approved + approval column filled",
+  true,
+  "6fb50e78-ec35-403f-b471-65e2d340adb8\tapproved\tf1a6c758dcb5\u2026\tui-phase live proof 201832\t6c2eca7e-4d48-4e8a-aa0a-afd4608614fe cited f1a6c758dcb5\u2026\t2026-09-02T19:34"
+ ],
+ [
+  "apply \u2192 applied (snapshot space) OR refusal verbatim",
+  true,
+  "6fb50e78-ec35-403f-b471-65e2d340adb8\tapplied\tf1a6c758dcb5\u2026\tui-phase live proof 201832\t6c2eca7e-4d48-4e8a-aa0a-afd4608614fe cited f1a6c758dcb5\u2026\t2026-09-02T19:34:"
+ ],
+ [
+  "proposal detail: sha256 + authoritative_apply, no bytes",
+  true,
+  "{\n  \"proposal_id\": \"6fb50e78-ec35-403f-b471-65e2d340adb8\",\n  \"state\": \"applied\",\n  \"base_snapshot_id\": \"e3daaf227804d647"
+ ],
+ [
+  "plan cards from session tenant",
+  true,
+  "Plan local-default Task units 999997 remaining \u00b7 3 used of 1000000 Modality limits none configured"
+ ],
+ [
+  "foreign tenant \u2192 server answer verbatim (error or plan)",
+  true,
+  "validation_error: No plan is configured for this tenant."
+ ],
+ [
+  "logout \u2192 login view; console hidden",
+  true,
+  ""
+ ],
+ [
+  "zero page errors / script console errors",
+  true,
+  ""
+ ]
+]
