@@ -380,6 +380,10 @@ class AdminAgentService:
             # THIS consumer's finalization too — the admin agent inherits the
             # strongest existing loop behavior instead of bypassing it.
             verify=verify,
+            # R165: the admin round handler does its OWN proposal parsing and
+            # signals "stop" by emitting an out-of-vocabulary action; a repair
+            # retry would re-enter the round with nothing new — single-shot.
+            max_invalid_proposals=1,
         )
 
     @staticmethod

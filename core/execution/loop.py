@@ -299,10 +299,7 @@ class AgentLoop:
                         observation=refusal,
                     )
                 )
-                if (
-                    state.invalid_streak >= self._max_invalid_proposals
-                    or index == self._max_steps
-                ):
+                if state.invalid_streak >= self._max_invalid_proposals or index == self._max_steps:
                     stop_reason = STOP_INVALID_PROPOSAL
                     break
                 # R165: the violation is DATA the model can correct — it

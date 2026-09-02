@@ -36,7 +36,7 @@ import pytest
 from core.audit import InMemoryAuditLog
 from core.contracts.base import JsonObject
 from core.contracts.execute import ExecutionStatus
-from core.contracts.execution import ExecutionNodeType, ExecutionStrategy
+from core.contracts.execution import ExecutionNodeStatus, ExecutionNodeType, ExecutionStrategy
 from core.execution.agent import AgentToolBinding
 from core.execution.loop import (
     STOP_FINAL,
@@ -330,16 +330,13 @@ def test_loop_has_no_direct_tool_path() -> None:
 def test_authority_injection_key_is_invalid_proposal() -> None:
     """A proposal smuggling authority keys fails validation, runs nothing."""
     world = AgentWorld()
-    loop, _ = world.loop(
-        [
-            {
-                "action": "tool_call",
-                "tool": "github.read",
-                "arguments": {},
-                "permission": "admin.everything",
-            }
-        ]
-    )
+    smuggled = {
+        "action": "tool_call",
+        "tool": "github.read",
+        "arguments": {},
+        "permission": "admin.everything",
+    }
+    loop, _ = world.loop([smuggled, smuggled])
     report = world.run(loop)
     assert report.succeeded is False
     assert report.stop_reason == STOP_INVALID_PROPOSAL
@@ -351,17 +348,67 @@ def test_authority_injection_key_is_invalid_proposal() -> None:
 
 
 def test_invalid_proposal_stops_run_as_failed_data() -> None:
+    """R165 bound: two CONSECUTIVE invalid proposals stop the run (default)."""
     world = AgentWorld()
-    loop, _ = world.loop([{"action": "improvise"}])
+    loop, proposer = world.loop([{"action": "improvise"}, {"action": "improvise"}])
     report = world.run(loop)
     assert report.succeeded is False
     assert report.stop_reason == STOP_INVALID_PROPOSAL
     assert report.final_output is None
+    assert len(report.steps) == 2
+    assert report.summary["invalid_proposals"] == 2
     failed_planner = report.nodes[-1]
     assert failed_planner.type is ExecutionNodeType.PLANNER
     assert failed_planner.error is not None
     assert failed_planner.error["reason"] == STOP_INVALID_PROPOSAL
     assert "action must be one of" in failed_planner.error["detail"]
+    # The second proposal SAW the first refusal as an observation (data).
+    second_payload = proposer.payloads[1]
+    assert second_payload["observations"][0]["error"] == STOP_INVALID_PROPOSAL
+    assert second_payload["observations"][0]["nothing_happened"] is True
+
+
+def test_invalid_proposal_then_repair_succeeds() -> None:
+    """R165: the model corrects a protocol violation within its budget."""
+    world = AgentWorld()
+    loop, _ = world.loop(
+        [
+            {"action": "improvise"},
+            {"action": "final", "output": {"answer": "recovered", "evidence": []}},
+        ]
+    )
+    report = world.run(loop)
+    assert report.succeeded is True
+    assert report.stop_reason == STOP_FINAL
+    assert report.summary["invalid_proposals"] == 1
+    assert [n.status for n in report.nodes if n.type is ExecutionNodeType.PLANNER][:2] == [
+        ExecutionNodeStatus.FAILED,
+        ExecutionNodeStatus.SUCCEEDED,
+    ]
+
+
+def test_invalid_proposal_single_shot_bound_is_configurable() -> None:
+    """max_invalid_proposals=1 restores the pre-R165 stop-on-first behaviour."""
+    world = AgentWorld()
+    proposer = ScriptedProposer([{"action": "improvise"}])
+    loop = AgentLoop(
+        propose=proposer,
+        tools=world.executor,
+        bindings={"github.read": world.binding},
+        max_steps=5,
+        max_invalid_proposals=1,
+    )
+    report = world.run(loop)
+    assert report.stop_reason == STOP_INVALID_PROPOSAL
+    assert len(report.steps) == 1
+
+
+def test_invalid_proposal_on_last_step_stops() -> None:
+    """A violation on the final budgeted step cannot be repaired — honest stop."""
+    world = AgentWorld()
+    loop, _ = world.loop([{"action": "improvise"}], max_steps=1)
+    report = world.run(loop)
+    assert report.stop_reason == STOP_INVALID_PROPOSAL
 
 
 def test_propose_fault_contained_as_data() -> None:
