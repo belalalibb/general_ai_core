@@ -68,9 +68,7 @@ class UnknownCheckName(ValueError):
 
     def __init__(self, name: str) -> None:
         self.name = name
-        super().__init__(
-            f"unknown check name {name!r}; the scenario check set is closed"
-        )
+        super().__init__(f"unknown check name {name!r}; the scenario check set is closed")
 
 
 class ScenarioNotFound(KeyError):
@@ -87,9 +85,7 @@ class ScenarioSaveRequest(ContractModel):
 
     name: BoundedStr
     ask: BoundedStr
-    checks: list[str] = Field(
-        default_factory=lambda: sorted(SCENARIO_CHECKS), min_length=1
-    )
+    checks: list[str] = Field(default_factory=lambda: sorted(SCENARIO_CHECKS), min_length=1)
 
 
 @dataclass(frozen=True)
@@ -136,9 +132,7 @@ class ScenarioService:
 
     # --- store (data only) --------------------------------------------------
 
-    def save(
-        self, tenant_id: UUID, *, name: str, ask: str, checks: tuple[str, ...]
-    ) -> Scenario:
+    def save(self, tenant_id: UUID, *, name: str, ask: str, checks: tuple[str, ...]) -> Scenario:
         """Save a scenario; unknown check names refuse loudly (closed set)."""
         scenario = Scenario(
             id=uuid4(),
@@ -163,23 +157,15 @@ class ScenarioService:
 
     # --- replay (real executions, honest verdicts) --------------------------
 
-    async def replay(
-        self, tenant_id: UUID, user_id: UUID, scenario_id: UUID
-    ) -> JsonObject:
+    async def replay(self, tenant_id: UUID, user_id: UUID, scenario_id: UUID) -> JsonObject:
         """Replay ONE scenario as the caller — verdict follows stored truth."""
         scenario = self.get(tenant_id, scenario_id)
         payload: JsonObject = {
             "ask": scenario.ask,
-            "context": {
-                "metadata": {
-                    SCENARIO_LABEL_KEY: {"scenario_id": str(scenario.id)}
-                }
-            },
+            "context": {"metadata": {SCENARIO_LABEL_KEY: {"scenario_id": str(scenario.id)}}},
         }
         try:
-            decision = self.router.route(
-                RoutingRequest(operation=ProviderOperation.GENERATE_TEXT)
-            )
+            decision = self.router.route(RoutingRequest(operation=ProviderOperation.GENERATE_TEXT))
         except (
             NoEligibleCandidates,
             FallbackNotConfigured,

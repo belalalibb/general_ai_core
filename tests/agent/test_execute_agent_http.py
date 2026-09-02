@@ -19,6 +19,15 @@ from fastapi import FastAPI
 
 from apps.api import InMemoryExecutionStore, Principal, create_app
 from apps.api.agent import AgentSurface
+from core.contracts.skills import (
+    Skill,
+    SkillManifest,
+    SkillSource,
+    SkillStatus,
+    SkillToolRequirements,
+    SkillType,
+)
+from core.roles.registry import SkillRegistry
 from tests.agent.world import (
     TENANT,
     USER,
@@ -36,6 +45,7 @@ def _app(
     with_agent: bool = True,
     tenant: UUID = TENANT,
     store: InMemoryExecutionStore | None = None,
+    skills: SkillRegistry | None = None,
 ) -> FastAPI:
     store = store if store is not None else InMemoryExecutionStore()
     world.runtime._store_report = store.put  # the API's store IS the runtime's store
@@ -48,6 +58,28 @@ def _app(
         store=store,
         principal=Principal(tenant_id=tenant, user_id=USER),
         agent=AgentSurface(runtime=world.runtime, catalog=catalog) if with_agent else None,
+        skills=skills,
+    )
+
+
+def _skill(manifest_id: str, required: list[str]) -> Skill:
+    manifest = SkillManifest(
+        id=manifest_id,
+        name=manifest_id,
+        version="1.0.0",
+        type=SkillType.INSTRUCTION,
+        source=SkillSource.LOCAL,
+        status=SkillStatus.ACTIVE,
+        requires_tools=SkillToolRequirements(required=required),
+    )
+    return Skill(
+        id=uuid4(),
+        name=manifest_id,
+        version="1.0.0",
+        type=SkillType.INSTRUCTION,
+        source=SkillSource.LOCAL,
+        manifest=manifest,
+        status=SkillStatus.ACTIVE,
     )
 
 
@@ -197,3 +229,69 @@ def test_agent_tools_listing_absent_without_seam() -> None:
     world = AgentWorld([model_says(final("x"))])
     app = _app(world, with_agent=False)
     assert run(_get(app, "/v1/agent-tools")).status_code == 404
+
+
+class TestSkillToolIntelligence:
+    """R160: admitted skills disclose the tools their manifests REQUIRE."""
+
+    def _registry(self) -> SkillRegistry:
+        registry = SkillRegistry()
+        registry.register(_skill("repo_reader", ["fs"]))
+        registry.register(_skill("deployer", ["fs", "shell"]))
+        return registry
+
+    def test_skill_required_tool_is_disclosed_without_allow_list(self) -> None:
+        world = AgentWorld(
+            [model_says(tool_call("fs", path="README.md")), model_says(final("ok", 1))]
+        )
+        app = _app(world, skills=self._registry())
+        response = run(
+            _post(app, {"ask": "read", "execution_policy": AGENT, "skills": ["repo_reader"]})
+        )
+        assert response.status_code == 200, response.text
+        assert world.fs.reads == ["README.md"]  # fs was disclosed AND admitted
+        first_ask = world.adapter.requests[0].payload["ask"]
+        assert '"name": "fs"' in first_ask and '"name": "fs_write"' not in first_ask
+        assert '"by_skill": {"fs": ["repo_reader"]}' in first_ask
+
+    def test_unoffered_required_tool_is_a_named_gap_not_a_grant(self) -> None:
+        world = AgentWorld([model_says(final("cannot deploy here"))])
+        app = _app(world, skills=self._registry())
+        response = run(
+            _post(app, {"ask": "deploy", "execution_policy": AGENT, "skills": ["deployer"]})
+        )
+        assert response.status_code == 200, response.text
+        first_ask = world.adapter.requests[0].payload["ask"]
+        assert '"unavailable": {"deployer": ["shell"]}' in first_ask
+        assert '"name": "fs"' in first_ask  # the offered half IS disclosed
+
+    def test_denied_overrides_skill_disclosure(self) -> None:
+        world = AgentWorld([model_says(final("x"))])
+        app = _app(world, skills=self._registry())
+        response = run(
+            _post(
+                app,
+                {
+                    "ask": "read",
+                    "execution_policy": AGENT,
+                    "skills": ["repo_reader"],
+                    "tools": {"allowed": [], "denied": ["fs"]},
+                },
+            )
+        )
+        assert response.status_code == 200, response.text
+        assert "Available tools:\n[]" in world.adapter.requests[0].payload["ask"]
+
+    def test_skill_disclosure_never_bypasses_the_firewall(self) -> None:
+        registry = SkillRegistry()
+        registry.register(_skill("writer", ["fs_write"]))
+        world = AgentWorld(
+            [model_says(tool_call("fs_write", path="x", content="y")), model_says(final("done"))]
+        )
+        app = _app(world, skills=registry)
+        response = run(
+            _post(app, {"ask": "write", "execution_policy": AGENT, "skills": ["writer"]})
+        )
+        assert response.status_code == 200
+        assert world.fs.writes == []  # disclosed by the skill, REFUSED by the firewall
+        assert "refused" in world.adapter.requests[1].payload["ask"]

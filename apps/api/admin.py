@@ -319,9 +319,7 @@ def create_admin_router(
                 payload=body.payload,
             )
         except InactiveAdminArea as exc:
-            return error_response(
-                ErrorCode.VALIDATION_ERROR, str(exc), details={"field": "action"}
-            )
+            return error_response(ErrorCode.VALIDATION_ERROR, str(exc), details={"field": "action"})
         return _json(_change_json(change), status=201)
 
     @router.get("/changes")
@@ -330,12 +328,7 @@ def create_admin_router(
         if isinstance(admitted, JSONResponse):
             return admitted
         return _json(
-            {
-                "changes": [
-                    _change_json(c)
-                    for c in surface.service.list_changes(admitted.tenant_id)
-                ]
-            }
+            {"changes": [_change_json(c) for c in surface.service.list_changes(admitted.tenant_id)]}
         )
 
     @router.get("/changes/{change_id}")
@@ -467,9 +460,7 @@ def create_admin_router(
         admitted = _admit(request)
         if isinstance(admitted, JSONResponse):
             return admitted
-        return _json(
-            surface.routing.default_weights.model_dump(mode="json", exclude_none=True)
-        )
+        return _json(surface.routing.default_weights.model_dump(mode="json", exclude_none=True))
 
     # --- evaluation reads (22 §7: ADMIN sees scores/confidence/evidence) -------------
 
@@ -493,9 +484,7 @@ def create_admin_router(
         return _json(record.model_dump(mode="json", exclude_none=True))
 
     @router.get("/executions/{execution_id}/evaluations")
-    async def list_execution_evaluations(
-        request: Request, execution_id: str
-    ) -> Response:
+    async def list_execution_evaluations(request: Request, execution_id: str) -> Response:
         admitted = _admit(request)
         if isinstance(admitted, JSONResponse):
             return admitted
@@ -506,11 +495,7 @@ def create_admin_router(
         # Empty is honest for unknown/foreign executions alike (20 §6
         # anti-enumeration — the port contract, surfaced unchanged).
         return _json(
-            {
-                "evaluations": [
-                    r.model_dump(mode="json", exclude_none=True) for r in records
-                ]
-            }
+            {"evaluations": [r.model_dump(mode="json", exclude_none=True) for r in records]}
         )
 
     # --- learning dashboard PLACEHOLDER (21 §7; R049 boundary (a)) -------------------
@@ -544,9 +529,7 @@ def create_admin_router(
             return _json(review_service.self_review(admitted.tenant_id))
 
         @router.post("/changes/propose")
-        async def propose_change(
-            request: Request, body: AdminDraftRequest
-        ) -> Response:
+        async def propose_change(request: Request, body: AdminDraftRequest) -> Response:
             """POST /v1/admin/changes/propose: draft→validate→preview, never publish.
 
             Reuses the AdminDraftRequest contract (the proposal IS a
@@ -613,14 +596,11 @@ def create_admin_router(
                 return _json(sample.model_dump(mode="json"), status=201)
             # The SAME tenant-scoped store the /v1/executions routes read:
             # absent id == foreign-tenant id == 404 (20 §6).
-            store = execution_store if execution_store is not None else (
-                surface.executions
-            )
+            store = execution_store if execution_store is not None else (surface.executions)
             if store is None:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
-                    "No execution store composed; execution-born capture "
-                    "unavailable.",
+                    "No execution store composed; execution-born capture unavailable.",
                     details={"field": "source_execution_id"},
                 )
             try:
@@ -652,9 +632,7 @@ def create_admin_router(
             if isinstance(parsed, JSONResponse):
                 return parsed
             try:
-                sample = await lifecycle.evaluate(
-                    admitted.tenant_id, parsed, body.output
-                )
+                sample = await lifecycle.evaluate(admitted.tenant_id, parsed, body.output)
             except SampleNotFound:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
@@ -664,14 +642,10 @@ def create_admin_router(
                 )
             except LearningError as exc:
                 return _json({"evaluated": False, "reason": str(exc)})
-            return _json(
-                {"evaluated": True, "sample": sample.model_dump(mode="json")}
-            )
+            return _json({"evaluated": True, "sample": sample.model_dump(mode="json")})
 
         @router.get("/learning/samples/{sample_id}")
-        async def learning_sample_report(
-            request: Request, sample_id: str
-        ) -> Response:
+        async def learning_sample_report(request: Request, sample_id: str) -> Response:
             """GET .../learning/samples/{id}: full lifecycle state + verdicts."""
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
@@ -701,9 +675,7 @@ def create_admin_router(
             if isinstance(parsed, JSONResponse):
                 return parsed
             try:
-                sample = lifecycle.mark_sanitized(
-                    admitted.tenant_id, parsed, passed=body.passed
-                )
+                sample = lifecycle.mark_sanitized(admitted.tenant_id, parsed, passed=body.passed)
             except SampleNotFound:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
@@ -729,9 +701,7 @@ def create_admin_router(
             if isinstance(parsed, JSONResponse):
                 return parsed
             try:
-                sample = lifecycle.admit_to_training(
-                    admitted.tenant_id, parsed, body.to_signals()
-                )
+                sample = lifecycle.admit_to_training(admitted.tenant_id, parsed, body.to_signals())
             except SampleNotFound:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
@@ -741,9 +711,7 @@ def create_admin_router(
                 )
             except NotEligibleForTraining as exc:
                 return _json({"admitted": False, "reason": str(exc)})
-            return _json(
-                {"admitted": True, "sample": sample.model_dump(mode="json")}
-            )
+            return _json({"admitted": True, "sample": sample.model_dump(mode="json")})
 
         @router.post("/learning/samples/{sample_id}/promote")
         async def promote_learning_sample(
@@ -786,14 +754,10 @@ def create_admin_router(
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
-            return _json(
-                {"keys": list(lifecycle.learned_keys(admitted.tenant_id))}
-            )
+            return _json({"keys": list(lifecycle.learned_keys(admitted.tenant_id))})
 
         @router.post("/learning/ask")
-        async def ask_learned_capability(
-            request: Request, body: LearningAskRequest
-        ) -> Response:
+        async def ask_learned_capability(request: Request, body: LearningAskRequest) -> Response:
             """POST .../ask: the ISOLATED learned-capability test path.
 
             Answers ONLY from GOLD knowledge — never touches conversation
@@ -821,9 +785,7 @@ def create_admin_router(
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
-            return _json(
-                observability.mark_reviewed(admitted.tenant_id, admitted.user_id)
-            )
+            return _json(observability.mark_reviewed(admitted.tenant_id, admitted.user_id))
 
     # --- AA-1 seam AUD-1: audit read (20 §9 events, port surfaced verbatim) ---------
 
@@ -856,14 +818,10 @@ def create_admin_router(
                     "limit must be >= 1.",
                     details={"field": "limit"},
                 )
-            events = audit_log.read(
-                admitted.tenant_id, event_type=parsed_type, limit=limit
-            )
+            events = audit_log.read(admitted.tenant_id, event_type=parsed_type, limit=limit)
             return _json(
                 {
-                    "events": [
-                        e.model_dump(mode="json", exclude_none=True) for e in events
-                    ],
+                    "events": [e.model_dump(mode="json", exclude_none=True) for e in events],
                     "total_recorded": audit_log.count(admitted.tenant_id),
                 }
             )
@@ -932,9 +890,7 @@ def create_admin_router(
             return _json({"exercisable": exercise_registry.exercisable()})
 
         @router.post("/capabilities/{capability_id}/exercise")
-        async def exercise_capability(
-            request: Request, capability_id: str
-        ) -> Response:
+        async def exercise_capability(request: Request, capability_id: str) -> Response:
             """POST /v1/admin/capabilities/{id}/exercise: prove it by running it.
 
             The probe runs the SAME machinery a user request runs, as the
@@ -983,9 +939,7 @@ def create_admin_router(
             return _json({"scenarios": [scenario_json(s) for s in rows]})
 
         @router.post("/scenarios")
-        async def save_scenario(
-            request: Request, body: ScenarioSaveRequest
-        ) -> Response:
+        async def save_scenario(request: Request, body: ScenarioSaveRequest) -> Response:
             """POST /v1/admin/scenarios: save a named, replayable scenario.
 
             The check set is CLOSED (the platform's own deterministic
@@ -1020,9 +974,7 @@ def create_admin_router(
             if isinstance(parsed, JSONResponse):
                 return _scenario_not_found(scenario_id)
             try:
-                result = await scenario_service.replay(
-                    admitted.tenant_id, admitted.user_id, parsed
-                )
+                result = await scenario_service.replay(admitted.tenant_id, admitted.user_id, parsed)
             except ScenarioNotFound:
                 return _scenario_not_found(scenario_id)
             return _json(result)
@@ -1033,9 +985,7 @@ def create_admin_router(
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
-            result = await scenario_service.regression_pack(
-                admitted.tenant_id, admitted.user_id
-            )
+            result = await scenario_service.regression_pack(admitted.tenant_id, admitted.user_id)
             return _json(result)
 
     # --- V7 chunk 4: Context Validation Lab (absent seam = absent routes,
@@ -1054,9 +1004,7 @@ def create_admin_router(
             return _json({"checks": lab_service.checks()})
 
         @router.post("/context-lab/validate")
-        async def validate_context(
-            request: Request, body: ContextLabRequest
-        ) -> Response:
+        async def validate_context(request: Request, body: ContextLabRequest) -> Response:
             """POST /v1/admin/context-lab/validate: dry-run the REAL composer.
 
             Returns the composed blocks + named exclusions + closed lab
@@ -1069,9 +1017,7 @@ def create_admin_router(
             if isinstance(admitted, JSONResponse):
                 return admitted
             try:
-                result = lab_service.validate(
-                    admitted.tenant_id, admitted.user_id, body
-                )
+                result = lab_service.validate(admitted.tenant_id, admitted.user_id, body)
             except ConversationNotAdmitted:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
@@ -1106,9 +1052,7 @@ def create_admin_router(
             )
 
         @router.post("/source-changes/snapshots")
-        async def create_source_snapshot(
-            request: Request, body: SnapshotCreateRequest
-        ) -> Response:
+        async def create_source_snapshot(request: Request, body: SnapshotCreateRequest) -> Response:
             """POST snapshots: register base content — the workshop intake.
 
             The response is EVIDENCE: the content address + derived
@@ -1126,9 +1070,7 @@ def create_admin_router(
                     details={"field": "files"},
                     http_status=422,
                 )
-            stored = sc_workflow.register_base_snapshot(
-                admitted.tenant_id, snapshot
-            )
+            stored = sc_workflow.register_base_snapshot(admitted.tenant_id, snapshot)
             return _json(
                 {
                     "snapshot_id": stored.snapshot_id,
@@ -1148,17 +1090,11 @@ def create_admin_router(
             if isinstance(admitted, JSONResponse):
                 return admitted
             return _json(
-                {
-                    "proposals": [
-                        _serialize(p) for p in sc_workflow.list(admitted.tenant_id)
-                    ]
-                }
+                {"proposals": [_serialize(p) for p in sc_workflow.list(admitted.tenant_id)]}
             )
 
         @router.post("/source-changes")
-        async def propose_source_change(
-            request: Request, body: ProposeRequest
-        ) -> Response:
+        async def propose_source_change(request: Request, body: ProposeRequest) -> Response:
             """POST: create a DRAFT proposal anchored to a stored base."""
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
@@ -1223,14 +1159,10 @@ def create_admin_router(
                     proposal = sc_workflow.verify(tenant_id, parsed)
                 elif act == "approve":
                     assert cited_hash is not None
-                    proposal = sc_workflow.approve(
-                        tenant_id, parsed, actor_id, cited_hash
-                    )
+                    proposal = sc_workflow.approve(tenant_id, parsed, actor_id, cited_hash)
                 elif act == "reject":
                     assert reason is not None
-                    proposal = sc_workflow.reject(
-                        tenant_id, parsed, actor_id, reason
-                    )
+                    proposal = sc_workflow.reject(tenant_id, parsed, actor_id, reason)
                 elif act == "apply":
                     proposal = sc_workflow.apply(tenant_id, parsed)
                 else:
@@ -1265,16 +1197,12 @@ def create_admin_router(
             return _json(_serialize(proposal))
 
         @router.post("/source-changes/{proposal_id}/verify")
-        async def verify_source_change(
-            request: Request, proposal_id: str
-        ) -> Response:
+        async def verify_source_change(request: Request, proposal_id: str) -> Response:
             """POST verify: the differential run — DRAFT -> VERIFIED | FAILED."""
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
-            return _sc_act(
-                admitted.tenant_id, admitted.user_id, proposal_id, "verify"
-            )
+            return _sc_act(admitted.tenant_id, admitted.user_id, proposal_id, "verify")
 
         @router.post("/source-changes/{proposal_id}/approve")
         async def approve_source_change(
@@ -1308,28 +1236,20 @@ def create_admin_router(
             )
 
         @router.post("/source-changes/{proposal_id}/apply")
-        async def apply_source_change(
-            request: Request, proposal_id: str
-        ) -> Response:
+        async def apply_source_change(request: Request, proposal_id: str) -> Response:
             """POST apply: snapshot-store space ONLY — §14 posture rides the
             response; authoritative source is structurally unreachable."""
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
-            return _sc_act(
-                admitted.tenant_id, admitted.user_id, proposal_id, "apply"
-            )
+            return _sc_act(admitted.tenant_id, admitted.user_id, proposal_id, "apply")
 
         @router.post("/source-changes/{proposal_id}/rollback")
-        async def rollback_source_change(
-            request: Request, proposal_id: str
-        ) -> Response:
+        async def rollback_source_change(request: Request, proposal_id: str) -> Response:
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
-            return _sc_act(
-                admitted.tenant_id, admitted.user_id, proposal_id, "rollback"
-            )
+            return _sc_act(admitted.tenant_id, admitted.user_id, proposal_id, "rollback")
 
     # --- AA-1 seam SYS-1: system read-model (process-local truths, labeled) ---------
 

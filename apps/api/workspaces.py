@@ -187,8 +187,7 @@ class InMemoryProjectStore:
         rows = [
             p
             for p in self._rows.values()
-            if p.tenant_id == tenant_id
-            and (workspace_id is None or p.workspace_id == workspace_id)
+            if p.tenant_id == tenant_id and (workspace_id is None or p.workspace_id == workspace_id)
         ]
         return tuple(sorted(rows, key=lambda p: (p.name, str(p.id))))
 
@@ -233,9 +232,7 @@ def _workspace_json(workspace: Workspace) -> dict[str, object]:
 def _project_json(project: Project) -> dict[str, object]:
     return {
         "project_id": str(project.id),
-        "workspace_id": (
-            str(project.workspace_id) if project.workspace_id is not None else None
-        ),
+        "workspace_id": (str(project.workspace_id) if project.workspace_id is not None else None),
         "name": project.name,
         "metadata": project.metadata,
     }
@@ -289,9 +286,7 @@ def create_workspace_router(
     # --- workspaces -----------------------------------------------------------
 
     @router.post("/v1/workspaces", status_code=201)
-    async def create_workspace(
-        request: Request, body: WorkspaceCreateRequest
-    ) -> Response:
+    async def create_workspace(request: Request, body: WorkspaceCreateRequest) -> Response:
         caller = resolve(request)
         if isinstance(caller, JSONResponse):
             return caller
@@ -400,9 +395,7 @@ def create_workspace_router(
         return JSONResponse(status_code=201, content=_project_json(project))
 
     @router.get("/v1/projects")
-    async def list_projects(
-        request: Request, workspace_id: str | None = None
-    ) -> Response:
+    async def list_projects(request: Request, workspace_id: str | None = None) -> Response:
         caller = resolve(request)
         if isinstance(caller, JSONResponse):
             return caller

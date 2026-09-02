@@ -95,9 +95,7 @@ def execution_failure_detail(
             retryable=False,
             details={"execution_id": execution_id},
         )
-    code = _CODE_BY_PROVIDER_CATEGORY.get(
-        provider_error.category, ErrorCode.EXECUTION_FAILED
-    )
+    code = _CODE_BY_PROVIDER_CATEGORY.get(provider_error.category, ErrorCode.EXECUTION_FAILED)
     return ErrorDetail(
         code=code,
         message=provider_error.safe_message,

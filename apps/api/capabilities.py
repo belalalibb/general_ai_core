@@ -87,9 +87,7 @@ class Capability:
 
     def __post_init__(self) -> None:
         if self.id not in CAPABILITY_IDS:
-            raise ValueError(
-                f"unknown capability id {self.id!r}; the catalog id set is closed"
-            )
+            raise ValueError(f"unknown capability id {self.id!r}; the catalog id set is closed")
 
 
 def catalog_json(entries: tuple[Capability, ...]) -> JsonObject:
@@ -104,9 +102,7 @@ def catalog_json(entries: tuple[Capability, ...]) -> JsonObject:
         raise ValueError("duplicate capability ids in catalog derivation")
     missing = CAPABILITY_IDS - seen
     if missing:
-        raise ValueError(
-            f"catalog derivation incomplete; missing: {sorted(missing)}"
-        )
+        raise ValueError(f"catalog derivation incomplete; missing: {sorted(missing)}")
     return {
         "scope": "process",  # SYS-1 posture: this process only, forced label
         "capabilities": [

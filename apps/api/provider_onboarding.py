@@ -90,9 +90,7 @@ class ProviderOnboardingSurface:
     """
 
     onboarding: ProviderOnboardingService
-    build_adapter: Callable[
-        [ProviderManifest, GatewayOnboardRequest], ProviderAdapterPort
-    ]
+    build_adapter: Callable[[ProviderManifest, GatewayOnboardRequest], ProviderAdapterPort]
     build_manifest: Callable[[GatewayOnboardRequest], ProviderManifest]
     persist_registration: Callable[[UUID, dict[str, object]], None] | None = None
 
@@ -133,9 +131,7 @@ def create_provider_onboarding_router(
         return caller
 
     @router.post("/onboard")
-    async def onboard_provider(
-        request: Request, body: GatewayOnboardRequest
-    ) -> Response:
+    async def onboard_provider(request: Request, body: GatewayOnboardRequest) -> Response:
         admitted = _admit(request)
         if isinstance(admitted, JSONResponse):
             return admitted
@@ -145,18 +141,14 @@ def create_provider_onboarding_router(
         try:
             manifest = surface.build_manifest(body)
         except (ValueError, ValidationError) as exc:
-            return error_response(
-                ErrorCode.VALIDATION_ERROR, str(exc), http_status=422
-            )
+            return error_response(ErrorCode.VALIDATION_ERROR, str(exc), http_status=422)
 
         # Composition-bound adapter construction (gateway not configured
         # ⇒ loud refusal — never a fake adapter).
         try:
             adapter = surface.build_adapter(manifest, body)
         except ValueError as exc:
-            return error_response(
-                ErrorCode.VALIDATION_ERROR, str(exc), http_status=409
-            )
+            return error_response(ErrorCode.VALIDATION_ERROR, str(exc), http_status=409)
 
         try:
             report = await surface.onboarding.onboard(
@@ -169,16 +161,12 @@ def create_provider_onboarding_router(
         except OnboardingRefused as exc:
             # The walker's refusal, verbatim (409 — state conflict, the
             # same mapping the config lifecycle routes use).
-            return error_response(
-                ErrorCode.VALIDATION_ERROR, str(exc), http_status=409
-            )
+            return error_response(ErrorCode.VALIDATION_ERROR, str(exc), http_status=409)
 
         # ADR-0011: persist the registration definition (refs only) so the
         # composition root rebuilds this adapter at the next startup.
         if surface.persist_registration is not None:
-            surface.persist_registration(
-                report.provider_id, definition_from_request(body)
-            )
+            surface.persist_registration(report.provider_id, definition_from_request(body))
 
         return JSONResponse(status_code=201, content=_report_json(report))
 

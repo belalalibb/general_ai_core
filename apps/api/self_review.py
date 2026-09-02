@@ -114,9 +114,7 @@ class SelfReviewService:
             "available": True,
             "total": len(changes),
             "by_state": dict(sorted(by_state.items())),
-            "evidence": [
-                _change_json(c) for c in newest_first[:CHANGE_EVIDENCE_LIMIT]
-            ],
+            "evidence": [_change_json(c) for c in newest_first[:CHANGE_EVIDENCE_LIMIT]],
             "evidence_truncated": len(changes) > CHANGE_EVIDENCE_LIMIT,
         }
 

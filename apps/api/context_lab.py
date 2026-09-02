@@ -108,9 +108,7 @@ class ContextLabService:
         """The closed lab-check name set, sorted — pure data."""
         return sorted(LAB_CHECK_NAMES)
 
-    def validate(
-        self, tenant_id: UUID, user_id: UUID, request: ContextLabRequest
-    ) -> JsonObject:
+    def validate(self, tenant_id: UUID, user_id: UUID, request: ContextLabRequest) -> JsonObject:
         """Compose for real, grade the composition, return verdicts as data.
 
         Raises ConversationNotAdmitted for absent/foreign conversation ids
@@ -160,18 +158,14 @@ class ContextLabService:
 
     # --- internals ------------------------------------------------------------
 
-    def _admit_conversation(
-        self, tenant_id: UUID, user_id: UUID, conversation_id: UUID
-    ) -> None:
+    def _admit_conversation(self, tenant_id: UUID, user_id: UUID, conversation_id: UUID) -> None:
         """13 §7 admission: absent, foreign-tenant, foreign-user — one answer."""
         if self.conversations is None:
             # No conversations seam composed: history cannot be verified as
             # the caller's own, so it is refused, never composed blind.
             raise ConversationNotAdmitted(_UNKNOWN_CONVERSATION)
         try:
-            conversation = self.conversations.get_conversation(
-                tenant_id, conversation_id
-            )
+            conversation = self.conversations.get_conversation(tenant_id, conversation_id)
         except ConversationNotFound:
             raise ConversationNotAdmitted(_UNKNOWN_CONVERSATION) from None
         if conversation.user_id != user_id:
@@ -188,18 +182,13 @@ class ContextLabService:
         ask_blocks = [b for b in blocks if b.type is ContextBlockType.ASK]
         results: dict[str, bool] = {
             # Recorded deterministic order: the ask composes LAST, once.
-            "ask_block_present": (
-                len(ask_blocks) == 1 and blocks[-1].type is ContextBlockType.ASK
-            ),
+            "ask_block_present": (len(ask_blocks) == 1 and blocks[-1].type is ContextBlockType.ASK),
             # 13 §10 "context budget respected" — over content characters,
             # the same unit the composer budgets in.
-            "budget_respected": (
-                sum(len(b.content) for b in blocks) <= request.context_budget
-            ),
+            "budget_respected": (sum(len(b.content) for b in blocks) <= request.context_budget),
             # 13 §5 determinism — two real compositions, byte-identical.
             "deterministic_composition": (
-                composed.model_dump(mode="json")
-                == recomposed.model_dump(mode="json")
+                composed.model_dump(mode="json") == recomposed.model_dump(mode="json")
             ),
             # 11 §14 — every exclusion names a closed-set reason.
             "exclusions_named": all(

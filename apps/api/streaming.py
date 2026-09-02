@@ -48,13 +48,7 @@ from core.contracts.execute import (
 from core.execution.service import ExecutionReport
 
 # One event as it rides the wire (SSE data frame).
-SseEvent = (
-    ExecutionStartedEvent
-    | NodeStartedEvent
-    | NodeCompletedEvent
-    | FinalEvent
-    | ErrorEvent
-)
+SseEvent = ExecutionStartedEvent | NodeStartedEvent | NodeCompletedEvent | FinalEvent | ErrorEvent
 
 Sleeper = Callable[[float], Awaitable[None]]
 
@@ -84,18 +78,12 @@ def derive_events(report: ExecutionReport) -> list[SseEvent]:
     error) appears ONLY when the execution itself is terminal.
     """
     events: list[SseEvent] = [
-        ExecutionStartedEvent(
-            type="execution_started", execution_id=str(report.execution.id)
-        )
+        ExecutionStartedEvent(type="execution_started", execution_id=str(report.execution.id))
     ]
     for entry in report.nodes:
-        events.append(
-            NodeStartedEvent(type="node_started", node=entry.node.node_key)
-        )
+        events.append(NodeStartedEvent(type="node_started", node=entry.node.node_key))
         if entry.node.status.value in _TERMINAL_NODE_STATES:
-            events.append(
-                NodeCompletedEvent(type="node_completed", node=entry.node.node_key)
-            )
+            events.append(NodeCompletedEvent(type="node_completed", node=entry.node.node_key))
     status = report.execution.status
     if status is ExecutionStatus.SUCCEEDED:
         events.append(FinalEvent(type="final", result=report.final_output or {}))

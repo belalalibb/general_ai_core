@@ -91,9 +91,7 @@ def build_patch(operations: list[PatchOperationRequest]) -> SourcePatch:
     """Request operations -> SourcePatch (all shape rules apply, named)."""
     built: list[PatchOperation] = []
     for op in operations:
-        content = (
-            _decode(op.content_b64, op.path) if op.content_b64 is not None else None
-        )
+        content = _decode(op.content_b64, op.path) if op.content_b64 is not None else None
         built.append(PatchOperation(kind=op.kind, path=op.path, content=content))
     return SourcePatch(operations=tuple(built))
 
@@ -105,17 +103,13 @@ def build_snapshot(files: dict[str, str]) -> SourceSnapshot:
     )
 
 
-def proposal_json(
-    proposal: ChangeProposal, *, authoritative_apply: JsonObject
-) -> JsonObject:
+def proposal_json(proposal: ChangeProposal, *, authoritative_apply: JsonObject) -> JsonObject:
     """Serialize one proposal — metadata and hashes, NEVER file bytes."""
     operations = [
         {
             "kind": op.kind.value,
             "path": op.path,
-            "content_sha256": (
-                file_content_hash(op.content) if op.content is not None else None
-            ),
+            "content_sha256": (file_content_hash(op.content) if op.content is not None else None),
             "size_bytes": len(op.content) if op.content is not None else None,
         }
         for op in proposal.patch.operations

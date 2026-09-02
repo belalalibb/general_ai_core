@@ -214,9 +214,7 @@ def create_notifications_router(
             return admitted
         rows = service.list(admitted.tenant_id)
         unread = sum(1 for row in rows if not row["read"])
-        return JSONResponse(
-            status_code=200, content={"notifications": rows, "unread": unread}
-        )
+        return JSONResponse(status_code=200, content={"notifications": rows, "unread": unread})
 
     @router.post("/{notification_id}/ack")
     async def ack_notification(request: Request, notification_id: str) -> Response:

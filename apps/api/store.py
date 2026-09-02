@@ -113,14 +113,8 @@ class InMemoryExecutionStore:
             if report.execution.tenant_id == tenant_id
             and (status is None or report.execution.status is status)
             and (initiated_by is None or report.execution.user_id == initiated_by)
-            and (
-                created_after is None
-                or report.execution.created_at > created_after
-            )
-            and (
-                created_before is None
-                or report.execution.created_at < created_before
-            )
+            and (created_after is None or report.execution.created_at > created_after)
+            and (created_before is None or report.execution.created_at < created_before)
         ]
         rows.sort(key=lambda r: r.execution.created_at, reverse=True)
         if limit is not None:

@@ -116,9 +116,7 @@ class LearningObservabilityService:
             # DATA; training machinery does not (R049 (a), 41 §49).
             "learning_machinery": {
                 "placeholder": True,
-                "training_eligibility_conditions": list(
-                    TRAINING_ELIGIBILITY_CONDITIONS
-                ),
+                "training_eligibility_conditions": list(TRAINING_ELIGIBILITY_CONDITIONS),
                 "promotion_conditions": list(PROMOTION_CONDITIONS),
             },
         }
@@ -130,9 +128,7 @@ class LearningObservabilityService:
         if self.audit is None:
             return {"available": False}
         events = self.audit.read(tenant_id)
-        window = [
-            e for e in events if since is None or e.occurred_at > since
-        ]
+        window = [e for e in events if since is None or e.occurred_at > since]
         by_type: dict[str, int] = {}
         for event in window:
             by_type[event.event_type.value] = by_type.get(event.event_type.value, 0) + 1
@@ -153,9 +149,7 @@ class LearningObservabilityService:
         if self.admin_service is None:
             return {"available": False}
         changes = self.admin_service.list_changes(tenant_id)
-        window = [
-            c for c in changes if since is None or c.created_at > since
-        ]
+        window = [c for c in changes if since is None or c.created_at > since]
         by_state: dict[str, int] = {}
         for change in window:
             by_state[change.state.value] = by_state.get(change.state.value, 0) + 1

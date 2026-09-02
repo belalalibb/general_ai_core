@@ -183,9 +183,7 @@ class ExecutionMessageHandler:
             request = ExecuteRequest.model_validate_json(message.payload["request"])
             payload: JsonObject = json.loads(message.payload["payload"])
             raw_conversation = message.payload.get("conversation_id")
-            conversation_id = (
-                UUID(raw_conversation) if raw_conversation is not None else None
-            )
+            conversation_id = UUID(raw_conversation) if raw_conversation is not None else None
             _ = message.payload["request_hash"]  # presence check (used later)
         except (KeyError, ValueError, ValidationError, json.JSONDecodeError) as exc:
             raise PermanentTaskError(
@@ -260,6 +258,4 @@ class ExecutionMessageHandler:
         )
         self._store.put(report)
         # V6 chunk 3: a denial is terminal truth too — execution.failed.
-        await self._stage_terminal_event(
-            WebhookEventType.EXECUTION_FAILED, execution_id, tenant_id
-        )
+        await self._stage_terminal_event(WebhookEventType.EXECUTION_FAILED, execution_id, tenant_id)

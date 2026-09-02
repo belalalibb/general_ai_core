@@ -137,7 +137,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from apps.api.admin import AdminSurface, create_admin_router
-from apps.api.agent import AGENT_STRATEGY, AgentSurface, AgentToolsRejected
+from apps.api.agent import AGENT_STRATEGY, AgentSurface, AgentToolSelection, AgentToolsRejected
 from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
 from apps.api.capabilities import Capability, CapabilityState
 from apps.api.context_lab import ContextLabService
@@ -198,7 +198,7 @@ from core.contracts.provider import ProviderError, ProviderOperation
 from core.contracts.role_profile import RoleProfile
 from core.contracts.roles import Role
 from core.contracts.routing import RoutingDecision, RoutingRequest, TaskAnalysis
-from core.contracts.skills import SkillListEntry, SkillsListResponse
+from core.contracts.skills import Skill, SkillListEntry, SkillsListResponse
 from core.contracts.usage import UsageLedger
 from core.contracts.webhooks import (
     WebhookSubscription,
@@ -643,7 +643,7 @@ def create_app(
         # composition catalog (unknown ⇒ validation error); admission per
         # call is the Capability Firewall's, inside the runtime.
         agent_strategy = policy is not None and policy.strategy == AGENT_STRATEGY
-        agent_tools = None
+        agent_tools: AgentToolSelection | None = None
         if agent_strategy:
             if agent is None:
                 return error_response(
@@ -657,8 +657,11 @@ def create_app(
                     "Agent strategy runs synchronously in this slice.",
                     details={"field": "execution_policy.async"},
                 )
+            # Allow-list names are validated HERE (before any admission work);
+            # the full selection (skill-required tools) is made once skills
+            # are admitted below — same catalog, one rule.
             try:
-                agent_tools = agent.resolve(body.tools)
+                agent.resolve(body.tools)
             except AgentToolsRejected as exc:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
@@ -691,6 +694,7 @@ def create_app(
         # admitted skills ride the execution payload as DATA (their tools
         # remain inert — 03 §8, enforced by the tool gate, not here).
         admitted_skills: list[JsonObject] = []
+        admitted_skill_objects: list[Skill] = []
         if body.skills:
             selectable = {skill.manifest.id: skill for skill in skill_registry.list_selectable()}
             seen_skill_ids: set[str] = set()
@@ -718,6 +722,7 @@ def create_app(
                         "version": skill.version,
                     }
                 )
+                admitted_skill_objects.append(skill)
         elif role is not None:
             # --- AUTO skill resolution (41 §16) when the caller selected
             # nothing. EXPLICIT WINS: this branch never runs when body.skills
@@ -751,6 +756,15 @@ def create_app(
                 }
                 for skill in resolution.selected
             )
+            admitted_skill_objects.extend(resolution.selected)
+
+        # --- R160 skill → tool intelligence (agent strategy only) --------------
+        # Admitted skills disclose the tools their manifests REQUIRE when the
+        # deployment offers them (03 §8: never a grant — the firewall still
+        # decides per call). Missing ones are a named gap the model sees.
+        if agent_strategy:
+            assert agent is not None
+            agent_tools = agent.select(body.tools, admitted_skill_objects)
 
         # --- idempotent replay (10 §10) ----------------------------------------
         # BEFORE persistence/composition: a replay must not duplicate turns.
@@ -948,6 +962,8 @@ def create_app(
             # manifest content is registry data the executor can look up;
             # the payload never becomes a skill-content channel).
             payload["skills"] = admitted_skills
+        if agent_tools is not None and (agent_tools.by_skill or agent_tools.unavailable):
+            payload["skill_tools"] = agent_tools.describe()
 
         # --- ASYNC path (Vision V2; 10 §4): enqueue via the outbox, ack 202 -----
         if policy is not None and policy.async_ is True:
@@ -1048,7 +1064,7 @@ def create_app(
                     tenant_id=caller.tenant_id,
                     user_id=caller.user_id,
                     task=payload,
-                    tools=agent_tools,
+                    tools=list(agent_tools.tools),
                     model_policy=(
                         effective_policy
                         if multi_model_policy is None and not node_decisions

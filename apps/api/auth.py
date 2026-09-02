@@ -163,9 +163,7 @@ def create_auth_router(surface: AuthSurface) -> APIRouter:
                     details={"scope": "auth:register"},
                 )
         try:
-            user = surface.identity.register(
-                body.email, body.password, body.preferred_language
-            )
+            user = surface.identity.register(body.email, body.password, body.preferred_language)
         except RegistrationError:
             # ONE constant message for every rejection cause (empty
             # fields, duplicate email) — the service already collapses
