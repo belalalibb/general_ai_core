@@ -109,8 +109,7 @@ def _validate_base_url(base_url: str) -> None:
     if base_url.startswith("https://"):
         return
     if any(
-        base_url == prefix or base_url.startswith(prefix + ":") or
-        base_url.startswith(prefix + "/")
+        base_url == prefix or base_url.startswith(prefix + ":") or base_url.startswith(prefix + "/")
         for prefix in _LOOPBACK_PREFIXES
     ):
         return

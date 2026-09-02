@@ -116,9 +116,7 @@ class TestTraceExposure:
         world.grant_budget(100)
         answer = run(world.service.converse(world.admin_principal(), "go"))
         assert answer.rounds == 2
-        assert [t.execution_id for t in answer.reasoning_trace] == (
-            answer.reasoning_execution_ids
-        )
+        assert [t.execution_id for t in answer.reasoning_trace] == (answer.reasoning_execution_ids)
 
     def test_trace_rides_the_http_answer(self) -> None:
         world = AgentWorld([_reasoning(tool_calls=[LIST_MODELS], claims=[CITED])])
@@ -138,8 +136,5 @@ class TestTraceExposure:
 
         body = run(go())
         assert body["verification"]["verified"] is True
-        assert (
-            body["reasoning_trace"][0]["stages"][0]["attempts"][0]["model_key"]
-            == "model-a"
-        )
+        assert body["reasoning_trace"][0]["stages"][0]["attempts"][0]["model_key"] == "model-a"
         assert body["reasoning_trace"][0]["ledger"] is not None

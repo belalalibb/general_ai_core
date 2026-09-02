@@ -148,9 +148,7 @@ class CatalogPersistence:
         self._bridge.run(self._bindings.model_catalog.delete(model_id))
 
     def delete_binding(self, provider_id: UUID, model_id: UUID) -> None:
-        self._bridge.run(
-            self._bindings.binding_catalog.delete(provider_id, model_id)
-        )
+        self._bridge.run(self._bindings.binding_catalog.delete(provider_id, model_id))
 
 
 def build_onboarding_surface(
@@ -196,9 +194,7 @@ def build_onboarding_surface(
         build_adapter=lambda manifest, body: adapter_from_definition(
             gateway_settings, secrets, manifest, body
         ),
-        persist_registration=(
-            _persist_registration if persistence is not None else None
-        ),
+        persist_registration=(_persist_registration if persistence is not None else None),
     )
 
 

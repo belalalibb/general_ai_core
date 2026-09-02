@@ -867,6 +867,8 @@ def build_runtime_profile(
             if gateway_settings is not None
             else None
         ),
+        # R160: Admin reasons through the platform's ONE shared agent runtime.
+        runtime=composed_agent.surface.runtime,
     )
 
     # --- end-user UI (P-D.2): the PROVEN ui/admin StaticFiles posture -----

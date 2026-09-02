@@ -81,9 +81,7 @@ class ExecutionRepositoryPort(Protocol):
     Postgres round-trip is tested env-gated, never simulated as green).
     """
 
-    async def put(
-        self, execution: Execution, nodes: tuple[ExecutionNode, ...] = ()
-    ) -> None: ...
+    async def put(self, execution: Execution, nodes: tuple[ExecutionNode, ...] = ()) -> None: ...
 
     async def get(self, tenant_id: UUID, execution_id: UUID) -> ExecutionRecord: ...
 
@@ -115,9 +113,7 @@ def report_from_record(record: ExecutionRecord) -> ExecutionReport:
     node_reports = []
     for node in record.nodes:
         response: ProviderGenerateResponse | None = None
-        if node.status is ExecutionNodeStatus.SUCCEEDED and isinstance(
-            node.output_ref, dict
-        ):
+        if node.status is ExecutionNodeStatus.SUCCEEDED and isinstance(node.output_ref, dict):
             # The service stored ``run.response.output`` as output_ref
             # (core/execution/service.py) — reconstructing the response
             # restores ``final_output`` for the GET route.  request_id
@@ -128,9 +124,7 @@ def report_from_record(record: ExecutionRecord) -> ExecutionReport:
                 succeeded=True,
                 output=node.output_ref,
             )
-        node_reports.append(
-            NodeReport(node=node, attempts=(), response=response)
-        )
+        node_reports.append(NodeReport(node=node, attempts=(), response=response))
     return ExecutionReport(
         execution=record.execution,
         nodes=tuple(node_reports),
@@ -181,9 +175,7 @@ class DurableExecutionStore:
         except ExecutionNotFound:
             pass  # cache miss — the durable record is the authority
         try:
-            record = self._bridge.run(
-                self._repository.get(tenant_id, execution_id)
-            )
+            record = self._bridge.run(self._repository.get(tenant_id, execution_id))
         except RepositoryExecutionNotFound as exc:
             raise ExecutionNotFound(execution_id) from exc
         report = report_from_record(record)

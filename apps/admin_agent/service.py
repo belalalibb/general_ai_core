@@ -44,11 +44,10 @@ from apps.admin_agent.dispatcher import ToolDispatcher, ToolRegistry
 from apps.admin_agent.secrecy import scrub_text
 from apps.admin_agent.tools import AGENT_LABEL_KEY, AgentToolSurface
 from apps.api.app import Principal
+from core.agent import AgentRuntime, ReasoningFailed
 from core.audit.memory import InMemoryAuditLog
 from core.contracts.base import JsonObject
 from core.contracts.execute import ExecutionStatus
-from core.contracts.provider import ProviderOperation
-from core.contracts.routing import RoutingRequest
 from core.contracts.security import ActorKind
 from core.contracts.tools import Tool
 from core.execution.agent import AgentToolBinding
@@ -61,12 +60,9 @@ from core.execution.loop import (
 from core.execution.service import ExecutionReport
 from core.identity.devices import DeviceRegistry
 from core.providers.errors import ModelNotRegistered, ProviderNotRegistered
-from core.routing.errors import FallbackNotConfigured, NoEligibleCandidates
-from core.routing.router import UnsupportedPolicyType
 from core.security.firewall import CapabilityFirewall, TenantPolicy
 from core.tools import ToolCallGate, ToolExecutor
 from core.tools import ToolRegistry as CoreToolRegistry
-from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
 from core.usage.memory import InMemoryUsageAccounting
 
 #: Flood bound: a single ROUND may dispatch at most this many tool calls.
@@ -175,10 +171,30 @@ class AdminAgentService:
         surface: AgentToolSurface,
         registry: ToolRegistry,
         dispatcher: ToolDispatcher,
+        runtime: AgentRuntime | None = None,
     ) -> None:
         self._surface = surface
         self._registry = registry
         self._dispatcher = dispatcher
+        # R160: the Admin agent REASONS through the SHARED ``core.agent``
+        # runtime (Admin owns no generic implementation). The composition
+        # root passes the platform's one runtime; when a caller composes
+        # the service alone, a runtime is derived from the SAME surface
+        # seams (router / execution / store) — never a private model path.
+        self._runtime = (
+            runtime
+            if runtime is not None
+            else AgentRuntime(
+                router=surface.router,
+                execution_service=surface.execution_service,
+                tool_registry=CoreToolRegistry(),
+                firewall=CapabilityFirewall(),
+                devices=DeviceRegistry(),
+                audit=surface.audit,
+                usage=surface.usage,
+                store_report=surface.execution_store.put,
+            )
+        )
 
     # --- conversation --------------------------------------------------------
 
@@ -229,10 +245,7 @@ class AdminAgentService:
 
         note = state.note
         if note is None and state.refused_claims:
-            note = (
-                f"{state.refused_claims} claim(s) refused: "
-                "missing or unverifiable evidence"
-            )
+            note = f"{state.refused_claims} claim(s) refused: missing or unverifiable evidence"
         stop_reason = state.stop_reason
         verification: JsonObject | None = None
         if report is not None:
@@ -259,17 +272,13 @@ class AdminAgentService:
         traces: list[ExecutionTrace] = []
         for execution_id in execution_ids:
             try:
-                report = self._surface.execution_store.get(
-                    caller.tenant_id, execution_id
-                )
+                report = self._surface.execution_store.get(caller.tenant_id, execution_id)
             except KeyError:
                 continue  # never fabricate a trace for an unrecorded id
             traces.append(self._trace_report(report))
         return traces
 
-    def _build_loop(
-        self, caller: Principal, message: str, state: _TurnState
-    ) -> AgentLoop:
+    def _build_loop(self, caller: Principal, message: str, state: _TurnState) -> AgentLoop:
         """Compose one turn's shared AgentLoop over the V3 gated runtime.
 
         The synthetic ``admin_round`` tool exists ONLY so every act passes
@@ -299,9 +308,7 @@ class AdminAgentService:
             ),
         )
         usage = InMemoryUsageAccounting()
-        usage.configure_tenant(
-            caller.tenant_id, plan="admin_agent_turn", task_units_limit=1.0
-        )
+        usage.configure_tenant(caller.tenant_id, plan="admin_agent_turn", task_units_limit=1.0)
 
         async def dispatch_round(arguments: JsonObject) -> JsonObject:
             """One round's acts: batched calls through the REAL dispatcher."""
@@ -315,9 +322,7 @@ class AdminAgentService:
                     call_args = call.get("arguments")
                     if not isinstance(call_args, dict):
                         call_args = {}
-                    record = await self._dispatcher.dispatch(
-                        caller, tool, call_args
-                    )
+                    record = await self._dispatcher.dispatch(caller, tool, call_args)
                     state.transcript.append(record)
                     if record.ok:
                         state.index.absorb(record.result)
@@ -397,9 +402,7 @@ class AdminAgentService:
         claims_admitted = len(state.claims)
         claims_refused = state.refused_claims
         tools_ok = sum(1 for r in state.transcript if r.ok)
-        verified = not (
-            claims_admitted == 0 and claims_refused > 0 and tools_ok > 0
-        )
+        verified = not (claims_admitted == 0 and claims_refused > 0 and tools_ok > 0)
         verdict: JsonObject = {
             "verified": verified,
             "claims_admitted": claims_admitted,
@@ -439,9 +442,7 @@ class AdminAgentService:
         observations: list[JsonObject] = []
         if isinstance(raw_observations, list):
             for entry in raw_observations:
-                if isinstance(entry, dict) and isinstance(
-                    entry.get("result"), dict
-                ):
+                if isinstance(entry, dict) and isinstance(entry.get("result"), dict):
                     observations.append(entry["result"])
 
         round_no = state.rounds + 1
@@ -465,11 +466,7 @@ class AdminAgentService:
 
         calls = proposals.get("tool_calls")
         calls = calls if isinstance(calls, list) else []
-        dispatchable = sum(
-            1
-            for call in calls[:_MAX_TOOL_CALLS_PER_TURN]
-            if isinstance(call, dict)
-        )
+        dispatchable = sum(1 for call in calls[:_MAX_TOOL_CALLS_PER_TURN] if isinstance(call, dict))
 
         # --- deterministic disposal (verbatim historical rules) ------------
         if proposals.get("continue") is not True:
@@ -500,14 +497,15 @@ class AdminAgentService:
         round_no: int = 1,
     ) -> tuple[str | None, UUID | None]:
         """The agent's model call — through the platform's OWN execute path."""
-        ask = _PROPOSAL_PROTOCOL.replace(
-            "{max_calls}", str(_MAX_TOOL_CALLS_PER_TURN)
-        ).replace(
-            "{max_rounds}", str(_MAX_ROUNDS)
-        ).replace(
-            "{tools}",
-            json.dumps(self._registry.describe(), ensure_ascii=False),
-        ).replace("{message}", message)
+        ask = (
+            _PROPOSAL_PROTOCOL.replace("{max_calls}", str(_MAX_TOOL_CALLS_PER_TURN))
+            .replace("{max_rounds}", str(_MAX_ROUNDS))
+            .replace(
+                "{tools}",
+                json.dumps(self._registry.describe(), ensure_ascii=False),
+            )
+            .replace("{message}", message)
+        )
         if observations:
             ask += (
                 "\nObservations from your previous rounds' tool calls "
@@ -516,47 +514,19 @@ class AdminAgentService:
                 + '\nDecide: call more tools (with "continue": true) or '
                 "finalize with evidence-cited claims."
             )
-        payload: JsonObject = {
-            "ask": ask,
-            "context": {
-                "metadata": {
-                    AGENT_LABEL_KEY: {
-                        "kind": "reasoning",
-                        "round": round_no,
-                        "tools": self._registry.names(),
-                    }
-                }
-            },
-        }
         try:
-            decision = self._surface.router.route(
-                RoutingRequest(operation=ProviderOperation.GENERATE_TEXT)
-            )
-        except (NoEligibleCandidates, FallbackNotConfigured, UnsupportedPolicyType):
-            return None, None
-        request_hash = hashlib.sha256(
-            json.dumps(payload, sort_keys=True).encode("utf-8")
-        ).hexdigest()
-        try:
-            report = self._surface.execution_service
-            result = await report.execute_single(
+            return await self._runtime.reason(
                 tenant_id=caller.tenant_id,
                 user_id=caller.user_id,
-                decision=decision,
-                operation=ProviderOperation.GENERATE_TEXT,
-                payload=payload,
-                request_hash=request_hash,
+                prompt=ask,
+                label={"round": round_no, "tools": self._registry.names()},
+                label_key=AGENT_LABEL_KEY,
             )
-        except (BudgetExceeded, EntitlementNotConfigured):
-            return None, None
-        self._surface.execution_store.put(result)
-        output = result.final_output
-        if output is None:
-            return None, result.execution.id
-        content = output.get("content")
-        if not isinstance(content, str):
-            content = json.dumps(output)
-        return content, result.execution.id
+        except ReasoningFailed as exc:
+            # Routing / budget / failed execution: the historical disposal is
+            # "no proposal this round" — the stored (failed) execution id, if
+            # any, still reaches the trace.
+            return None, exc.execution_id
 
     @staticmethod
     def _parse_proposals(raw: str) -> tuple[JsonObject | None, str | None]:
@@ -634,13 +604,9 @@ class AdminAgentService:
                     model_key=self._model_key(a.candidate.model_id),
                     provider_key=self._provider_key(a.candidate.provider_id),
                     succeeded=a.succeeded,
-                    error_category=(
-                        a.error.category.value if a.error is not None else None
-                    ),
+                    error_category=(a.error.category.value if a.error is not None else None),
                     safe_message=(
-                        scrub_text(a.error.safe_message)[:512]
-                        if a.error is not None
-                        else None
+                        scrub_text(a.error.safe_message)[:512] if a.error is not None else None
                     ),
                     latency_ms=a.latency_ms,
                 )

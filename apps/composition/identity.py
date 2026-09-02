@@ -120,9 +120,7 @@ class DurableIdentityService:
 
     def verify_email(self, token: str) -> User:
         user = self.bridge.run(
-            self.repository.redeem_verification_token(
-                _digest(token), now=self.clock()
-            )
+            self.repository.redeem_verification_token(_digest(token), now=self.clock())
         )
         if user is None:
             raise VerificationFailed("invalid or already-used token")
@@ -132,9 +130,7 @@ class DurableIdentityService:
 
     def login(self, email: str, password: str) -> Session:
         normalized = _normalize_email(email)
-        account = self.bridge.run(
-            self.repository.get_account_by_email(normalized)
-        )
+        account = self.bridge.run(self.repository.get_account_by_email(normalized))
         if account is None:
             self.hasher.hash(password)  # equalize work factor (recorded)
             raise AuthenticationFailed()

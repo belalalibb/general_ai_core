@@ -68,9 +68,7 @@ class DurableWorkspaceStore:
 
     async def get(self, tenant_id: UUID, workspace_id: UUID) -> Workspace:
         try:
-            return await self.bridge.run_async(
-                self.repository.get(tenant_id, workspace_id)
-            )
+            return await self.bridge.run_async(self.repository.get(tenant_id, workspace_id))
         except RepoWorkspaceNotFound as exc:
             raise WorkspaceNotFound(workspace_id) from exc
 
@@ -79,9 +77,7 @@ class DurableWorkspaceStore:
 
     async def delete(self, tenant_id: UUID, workspace_id: UUID) -> None:
         try:
-            await self.bridge.run_async(
-                self.repository.delete(tenant_id, workspace_id)
-            )
+            await self.bridge.run_async(self.repository.delete(tenant_id, workspace_id))
         except RepoWorkspaceNotFound as exc:
             raise WorkspaceNotFound(workspace_id) from exc
         except IntegrityError as exc:
@@ -102,9 +98,7 @@ class DurableProjectStore:
 
     async def get(self, tenant_id: UUID, project_id: UUID) -> Project:
         try:
-            return await self.bridge.run_async(
-                self.repository.get(tenant_id, project_id)
-            )
+            return await self.bridge.run_async(self.repository.get(tenant_id, project_id))
         except RepoProjectNotFound as exc:
             raise ProjectNotFound(project_id) from exc
 
@@ -117,9 +111,7 @@ class DurableProjectStore:
 
     async def delete(self, tenant_id: UUID, project_id: UUID) -> None:
         try:
-            await self.bridge.run_async(
-                self.repository.delete(tenant_id, project_id)
-            )
+            await self.bridge.run_async(self.repository.delete(tenant_id, project_id))
         except RepoProjectNotFound as exc:
             raise ProjectNotFound(project_id) from exc
 

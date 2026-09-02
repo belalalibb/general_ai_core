@@ -100,9 +100,7 @@ class AsyncBridge:
             coro.close()
             raise BridgeClosed("AsyncBridge is closed")
         future = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return await asyncio.wait_for(
-            asyncio.wrap_future(future), timeout=self._timeout_s
-        )
+        return await asyncio.wait_for(asyncio.wrap_future(future), timeout=self._timeout_s)
 
     def close(self) -> None:
         """Stop the loop and join the thread (idempotent)."""

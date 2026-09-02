@@ -110,9 +110,7 @@ class TestInMemoryBudgetGrant:
         assert isinstance(prof.identity, BudgetGrantingIdentity)
         stream = io.StringIO()
         with contextlib.redirect_stdout(stream):
-            user = prof.identity.register(
-                "gap2@example.com", "correct horse battery staple", "en"
-            )
+            user = prof.identity.register("gap2@example.com", "correct horse battery staple", "en")
         token = json.loads(stream.getvalue())["token"]
         prof.identity.verify_email(token)
         prof.identity.login("gap2@example.com", "correct horse battery staple")

@@ -32,6 +32,7 @@ from apps.api.provider_onboarding import (
     create_provider_onboarding_router,
 )
 from apps.api.skills_import import SkillReviewSurface, create_skills_import_router
+from core.agent import AgentRuntime
 
 #: repo_root/ui/admin — the static 7-surface shell (doc D §2).
 UI_DIR = Path(__file__).resolve().parents[2] / "ui" / "admin"
@@ -45,11 +46,17 @@ def attach_admin_console(
     ui: bool = True,
     skill_review: SkillReviewSurface | None = None,
     provider_onboarding: ProviderOnboardingSurface | None = None,
+    runtime: AgentRuntime | None = None,
 ) -> AdminAgentService:
-    """Mount /v1/agent + AA-3 seams (+ optionally /admin static UI)."""
+    """Mount /v1/agent + AA-3 seams (+ optionally /admin static UI).
+
+    ``runtime`` (R160) is the platform's ONE shared ``core.agent`` runtime;
+    the Admin agent reasons through it (Admin parity via generic seams).
+    Absent ⇒ the service derives one over the same surface seams.
+    """
     registry = build_registry(surface)
     dispatcher = ToolDispatcher(registry, audit=surface.audit)
-    service = AdminAgentService(surface, registry, dispatcher)
+    service = AdminAgentService(surface, registry, dispatcher, runtime=runtime)
     resolve = session_resolver(auth)
     app.include_router(create_agent_router(service, registry, resolve=resolve))
 
@@ -71,9 +78,7 @@ def attach_admin_console(
     # Canonical-gateway providers only (DECISION 2); absent when the
     # gateway binding is not configured ⇒ the route does not exist.
     if provider_onboarding is not None:
-        app.include_router(
-            create_provider_onboarding_router(provider_onboarding, resolve=resolve)
-        )
+        app.include_router(create_provider_onboarding_router(provider_onboarding, resolve=resolve))
 
     if ui and UI_DIR.is_dir():
         app.mount("/admin", StaticFiles(directory=str(UI_DIR), html=True), name="admin_ui")

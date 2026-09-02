@@ -54,9 +54,7 @@ ROLLBACK_DENIAL = (
 )
 
 
-async def _admin_post(
-    world: AgentWorld, path: str, body: dict[str, Any] | None = None
-) -> Any:
+async def _admin_post(world: AgentWorld, path: str, body: dict[str, Any] | None = None) -> Any:
     token = await _login(world.app, ADMIN_EMAIL)
     async with _client(world.app) as c:
         return await c.post(path, headers=bearer(token), json=body or {})
@@ -111,9 +109,7 @@ class TestCriterion1SameLifecycle:
         assert len(records) == 2
         agent_record, form_record = records
         exclude = {"id", "created_at"}
-        assert agent_record.model_dump(exclude=exclude) == form_record.model_dump(
-            exclude=exclude
-        )
+        assert agent_record.model_dump(exclude=exclude) == form_record.model_dump(exclude=exclude)
 
     def test_agent_drafted_change_progresses_through_the_same_http_lifecycle(
         self,
@@ -139,17 +135,13 @@ class TestCriterion1SameLifecycle:
                 ("preview", "validated"),
                 ("publish", "published"),
             ):
-                response = await _admin_post(
-                    world, f"/v1/admin/changes/{change_id}/{step}"
-                )
+                response = await _admin_post(world, f"/v1/admin/changes/{change_id}/{step}")
                 assert response.status_code == 200, (step, response.text)
                 assert response.json()["state"] == expected_state
 
         run(lifecycle())
         # Same audit trail: ADMIN_CONFIG_PUBLISHED names THIS change.
-        events = world.audit.read(
-            admin.tenant_id, event_type=AuditEventType.ADMIN_CONFIG_PUBLISHED
-        )
+        events = world.audit.read(admin.tenant_id, event_type=AuditEventType.ADMIN_CONFIG_PUBLISHED)
         assert any(e.details.get("change_id") == change_id for e in events)
 
     def test_agent_validate_and_preview_tools_hit_the_same_service(self) -> None:
@@ -166,17 +158,13 @@ class TestCriterion1SameLifecycle:
         assert drafted.result is not None
         change_id = drafted.result["change_id"]
         validated = run(
-            world.dispatcher.dispatch(
-                admin, "validate_change", {"change_id": change_id}
-            )
+            world.dispatcher.dispatch(admin, "validate_change", {"change_id": change_id})
         )
         assert validated.result is not None
         assert validated.result["state"] == "validated"
         assert validated.result["validation_result"] == "passed"
         previewed = run(
-            world.dispatcher.dispatch(
-                admin, "preview_change", {"change_id": change_id}
-            )
+            world.dispatcher.dispatch(admin, "preview_change", {"change_id": change_id})
         )
         assert previewed.result is not None
         assert "impact_preview" in previewed.result
@@ -190,9 +178,7 @@ class TestCriterion1SameLifecycle:
         admin = world.admin_principal()
         # Unknown / foreign id: anti-enumeration answer.
         unknown = run(
-            world.dispatcher.dispatch(
-                admin, "validate_change", {"change_id": str(uuid4())}
-            )
+            world.dispatcher.dispatch(admin, "validate_change", {"change_id": str(uuid4())})
         )
         assert unknown.result is not None
         assert unknown.result["error"] == "unknown change id"
@@ -207,9 +193,7 @@ class TestCriterion1SameLifecycle:
         assert drafted.result is not None
         change_id = drafted.result["change_id"]
         run(world.dispatcher.dispatch(admin, "validate_change", {"change_id": change_id}))
-        again = run(
-            world.dispatcher.dispatch(admin, "validate_change", {"change_id": change_id})
-        )
+        again = run(world.dispatcher.dispatch(admin, "validate_change", {"change_id": change_id}))
         assert again.result is not None
         assert again.result["error"] == (
             "invalid lifecycle transition: expected draft, found validated"
@@ -281,13 +265,9 @@ class TestCriterion3VerbatimRollbackDenial:
             assert draft.status_code == 201, draft.text
             change_id = draft.json()["id"]
             for step in ("validate", "preview", "publish"):
-                response = await _admin_post(
-                    world, f"/v1/admin/changes/{change_id}/{step}"
-                )
+                response = await _admin_post(world, f"/v1/admin/changes/{change_id}/{step}")
                 assert response.status_code == 200, (step, response.text)
-            rollback = await _admin_post(
-                world, f"/v1/admin/changes/{change_id}/rollback"
-            )
+            rollback = await _admin_post(world, f"/v1/admin/changes/{change_id}/rollback")
             assert rollback.status_code == 409
             error = rollback.json()["error"]
             assert error["code"] == "validation_error"
@@ -404,8 +384,7 @@ class TestCriterion4NotificationsEvidence:
         public_methods = {
             name
             for name in dir(NotificationService)
-            if not name.startswith("_")
-            and callable(getattr(NotificationService, name))
+            if not name.startswith("_") and callable(getattr(NotificationService, name))
         }
         assert public_methods == {"list", "ack"}
 
@@ -420,16 +399,12 @@ class TestCriterion4NotificationsEvidence:
                 unread_before = first.json()["unread"]
                 assert unread_before == len(rows)
                 target = rows[0]["id"]
-                ack = await c.post(
-                    f"/v1/admin/notifications/{target}/ack", headers=bearer(token)
-                )
+                ack = await c.post(f"/v1/admin/notifications/{target}/ack", headers=bearer(token))
                 assert ack.status_code == 200
                 assert ack.json() == {"acknowledged": target}
                 second = await c.get("/v1/admin/notifications", headers=bearer(token))
                 assert second.json()["unread"] == unread_before - 1
-                acked_row = next(
-                    r for r in second.json()["notifications"] if r["id"] == target
-                )
+                acked_row = next(r for r in second.json()["notifications"] if r["id"] == target)
                 assert acked_row["read"] is True
 
         run(check())
@@ -439,9 +414,7 @@ class TestCriterion4NotificationsEvidence:
         world = AgentWorld()
 
         async def check() -> None:
-            response = await _admin_post(
-                world, f"/v1/admin/notifications/audit:{uuid4()}/ack"
-            )
+            response = await _admin_post(world, f"/v1/admin/notifications/audit:{uuid4()}/ack")
             assert response.status_code == 404
             assert response.json()["error"]["code"] == "validation_error"
 
@@ -514,9 +487,7 @@ class TestSkillImportSurface:
                 assert reviewed.status_code == 200
                 assert reviewed.json()["status"] == "reviewed"
                 # Reviewer = the authenticated principal, never claimed.
-                assert reviewed.json()["provenance"]["reviewed_by"] == str(
-                    admin.user_id
-                )
+                assert reviewed.json()["provenance"]["reviewed_by"] == str(admin.user_id)
 
                 approved = await c.post(
                     f"/v1/admin/skills/imports/{skill_id}/approve", headers=headers
@@ -616,9 +587,7 @@ class TestSkillImportSurface:
 
         async def check() -> None:
             for skill_id in (str(uuid4()), "not-a-uuid"):
-                response = await _admin_post(
-                    world, f"/v1/admin/skills/imports/{skill_id}/validate"
-                )
+                response = await _admin_post(world, f"/v1/admin/skills/imports/{skill_id}/validate")
                 assert response.status_code == 404, skill_id
                 error = response.json()["error"]
                 assert error["code"] == "validation_error"
@@ -661,8 +630,8 @@ class TestSkillImportSurface:
                     f"/v1/admin/skills/imports/{skill_id}/activate", headers=headers
                 )
                 assert response.status_code == 409
-                assert "cannot activate from status=imported" in (
-                    response.json()["error"]["message"]
+                assert (
+                    "cannot activate from status=imported" in (response.json()["error"]["message"])
                 )
             # And nothing reached the registry.
             try:

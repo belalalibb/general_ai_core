@@ -67,23 +67,15 @@ class SourceChangeRepositoryPort(Protocol):
     Postgres round-trip is tested env-gated, never simulated as green).
     """
 
-    async def save_snapshot(
-        self, tenant_id: UUID, snapshot: SourceSnapshot
-    ) -> None: ...
+    async def save_snapshot(self, tenant_id: UUID, snapshot: SourceSnapshot) -> None: ...
 
-    async def get_snapshot(
-        self, tenant_id: UUID, snapshot_id: str
-    ) -> SourceSnapshot: ...
+    async def get_snapshot(self, tenant_id: UUID, snapshot_id: str) -> SourceSnapshot: ...
 
     async def save_proposal(self, proposal: ChangeProposal) -> None: ...
 
-    async def get_proposal(
-        self, tenant_id: UUID, proposal_id: UUID
-    ) -> ChangeProposal: ...
+    async def get_proposal(self, tenant_id: UUID, proposal_id: UUID) -> ChangeProposal: ...
 
-    async def list_proposals(
-        self, tenant_id: UUID
-    ) -> tuple[ChangeProposal, ...]: ...
+    async def list_proposals(self, tenant_id: UUID) -> tuple[ChangeProposal, ...]: ...
 
 
 class DurableSnapshotStore:
@@ -94,9 +86,7 @@ class DurableSnapshotStore:
     whose content-address lies about them (criterion 1).
     """
 
-    def __init__(
-        self, *, repository: SourceChangeRepositoryPort, bridge: AsyncBridge
-    ) -> None:
+    def __init__(self, *, repository: SourceChangeRepositoryPort, bridge: AsyncBridge) -> None:
         self._repository = repository
         self._bridge = bridge
 
@@ -108,9 +98,7 @@ class DurableSnapshotStore:
     def get_snapshot(self, tenant_id: UUID, snapshot_id: str) -> SourceSnapshot:
         """Named refusals pass through verbatim (:class:`UnknownSnapshot`
         for absent/foreign); the reconstruction is re-verified HERE."""
-        snapshot = self._bridge.run(
-            self._repository.get_snapshot(tenant_id, snapshot_id)
-        )
+        snapshot = self._bridge.run(self._repository.get_snapshot(tenant_id, snapshot_id))
         if not snapshot.verify_integrity():
             raise SnapshotIntegrityError(snapshot_id)
         return snapshot
@@ -125,9 +113,7 @@ class DurableProposalStore:
     through both layers (20 §6).
     """
 
-    def __init__(
-        self, *, repository: SourceChangeRepositoryPort, bridge: AsyncBridge
-    ) -> None:
+    def __init__(self, *, repository: SourceChangeRepositoryPort, bridge: AsyncBridge) -> None:
         self._repository = repository
         self._bridge = bridge
 
@@ -135,9 +121,7 @@ class DurableProposalStore:
         self._bridge.run(self._repository.save_proposal(proposal))
 
     def get_proposal(self, tenant_id: UUID, proposal_id: UUID) -> ChangeProposal:
-        return self._bridge.run(
-            self._repository.get_proposal(tenant_id, proposal_id)
-        )
+        return self._bridge.run(self._repository.get_proposal(tenant_id, proposal_id))
 
     def list_proposals(self, tenant_id: UUID) -> tuple[ChangeProposal, ...]:
         return self._bridge.run(self._repository.list_proposals(tenant_id))

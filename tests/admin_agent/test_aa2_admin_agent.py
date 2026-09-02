@@ -96,9 +96,7 @@ class AgentWorld:
         self.store = InMemoryExecutionStore()
         self.execution_service = ExecutionService(
             adapters={self.world.provider.id: self.adapter},
-            credential_refs={
-                self.world.provider.id: f"secret-ref://{self.world.provider.id}"
-            },
+            credential_refs={self.world.provider.id: f"secret-ref://{self.world.provider.id}"},
             bindings=self.world.bindings,
             max_retries_per_candidate=0,
             usage=self.world.usage,
@@ -174,9 +172,7 @@ class AgentWorld:
 
 
 def _client(app: FastAPI) -> httpx.AsyncClient:
-    return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    )
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
 def bearer(token: str) -> dict[str, str]:
@@ -185,9 +181,7 @@ def bearer(token: str) -> dict[str, str]:
 
 async def _login(app: FastAPI, email: str) -> str:
     async with _client(app) as c:
-        response = await c.post(
-            "/v1/auth/login", json={"email": email, "password": PASSWORD}
-        )
+        response = await c.post("/v1/auth/login", json={"email": email, "password": PASSWORD})
     assert response.status_code == 200, response.text
     token = response.json()["token"]
     assert isinstance(token, str)
@@ -199,11 +193,7 @@ def _reasoning(
     claims: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """One scripted model output: a JSON proposal riding {"content": ...}."""
-    return {
-        "content": json.dumps(
-            {"tool_calls": tool_calls or [], "claims": claims or []}
-        )
-    }
+    return {"content": json.dumps({"tool_calls": tool_calls or [], "claims": claims or []})}
 
 
 def _provider_error(
@@ -216,9 +206,7 @@ def _provider_error(
 def openapi_ops(app: FastAPI) -> list[str]:
     spec = app.openapi()
     return sorted(
-        f"{method.upper()} {path}"
-        for path, item in spec["paths"].items()
-        for method in item
+        f"{method.upper()} {path}" for path, item in spec["paths"].items() for method in item
     )
 
 
@@ -238,9 +226,7 @@ class TestDispatcherDeterminism:
             ToolClass.R4_FORBIDDEN,
         ):
             with pytest.raises(ToolClassNotRegistrable):
-                ToolRegistry(
-                    [ToolSpec(name="evil", tool_class=tool_class, handler=_noop_handler)]
-                )
+                ToolRegistry([ToolSpec(name="evil", tool_class=tool_class, handler=_noop_handler)])
 
     def test_registrable_set_is_exactly_r0_r1(self) -> None:
         assert AA2_REGISTRABLE_CLASSES == {
@@ -249,9 +235,7 @@ class TestDispatcherDeterminism:
         }
 
     def test_aa3_registrable_set_adds_exactly_r2(self) -> None:
-        assert AA3_REGISTRABLE_CLASSES == AA2_REGISTRABLE_CLASSES | {
-            ToolClass.R2_CONFIG_CHANGE
-        }
+        assert AA3_REGISTRABLE_CLASSES == AA2_REGISTRABLE_CLASSES | {ToolClass.R2_CONFIG_CHANGE}
 
     def test_r3_r4_never_registrable_even_with_widest_set(self) -> None:
         """Doc C §5: publish is a human act; R3/R4 are UNCONDITIONALLY out —
@@ -374,9 +358,7 @@ class TestEvidenceEnforcement:
             AgentClaim(text="the platform is fine", evidence=[])
 
     def test_uncited_model_claims_refused(self) -> None:
-        world = AgentWorld(
-            [_reasoning(claims=[{"text": "all models healthy", "evidence": []}])]
-        )
+        world = AgentWorld([_reasoning(claims=[{"text": "all models healthy", "evidence": []}])])
         world.grant_budget(100)
         answer = run(world.service.converse(world.admin_principal(), "status?"))
         assert answer.claims == []
@@ -463,9 +445,7 @@ class TestR1RealExecutions:
     def test_r1_visible_in_executions_list_over_http(self) -> None:
         world = AgentWorld(
             [
-                _reasoning(
-                    tool_calls=[{"tool": "run_test_execution", "arguments": {}}]
-                ),
+                _reasoning(tool_calls=[{"tool": "run_test_execution", "arguments": {}}]),
                 {"content": "pong"},
             ]
         )
@@ -490,9 +470,7 @@ class TestR1RealExecutions:
         """With 0.5 units the reservation (1 unit) is denied honestly."""
         world = AgentWorld(
             [
-                _reasoning(
-                    tool_calls=[{"tool": "run_test_execution", "arguments": {}}]
-                ),
+                _reasoning(tool_calls=[{"tool": "run_test_execution", "arguments": {}}]),
             ]
         )
         world.grant_budget(0.5)
@@ -510,9 +488,7 @@ class TestR1RealExecutions:
         """1.5 units: reasoning (1) succeeds, R1 reservation (1) denied."""
         world = AgentWorld(
             [
-                _reasoning(
-                    tool_calls=[{"tool": "run_test_execution", "arguments": {}}]
-                ),
+                _reasoning(tool_calls=[{"tool": "run_test_execution", "arguments": {}}]),
             ]
         )
         world.grant_budget(1.5)
@@ -525,11 +501,7 @@ class TestR1RealExecutions:
     def test_r1_no_entitlement_denied(self) -> None:
         world = AgentWorld()
         # NO grant_budget: unknown tenant ⇒ deny-by-default.
-        record = run(
-            world.dispatcher.dispatch(
-                world.admin_principal(), "run_test_execution", {}
-            )
-        )
+        record = run(world.dispatcher.dispatch(world.admin_principal(), "run_test_execution", {}))
         assert record.ok is True
         assert record.result is not None
         assert "entitlement" in str(record.result.get("error", ""))
@@ -589,9 +561,7 @@ class TestSecrecy:
         """A provider that echoes a secret cannot leak it through R1."""
         world = AgentWorld(
             [
-                _reasoning(
-                    tool_calls=[{"tool": "run_test_execution", "arguments": {}}]
-                ),
+                _reasoning(tool_calls=[{"tool": "run_test_execution", "arguments": {}}]),
                 {"content": "leaked: sk-abcdefghijklmnop1234 and secret-ref://p/x"},
             ]
         )
@@ -684,9 +654,7 @@ class TestAgentHttpSurface:
         world = AgentWorld([{"content": "pong"}])
         world.grant_budget(100)
         admin = world.admin_principal()
-        record = run(
-            world.dispatcher.dispatch(admin, "run_test_execution", {"ask": "ping"})
-        )
+        record = run(world.dispatcher.dispatch(admin, "run_test_execution", {"ask": "ping"}))
         assert record.ok and record.result is not None
         execution_id = record.result["execution_id"]
 
@@ -726,7 +694,9 @@ class TestAgentHttpSurface:
 
     def test_diagnosis_proven_cause_names_category(self) -> None:
         world = AgentWorld(
-            [_provider_error(message="quota exhausted upstream"), ]
+            [
+                _provider_error(message="quota exhausted upstream"),
+            ]
         )
         world.grant_budget(100)
         admin = world.admin_principal()

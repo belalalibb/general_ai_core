@@ -32,11 +32,7 @@ def run(coro: Any) -> Any:
 
 def _continuing(tool_calls: list[dict[str, Any]]) -> dict[str, Any]:
     """A proposal that calls tools AND asks to continue."""
-    return {
-        "content": json.dumps(
-            {"tool_calls": tool_calls, "claims": [], "continue": True}
-        )
-    }
+    return {"content": json.dumps({"tool_calls": tool_calls, "claims": [], "continue": True})}
 
 
 LIST_MODELS = {"tool": "list_models", "arguments": {}}
@@ -100,9 +96,7 @@ class TestIteration:
         assert answer.stop_reason == "continue_without_tools"
 
     def test_invalid_proposal_mid_loop_stops_honestly(self) -> None:
-        world = AgentWorld(
-            [_continuing([LIST_MODELS]), {"content": "prose, not JSON"}]
-        )
+        world = AgentWorld([_continuing([LIST_MODELS]), {"content": "prose, not JSON"}])
         world.grant_budget(100)
         answer = run(world.service.converse(world.admin_principal(), "go"))
         assert answer.rounds == 2
@@ -126,25 +120,19 @@ class TestIteration:
 
     def test_flood_bound_applies_per_round(self) -> None:
         flood = [LIST_MODELS for _ in range(50)]
-        world = AgentWorld(
-            [_continuing(flood), _reasoning(tool_calls=[LIST_MODELS])]
-        )
+        world = AgentWorld([_continuing(flood), _reasoning(tool_calls=[LIST_MODELS])])
         world.grant_budget(100)
         answer = run(world.service.converse(world.admin_principal(), "flood"))
         assert answer.rounds == 2
         assert len(answer.tool_calls) == 9  # 8 (capped round 1) + 1 (round 2)
 
     def test_each_round_reasoning_labeled_with_round_number(self) -> None:
-        world = AgentWorld(
-            [_continuing([LIST_MODELS]), _reasoning(tool_calls=[])]
-        )
+        world = AgentWorld([_continuing([LIST_MODELS]), _reasoning(tool_calls=[])])
         world.grant_budget(100)
         admin = world.admin_principal()
         answer = run(world.service.converse(admin, "go"))
         assert len(answer.reasoning_execution_ids) == 2
-        for expected_round, execution_id in enumerate(
-            answer.reasoning_execution_ids, start=1
-        ):
+        for expected_round, execution_id in enumerate(answer.reasoning_execution_ids, start=1):
             report = world.store.get(admin.tenant_id, execution_id)
             input_ref = report.nodes[0].node.input_ref
             assert isinstance(input_ref, dict)

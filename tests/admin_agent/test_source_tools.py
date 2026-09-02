@@ -30,9 +30,7 @@ def run(coro: Any) -> Any:
 @pytest.fixture()
 def repo(tmp_path: Path) -> Path:
     (tmp_path / "core").mkdir()
-    (tmp_path / "core" / "engine.py").write_text(
-        "def route():\n    return 'decision'\n"
-    )
+    (tmp_path / "core" / "engine.py").write_text("def route():\n    return 'decision'\n")
     (tmp_path / ".env").write_text("API_KEY=sk-abcdefghijklmnop1234\n")
     return tmp_path
 
@@ -40,9 +38,7 @@ def repo(tmp_path: Path) -> Path:
 def world_with_source(repo: Path, script: list[object] | None = None) -> AgentWorld:
     """AgentWorld whose surface carries a SourceReader (rebuilt seams)."""
     world = AgentWorld(script)
-    world.surface = dataclasses.replace(
-        world.surface, repo_reader=SourceReader(root=repo)
-    )
+    world.surface = dataclasses.replace(world.surface, repo_reader=SourceReader(root=repo))
     world.registry = build_registry(world.surface)
     world.dispatcher = ToolDispatcher(world.registry, audit=world.audit)
     world.service = AdminAgentService(world.surface, world.registry, world.dispatcher)
@@ -95,9 +91,7 @@ class TestDispatch:
     def test_denied_env_file_refused(self, repo: Path) -> None:
         world = world_with_source(repo)
         record = run(
-            world.dispatcher.dispatch(
-                world.admin_principal(), "read_source_file", {"path": ".env"}
-            )
+            world.dispatcher.dispatch(world.admin_principal(), "read_source_file", {"path": ".env"})
         )
         assert record.ok is True
         assert record.result is not None
@@ -105,11 +99,7 @@ class TestDispatch:
 
     def test_search_and_list_work(self, repo: Path) -> None:
         world = world_with_source(repo)
-        listing = run(
-            world.dispatcher.dispatch(
-                world.admin_principal(), "list_source_files", {}
-            )
-        )
+        listing = run(world.dispatcher.dispatch(world.admin_principal(), "list_source_files", {}))
         assert listing.result is not None
         assert "core/engine.py" in listing.result["files"]
         found = run(
@@ -134,9 +124,7 @@ class TestEndToEndScrubbing:
     def test_secretish_content_scrubbed_in_answer(self, repo: Path) -> None:
         # A NON-denied file that embeds a key-shaped string: content-level
         # scrubbing still protects the transcript.
-        (repo / "core" / "config_sample.py").write_text(
-            'KEY = "sk-abcdefghijklmnop1234"\n'
-        )
+        (repo / "core" / "config_sample.py").write_text('KEY = "sk-abcdefghijklmnop1234"\n')
         world = world_with_source(
             repo,
             [
@@ -164,9 +152,7 @@ class TestEndToEndScrubbing:
                 {
                     "content": json.dumps(
                         {
-                            "tool_calls": [
-                                {"tool": "list_source_files", "arguments": {}}
-                            ],
+                            "tool_calls": [{"tool": "list_source_files", "arguments": {}}],
                             "claims": [],
                             "continue": True,
                         }
