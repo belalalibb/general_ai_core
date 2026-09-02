@@ -185,6 +185,7 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
   collapseAgentPanelIfNarrow();
   refreshHealth();
   loadAgent();
+  loadPlatformAgentTools();
   loadSurface("overview");
 });
 
@@ -274,6 +275,38 @@ async function loadAgent() {
     const cls = document.createElement("td"); cls.appendChild(statusBadge(tool.class));
     const args = document.createElement("td"); args.textContent = tool.arguments.join(", ") || "\u2014";
     tr.append(name, cls, args);
+    tbody.appendChild(tr);
+  }
+}
+
+/* Admin parity (R160): the SAME platform-wide catalog every tenant reads —
+   GET /v1/agent-tools (the strategy=agent allow-list seam). Admin consumes
+   the generic surface; nothing is re-derived here. Absent route (no agent
+   seam composed) renders as an honest note, never an invented list. */
+async function loadPlatformAgentTools() {
+  const result = await api("/v1/agent-tools");
+  const note = document.getElementById("platform-tools-note");
+  const tbody = document.querySelector("#platform-tools-table tbody");
+  tbody.textContent = "";
+  if (!result.ok) {
+    note.textContent = result.status === 404
+      ? "Shared agent runtime not composed in this profile (route absent)."
+      : `Catalog unavailable (${result.status}).`;
+    return;
+  }
+  const tools = result.body.tools || [];
+  note.textContent = `strategy=${result.body.strategy} · max_steps=${result.body.max_steps} · ${tools.length} tool(s) offered`;
+  for (const tool of tools) {
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    name.className = "mono";
+    name.textContent = tool.name;
+    name.title = tool.description || "";
+    const perm = document.createElement("td"); perm.className = "mono"; perm.textContent = tool.permission;
+    const risk = document.createElement("td"); risk.className = "mono"; risk.textContent = tool.risk_level;
+    const args = document.createElement("td");
+    args.textContent = Object.keys(tool.arguments || {}).join(", ") || "\u2014";
+    tr.append(name, perm, risk, args);
     tbody.appendChild(tr);
   }
 }

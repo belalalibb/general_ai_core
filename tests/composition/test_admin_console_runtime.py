@@ -337,3 +337,58 @@ class TestExternalSkillAcquisition:
                 assert r.status_code == 422
 
         run(scenario())
+
+
+# --- 6: Admin parity — the console CONSUMES the shared agent catalog ----------
+
+
+ADMIN_APP_JS = REPO_ROOT / "ui" / "admin" / "app.js"
+ADMIN_INDEX = REPO_ROOT / "ui" / "admin" / "index.html"
+
+
+class TestAdminParityAgentCatalog:
+    def test_console_reads_the_generic_agent_tools_seam(self) -> None:
+        """R160 admin parity: the admin shell reads GET /v1/agent-tools — the
+        SAME catalog every tenant reads — and never re-derives a private
+        copy (P3: consume the generic surface)."""
+        js = ADMIN_APP_JS.read_text(encoding="utf-8")
+        assert 'api("/v1/agent-tools")' in js
+        assert "loadPlatformAgentTools();" in js
+        # Absent seam renders as an honest note, never an invented list.
+        assert "route absent" in js
+        html = ADMIN_INDEX.read_text(encoding="utf-8")
+        assert 'id="platform-tools-table"' in html
+
+    def test_admin_and_tenant_read_the_same_catalog(self) -> None:
+        """ONE derivation, two consumers: the body an admin session receives
+        from /v1/agent-tools is byte-identical to the tenant's."""
+        profile = build_runtime_profile(environ={"ADMIN_EMAILS": ADMIN_EMAIL})
+        token = _admin_token(profile)
+
+        async def scenario() -> None:
+            async with _client(profile.app) as c:
+                as_admin = await c.get(
+                    "/v1/agent-tools", headers={"Authorization": f"Bearer {token}"}
+                )
+                assert as_admin.status_code == 200, as_admin.text
+                body = as_admin.json()
+                assert body["strategy"] == "agent"
+                assert isinstance(body["max_steps"], int)
+                assert isinstance(body["tools"], list)
+                for tool in body["tools"]:
+                    assert set(tool) >= {
+                        "name",
+                        "description",
+                        "arguments",
+                        "permission",
+                        "risk_level",
+                    }
+            # The tenant view (demo principal profile) offers the SAME data.
+            tenant = build_runtime_profile(environ={})
+            async with _client(tenant.app) as c:
+                as_tenant = await c.get("/v1/agent-tools")
+            assert as_tenant.status_code == 200
+            assert as_tenant.json()["tools"] == body["tools"]
+            assert as_tenant.json()["max_steps"] == body["max_steps"]
+
+        run(scenario())
