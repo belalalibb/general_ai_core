@@ -959,6 +959,11 @@ async function loadSystem() {
    seam composed) render as an honest note. Every verdict is an explicit click
    with the SAME closed request shapes the API validates — no defaults here. */
 
+/* The unified error envelope ({error:{code,message}}) rendered verbatim. */
+function errorText(payload) {
+  return payload && payload.error ? `${payload.error.code}: ${payload.error.message}` : "";
+}
+
 function td(text, cls) {
   const cell = document.createElement("td");
   if (cls) cell.className = cls;
@@ -989,7 +994,7 @@ function parseJsonObject(text, what) {
 async function learningStep(sampleId, step, body) {
   const result = await api(`/v1/admin/learning/samples/${encodeURIComponent(sampleId)}/${step}`, { method: "POST", body });
   if (result.ok) toast(`${step}: ${sampleId.slice(0, 8)}… → ${JSON.stringify(result.body).slice(0, 80)}`, "ok");
-  else toast(`${step} refused (${result.status}): ${result.body && result.body.message ? result.body.message : ""}`, "err");
+  else toast(`${step} refused (${result.status}): ${errorText(result.body)}`, "err");
   loadLearning();
 }
 
@@ -1074,7 +1079,7 @@ document.getElementById("learning-capture-form").addEventListener("submit", asyn
   if (execution) body.source_execution_id = execution;
   const result = await api("/v1/admin/learning/samples", { method: "POST", body });
   if (result.ok) { toast("sample captured (PENDING)", "ok"); event.target.reset(); }
-  else toast(`capture refused (${result.status}): ${result.body && result.body.message ? result.body.message : ""}`, "err");
+  else toast(`capture refused (${result.status}): ${errorText(result.body)}`, "err");
   loadLearning();
 });
 
@@ -1128,7 +1133,7 @@ async function skillStep(skillId, step) {
   const body = step === "scan" ? { findings: [] } : undefined;
   const result = await api(`/v1/admin/skills/imports/${encodeURIComponent(skillId)}/${step}`, { method: "POST", body });
   if (result.ok) toast(`${step} → ${result.body.status} (source ${result.body.source})`, "ok");
-  else toast(`${step} refused (${result.status}): ${result.body && result.body.message ? result.body.message : ""}`, "err");
+  else toast(`${step} refused (${result.status}): ${errorText(result.body)}`, "err");
   loadSkills();
 }
 
@@ -1191,7 +1196,7 @@ document.getElementById("skill-import-form").addEventListener("submit", async (e
   if (checksum) body.expected_checksum = checksum;
   const result = await api("/v1/admin/skills/import", { method: "POST", body });
   if (result.ok) { toast(`imported ${result.body.name} (status ${result.body.status} — not selectable yet)`, "ok"); event.target.reset(); }
-  else toast(`import refused (${result.status}): ${result.body && result.body.message ? result.body.message : ""}`, "err");
+  else toast(`import refused (${result.status}): ${errorText(result.body)}`, "err");
   loadSkills();
 });
 
