@@ -426,7 +426,11 @@ class TestAdminSurfacesR160:
         called = {_shape(p) for p in re.findall(r'api\([`"](/v1/[^`"]+)[`"]', js)}
         assert called, "no api() calls found"
         gateway_gated = {"/v1/admin/providers/onboard"}
-        assert "route absent" in js  # the honest rendering of the gated one
+        # SECOND recorded exception (ADR-0012 §4): the engineering seam exists
+        # ONLY when AGENT_WORKSPACE_ROOT is configured — absent by design in the
+        # default profile; the UI renders that absence as an honest note.
+        env_gated = {p for p in called if p.startswith("/v1/admin/engineering/")}
+        assert "route absent" in js  # the honest rendering of the gated ones
 
         def is_served(path: str) -> bool:
             # A {x} segment on EITHER side is a wildcard for one segment: the
@@ -439,7 +443,7 @@ class TestAdminSurfacesR160:
                 for s in served
             )
 
-        missing = sorted(p for p in called - gateway_gated if not is_served(p))
+        missing = sorted(p for p in called - gateway_gated - env_gated if not is_served(p))
         assert missing == [], f"console calls routes that are not served: {missing}"
 
     def test_no_raw_secret_field_in_onboarding_form(self) -> None:

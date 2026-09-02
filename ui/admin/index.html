@@ -121,6 +121,9 @@
         <button class="rail-item" data-surface="source">
           <span class="rail-glyph">⌥</span> Source Changes
         </button>
+        <button class="rail-item" data-surface="engineering">
+          <span class="rail-glyph">⌘</span> Engineering Authorizations
+        </button>
       </div>
       <div class="rail-group">
         <div class="rail-head">System</div>
@@ -254,6 +257,52 @@
         patch hash. Authoritative apply is §14-gated: snapshot-space only.</p>
         <table class="data-table" id="source-table">
           <thead><tr><th>ID</th><th>State</th><th>Patch hash</th><th>Rationale</th><th>Approval</th><th>Created</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Surface: Engineering authorizations (ADR-0012 §4 — Admin AUTHORIZES, never runs) -->
+      <section id="surface-engineering" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Engineering Authorizations</h2>
+          <button id="engineering-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <p class="muted small">The shared agent runtime may write files, run
+        allow-listed commands and commit/push/merge in the configured workspace
+        ONLY with (a) a tenant permission granted here and (b) a bounded ticket
+        issued here. Admin authorizes; the agent acts through the ONE authority
+        chain. Absent workspace ⇒ surface reports the route as absent.</p>
+        <div id="engineering-status" class="mono small muted">Not loaded.</div>
+        <div class="surface-head" style="margin-top:1rem"><h3>Issue ticket</h3></div>
+        <form id="engineering-issue" class="inline-form">
+          <label>Acts
+            <select id="eng-acts" multiple size="5">
+              <option value="fs.write" selected>fs.write</option>
+              <option value="cmd.run">cmd.run</option>
+              <option value="git.commit">git.commit</option>
+              <option value="git.push">git.push</option>
+              <option value="git.merge">git.merge</option>
+            </select>
+          </label>
+          <label>Uses <input id="eng-uses" type="number" min="1" max="1000" value="1"></label>
+          <label>TTL (min) <input id="eng-ttl" type="number" min="1" max="1440" value="60"></label>
+          <label>Note <input id="eng-note" type="text" maxlength="200" placeholder="why"></label>
+          <button class="btn small" type="submit">Issue</button>
+        </form>
+        <div class="surface-head" style="margin-top:1rem"><h3>Grant write permissions to a tenant</h3></div>
+        <form id="engineering-grant" class="inline-form">
+          <label>Tenant ID <input id="eng-grant-tenant" type="text" size="38" required></label>
+          <label>Permissions
+            <select id="eng-grant-perms" multiple size="3">
+              <option value="workspace.write" selected>workspace.write</option>
+              <option value="workspace.exec">workspace.exec</option>
+              <option value="git.write">git.write</option>
+            </select>
+          </label>
+          <button class="btn small" type="submit">Grant</button>
+        </form>
+        <table class="data-table" id="engineering-table">
+          <thead><tr><th>ID</th><th>Acts</th><th>Uses left</th><th>Expires</th><th>Revoked</th><th>Note</th><th></th></tr></thead>
           <tbody></tbody>
         </table>
       </section>

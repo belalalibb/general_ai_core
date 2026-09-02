@@ -918,6 +918,10 @@ class TestUIHonestyChecklist:
         "/v1/admin/skills/import",
         "/v1/admin/skills/imports/{x}/{x}",
         "/v1/admin/providers/onboard",
+        # R164 three (ADR-0012 §4: Admin AUTHORIZES engineering, never runs)
+        "/v1/admin/engineering/authorizations",
+        "/v1/admin/engineering/authorizations/{x}/revoke",
+        "/v1/admin/engineering/grants",
     }
 
     def test_write_paths_are_exactly_the_sanctioned_posts(self) -> None:

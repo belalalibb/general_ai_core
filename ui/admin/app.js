@@ -224,6 +224,7 @@ function loadSurface(name) {
     intelligence: loadIntelligence,
     changes: loadChanges,
     source: loadSource,
+    engineering: loadEngineering,
     system: loadSystem,
     learning: loadLearning,
     skills: loadSkills,
@@ -239,6 +240,7 @@ document.getElementById("catalog-refresh").addEventListener("click", loadCatalog
 document.getElementById("intelligence-refresh").addEventListener("click", loadIntelligence);
 document.getElementById("changes-refresh").addEventListener("click", loadChanges);
 document.getElementById("source-refresh").addEventListener("click", loadSource);
+document.getElementById("engineering-refresh").addEventListener("click", loadEngineering);
 document.getElementById("notif-refresh").addEventListener("click", loadNotifications);
 document.getElementById("usage-refresh").addEventListener("click", loadUsage);
 document.getElementById("system-refresh").addEventListener("click", loadSystem);
@@ -1293,4 +1295,82 @@ document.getElementById("onboard-form").addEventListener("submit", async (event)
   } else {
     toast(`onboarding refused (${result.status})`, "err");
   }
+});
+
+/* --- Surface: Engineering authorizations (ADR-0012 §4) ---------------------------- */
+
+async function loadEngineering() {
+  const statusEl = document.getElementById("engineering-status");
+  const tbody = document.querySelector("#engineering-table tbody");
+  tbody.textContent = "";
+  const result = await api("/v1/admin/engineering/status");
+  if (!result.ok) {
+    if (result.status === 404) {
+      statusEl.textContent =
+        "route absent: AGENT_WORKSPACE_ROOT is unset \u2014 no engineering tools exist in this process.";
+    } else {
+      statusEl.textContent = "";
+      renderError(document.getElementById("global-error"), result.body);
+    }
+    return;
+  }
+  const b = result.body;
+  statusEl.textContent =
+    `workspace=${b.workspace_root} remote=${b.remote} commands=[${b.commands.join(", ")}] ` +
+    `tenant granted=[${b.tenant_granted.join(", ")}]`;
+  const rows = b.authorizations || [];
+  if (rows.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 7; td.className = "muted";
+    td.textContent = "No authorizations issued since process start.";
+    tr.appendChild(td); tbody.appendChild(tr);
+    return;
+  }
+  for (const t of rows) {
+    const tr = document.createElement("tr");
+    const id = document.createElement("td"); id.className = "mono"; id.textContent = t.id;
+    const acts = document.createElement("td"); acts.className = "mono small"; acts.textContent = t.acts.join(", ");
+    const uses = document.createElement("td"); uses.textContent = String(t.uses_remaining);
+    const exp = document.createElement("td"); exp.textContent = t.expires_at;
+    const rev = document.createElement("td"); rev.textContent = t.revoked ? "yes" : "no";
+    const note = document.createElement("td"); note.textContent = t.note || "\u2014";
+    const act = document.createElement("td");
+    if (!t.revoked) {
+      const btn = document.createElement("button");
+      btn.className = "btn-ghost small"; btn.type = "button"; btn.textContent = "Revoke";
+      btn.addEventListener("click", async () => {
+        const r = await api(`/v1/admin/engineering/authorizations/${t.id}/revoke`, { method: "POST" });
+        if (!r.ok) renderError(document.getElementById("global-error"), r.body);
+        loadEngineering();
+      });
+      act.appendChild(btn);
+    }
+    tr.append(id, acts, uses, exp, rev, note, act);
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById("engineering-issue").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const acts = [...document.getElementById("eng-acts").selectedOptions].map((o) => o.value);
+  const body = {
+    acts,
+    uses: Number(document.getElementById("eng-uses").value || 1),
+    ttl_minutes: Number(document.getElementById("eng-ttl").value || 60),
+  };
+  const note = document.getElementById("eng-note").value.trim();
+  if (note) body.note = note;
+  const r = await api("/v1/admin/engineering/authorizations", { method: "POST", body });
+  if (!r.ok) renderError(document.getElementById("global-error"), r.body);
+  loadEngineering();
+});
+
+document.getElementById("engineering-grant").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const permissions = [...document.getElementById("eng-grant-perms").selectedOptions].map((o) => o.value);
+  const body = { tenant_id: document.getElementById("eng-grant-tenant").value.trim(), permissions };
+  const r = await api("/v1/admin/engineering/grants", { method: "POST", body });
+  if (!r.ok) renderError(document.getElementById("global-error"), r.body);
+  loadEngineering();
 });
