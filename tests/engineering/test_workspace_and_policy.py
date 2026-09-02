@@ -11,7 +11,7 @@ import pytest
 
 from core.audit.memory import InMemoryAuditLog
 from core.contracts.audit import AuditEventType
-from core.contracts.engineering import ChangeSet, CommandRequest, EngineeringAct
+from core.contracts.engineering import ChangeSet, CommandRequest, EngineeringAct, FileChange
 from core.engineering import (
     AuthorizationLedger,
     AuthorizationRefused,
@@ -39,7 +39,7 @@ class TestWorkspaceJail:
     def test_read_list_search_reuse_source_reader(self, ws: WorkspaceFs) -> None:
         assert ws.reader.read_file("README.md")["content"] == "hello\n"
         listed = ws.reader.list_files("", "**/*.py")
-        assert any("src/app.py" in str(e) for e in listed["files"])
+        assert "src/app.py" in str(listed["files"])
         found = ws.reader.search("return 1", "", "**/*.py")
         assert found["matches"]
 
@@ -86,9 +86,9 @@ class TestWorkspaceJail:
         before = (ws.root / "README.md").read_text()
         change_set = ChangeSet(
             changes=[
-                {"kind": "write", "path": "README.md", "content": "changed\n"},
-                {"kind": "write", "path": "docs/new.md", "content": "new\n"},
-                {"kind": "delete", "path": "src/missing.py"},  # fails -> rollback
+                FileChange(kind="write", path="README.md", content="changed\n"),
+                FileChange(kind="write", path="docs/new.md", content="new\n"),
+                FileChange(kind="delete", path="src/missing.py"),  # fails -> rollback
             ]
         )
         result = ws.apply_change_set(change_set)
@@ -102,9 +102,9 @@ class TestWorkspaceJail:
         result = ws.apply_change_set(
             ChangeSet(
                 changes=[
-                    {"kind": "write", "path": "a.txt", "content": "a"},
-                    {"kind": "move", "path": "a.txt", "to_path": "b.txt"},
-                    {"kind": "delete", "path": "README.md"},
+                    FileChange(kind="write", path="a.txt", content="a"),
+                    FileChange(kind="move", path="a.txt", to_path="b.txt"),
+                    FileChange(kind="delete", path="README.md"),
                 ],
                 reason="test",
             )
