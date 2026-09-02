@@ -61,8 +61,12 @@ const STATUS_CLASSES = {
   eligible: "ok",
   ineligible: "err",
   passed: "ok",
-  /* VerificationLevel */
-  raw: "neutral",
+  /* VerificationLevel (core/contracts/evaluation.py — UPPERCASE literals) */
+  RAW: "neutral",
+  EVALUATED: "info",
+  VALIDATED: "info",
+  VERIFIED: "ok",
+  GOLD: "ok",
   /* healthz literal */
   alive: "ok",
   /* agent ToolClass values */
