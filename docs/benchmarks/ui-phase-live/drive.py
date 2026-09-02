@@ -45,9 +45,11 @@ async def main() -> None:
         # genuine script errors.
         pg.on(
             "console",
-            lambda m: errors.append(m.text)
-            if m.type == "error" and not m.text.startswith("Failed to load resource")
-            else None,
+            lambda m: (
+                errors.append(m.text)
+                if m.type == "error" and not m.text.startswith("Failed to load resource")
+                else None
+            ),
         )
 
         await pg.goto(B + "/admin/", wait_until="networkidle")
@@ -111,8 +113,16 @@ async def main() -> None:
         await pg.click("#scenario-form button[type=submit]")
         await pg.wait_for_timeout(1000)
         err = await pg.inner_text("#scenario-error")
-        ok("empty check set \u2192 server validation_error rendered verbatim", "validation_error" in err, err)
-        await pg.locator("#scenarios-table tbody tr", has_text=sc_name).locator("button", has_text="Replay").click()
+        ok(
+            "empty check set \u2192 server validation_error rendered verbatim",
+            "validation_error" in err,
+            err,
+        )
+        await (
+            pg.locator("#scenarios-table tbody tr", has_text=sc_name)
+            .locator("button", has_text="Replay")
+            .click()
+        )
         await pg.wait_for_timeout(2000)
         rep = await pg.inner_text("#scenario-result")
         ok(
@@ -123,7 +133,11 @@ async def main() -> None:
         await pg.click("#regression-pack")
         await pg.wait_for_timeout(2500)
         reg = await pg.inner_text("#scenario-result")
-        ok("regression pack \u2192 count + verdict", "scenario(s)" in reg and "regression" in reg, reg[:160])
+        ok(
+            "regression pack \u2192 count + verdict",
+            "scenario(s)" in reg and "regression" in reg,
+            reg[:160],
+        )
         await pg.screenshot(path=f"{OUT}/s2_scenarios.png", full_page=True)
 
         # --- Context lab -------------------------------------------------------
@@ -133,7 +147,11 @@ async def main() -> None:
         await pg.click("#lab-form button[type=submit]")
         await pg.wait_for_timeout(1200)
         lab = await pg.inner_text("#lab-result")
-        ok("lab validate \u2192 checks + blocks summary", "ask_block_present" in lab and "context block" in lab, lab[:160])
+        ok(
+            "lab validate \u2192 checks + blocks summary",
+            "ask_block_present" in lab and "context block" in lab,
+            lab[:160],
+        )
         # The input carries min=1 (mirrors the contract), so the browser's own
         # constraint check blocks 0 before any request. Strip it to reach the
         # server and prove its refusal renders verbatim.
@@ -142,7 +160,11 @@ async def main() -> None:
         await pg.click("#lab-form button[type=submit]")
         await pg.wait_for_timeout(1000)
         laberr = await pg.inner_text("#lab-error")
-        ok("lab budget 0 \u2192 server validation_error verbatim", "validation_error" in laberr, laberr)
+        ok(
+            "lab budget 0 \u2192 server validation_error verbatim",
+            "validation_error" in laberr,
+            laberr,
+        )
         await pg.fill("#lab-budget", "16000")
         await pg.evaluate("document.getElementById('lab-budget').setAttribute('min', '1')")
 
@@ -150,7 +172,11 @@ async def main() -> None:
         await go("executions")
         n = await pg.locator("#executions-table tbody tr").count()
         ok("executions list shows the exercise/replay executions", n >= 3, str(n))
-        await pg.locator("#executions-table tbody tr").first.locator("button", has_text="Open").click()
+        await (
+            pg.locator("#executions-table tbody tr")
+            .first.locator("button", has_text="Open")
+            .click()
+        )
         await pg.wait_for_timeout(1500)
         rec = await pg.inner_text("#tab-record")
         ok("record tab shows status + stored result", "status:" in rec and "echo" in rec, rec[:120])
@@ -170,12 +196,20 @@ async def main() -> None:
         await pg.wait_for_timeout(1200)
         after = await pg.locator("#changes-table tbody tr", has_text="disable_model").count()
         ok("change drafted and listed", after == before + 1, f"{before}\u2192{after}")
-        row = pg.locator("#changes-table tbody tr", has_text="draft").filter(has_text="disable_model").first
+        row = (
+            pg.locator("#changes-table tbody tr", has_text="draft")
+            .filter(has_text="disable_model")
+            .first
+        )
         await row.locator("button", has_text="Validate").click()
         await pg.wait_for_timeout(1200)
         row = pg.locator("#changes-table tbody tr", has_text="disable_model").first
         st = await row.inner_text()
-        ok("validate \u2192 server state shown (validated or rejected)", "validated" in st or "rejected" in st, st[:160])
+        ok(
+            "validate \u2192 server state shown (validated or rejected)",
+            "validated" in st or "rejected" in st,
+            st[:160],
+        )
         if "validated" in st:
             await row.locator("button", has_text="Preview").click()
             await pg.wait_for_timeout(1200)
@@ -213,19 +247,29 @@ async def main() -> None:
         await pg.wait_for_timeout(1200)
         prow = pg.locator("#source-table tbody tr", has_text=rationale)
         t = await prow.inner_text()
-        ok("approve (cited hash) \u2192 approved + approval column filled", "approved" in t and "cited" in t, t[:160])
+        ok(
+            "approve (cited hash) \u2192 approved + approval column filled",
+            "approved" in t and "cited" in t,
+            t[:160],
+        )
         await prow.locator("button", has_text="Apply").click()
         await pg.wait_for_timeout(1500)
         prow = pg.locator("#source-table tbody tr", has_text=rationale)
         t = await prow.inner_text()
         serr = await pg.inner_text("#source-error")
-        ok("apply \u2192 applied (snapshot space) OR refusal verbatim", "applied" in t or serr, (t + " | " + serr)[:160])
+        ok(
+            "apply \u2192 applied (snapshot space) OR refusal verbatim",
+            "applied" in t or serr,
+            (t + " | " + serr)[:160],
+        )
         await prow.locator("td button").first.click()
         await pg.wait_for_timeout(800)
         sdet = await pg.inner_text("#source-detail")
         ok(
             "proposal detail: sha256 + authoritative_apply, no bytes",
-            '"content_sha256"' in sdet and '"authoritative_apply"' in sdet and "content_b64" not in sdet,
+            '"content_sha256"' in sdet
+            and '"authoritative_apply"' in sdet
+            and "content_b64" not in sdet,
             sdet[:120],
         )
         await pg.screenshot(path=f"{OUT}/s5_source.png", full_page=True)
