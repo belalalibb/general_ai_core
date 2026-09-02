@@ -422,6 +422,31 @@ def test_explicit_model_default_fallback_same_model_different_provider() -> None
     assert fb.provider_id != decision.selected.provider_id
 
 
+def test_explicit_model_with_max_escalation_falls_over_to_other_models() -> None:
+    """R165 (live): Groq's free tier caps each model separately. An explicit
+    gpt-oss-120b that is out of quota must be able to hand the run to
+    gpt-oss-20b when the caller widened the scope — the explicit choice
+    stays selected and first; the other active models form the route."""
+    world, provider, strong, weak = _basic_world()
+    policy = ExplicitModelPolicy(
+        type="explicit_model",
+        model_id="model-weak",
+        allow_fallback=True,
+        fallback_scope=FallbackScope.MAX_ESCALATION,
+    )
+    decision = world.router().route(_request(model_policy=policy))
+    assert decision.selected.model_id == weak.id
+    assert [c.model_id for c in decision.fallback_candidates] == [strong.id]
+
+
+def test_explicit_model_same_provider_scope_never_widens_to_other_models() -> None:
+    world, provider, strong, weak = _basic_world()
+    policy = ExplicitModelPolicy(type="explicit_model", model_id="model-weak", allow_fallback=True)
+    decision = world.router().route(_request(model_policy=policy))
+    assert decision.selected.model_id == weak.id
+    assert decision.fallback_candidates == []  # only one provider binds model-weak
+
+
 def test_fallback_disabled_yields_no_candidates_and_scope_none() -> None:
     world, *_ = _basic_world()
     policy = AutoModelPolicy(type="auto", allow_fallback=False)

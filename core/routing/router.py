@@ -63,6 +63,16 @@ from core.routing.errors import (
 #: Default request-level policy when none is provided (10 §13 posture).
 _AUTO_POLICY = AutoModelPolicy(type="auto")
 
+#: Fallback scopes under which an explicit model may fail over to OTHER models.
+_WIDENING_SCOPES: frozenset[FallbackScope] = frozenset(
+    {
+        FallbackScope.SAME_TIER,
+        FallbackScope.LOWER_COST_SAME_CAPABILITY,
+        FallbackScope.MAX_ESCALATION,
+        FallbackScope.ADMIN_DEFINED_CHAIN,
+    }
+)
+
 
 class UnsupportedPolicyType(RoutingError):
     """Policy types outside this slice's scope are rejected, never guessed."""
@@ -142,7 +152,22 @@ class SimpleScoringRouter:
 
         ranked = self._rank(candidates, policy, weights)
         fallback_policy = self._resolve_fallback_scope(policy)
-        fallback = self._fallback_candidates(ranked, policy, fallback_policy)
+        pool = ranked
+        if isinstance(policy, ExplicitModelPolicy) and fallback_policy in _WIDENING_SCOPES:
+            # 11 §8: an explicit model with a scope wider than "same model,
+            # different provider" fails over to OTHER models. The explicit
+            # choice stays selected and ranked first; the rest of the ACTIVE
+            # pool (same eligibility filters) supplies the fallback route.
+            # R165 live: Groq's free tier caps each model separately, so an
+            # exhausted gpt-oss-120b must be able to hand off to gpt-oss-20b.
+            widened_excluded: list[ExclusionRecord] = []
+            others = [
+                c
+                for c in self._eligible_candidates(request, _AUTO_POLICY, widened_excluded)
+                if c.model.model_key != policy.model_id
+            ]
+            pool = ranked + self._rank(others, policy, weights)
+        fallback = self._fallback_candidates(pool, policy, fallback_policy)
 
         return RoutingDecision(
             selected=ranked[0],
