@@ -133,7 +133,9 @@ def _dump(model: BaseModel) -> JsonObject:
     return model.model_dump(mode="json")
 
 
-def engineering_tool_specs(bundle: EngineeringBundle, registry: ToolRegistry) -> list[AgentToolSpec]:
+def engineering_tool_specs(
+    bundle: EngineeringBundle, registry: ToolRegistry
+) -> list[AgentToolSpec]:
     """Register the engineering tools in the shared registry and return their specs."""
 
     ws = bundle.workspace
@@ -272,7 +274,15 @@ def engineering_tool_specs(bundle: EngineeringBundle, registry: ToolRegistry) ->
             ws_search,
             None,
         ),
-        ("git_status", GIT_READ, "low", "Branch, HEAD and working-tree status.", {}, git_status, None),
+        (
+            "git_status",
+            GIT_READ,
+            "low",
+            "Branch, HEAD and working-tree status.",
+            {},
+            git_status,
+            None,
+        ),
         (
             "git_diff",
             GIT_READ,

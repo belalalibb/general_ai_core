@@ -119,9 +119,7 @@ class GitCli:
             return GitPushResult(
                 pushed=False, remote=remote_name, branch=target, reason="remote_not_configured"
             )
-        result = await self._git(
-            "push", remote_name, f"{target}:{target}", timeout_ms=120_000
-        )
+        result = await self._git("push", remote_name, f"{target}:{target}", timeout_ms=120_000)
         if result.exit_code != 0:
             return GitPushResult(
                 pushed=False,
@@ -143,7 +141,8 @@ class GitCli:
             unmerged = await self._git("diff", "--name-only", "--diff-filter=U")
             conflicts = [line for line in unmerged.stdout.splitlines() if line.strip()]
             await self._git("merge", "--abort")
-            reason = "conflicts" if conflicts else (merged.stderr or merged.stdout).strip()[:_MAX_STDERR]
+            detail = (merged.stderr or merged.stdout).strip()[:_MAX_STDERR]
+            reason = "conflicts" if conflicts else detail
             return GitMergeResult(
                 merged=False, into=dst, source=src, conflicts=conflicts, reason=reason
             )
