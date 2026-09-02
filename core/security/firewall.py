@@ -69,6 +69,10 @@ class CapabilityFirewall:
         """Install/replace the policy record for a tenant."""
         self._policies[tenant_id] = policy
 
+    def policy_for(self, tenant_id: UUID) -> TenantPolicy | None:
+        """The installed policy record (None ⇒ deny-by-default). Read-only."""
+        return self._policies.get(tenant_id)
+
     def decide(self, request: FirewallDecisionInput) -> FirewallDecision:
         """Evaluate one request to exactly one explicit decision.
 
