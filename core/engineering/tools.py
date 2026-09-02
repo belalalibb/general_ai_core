@@ -155,10 +155,12 @@ def engineering_tool_specs(
         return ws.reader.read_file(_str(args, "path"))
 
     async def ws_list(args: JsonObject) -> JsonObject:
-        return ws.reader.list_files(_str(args, "glob", "**/*"))
+        return ws.reader.list_files(_str(args, "path"), _str(args, "glob", "**/*"))
 
     async def ws_search(args: JsonObject) -> JsonObject:
-        return ws.reader.search(_str(args, "pattern"), _str(args, "glob", "**/*.py"))
+        return ws.reader.search(
+            _str(args, "text"), _str(args, "path"), _str(args, "glob", "**/*.py")
+        )
 
     async def git_status(args: JsonObject) -> JsonObject:
         return _dump(await git.status())
@@ -260,8 +262,8 @@ def engineering_tool_specs(
             "ws_list",
             WORKSPACE_READ,
             "low",
-            "List workspace files matching a glob.",
-            {"glob": "string (default '**/*')"},
+            "List workspace files under a directory matching a glob.",
+            {"path": "string (relative dir, default root)", "glob": "string (default '**/*')"},
             ws_list,
             None,
         ),
@@ -269,8 +271,12 @@ def engineering_tool_specs(
             "ws_search",
             WORKSPACE_READ,
             "low",
-            "Search workspace files for a substring.",
-            {"pattern": "string", "glob": "string (default '**/*.py')"},
+            "Literal substring search across workspace files.",
+            {
+                "text": "string",
+                "path": "string (relative dir, default root)",
+                "glob": "string (default '**/*.py')",
+            },
             ws_search,
             None,
         ),

@@ -38,9 +38,9 @@ def ws(tmp_path: Path) -> WorkspaceFs:
 class TestWorkspaceJail:
     def test_read_list_search_reuse_source_reader(self, ws: WorkspaceFs) -> None:
         assert ws.reader.read_file("README.md")["content"] == "hello\n"
-        listed = ws.reader.list_files("**/*.py")
-        assert any("src/app.py" in str(e) for e in listed["entries"])
-        found = ws.reader.search("return 1", "**/*.py")
+        listed = ws.reader.list_files("", "**/*.py")
+        assert any("src/app.py" in str(e) for e in listed["files"])
+        found = ws.reader.search("return 1", "", "**/*.py")
         assert found["matches"]
 
     def test_parent_traversal_refused(self, ws: WorkspaceFs) -> None:
@@ -226,7 +226,9 @@ class TestAuthorizationLedger:
     def test_missing_or_unknown_ticket_refused_and_audited_under_nil_tenant(self) -> None:
         ledger, audit, _ = self._ledger()
         with pytest.raises(AuthorizationRefused, match="missing"):
-            ledger.consume_ticket(authorization_id=None, workspace="ws", act=EngineeringAct.FS_WRITE)
+            ledger.consume_ticket(
+                authorization_id=None, workspace="ws", act=EngineeringAct.FS_WRITE
+            )
         with pytest.raises(AuthorizationRefused, match="unknown"):
             ledger.consume_ticket(
                 authorization_id=uuid4(), workspace="ws", act=EngineeringAct.FS_WRITE
