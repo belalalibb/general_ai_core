@@ -837,6 +837,10 @@ class TestUIHonestyChecklist:
         from core.contracts.skills import SkillStatus
         from core.contracts.usage import UsageLedgerStatus
 
+        # UI phase: the two closed sets the console now renders as badges.
+        from apps.api.capabilities import CapabilityState
+        from core.sourcechange.proposal import ProposalState
+
         allowed: set[str] = set()
         for enum_cls in (
             ExecutionStatus,
@@ -850,6 +854,9 @@ class TestUIHonestyChecklist:
             LearningEligibility,
             SanitizationState,
             VerificationLevel,
+            # UI phase: capability catalog states + source-change proposal states.
+            CapabilityState,
+            ProposalState,
         ):
             allowed.update(member.value for member in enum_cls)
         # healthz literal + agent ToolClass values (both backend-produced).
@@ -922,6 +929,18 @@ class TestUIHonestyChecklist:
         "/v1/admin/engineering/authorizations",
         "/v1/admin/engineering/authorizations/{x}/revoke",
         "/v1/admin/engineering/grants",
+        # UI phase ten — bindings to admin routes that ALREADY existed but had
+        # no console act: every one is an explicit click over a real route.
+        "/v1/auth/logout",
+        "/v1/admin/capabilities/{x}/exercise",
+        "/v1/admin/scenarios",
+        "/v1/admin/scenarios/{x}/replay",
+        "/v1/admin/scenarios/regression-pack",
+        "/v1/admin/context-lab/validate",
+        "/v1/admin/changes",
+        "/v1/admin/source-changes",
+        "/v1/admin/source-changes/snapshots",
+        "/v1/admin/source-changes/{x}/{x}",
     }
 
     def test_write_paths_are_exactly_the_sanctioned_posts(self) -> None:
@@ -937,6 +956,56 @@ class TestUIHonestyChecklist:
 
     def test_ledger_null_is_explicit(self) -> None:
         assert "no ledger (accounting unbound)" in _js_code()
+
+    # --- UI phase: closed sets the console hardcodes MUST equal the backend enums.
+    # The console offers these as choices; a drift here would let the UI offer a
+    # verb/check/op the server refuses (or hide one it accepts).
+
+    @staticmethod
+    def _js_string_array(name: str) -> set[str]:
+        code = _js_code()
+        match = re.search(rf"const {name} = \[(.*?)\];", code, re.DOTALL)
+        assert match is not None, f"{name} array not found"
+        return set(re.findall(r'"([a-z_]+)"', match.group(1)))
+
+    def test_admin_actions_equal_the_admin_action_enum(self) -> None:
+        from core.contracts.admin import AdminAction
+
+        assert self._js_string_array("ADMIN_ACTIONS") == {a.value for a in AdminAction}
+
+    def test_scenario_check_names_equal_the_closed_check_set(self) -> None:
+        from apps.api.scenarios import SCENARIO_CHECKS
+
+        assert self._js_string_array("SCENARIO_CHECK_NAMES") == set(SCENARIO_CHECKS)
+
+    def test_propose_kind_options_equal_patch_op_kind(self) -> None:
+        from core.sourcechange.patch import PatchOpKind
+
+        html = (UI_DIR / "index.html").read_text(encoding="utf-8")
+        select = re.search(r'<select id="propose-kind">(.*?)</select>', html, re.DOTALL)
+        assert select is not None
+        options = set(re.findall(r'<option value="([a-z_]+)"', select.group(1)))
+        assert options == {k.value for k in PatchOpKind}
+
+    def test_exercise_is_offered_only_for_server_listed_ids(self) -> None:
+        """The Exercise button is gated on the /exercisable read — the UI never
+        invents a probe; unlisted rows say so in words."""
+        code = _js_code()
+        assert "exercisableIds.has(c.id)" in code
+        assert "not exercisable" in code
+
+    def test_approve_cites_the_row_patch_hash(self) -> None:
+        """ADR-0009: approval MUST cite the exact hash — taken from the row the
+        admin is looking at, never typed, never defaulted."""
+        assert "{ cited_hash: p.patch_hash }" in _js_code()
+
+    def test_logout_forgets_token_only_after_server_confirms(self) -> None:
+        raw = (UI_DIR / "app.js").read_text(encoding="utf-8")
+        after = raw.split('getElementById("logout")', 1)[1]
+        assert "/* --- navigation" in after
+        handler = after.split("/* --- navigation", 1)[0]
+        assert '"/v1/auth/logout"' in handler
+        assert handler.index("if (!result.ok)") < handler.index("state.token = null")
 
     def test_learning_makes_no_learned_state_claim(self) -> None:
         """R160: the placeholder "NOT OPERATIONAL" is gone; the System card
