@@ -12,7 +12,10 @@ model call from the ONE routing + execution path, and every bound
 from core.agent.runtime import (
     DEFAULT_AGENT_DEADLINE_MS,
     DEFAULT_AGENT_MAX_STEPS,
+    DEFAULT_REASONING_MAX_TOKENS,
     MAX_AGENT_MAX_STEPS,
+    MAX_REASONING_MAX_TOKENS,
+    MIN_REASONING_MAX_TOKENS,
     AgentRunOutcome,
     AgentRuntime,
     AgentToolSpec,
@@ -26,6 +29,9 @@ from core.agent.runtime import (
 
 __all__ = [
     "DEFAULT_AGENT_DEADLINE_MS",
+    "DEFAULT_REASONING_MAX_TOKENS",
+    "MAX_REASONING_MAX_TOKENS",
+    "MIN_REASONING_MAX_TOKENS",
     "DEFAULT_AGENT_MAX_STEPS",
     "MAX_AGENT_MAX_STEPS",
     "AgentRunOutcome",

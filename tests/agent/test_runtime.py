@@ -87,10 +87,10 @@ class TestHappyPath:
             "schema": AGENT_PROPOSAL_SCHEMA,
         }
         # ...and asks for room to carry a whole file in one proposal.
-        from core.agent.runtime import REASONING_MAX_COMPLETION_TOKENS
+        from core.agent.runtime import DEFAULT_REASONING_MAX_TOKENS
 
-        assert first["generation"] == {"max_completion_tokens": REASONING_MAX_COMPLETION_TOKENS}
-        assert REASONING_MAX_COMPLETION_TOKENS >= 4096
+        assert first["generation"] == {"max_completion_tokens": DEFAULT_REASONING_MAX_TOKENS}
+        assert DEFAULT_REASONING_MAX_TOKENS >= 4096
 
     def test_final_without_tools_and_empty_evidence_passes(self) -> None:
         world = AgentWorld([model_says(final("42"))])

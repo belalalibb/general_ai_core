@@ -30,6 +30,7 @@ from apps.api.store import ExecutionStorePort
 from core.agent import (
     DEFAULT_AGENT_DEADLINE_MS,
     DEFAULT_AGENT_MAX_STEPS,
+    DEFAULT_REASONING_MAX_TOKENS,
     AgentRuntime,
     AgentToolSpec,
 )
@@ -170,6 +171,7 @@ def build_agent(
     engineering: EngineeringBundle | None = None,
     max_steps: int = DEFAULT_AGENT_MAX_STEPS,
     deadline_ms: int | None = DEFAULT_AGENT_DEADLINE_MS,
+    reasoning_max_tokens: int = DEFAULT_REASONING_MAX_TOKENS,
 ) -> ComposedAgent:
     """Compose the shared agent authority chain + runtime + catalog.
 
@@ -195,6 +197,7 @@ def build_agent(
         store_report=store.put,
         max_steps=max_steps,
         deadline_ms=deadline_ms,
+        reasoning_max_tokens=reasoning_max_tokens,
     )
     catalog: dict[str, AgentToolSpec] = {}
     if repo_reader is not None:

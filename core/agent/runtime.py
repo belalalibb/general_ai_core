@@ -199,10 +199,16 @@ class AgentRunOutcome:
     execution_report: ExecutionReport
 
 
-#: Completion budget per reasoning call (R165 live). Groq's free tier is 8k
-#: tokens/minute; the cap counts against the run's deadline via retries, not
-#: against correctness — a truncated proposal is worse than a slow one.
-REASONING_MAX_COMPLETION_TOKENS = 8192
+#: Default completion budget per reasoning call (R165 live). A proposal may
+#: carry a whole file (ws_write) and reasoning models spend thinking tokens
+#: inside the same budget, so the adapter default (1024) truncated a write
+#: step live. Providers count the REQUESTED budget against per-minute token
+#: caps up front (Groq free tier: 8k TPM → 8192 was refused as 413 before a
+#: single token was generated), so the default fits prompt + budget under
+#: that cap; operators raise it via ``AGENT_REASONING_MAX_TOKENS``.
+DEFAULT_REASONING_MAX_TOKENS = 4096
+MIN_REASONING_MAX_TOKENS = 256
+MAX_REASONING_MAX_TOKENS = 65_536
 
 _PROTOCOL = (
     "You are an agent running inside a governed platform. Respond with ONLY "
@@ -293,10 +299,18 @@ class AgentRuntime:
         max_steps: int = DEFAULT_AGENT_MAX_STEPS,
         deadline_ms: int | None = DEFAULT_AGENT_DEADLINE_MS,
         max_repeated_failures: int = DEFAULT_MAX_REPEATED_FAILURES,
+        reasoning_max_tokens: int = DEFAULT_REASONING_MAX_TOKENS,
     ) -> None:
         if not (1 <= max_steps <= MAX_AGENT_MAX_STEPS):
             msg = f"max_steps must be within [1, {MAX_AGENT_MAX_STEPS}]"
             raise ValueError(msg)
+        if not (MIN_REASONING_MAX_TOKENS <= reasoning_max_tokens <= MAX_REASONING_MAX_TOKENS):
+            msg = (
+                "reasoning_max_tokens must be within "
+                f"[{MIN_REASONING_MAX_TOKENS}, {MAX_REASONING_MAX_TOKENS}]"
+            )
+            raise ValueError(msg)
+        self._reasoning_max_tokens = reasoning_max_tokens
         self._router = router
         self._execution = execution_service
         self._tools = tool_registry
@@ -473,11 +487,9 @@ class AgentRuntime:
             # Adapters that support constrained decoding honor this; others
             # ignore it and the prompt's protocol text still governs.
             "response_schema": {"name": "agent_proposal", "schema": AGENT_PROPOSAL_SCHEMA},
-            # A proposal may carry a whole file (ws_write) and reasoning
-            # models spend thinking tokens inside the same budget; the
-            # adapter default (1024) truncated a write step live, which under
-            # constrained decoding surfaces as 400 json_validate_failed.
-            "generation": {"max_completion_tokens": REASONING_MAX_COMPLETION_TOKENS},
+            # See DEFAULT_REASONING_MAX_TOKENS: truncation under constrained
+            # decoding surfaces as 400 json_validate_failed.
+            "generation": {"max_completion_tokens": self._reasoning_max_tokens},
         }
         request_hash = hashlib.sha256(
             json.dumps(payload, sort_keys=True).encode("utf-8")

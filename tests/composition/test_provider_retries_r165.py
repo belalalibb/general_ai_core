@@ -40,3 +40,16 @@ def test_out_of_range_or_garbage_is_refused_at_boot(raw: str) -> None:
 def test_valid_value_boots() -> None:
     profile = build_runtime_profile(environ={"PROVIDER_MAX_RETRIES": "3"})
     assert profile.app is not None
+
+
+def test_reasoning_budget_knob_reaches_the_runtime() -> None:
+    """R165 (live): ``AGENT_REASONING_MAX_TOKENS`` is the per-call completion
+    budget; out-of-range values fall back to the default like the other caps."""
+    from core.agent import DEFAULT_REASONING_MAX_TOKENS
+
+    tuned = build_runtime_profile(environ={"AGENT_REASONING_MAX_TOKENS": "2048"})
+    assert tuned.agent is not None
+    assert tuned.agent.surface.runtime._reasoning_max_tokens == 2048
+    bad = build_runtime_profile(environ={"AGENT_REASONING_MAX_TOKENS": "999999"})
+    assert bad.agent is not None
+    assert bad.agent.surface.runtime._reasoning_max_tokens == DEFAULT_REASONING_MAX_TOKENS

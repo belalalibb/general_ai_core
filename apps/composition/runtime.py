@@ -96,7 +96,10 @@ from core.admin.service import AdminConfigService
 from core.agent import (
     DEFAULT_AGENT_DEADLINE_MS,
     DEFAULT_AGENT_MAX_STEPS,
+    DEFAULT_REASONING_MAX_TOKENS,
     MAX_AGENT_MAX_STEPS,
+    MAX_REASONING_MAX_TOKENS,
+    MIN_REASONING_MAX_TOKENS,
 )
 from core.audit.memory import InMemoryAuditLog
 from core.context.composer import ContextComposer
@@ -192,6 +195,7 @@ _ENV_ADMIN_EMAILS = "ADMIN_EMAILS"
 #: runtime's hard cap (32 steps); invalid/absent ⇒ the core defaults.
 _ENV_AGENT_MAX_STEPS = "AGENT_MAX_STEPS"
 _ENV_AGENT_DEADLINE_MS = "AGENT_DEADLINE_MS"
+_ENV_AGENT_REASONING_MAX_TOKENS = "AGENT_REASONING_MAX_TOKENS"
 _ENV_GROQ_KEY = "GROQ_API_KEY"
 _ENV_GSK_KEY = "GSK_API_KEY"
 
@@ -846,6 +850,12 @@ def build_runtime_profile(
             default=DEFAULT_AGENT_DEADLINE_MS,
             low=1_000,
             high=3_600_000,
+        ),
+        reasoning_max_tokens=_agent_cap(
+            env.get(_ENV_AGENT_REASONING_MAX_TOKENS),
+            default=DEFAULT_REASONING_MAX_TOKENS,
+            low=MIN_REASONING_MAX_TOKENS,
+            high=MAX_REASONING_MAX_TOKENS,
         ),
     )
 
