@@ -53,9 +53,7 @@ def run[T](coro: Coroutine[Any, Any, T]) -> T:
 
 
 def _client(app: FastAPI) -> httpx.AsyncClient:
-    return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    )
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
 @pytest.fixture()
@@ -102,9 +100,7 @@ class TestMount:
 
     def test_mount_is_guarded_by_directory_existence(self) -> None:
         """20 §4 pin: absent dir ⇒ no mount (the guard line, verbatim)."""
-        source = (REPO_ROOT / "apps" / "composition" / "runtime.py").read_text(
-            encoding="utf-8"
-        )
+        source = (REPO_ROOT / "apps" / "composition" / "runtime.py").read_text(encoding="utf-8")
         assert "if UI_APP_DIR.is_dir():" in source
 
 
@@ -160,9 +156,11 @@ class TestDemoProfileLoop:
 
         async def scenario() -> None:
             async with _client(profile.app) as c:
-                # probe (demo: no auth routes ⇒ 404)
+                # probe (demo: R160 hybrid ⇒ the server SAYS mode=demo)
                 session = await c.get("/v1/auth/session")
-                assert session.status_code == 404
+                assert session.status_code == 200
+                assert session.json()["mode"] == "demo"
+                assert session.json()["is_admin"] is False
                 # ask (sync)
                 execute = await c.post("/v1/execute", json={"ask": "hello"})
                 assert execute.status_code == 200

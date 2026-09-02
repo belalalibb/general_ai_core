@@ -71,9 +71,7 @@ class _MailSink:
 
 def make_identity() -> tuple[InMemoryIdentityService, _MailSink]:
     sink = _MailSink()
-    service = InMemoryIdentityService(
-        hasher=_Hasher(), email_sender=sink, default_plan_id=uuid4()
-    )
+    service = InMemoryIdentityService(hasher=_Hasher(), email_sender=sink, default_plan_id=uuid4())
     return service, sink
 
 
@@ -114,9 +112,7 @@ def make_session_app(
     )
     surface = None
     if with_admin:
-        surface = dataclasses.replace(
-            world.surface(), audit=audit, executions=execution_store
-        )
+        surface = dataclasses.replace(world.surface(), audit=audit, executions=execution_store)
     app = create_app(
         router=world.router,
         execution_service=service,
@@ -136,9 +132,7 @@ def make_session_app(
 
 
 def _client(app: FastAPI) -> httpx.AsyncClient:
-    return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    )
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
 def bearer(token: str) -> dict[str, str]:
@@ -147,9 +141,7 @@ def bearer(token: str) -> dict[str, str]:
 
 async def _login(app: FastAPI, email: str) -> str:
     async with _client(app) as c:
-        response = await c.post(
-            "/v1/auth/login", json={"email": email, "password": PASSWORD}
-        )
+        response = await c.post("/v1/auth/login", json={"email": email, "password": PASSWORD})
     assert response.status_code == 200, response.text
     token = response.json()["token"]
     assert isinstance(token, str)
@@ -160,9 +152,7 @@ def openapi_ops(app: FastAPI) -> list[str]:
     """Sorted METHOD PATH list via OpenAPI (lazy-router-safe enumeration)."""
     spec = app.openapi()
     return sorted(
-        f"{method.upper()} {path}"
-        for path, item in spec["paths"].items()
-        for method in item
+        f"{method.upper()} {path}" for path, item in spec["paths"].items() for method in item
     )
 
 
@@ -227,18 +217,9 @@ class TestAuthBinding:
         async def scenario() -> None:
             async with _client(app) as c:
                 missing = await c.get("/v1/auth/session")
-                garbage = await c.get(
-                    "/v1/auth/session", headers=bearer("not-a-token")
-                )
-                scheme = await c.get(
-                    "/v1/auth/session", headers={"Authorization": "Basic abc"}
-                )
-                assert (
-                    missing.status_code
-                    == garbage.status_code
-                    == scheme.status_code
-                    == 401
-                )
+                garbage = await c.get("/v1/auth/session", headers=bearer("not-a-token"))
+                scheme = await c.get("/v1/auth/session", headers={"Authorization": "Basic abc"})
+                assert missing.status_code == garbage.status_code == scheme.status_code == 401
                 assert missing.content == garbage.content == scheme.content
 
         run(scenario())
@@ -314,7 +295,8 @@ class TestAuthBinding:
         assert subscriptions == {}
 
     def test_exactly_one_identity_mode_is_enforced(self) -> None:
-        """Loud ValueError for both-or-neither principal/auth (never silent)."""
+        """Loud ValueError for NEITHER principal nor auth (never silent);
+        principal+auth is the R160 HYBRID mode (see test_hybrid_identity_mode)."""
         world = ExecuteWorld()
         identity, _ = make_identity()
         service = ExecutionService(
@@ -328,13 +310,54 @@ class TestAuthBinding:
         router = SimpleScoringRouter(world.providers, world.models, world.bindings)
         with pytest.raises(ValueError, match="exactly one"):
             create_app(router=router, execution_service=service)
-        with pytest.raises(ValueError, match="exactly one"):
-            create_app(
-                router=router,
-                execution_service=service,
-                principal=Principal(tenant_id=uuid4(), user_id=uuid4()),
-                auth=AuthSurface(identity=identity),
-            )
+
+    def test_hybrid_identity_mode(self) -> None:
+        """R160 HYBRID (principal + auth): no token ⇒ the fixed principal
+        (never admin); a valid Bearer ⇒ the REAL session (admin iff listed);
+        an invalid Bearer ⇒ 401 — a bad credential is a refusal, not anonymity.
+        /v1/auth/* is mounted and GET /session says mode=demo without a token."""
+        world = ExecuteWorld()
+        identity, sink = make_identity()
+        register_verified(identity, sink, "admin@x.test", "correct horse battery staple")
+        token = identity.login("admin@x.test", "correct horse battery staple").token
+        service = ExecutionService(
+            adapters={world.provider.id: world.adapter},
+            credential_refs={world.provider.id: "secret-ref://x"},
+            bindings=world.bindings,
+            max_retries_per_candidate=0,
+        )
+        from core.routing.router import SimpleScoringRouter
+
+        router = SimpleScoringRouter(world.providers, world.models, world.bindings)
+        demo = Principal(tenant_id=uuid4(), user_id=uuid4())
+        app = create_app(
+            router=router,
+            execution_service=service,
+            principal=demo,
+            auth=AuthSurface(identity=identity, admin_emails=frozenset({"admin@x.test"})),
+        )
+        assert any("/v1/auth/session" in op for op in openapi_ops(app))
+
+        async def scenario() -> None:
+            async with _client(app) as c:
+                anon = await c.get("/v1/auth/session")
+                assert anon.status_code == 200
+                assert anon.json()["mode"] == "demo"
+                assert anon.json()["is_admin"] is False
+                assert anon.json()["tenant_id"] == str(demo.tenant_id)
+                real = await c.get("/v1/auth/session", headers={"Authorization": f"Bearer {token}"})
+                assert real.status_code == 200
+                assert real.json()["is_admin"] is True
+                assert "mode" not in real.json()
+                bad = await c.get("/v1/auth/session", headers={"Authorization": "Bearer nope"})
+                assert bad.status_code == 401
+                # The app's own resolver follows the same three-way rule.
+                assert (await c.get("/v1/executions")).status_code == 200
+                assert (
+                    await c.get("/v1/executions", headers={"Authorization": "Bearer nope"})
+                ).status_code == 401
+
+        run(scenario())
 
     def test_fixed_principal_mode_has_no_auth_routes(self) -> None:
         """Fixed mode (every existing caller): /v1/auth/* is ABSENT."""
@@ -380,9 +403,7 @@ class TestAdminGateUnderSessions:
                     if method == "POST" and path.endswith("/source-changes"):
                         body = {
                             "base_snapshot_id": "0" * 64,
-                            "operations": [
-                                {"kind": "delete_file", "path": "denied.py"}
-                            ],
+                            "operations": [{"kind": "delete_file", "path": "denied.py"}],
                             "rationale": "denied",
                         }
                     if method == "POST" and path.endswith("/source-changes/snapshots"):
@@ -393,15 +414,9 @@ class TestAdminGateUnderSessions:
                         and path.endswith("/approve")
                     ):
                         body = {"cited_hash": "0" * 64}
-                    if (
-                        method == "POST"
-                        and "/source-changes/" in path
-                        and path.endswith("/reject")
-                    ):
+                    if method == "POST" and "/source-changes/" in path and path.endswith("/reject"):
                         body = {"reason": "denied"}
-                    response = await c.request(
-                        method, path, json=body, headers=bearer(token)
-                    )
+                    response = await c.request(method, path, json=body, headers=bearer(token))
                     assert response.status_code == 403, op
                     assert response.json()["error"]["code"] == "unauthorized"
 
@@ -442,11 +457,7 @@ def _seed_execution(
         status=status,
         strategy=ExecutionStrategy.SINGLE,
         cost_snapshot={},
-        created_at=(
-            created_at
-            if created_at is not None
-            else datetime.now(UTC)
-        ),
+        created_at=(created_at if created_at is not None else datetime.now(UTC)),
     )
     store.put(ExecutionReport(execution=execution, nodes=(), status_history=()))
     return execution.id
@@ -470,12 +481,8 @@ class TestExecutionsList:
                 assert ids == {str(own_id)}
                 assert str(foreign_id) not in ids
                 # by-id read of the foreign row is the identical 404
-                foreign = await c.get(
-                    f"/v1/executions/{foreign_id}", headers=bearer(token)
-                )
-                absent = await c.get(
-                    f"/v1/executions/{foreign_id}", headers=bearer(token)
-                )
+                foreign = await c.get(f"/v1/executions/{foreign_id}", headers=bearer(token))
+                absent = await c.get(f"/v1/executions/{foreign_id}", headers=bearer(token))
                 assert foreign.status_code == 404
                 assert foreign.content == absent.content
 
@@ -508,34 +515,22 @@ class TestExecutionsList:
                 all_rows = await c.get("/v1/executions", headers=bearer(token))
                 ids = [r["execution_id"] for r in all_rows.json()["executions"]]
                 assert ids == [str(newer), str(older)]  # newest-first
-                failed = await c.get(
-                    "/v1/executions?status=failed", headers=bearer(token)
-                )
-                assert [r["execution_id"] for r in failed.json()["executions"]] == [
-                    str(older)
-                ]
+                failed = await c.get("/v1/executions?status=failed", headers=bearer(token))
+                assert [r["execution_id"] for r in failed.json()["executions"]] == [str(older)]
                 by_user = await c.get(
                     f"/v1/executions?initiated_by={initiator}",
                     headers=bearer(token),
                 )
-                assert [
-                    r["execution_id"] for r in by_user.json()["executions"]
-                ] == [str(newer)]
+                assert [r["execution_id"] for r in by_user.json()["executions"]] == [str(newer)]
                 cutoff = (base - timedelta(minutes=90)).isoformat()
                 recent = await c.get(
                     "/v1/executions",
                     params={"created_after": cutoff},  # proper URL-encoding
                     headers=bearer(token),
                 )
-                assert [
-                    r["execution_id"] for r in recent.json()["executions"]
-                ] == [str(newer)]
-                limited = await c.get(
-                    "/v1/executions?limit=1", headers=bearer(token)
-                )
-                assert [
-                    r["execution_id"] for r in limited.json()["executions"]
-                ] == [str(newer)]
+                assert [r["execution_id"] for r in recent.json()["executions"]] == [str(newer)]
+                limited = await c.get("/v1/executions?limit=1", headers=bearer(token))
+                assert [r["execution_id"] for r in limited.json()["executions"]] == [str(newer)]
 
         run(scenario())
 
@@ -552,9 +547,7 @@ class TestExecutionsList:
                     ("created_before=tomorrow%20maybe", "created_before"),
                     ("limit=0", "limit"),
                 ]:
-                    response = await c.get(
-                        f"/v1/executions?{query}", headers=bearer(token)
-                    )
+                    response = await c.get(f"/v1/executions?{query}", headers=bearer(token))
                     assert response.status_code == 422, query
                     error = response.json()["error"]
                     assert error["code"] == "validation_error"
@@ -621,21 +614,13 @@ class TestAuditRead:
         async def scenario() -> None:
             token = await _login(app, ADMIN_EMAIL)
             async with _client(app) as c:
-                good = await c.get(
-                    "/v1/admin/audit?event_type=login", headers=bearer(token)
-                )
+                good = await c.get("/v1/admin/audit?event_type=login", headers=bearer(token))
                 assert good.status_code == 200
-                assert all(
-                    e["event_type"] == "login" for e in good.json()["events"]
-                )
-                bad = await c.get(
-                    "/v1/admin/audit?event_type=made_up", headers=bearer(token)
-                )
+                assert all(e["event_type"] == "login" for e in good.json()["events"])
+                bad = await c.get("/v1/admin/audit?event_type=made_up", headers=bearer(token))
                 assert bad.status_code == 422
                 assert bad.json()["error"]["details"]["field"] == "event_type"
-                zero = await c.get(
-                    "/v1/admin/audit?limit=0", headers=bearer(token)
-                )
+                zero = await c.get("/v1/admin/audit?limit=0", headers=bearer(token))
                 assert zero.status_code == 422
 
         run(scenario())
@@ -699,9 +684,7 @@ class TestSystemReadModel:
         app = create_app(
             router=world.router,
             execution_service=service,
-            auth=AuthSurface(
-                identity=identity, admin_emails=frozenset({ADMIN_EMAIL})
-            ),
+            auth=AuthSurface(identity=identity, admin_emails=frozenset({ADMIN_EMAIL})),
             admin=world.surface(),
             system_info=lambda: {"scope": "GLOBAL FLEET", "routes": 3},
         )
@@ -780,9 +763,7 @@ class TestUsageDrilldown:
         app = create_app(
             router=world.router,
             execution_service=service,
-            auth=AuthSurface(
-                identity=identity, admin_emails=frozenset({ADMIN_EMAIL})
-            ),
+            auth=AuthSurface(identity=identity, admin_emails=frozenset({ADMIN_EMAIL})),
             admin=world.surface(),  # no executions seam
         )
 
@@ -816,20 +797,14 @@ class TestWebhookManagement:
                 assert created.status_code == 201
                 victim_id = created.json()["id"]
                 # ATTACK: the other tenant deletes the victim's id
-                foreign = await c.delete(
-                    f"/v1/webhooks/{victim_id}", headers=bearer(user_token)
-                )
+                foreign = await c.delete(f"/v1/webhooks/{victim_id}", headers=bearer(user_token))
                 # CONTROL: the same id when it truly does not exist for them
                 # (identical request ⇒ must be byte-identical response)
-                control = await c.delete(
-                    f"/v1/webhooks/{victim_id}", headers=bearer(user_token)
-                )
+                control = await c.delete(f"/v1/webhooks/{victim_id}", headers=bearer(user_token))
                 assert foreign.status_code == control.status_code == 404
                 assert foreign.content == control.content
                 # the victim's subscription SURVIVED the attack
-                listed = await c.get(
-                    "/v1/webhooks", headers=bearer(admin_token)
-                )
+                listed = await c.get("/v1/webhooks", headers=bearer(admin_token))
                 assert [w["id"] for w in listed.json()["webhooks"]] == [victim_id]
 
         run(scenario())
@@ -847,13 +822,9 @@ class TestWebhookManagement:
                     headers=bearer(admin_token),
                 )
                 sub_id = created.json()["id"]
-                other_view = await c.get(
-                    "/v1/webhooks", headers=bearer(user_token)
-                )
+                other_view = await c.get("/v1/webhooks", headers=bearer(user_token))
                 assert other_view.json() == {"webhooks": []}
-                deleted = await c.delete(
-                    f"/v1/webhooks/{sub_id}", headers=bearer(admin_token)
-                )
+                deleted = await c.delete(f"/v1/webhooks/{sub_id}", headers=bearer(admin_token))
                 assert deleted.status_code == 204
                 after = await c.get("/v1/webhooks", headers=bearer(admin_token))
                 assert after.json() == {"webhooks": []}
@@ -866,14 +837,9 @@ class TestWebhookManagement:
         async def scenario() -> None:
             token = await _login(app, ADMIN_EMAIL)
             async with _client(app) as c:
-                response = await c.delete(
-                    "/v1/webhooks/not-a-uuid", headers=bearer(token)
-                )
+                response = await c.delete("/v1/webhooks/not-a-uuid", headers=bearer(token))
                 assert response.status_code == 422
-                assert (
-                    response.json()["error"]["details"]["field"]
-                    == "subscription_id"
-                )
+                assert response.json()["error"]["details"]["field"] == "subscription_id"
 
         run(scenario())
 
@@ -888,9 +854,7 @@ class TestWebhookManagement:
                     ("POST", "/v1/webhooks"),
                     ("DELETE", f"/v1/webhooks/{uuid4()}"),
                 ]:
-                    response = await c.request(
-                        method, path, headers=bearer(token)
-                    )
+                    response = await c.request(method, path, headers=bearer(token))
                     assert response.status_code == 404, (method, path)
 
         run(scenario())
@@ -923,9 +887,7 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         execution_service=service,
         store=store,
         auth=AuthSurface(identity=identity, admin_emails=frozenset({ADMIN_EMAIL})),
-        admin=dataclasses.replace(
-            world.surface(), audit=audit, executions=store
-        ),
+        admin=dataclasses.replace(world.surface(), audit=audit, executions=store),
         models=world.models,
         bindings=world.bindings,
         usage=world.usage,

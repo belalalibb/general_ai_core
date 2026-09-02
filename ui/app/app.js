@@ -94,10 +94,11 @@ function clearError(el) {
 /* --- profile probe ------------------------------------------------------------ */
 
 async function probeProfile() {
-  /* Durable profile: /v1/auth/session exists and answers 401 without a
-     token. Demo profile: fixed-principal mode has NO auth routes ⇒ 404. */
+  /* Durable profile: /v1/auth/session answers 401 without a token.
+     Demo profile: either NO auth routes (404, fixed-principal mode) or the
+     R160 hybrid answer 200 {mode:"demo"} — the server SAYS it is demo. */
   const session = await api("/v1/auth/session");
-  if (session.status === 404) {
+  if (session.status === 404 || (session.ok && session.body && session.body.mode === "demo")) {
     state.profile = "demo";
   } else {
     state.profile = "durable";
