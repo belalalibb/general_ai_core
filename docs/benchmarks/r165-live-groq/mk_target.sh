@@ -50,8 +50,7 @@ def parse_money(text: str) -> Money:
     negative = amount.startswith("-")
     amount = amount.lstrip("-")
     whole, _, frac = amount.partition(".")
-    frac = (frac + "00")[:2]
-    cents = int(whole) * 100 + int(frac)
+    cents = int(whole) * 100 + int(frac or 0)
     return Money(-cents if negative else cents, currency.upper())
 EOF
 cat > ledger/accounts.py <<'EOF'
