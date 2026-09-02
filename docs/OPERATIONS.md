@@ -62,7 +62,6 @@ below is read from the process environment at start.
 | `AGENT_SOURCE_ROOT` | directory jail; enables the read-only source tools for agent mode | absent ⇒ 0 source tools |
 | `AGENT_MAX_STEPS` | operator cap on proposals per agent run (1–32); a request may ask for fewer via `execution_policy.max_steps`, never more (422) | `8` |
 | `AGENT_REASONING_MAX_TOKENS` | completion budget per agent reasoning call (256–65 536). A proposal may carry a whole file; too small truncates it (Groq: `400 json_validate_failed`). Providers count the *requested* budget against per-minute caps up front, so on Groq free (8k TPM) keep prompt + budget under 8k | `4096` |
-| `AGENT_REASONING_MAX_TOKENS` | completion budget per agent reasoning call (256–65 536). A proposal may carry a whole file; too small truncates it (Groq: `400 json_validate_failed`). Providers count the *requested* budget against per-minute caps up front, so on Groq free (8k TPM) keep prompt + budget under 8k | `4096` |
 | `AGENT_DEADLINE_MS` | operator wall-clock cap per agent run (1 000–3 600 000); requests may lower it via `execution_policy.deadline_ms` | `120000` |
 | `AGENT_WORKSPACE_ROOT` | **engineering workspace** (ADR-0012): a git checkout the shared agent may read, write, run allow-listed commands in and commit/push/merge — under Admin authorization. Refused if it is (or contains / is inside) the platform's own checkout (ADR-0009 §14) | absent ⇒ 0 engineering tools, `/v1/admin/engineering/*` NOT mounted (404) |
 | `AGENT_WORKSPACE_REMOTE` | git remote name used by `git_push` / `git_compare` | `origin` |
@@ -285,6 +284,9 @@ and `infrastructure/` — a stubs gap, not a defect; install `types-boto3`/
 | Provider health `UNAVAILABLE: no health credential` | honest: cannot verify ≠ healthy; set the key |
 | `attached to a different loop` at shutdown | only if bypassing `apps.main` — the lifespan disposes on the bridge loop |
 | Verification email never arrives | there is no email delivery; read the token from the server console |
+| Agent run dies on step 1 with `propose_failed … bad_request` | read the server log line `groq_http_error status=… type=… code=… param=…` — the tenant-facing error never carries provider text. `param=response_format` ⇒ that model lacks constrained decoding (now fails over automatically) |
+| Agent run stops `invalid_proposal` twice in a row | the model returned a shape the strict validator refused; check `/v1/agent/executions/{id}/trace` stage errors. The published `AGENT_PROPOSAL_SCHEMA` is discriminated on `action`, so a `tool_call` without `arguments` should no longer be produced under constrained decoding |
+| Groq free tier: `429 … tokens` every step, runs take 10+ min | per-model 8k TPM cap. Keep prompt + `AGENT_REASONING_MAX_TOKENS` under 8k, set `PROVIDER_MAX_RETRIES=4`, ask for `fallback: max_escalation` so an exhausted model hands off to another. Reference run: `docs/benchmarks/r165-live-groq/` (32 stages, 617 s) |
 
 ---
 
@@ -300,6 +302,7 @@ and `infrastructure/` — a stubs gap, not a defect; install `types-boto3`/
 | Learning | `core/learning/`, `apps/api/provenance.py` |
 | Skills | `core/skills/`, `apps/api/skills_import.py` |
 | Gate script | `engineering/verification/check_repo.sh` |
+| Live real-LLM engineering proof (Groq) | `docs/benchmarks/r165-live-groq/` — scripts + evidence bundle |
 | Product objective | `docs/architecture/MASTER_VISION_V2_FINAL_DOCUMENTATION.md` |
 | Roadmap (dependency order V1–V9) | `docs/architecture/MASTER_VISION_V2_ROADMAP.md` |
 | Execution state (R-series ledger) | `docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md` |
