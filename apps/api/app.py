@@ -148,6 +148,7 @@ from apps.api.errors import (
 )
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
+from apps.api.provenance import context_provenance as _context_provenance
 from apps.api.scenarios import ScenarioService
 from apps.api.self_review import SelfReviewService
 from apps.api.store import (
@@ -225,12 +226,8 @@ from core.execution.service import (
     PipelineStage,
 )
 from core.identity.errors import SessionInvalid
-from core.learning import (
-    GOLD_KNOWLEDGE_SOURCE,
-    LearningLifecycleService,
-    TrainingEligibilityGate,
-)
-from core.memory.errors import ConversationNotFound, MemoryStoreError
+from core.learning import LearningLifecycleService, TrainingEligibilityGate
+from core.memory.errors import ConversationNotFound
 from core.memory.ports import ConversationStorePort, MemoryStorePort
 from core.providers.registry import BindingRegistry, ModelRegistry
 from core.roles.errors import RoleNotRegistered, RoleNotSelectable
@@ -281,67 +278,6 @@ def _request_hash(payload: ExecuteRequest) -> str:
         separators=(",", ":"),
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-
-
-#: Artifact type label for the R161 context-provenance evidence.
-CONTEXT_PROVENANCE_ARTIFACT = "context_provenance"
-
-
-def _context_provenance(
-    report: ExecutionReport,
-    tenant_id: UUID,
-    memory: MemoryStorePort | None,
-) -> JsonObject | None:
-    """Derive the R161 ``context_provenance`` artifact from STORED evidence.
-
-    Phase 3 (real learning improvement) requires that GOLD knowledge reaching
-    a production answer be MEASURABLE, not asserted. The composed 13 §5
-    context already rides the node's ``input_ref["context"]`` (stored
-    execution truth). This reads it back and names, per memory block, the
-    memory id + its ``source`` label (``learning.gold`` for promoted
-    knowledge) — never the content (that already rode the payload once;
-    re-echoing it here would widen the response surface).
-
-    Deny-by-default: no composed context ⇒ no artifact (``None``); an
-    unresolvable memory id ⇒ ``source: null`` (honest, no fabrication).
-    """
-    if not report.nodes:
-        return None
-    input_ref = report.nodes[-1].node.input_ref
-    if not isinstance(input_ref, dict):
-        return None
-    context = input_ref.get("context")
-    if not isinstance(context, dict):
-        return None
-    blocks = context.get("context_blocks")
-    if not isinstance(blocks, list):
-        return None
-    memory_blocks: list[JsonObject] = []
-    gold_count = 0
-    for block in blocks:
-        if not isinstance(block, dict):
-            continue
-        source = block.get("source")
-        if not isinstance(source, str) or not source.startswith("memory:"):
-            continue
-        memory_id = source.removeprefix("memory:")
-        origin: str | None = None
-        if memory is not None:
-            try:
-                origin = memory.get(tenant_id, UUID(memory_id)).source
-            except (ValueError, MemoryStoreError):
-                origin = None
-        if origin == GOLD_KNOWLEDGE_SOURCE:
-            gold_count += 1
-        memory_blocks.append({"memory_id": memory_id, "source": origin, "type": block.get("type")})
-    excluded = context.get("excluded")
-    return {
-        "type": CONTEXT_PROVENANCE_ARTIFACT,
-        "blocks_total": len(blocks),
-        "memory_blocks": memory_blocks,
-        "gold_blocks": gold_count,
-        "excluded": len(excluded) if isinstance(excluded, list) else 0,
-    }
 
 
 def _result_from_output(
@@ -2000,6 +1936,7 @@ def create_app(
                 execution_store=execution_store,
                 self_review=self_review_service,
                 source_changes=source_change_workflow,
+                memory=memory,
             )
         )
 

@@ -177,3 +177,52 @@ class TestGoldReachesProductionMeasurably:
         assert prov["memory_blocks"] == [
             {"memory_id": str(item.id), "source": "user.stated", "type": "preference"}
         ]
+
+
+class TestRetestMeasuresProductionReach:
+    """R161 follow-up (a): the admin re-test reports the PRODUCTION counterpart
+    of the isolated verdict — per probe key, how many REAL executions carried
+    it as GOLD model input (same stored input_ref the artifact reads)."""
+
+    def test_production_section_moves_with_real_executions(self) -> None:
+        from tests.api.test_self_evolution_r161 import _admin, _profile
+
+        profile = _profile()
+        headers, tenant = _admin(profile)
+        probes = ["ops.rollback", "never.learned"]
+
+        async def retest() -> dict[str, Any]:
+            transport = httpx.ASGITransport(app=profile.app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://t") as client:
+                r = await client.post(
+                    "/v1/admin/learning/capability-retest",
+                    json={"probes": probes},
+                    headers=headers,
+                )
+                assert r.status_code == 200, r.text
+                return dict(r.json())
+
+        async def execute_as_admin(ask: str) -> None:
+            transport = httpx.ASGITransport(app=profile.app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://t") as client:
+                r = await client.post("/v1/execute", json={"ask": ask}, headers=headers)
+                assert r.status_code == 200, r.text
+
+        before = run(retest())["production"]
+        assert before["available"] is True
+        assert before["reached_by_key"] == {"ops.rollback": 0, "never.learned": 0}
+        assert before["never_reached"] == ["never.learned", "ops.rollback"]
+
+        _promote(profile, tenant, "ops.rollback", {"answer": "drain then flip"})
+        run(execute_as_admin("first"))
+        run(execute_as_admin("second"))
+
+        after = run(retest())
+        # isolated verdict AND production reach, side by side
+        assert after["snapshot"]["found"] == ["ops.rollback"]
+        production = after["production"]
+        assert production["reached_by_key"] == {"ops.rollback": 2, "never.learned": 0}
+        assert production["reached"] == ["ops.rollback"]
+        assert production["never_reached"] == ["never.learned"]
+        assert production["executions_examined"] >= 2
+        assert production["window"] == 200

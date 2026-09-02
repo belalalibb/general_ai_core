@@ -60,7 +60,7 @@ Phase AA-1 (seams AUD-1, USG-2, SYS-1) — recorded decisions:
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -79,6 +79,7 @@ from apps.api.context_lab import (
 from apps.api.errors import error_response
 from apps.api.exercise import ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
+from apps.api.provenance import gold_keys_in_report
 from apps.api.scenarios import (
     ScenarioNotFound,
     ScenarioSaveRequest,
@@ -126,6 +127,7 @@ from core.learning import (
     SampleNotFound,
     SanitizationRefused,
 )
+from core.memory.ports import MemoryStorePort
 from core.providers.registry import ModelRegistry, ProviderRegistry
 from core.sourcechange.errors import (
     ApprovalHashMismatch,
@@ -225,6 +227,10 @@ class LearningPromoteRequest(ContractModel):
         )
 
 
+#: Newest executions examined by the re-test's production-reach measurement.
+_RETEST_EXECUTION_WINDOW = 200
+
+
 def _snapshot_from_json(data: JsonObject) -> CapabilitySnapshot:
     """Rebuild a baseline from a prior ``snapshot`` payload (strict shape)."""
     probes = data["probes"]
@@ -291,6 +297,7 @@ def create_admin_router(
     execution_store: ExecutionStorePort | None = None,
     self_review: SelfReviewService | None = None,
     source_changes: SourceChangeWorkflow | None = None,
+    memory: MemoryStorePort | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -822,6 +829,31 @@ def create_admin_router(
                 return admitted
             return _json({"keys": list(lifecycle.learned_keys(admitted.tenant_id))})
 
+        def _production_reach(tenant_id: UUID, probes: Sequence[str]) -> JsonObject:
+            """Per probe key: how many REAL executions carried it as GOLD input.
+
+            Reads the SAME stored ``input_ref`` the ``context_provenance``
+            artifact is derived from (one derivation, P3). Bounded to the
+            newest ``_RETEST_EXECUTION_WINDOW`` executions — the window is
+            reported so the number is never mistaken for all-time truth.
+            """
+            store = execution_store if execution_store is not None else surface.executions
+            if store is None or memory is None:
+                return {"available": False}
+            reports = store.list(tenant_id, limit=_RETEST_EXECUTION_WINDOW)
+            reached: dict[str, int] = {key: 0 for key in probes}
+            for report in reports:
+                for key in gold_keys_in_report(report, tenant_id, memory) & reached.keys():
+                    reached[key] += 1
+            return {
+                "available": True,
+                "executions_examined": len(reports),
+                "window": _RETEST_EXECUTION_WINDOW,
+                "reached_by_key": reached,
+                "reached": sorted(k for k, n in reached.items() if n > 0),
+                "never_reached": sorted(k for k, n in reached.items() if n == 0),
+            }
+
         @router.post("/learning/capability-retest")
         async def capability_retest(request: Request, body: LearningRetestRequest) -> Response:
             """POST .../capability-retest: measured before/after over ONE probe set.
@@ -835,6 +867,11 @@ def create_admin_router(
                 return admitted
             after = lifecycle.capability_snapshot(admitted.tenant_id, list(body.probes))
             result: JsonObject = {"snapshot": after.as_json()}
+            # R161 follow-up: the PRODUCTION counterpart — which probe keys
+            # actually rode REAL /v1/execute model inputs (stored input_ref
+            # provenance), measured from the tenant's execution history.
+            # Absent seams answer honestly (available: False), never infer.
+            result["production"] = _production_reach(admitted.tenant_id, after.probes)
             if body.baseline is not None:
                 try:
                     before = _snapshot_from_json(body.baseline)
