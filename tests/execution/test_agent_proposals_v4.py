@@ -15,6 +15,7 @@ from uuid import uuid4
 import pytest
 
 from core.execution.agent import (
+    AGENT_PROPOSAL_SCHEMA,
     AgentToolBinding,
     FinalProposal,
     InvalidAgentProposal,
@@ -155,3 +156,18 @@ def test_binding_is_frozen_composition_data() -> None:
     assert binding.approval_state is None
     assert binding.device_id is None
     assert binding.estimated_units == 0.0
+
+
+def test_published_schema_agrees_with_the_validator() -> None:
+    """R165 (live): the JSON Schema handed to providers for constrained
+    decoding admits exactly what ``parse_agent_proposal`` accepts — the
+    closed action vocabulary and the declared keys, nothing more."""
+    props = AGENT_PROPOSAL_SCHEMA["properties"]
+    assert set(props["action"]["enum"]) == {"tool_call", "final"}
+    assert set(props) == {"action", "tool", "arguments", "output", "reasoning"}
+    assert AGENT_PROPOSAL_SCHEMA["additionalProperties"] is False
+    # A schema-shaped tool_call and final both pass the validator verbatim.
+    call = {"action": "tool_call", "tool": "fs", "arguments": {"path": "x"}, "reasoning": "r"}
+    assert isinstance(parse_agent_proposal(call), ToolCallProposal)
+    done = {"action": "final", "output": {"answer": "a", "evidence": []}, "reasoning": "r"}
+    assert isinstance(parse_agent_proposal(done), FinalProposal)

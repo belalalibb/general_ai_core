@@ -78,6 +78,14 @@ class TestHappyPath:
         assert "Observations so far" in second["ask"] and '"content": "hello"' in second["ask"]
         meta = first["context"]["metadata"][AGENT_RUNTIME_LABEL_KEY]
         assert meta == {"kind": "reasoning", "step": 1, "surface": "test"}
+        # R165 (live): every reasoning request carries the proposal schema so
+        # adapters with constrained decoding keep the model in the protocol.
+        from core.execution.agent import AGENT_PROPOSAL_SCHEMA
+
+        assert first["response_schema"] == {
+            "name": "agent_proposal",
+            "schema": AGENT_PROPOSAL_SCHEMA,
+        }
 
     def test_final_without_tools_and_empty_evidence_passes(self) -> None:
         world = AgentWorld([model_says(final("42"))])

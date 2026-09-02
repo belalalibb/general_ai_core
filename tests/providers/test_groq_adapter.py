@@ -197,6 +197,29 @@ class TestGenerateContract:
         # tools and Groq answers 400 tool_use_failed.
         assert sent["tool_choice"] == "none"
         assert "tools" not in sent
+        assert "response_format" not in sent  # plain asks are unconstrained
+
+    def test_response_schema_maps_to_json_schema_response_format(self) -> None:
+        """R165 (live): the agent's proposal schema becomes constrained decoding."""
+        adapter, recorder = _adapter(_ok_chat)
+        schema = {"type": "object", "properties": {"action": {"type": "string"}}}
+        run(
+            adapter.generate(
+                _generate_request(
+                    payload={"ask": "go", "response_schema": {"name": "p", "schema": schema}}
+                )
+            )
+        )
+        sent = json.loads(recorder.requests[0].content)
+        assert sent["response_format"] == {
+            "type": "json_schema",
+            "json_schema": {"name": "p", "schema": schema},
+        }
+
+    def test_malformed_response_schema_is_ignored(self) -> None:
+        adapter, recorder = _adapter(_ok_chat)
+        run(adapter.generate(_generate_request(payload={"ask": "go", "response_schema": "x"})))
+        assert "response_format" not in json.loads(recorder.requests[0].content)
 
     def test_role_and_context_and_previous_output_map_to_messages(self) -> None:
         adapter, recorder = _adapter(_ok_chat)

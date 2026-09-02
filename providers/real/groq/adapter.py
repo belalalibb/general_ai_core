@@ -455,6 +455,10 @@ def _chat_completion_body(request: ProviderGenerateRequest) -> dict[str, Any]:
       (pipeline stage chaining).
     - ``payload["ask"]`` (str, required by the API contract) -> user message.
     - ``payload["generation"]`` (object) -> whitelisted sampling params.
+    - ``payload["response_schema"]`` ({name, schema}) -> ``response_format``
+      ``json_schema`` (constrained decoding). R165 live: this is what makes
+      gpt-oss answer a tool-describing prompt IN the text protocol instead
+      of emitting a native function call that Groq then 400s.
     """
     payload = request.payload
     messages: list[dict[str, str]] = []
@@ -490,6 +494,19 @@ def _chat_completion_body(request: ProviderGenerateRequest) -> dict[str, Any]:
         for key, value in generation.items():
             if key in _GENERATION_PARAM_WHITELIST:
                 body[key] = value
+    response_schema = payload.get("response_schema")
+    if (
+        isinstance(response_schema, dict)
+        and isinstance(response_schema.get("schema"), dict)
+        and isinstance(response_schema.get("name"), str)
+    ):
+        body["response_format"] = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": response_schema["name"],
+                "schema": response_schema["schema"],
+            },
+        }
     return body
 
 

@@ -50,6 +50,25 @@ _ACTION_FINAL = "final"
 _TOOL_CALL_KEYS = frozenset({"action", "tool", "arguments", "reasoning"})
 _FINAL_KEYS = frozenset({"action", "output", "reasoning"})
 
+#: The proposal contract as JSON Schema — the SAME closed vocabulary the
+#: validator below enforces, published so a provider adapter can ask the
+#: model for constrained decoding into it (R165 live: gpt-oss on Groq
+#: otherwise answers a tool-describing prompt with a NATIVE function call,
+#: which Groq rejects as 400 tool_use_failed). The schema narrows what the
+#: model can emit; :func:`parse_agent_proposal` still disposes (P4/P7).
+AGENT_PROPOSAL_SCHEMA: JsonObject = {
+    "type": "object",
+    "properties": {
+        "action": {"type": "string", "enum": [_ACTION_TOOL_CALL, _ACTION_FINAL]},
+        "tool": {"type": "string"},
+        "arguments": {"type": "object", "additionalProperties": True},
+        "output": {"type": "object", "additionalProperties": True},
+        "reasoning": {"type": "string"},
+    },
+    "required": ["action", "reasoning"],
+    "additionalProperties": False,
+}
+
 
 class InvalidAgentProposal(Exception):
     """The model's structured output violates the proposal contract.

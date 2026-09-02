@@ -48,7 +48,7 @@ from core.contracts.provider import ProviderGenerateResponse, ProviderOperation
 from core.contracts.routing import RoutingRequest
 from core.contracts.security import ActorKind
 from core.contracts.tools import Tool
-from core.execution.agent import AgentToolBinding
+from core.execution.agent import AGENT_PROPOSAL_SCHEMA, AgentToolBinding
 from core.execution.loop import (
     DEFAULT_MAX_REPEATED_FAILURES,
     AgentLoop,
@@ -465,6 +465,9 @@ class AgentRuntime:
         payload: JsonObject = {
             "ask": prompt,
             "context": {"metadata": {label_key: metadata}},
+            # Adapters that support constrained decoding honor this; others
+            # ignore it and the prompt's protocol text still governs.
+            "response_schema": {"name": "agent_proposal", "schema": AGENT_PROPOSAL_SCHEMA},
         }
         request_hash = hashlib.sha256(
             json.dumps(payload, sort_keys=True).encode("utf-8")
