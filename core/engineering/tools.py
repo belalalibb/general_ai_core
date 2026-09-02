@@ -256,7 +256,11 @@ def engineering_tool_specs(
         return _dump(await git.merge(source, into=into))
 
     ticket_arg: dict[str, str] = {
-        "authorization_id": "string (UUID of an Admin-issued authorization)"
+        "authorization_id": (
+            "string (UUID of an Admin-issued authorization, exactly as given in the "
+            "task; NEVER invent or guess one — omit the key when none was given and "
+            "the platform will answer with the refusal)"
+        )
     }
     entries: list[tuple[str, str, str, str, dict[str, str], Handler, ResultCheck | None]] = [
         (
