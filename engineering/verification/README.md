@@ -15,7 +15,7 @@ Authority: `docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTOCOL.md`
 4. Repo-level checks live in this directory and must be runnable locally and
    in CI with the same entry point:
        ./engineering/verification/check_repo.sh
-5. CI (.github/workflows/ci.yml) runs the same script — CI is a mirror of the
+5. CI ((no `.github/workflows/ci.yml` exists in this repository yet — the gate is run locally / by the operator via `python3 -m apps.cli check`)) runs the same script — CI is a mirror of the
    local gate, never a different gate.
 6. Never assume an interrupted command succeeded (40 §10): re-verify from
    filesystem/Git reality after any interruption.

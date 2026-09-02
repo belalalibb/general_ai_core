@@ -1,3 +1,5 @@
+> **Superseded for operations:** the ONE authoritative run/operate document is [`docs/OPERATIONS.md`](docs/OPERATIONS.md) (start there). This file is kept as a short local-first companion; where they differ, OPERATIONS.md wins.
+
 # Running the platform (P-B local-first runtime)
 
 One process serves the API, drains the transactional outbox, and executes

@@ -1,3 +1,12 @@
+# general_ai_core — General AI Agent Platform / Core
+
+**Operators/engineers start here → [`docs/OPERATIONS.md`](docs/OPERATIONS.md)** (install, env, providers, start, tests, agent mode, learning, troubleshooting).
+Product objective: `docs/architecture/MASTER_VISION_V2_FINAL_DOCUMENTATION.md` · Roadmap (dependency order V1–V9): `docs/architecture/MASTER_VISION_V2_ROADMAP.md` · Execution ledger (R-series): `docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md`.
+
+---
+
+_The remainder of this file is the historical documentation re-architecture agent prompt, kept verbatim for provenance._
+
 # General AI Core / AI Orchestration Platform
 
 # DOCUMENTATION RE-ARCHITECTURE AGENT

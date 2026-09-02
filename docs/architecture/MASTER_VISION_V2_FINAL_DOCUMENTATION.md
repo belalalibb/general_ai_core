@@ -1,3 +1,5 @@
+> **Reconciliation note (R162, 2026-09-02):** this document records the V1–V9 closure at R135 (2121 tests). Subsequent R136–R162 work on branch `feature/model-provider-skill-orchestration` (PR #12) ADDED, without regressing it: shared agent runtime (`core/agent`, `strategy=agent`), verification-before-finalization, external skill acquisition pipeline, provider onboarding via gateway discovery (refs only), measured learning lifecycle (scan/sanitize/derived admission signals/GOLD-after-write/context_provenance/capability re-test with production reach), two-lane self-evolution statement (§14 gate untouched), hybrid identity mode, unified CLI, S2 pooled provider clients (all three real adapters + shutdown release), S3 bounded fan-out. Gates at R162: 2586 passed / 64 skipped, ruff clean, mypy --strict clean (core+apps/api+apps/admin_agent), 12/0 import contracts. Operations: `docs/OPERATIONS.md`. The §6 honest exclusions still standing: email delivery, OS jail, token streaming, distributed deployment composition; durable stores for usage/audit/learning samples remain in-process.
+
 # MASTER VISION v2 — FINAL DOCUMENTATION (V9, one doc)
 
 ```text

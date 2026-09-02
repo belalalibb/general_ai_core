@@ -1,3 +1,5 @@
+> **STALE — superseded (2026-09-02).** This summary predates R157–R162 and its claim that the platform is "NOT an agent platform yet" is no longer true: a shared AgentRuntime/AgentLoop is composed into `POST /v1/execute strategy=agent` (bounded, verified, evidence-ledgered), external skill admission, provider onboarding, the measured learning lifecycle, S2 pooled clients and S3 bounded fan-out are implemented and pinned. Current truth: `docs/OPERATIONS.md` + `PROJECT_EXECUTION_STATE.md` (R162). Kept for history only.
+
 # PLATFORM CAPABILITY SUMMARY (Operator-Facing)
 
 **Date:** 2026-08-30 · **State assessed:** `main` @ `5c1410b`
