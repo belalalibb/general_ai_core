@@ -199,6 +199,11 @@ class AgentRunOutcome:
     execution_report: ExecutionReport
 
 
+#: Completion budget per reasoning call (R165 live). Groq's free tier is 8k
+#: tokens/minute; the cap counts against the run's deadline via retries, not
+#: against correctness — a truncated proposal is worse than a slow one.
+REASONING_MAX_COMPLETION_TOKENS = 8192
+
 _PROTOCOL = (
     "You are an agent running inside a governed platform. Respond with ONLY "
     "one raw JSON object (no markdown fences, no prose) in EXACTLY one of "
@@ -468,6 +473,11 @@ class AgentRuntime:
             # Adapters that support constrained decoding honor this; others
             # ignore it and the prompt's protocol text still governs.
             "response_schema": {"name": "agent_proposal", "schema": AGENT_PROPOSAL_SCHEMA},
+            # A proposal may carry a whole file (ws_write) and reasoning
+            # models spend thinking tokens inside the same budget; the
+            # adapter default (1024) truncated a write step live, which under
+            # constrained decoding surfaces as 400 json_validate_failed.
+            "generation": {"max_completion_tokens": REASONING_MAX_COMPLETION_TOKENS},
         }
         request_hash = hashlib.sha256(
             json.dumps(payload, sort_keys=True).encode("utf-8")
