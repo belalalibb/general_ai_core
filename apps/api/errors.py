@@ -81,19 +81,35 @@ def error_response(
 
 
 def execution_failure_detail(
-    execution_id: str, provider_error: ProviderError | None
+    execution_id: str,
+    provider_error: ProviderError | None,
+    *,
+    agent_failure: JsonObject | None = None,
 ) -> ErrorDetail:
     """Map a failed execution's last normalized error to the unified shape.
 
     Only the adapter-normalized ``safe_message`` and category cross this
     boundary (30 §14) — raw provider internals never reach clients.
+
+    ``agent_failure`` (R165) is a ``strategy=agent`` run's recorded cause —
+    ``{"stop_reason": ..., "node": ..., "error": {...}}``, already scrubbed by
+    the caller — so a client sees WHY the bounded loop stopped (invalid
+    proposal detail, refused capability, deadline) instead of an opaque
+    "Execution failed.". Absent ⇒ the historical shape, unchanged.
     """
     if provider_error is None:
+        details: JsonObject = {"execution_id": execution_id}
+        message = "Execution failed."
+        if agent_failure:
+            details["agent"] = dict(agent_failure)
+            stop_reason = agent_failure.get("stop_reason")
+            if isinstance(stop_reason, str):
+                message = f"Execution failed: agent stopped ({stop_reason})."
         return ErrorDetail(
             code=ErrorCode.EXECUTION_FAILED,
-            message="Execution failed.",
+            message=message,
             retryable=False,
-            details={"execution_id": execution_id},
+            details=details,
         )
     code = _CODE_BY_PROVIDER_CATEGORY.get(provider_error.category, ErrorCode.EXECUTION_FAILED)
     return ErrorDetail(

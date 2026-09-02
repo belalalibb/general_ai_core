@@ -142,6 +142,7 @@ from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthe
 from apps.api.capabilities import Capability, CapabilityState
 from apps.api.context_lab import ContextLabService
 from apps.api.engineering_admin import EngineeringAdminSurface
+from apps.admin_agent.secrecy import scrub_object
 from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
@@ -189,7 +190,7 @@ from core.contracts.execute import (
     UsageReport,
     WebhookEventType,
 )
-from core.contracts.execution import Execution, ExecutionStrategy
+from core.contracts.execution import Execution, ExecutionNodeStatus, ExecutionStrategy
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
 from core.contracts.model_policy import (
     AgentNodeMappingPolicy,
@@ -357,6 +358,29 @@ def _last_provider_error(report: ExecutionReport) -> ProviderError | None:
             if attempt.error is not None:
                 return attempt.error
     return None
+
+
+def _agent_failure(report: ExecutionReport) -> JsonObject | None:
+    """R165: WHY a ``strategy=agent`` run failed, from what the loop recorded.
+
+    ``stop_reason`` rides the loop summary (``cost_snapshot``); the cause is
+    the LAST failed node's recorded error (invalid-proposal detail, refused
+    capability, deadline…). Scrubbed (R4) before it crosses the boundary.
+    ``None`` for non-agent records — the historical shape stays untouched.
+    """
+    if report.execution.strategy is not ExecutionStrategy.AGENT:
+        return None
+    failure: JsonObject = {}
+    stop_reason = report.execution.cost_snapshot.get("stop_reason")
+    if isinstance(stop_reason, str):
+        failure["stop_reason"] = stop_reason
+    for node_report in reversed(report.nodes):
+        node = node_report.node
+        if node.status is ExecutionNodeStatus.FAILED and node.error:
+            failure["node"] = node.node_key
+            failure["error"] = scrub_object(dict(node.error))
+            break
+    return failure or None
 
 
 def _resolve_role(selector: RoleSelector, registry: RoleRegistry) -> Role | JSONResponse:
@@ -1225,7 +1249,11 @@ def create_app(
             )
         # Failed execution: unified error (10 §9) carrying the execution id so
         # GET /v1/executions/{id} remains fully usable for diagnosis.
-        detail = execution_failure_detail(str(report.execution.id), _last_provider_error(report))
+        detail = execution_failure_detail(
+            str(report.execution.id),
+            _last_provider_error(report),
+            agent_failure=_agent_failure(report),
+        )
         return JSONResponse(
             status_code=HTTP_STATUS_BY_CODE[detail.code],
             content={"error": detail.model_dump(mode="json", exclude_none=True)},
@@ -1550,7 +1578,11 @@ def create_app(
                 report.final_output, None, [provenance] if provenance else None
             )
         elif status is ExecutionStatus.FAILED:
-            error_detail = execution_failure_detail(execution_id, _last_provider_error(report))
+            error_detail = execution_failure_detail(
+                execution_id,
+                _last_provider_error(report),
+                agent_failure=_agent_failure(report),
+            )
         status_response = ExecutionStatusResponse(
             execution_id=execution_id,
             status=status,
