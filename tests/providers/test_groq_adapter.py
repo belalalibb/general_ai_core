@@ -333,6 +333,28 @@ class TestErrorNormalization:
         assert response.error is not None
         assert response.error.category is ProviderErrorCategory.CONTENT_REJECTED
 
+    def test_model_without_constrained_decoding_is_unsupported_capability(self) -> None:
+        """R165 (live): allam-2-7b answers 400 param=response_format for
+        json_schema. The request is sound; this candidate lacks the
+        capability — failover, not bad_request."""
+        adapter, _ = _adapter(
+            lambda req: httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "message": "This model does not support response format `json_schema`.",
+                        "type": "invalid_request_error",
+                        "param": "response_format",
+                    }
+                },
+            )
+        )
+        response = run(adapter.generate(_generate_request()))
+        assert response.succeeded is False
+        assert response.error is not None
+        assert response.error.category is ProviderErrorCategory.UNSUPPORTED_CAPABILITY
+        assert response.error.retryable is False
+
     @pytest.mark.parametrize("code", ["tool_use_failed", "json_validate_failed"])
     def test_generation_failures_are_retryable_not_bad_request(self, code: str) -> None:
         """R165 (live): under constrained decoding gpt-oss on Groq fails its

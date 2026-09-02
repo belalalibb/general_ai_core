@@ -391,6 +391,17 @@ class GroqAdapter:
         """HTTP status -> normalized category (30 §14 mapping for Groq)."""
         status = response.status_code
         code = _safe_error_code(response)
+        if status == 400 and _error_param(response) == "response_format":
+            # R165 live: not every Groq model accepts constrained decoding
+            # ("This model does not support response format `json_schema`").
+            # The REQUEST is fine; this CANDIDATE lacks the capability —
+            # fail over to the next one instead of indicting the request.
+            return ProviderError(
+                category=ProviderErrorCategory.UNSUPPORTED_CAPABILITY,
+                retryable=False,
+                provider_code=code or "response_format_unsupported",
+                safe_message="model does not support the requested response format",
+            )
         if status in (401, 403):
             return ProviderError(
                 category=ProviderErrorCategory.INVALID_CREDENTIAL,
@@ -555,6 +566,16 @@ def _retry_after_ms(response: httpx.Response) -> int | None:
         return max(0, int(float(raw) * 1000))
     except ValueError:
         return None
+
+
+def _error_param(response: httpx.Response) -> str | None:
+    """The request field Groq's error names (``error.param``), if any."""
+    try:
+        error = response.json().get("error", {})
+    except ValueError:
+        return None
+    param = error.get("param") if isinstance(error, dict) else None
+    return param if isinstance(param, str) and param else None
 
 
 def _safe_error_code(response: httpx.Response) -> str | None:
