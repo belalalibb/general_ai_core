@@ -102,7 +102,7 @@ Request bodies are closed shapes (`extra=forbid`): unknown fields ⇒ 422.
 
 - **API** — `/v1/*` (see `apps.cli routes`). Core entry: `POST /v1/execute`
   (sync or `{"execution_policy":{"async":true}}` ⇒ 202 → `GET /v1/executions/{id}`),
-  `GET /v1/executions/{id}/trace`, `GET /v1/agent-tools`, `GET /v1/models`.
+  `GET /v1/agent/executions/{id}/trace` (agent runs), `GET /v1/agent-tools`, `GET /v1/models`.
 - **End-user web UI** — `/app/` (static, talks to the same API).
 - **Admin console** — `/admin/` (static; every panel reads REAL routes;
   `GET /v1/admin/system`, `/v1/admin/usage`, learning, skills import,
@@ -118,8 +118,18 @@ Request bodies are closed shapes (`extra=forbid`): unknown fields ⇒ 422.
 
 ```bash
 curl -s -X POST localhost:8000/v1/execute -H 'content-type: application/json' \
-  -d '{"ask":"list the python files under the source root","strategy":"agent"}'
+  -d '{"ask":"list the files under the agent directory",
+       "execution_policy":{"strategy":"agent"},
+       "tools":{"allowed":["source_list","source_read","source_search"]}}'
 ```
+
+The strategy lives under `execution_policy`; tools are granted through the
+`tools.allowed` allow-list (closed shape; unknown names ⇒ 422). With the
+zero-config `local_echo` provider an agent turn ends in an **honest 502**
+`execution_failed` (echo cannot drive reasoning; pinned) — the failed
+reasoning execution is still traceable. With a real provider key (verified
+live: `plan-1 → act-1-source_list → plan-2 → verify-2 → finalize-2 → final`)
+the answer carries `evidence` indices into the ledger.
 
 `strategy=agent` runs `core/agent/runtime.py::AgentRuntime` over the shared
 `core/execution/loop.py::AgentLoop`: understand → plan → select → act →
@@ -129,7 +139,7 @@ repeated-identical-failure refusal, invented-evidence rejection. Tools flow
 ToolRegistry → CapabilityFirewall → DeviceRegistry (one chain, shared with the
 admin agent). **Deny by default:** with no allow-list and no skills the agent
 is offered NO tools; set `AGENT_SOURCE_ROOT` to offer the read-only source tools.
-Inspect: `GET /v1/agent-tools`, `GET /v1/executions/{id}/trace` (evidence ledger).
+Inspect: `GET /v1/agent-tools`, `GET /v1/agent/executions/{id}/trace` (stages + evidence ledger).
 
 ---
 
@@ -157,12 +167,15 @@ discovery. Direct adapters (`groq`, `genspark_llm`) discover models via
 ## 8. Learning lifecycle and capability re-test (admin)
 
 ```
-POST /v1/admin/learning/samples            capture (execution-born or external → PENDING)
-POST .../samples/{id}/evaluate             grade via EvaluationPolicyService
+POST /v1/admin/learning/samples            {knowledge_key, knowledge_value:<object>, source_execution_id?} → PENDING
+POST .../samples/{id}/evaluate             {output:<object>} grade via EvaluationPolicyService
 POST .../samples/{id}/scan                 deterministic secret scan (paths+labels+fingerprints, never text)
 POST .../samples/{id}/sanitize             {passed} — passed=true over findings ⇒ 200 {sanitized:false}
-POST .../samples/{id}/admit                22 §9 gate with DERIVED signals ⇒ {admitted:bool}
-POST .../samples/{id}/promote              knowledge write FIRST, then GOLD ⇒ {promoted:bool, stage}
+POST .../samples/{id}/admit                {privacy_policy_allows, tenant_user_policy_allows, sensitive_data_handled, not_poisoned}
+                                           22 §9 gate; deduplicated/scan-clean are DERIVED ⇒ {admitted:bool}
+POST .../samples/{id}/promote              {offline_eval_pass, regression_pass, security_eval_pass, shadow_performance_acceptable,
+                                            canary_performance_acceptable, rollback_plan_exists, approval_required, admin_approved}
+                                           knowledge write FIRST, then GOLD ⇒ {promoted:bool, stage}
 GET  /v1/admin/learning/learned            ask_learned
 POST /v1/admin/learning/capability-retest  {probes:[...], baseline?} ⇒ score, delta, production reach
 ```
@@ -181,7 +194,7 @@ tested, reviewed, never auto-applied.
 ## 9. Observability / audit
 
 - Per-execution: `GET /v1/executions/{id}` (result, artifacts incl.
-  `context_provenance`), `/trace` (per-round model/provider/attempts/latency +
+  `context_provenance`), `GET /v1/agent/executions/{id}/trace` (per-round model/provider/attempts/latency +
   evidence ledger).
 - Audit log: closed event set (`core/audit`), tenant-scoped; learning
   promotions, skill activations, admin changes are audited.
