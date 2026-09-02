@@ -41,3 +41,4 @@ __pycache__/
 .import_linter_cache/
 .venv/
 .aa_backups/
+*.egg-info/

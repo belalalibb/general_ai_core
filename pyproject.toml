@@ -49,6 +49,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
+    # 16 infrastructure test modules use pytest_asyncio fixtures (durable
+    # repositories); undeclared until R163 from-scratch verification.
+    "pytest-asyncio>=0.23",
     "mypy>=1.10",
     "ruff>=0.4",
     "import-linter>=2",
@@ -57,6 +60,18 @@ dev = [
     # ADR-0007: type stubs for hvac ("strict mypy needs care" — recorded con).
     "types-hvac>=2",
 ]
+
+# Build/packaging: the documented install path (`pip install -e ".[dev]"`,
+# docs/OPERATIONS.md §0) must work on a CLEAN machine. The repo is a flat
+# multi-package layout, so package discovery is declared explicitly —
+# setuptools' auto-discovery refuses "multiple top-level packages" otherwise
+# (found by from-scratch verification, R163).
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["apps*", "core*", "providers*", "infrastructure*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
