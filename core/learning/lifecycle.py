@@ -59,7 +59,9 @@ Recorded design decisions:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import StrEnum
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -108,9 +110,7 @@ class EvaluationRunner(Protocol):
     second consumer of the SAME grader pipeline, never a parallel one.
     """
 
-    async def evaluate(
-        self, tenant_id: UUID, execution_id: UUID, output: JsonObject
-    ) -> object: ...
+    async def evaluate(self, tenant_id: UUID, execution_id: UUID, output: JsonObject) -> object: ...
 
 
 class KnowledgeStorePort(Protocol):
@@ -133,6 +133,29 @@ class AuditPort(Protocol):
     """The EXISTING audit-log seam (core/audit)."""
 
     def append(self, event: AuditEvent) -> AuditEvent: ...
+
+
+@dataclass(frozen=True)
+class CapabilitySnapshot:
+    """One measured pass over a fixed probe set (R160 re-test)."""
+
+    probes: tuple[str, ...]
+    found: tuple[str, ...]
+    missing: tuple[str, ...]
+    taken_at: datetime
+
+    @property
+    def score(self) -> float:
+        return len(self.found) / len(self.probes) if self.probes else 0.0
+
+    def as_json(self) -> JsonObject:
+        return {
+            "probes": list(self.probes),
+            "found": list(self.found),
+            "missing": list(self.missing),
+            "score": self.score,
+            "taken_at": self.taken_at.isoformat(),
+        }
 
 
 @dataclass
@@ -238,9 +261,7 @@ class LearningLifecycleService:
 
     def list_samples(self, tenant_id: UUID) -> tuple[LearningSample, ...]:
         return tuple(
-            record.sample
-            for (owner, _), record in self._samples.items()
-            if owner == tenant_id
+            record.sample for (owner, _), record in self._samples.items() if owner == tenant_id
         )
 
     def sample_report(self, tenant_id: UUID, sample_id: UUID) -> JsonObject:
@@ -262,9 +283,7 @@ class LearningLifecycleService:
 
     # --- sanitization (explicit reviewed act; no silent pass) -------------------
 
-    def mark_sanitized(
-        self, tenant_id: UUID, sample_id: UUID, *, passed: bool
-    ) -> LearningSample:
+    def mark_sanitized(self, tenant_id: UUID, sample_id: UUID, *, passed: bool) -> LearningSample:
         record = self._record(tenant_id, sample_id)
         record.sample = record.sample.model_copy(
             update={
@@ -283,18 +302,14 @@ class LearningLifecycleService:
         """Grade via the EXISTING EvaluationPolicyService; bind the level."""
         record = self._record(tenant_id, sample_id)
         if self._evaluation is None:
-            raise LearningError(
-                "no evaluation seam composed; sample level cannot advance"
-            )
+            raise LearningError("no evaluation seam composed; sample level cannot advance")
         evaluation = await self._evaluation.evaluate(
             tenant_id, record.sample.source_execution_id, output
         )
         level = getattr(evaluation, "level", None)
         if not isinstance(level, VerificationLevel):
             raise LearningError("evaluation seam returned no verification level")
-        record.sample = record.sample.model_copy(
-            update={"verification_level": level}
-        )
+        record.sample = record.sample.model_copy(update={"verification_level": level})
         return record.sample
 
     def set_verification_level(
@@ -302,9 +317,7 @@ class LearningLifecycleService:
     ) -> LearningSample:
         """Explicit reviewer act (e.g. human verification step, 22 §8)."""
         record = self._record(tenant_id, sample_id)
-        record.sample = record.sample.model_copy(
-            update={"verification_level": level}
-        )
+        record.sample = record.sample.model_copy(update={"verification_level": level})
         return record.sample
 
     # --- gates → GOLD → retrieval (the connection that was missing) -------------
@@ -325,9 +338,7 @@ class LearningLifecycleService:
             record.sample = record.sample.model_copy(
                 update={"eligibility": LearningEligibility.INELIGIBLE}
             )
-            record.eligibility_verdicts = self._eligibility.evaluate(
-                record.sample, signals
-            )
+            record.eligibility_verdicts = self._eligibility.evaluate(record.sample, signals)
             raise
         record.eligibility_verdicts = verdicts
         record.sample = record.sample.model_copy(
@@ -355,9 +366,7 @@ class LearningLifecycleService:
         """
         record = self._record(tenant_id, sample_id)
         if record.sample.eligibility is not LearningEligibility.ELIGIBLE:
-            raise LearningError(
-                "sample must pass training eligibility before promotion (22 §8)"
-            )
+            raise LearningError("sample must pass training eligibility before promotion (22 §8)")
         verdicts = self._promotion.admit(str(sample_id), signals)
         record.promotion_verdicts = verdicts
         record.sample = record.sample.model_copy(
@@ -401,9 +410,7 @@ class LearningLifecycleService:
         Deny-by-default: no GOLD item under the key = an explicit
         ``found: False`` answer; the service never fabricates content.
         """
-        items = self._knowledge.query(
-            tenant_id, scope=MemoryScope.TENANT, key=key
-        )
+        items = self._knowledge.query(tenant_id, scope=MemoryScope.TENANT, key=key)
         gold = [i for i in items if i.source == GOLD_KNOWLEDGE_SOURCE]
         if not gold:
             return {"found": False, "key": key, "answer": None, "evidence": None}
@@ -419,6 +426,46 @@ class LearningLifecycleService:
     def learned_keys(self, tenant_id: UUID) -> tuple[str, ...]:
         """The tenant's GOLD knowledge keys — the testable surface, listed."""
         items = self._knowledge.query(tenant_id, scope=MemoryScope.TENANT)
-        return tuple(
-            sorted({i.key for i in items if i.source == GOLD_KNOWLEDGE_SOURCE})
+        return tuple(sorted({i.key for i in items if i.source == GOLD_KNOWLEDGE_SOURCE}))
+
+    # --- measurable capability re-test (R160) ------------------------------------
+    #
+    # Self-improvement must be MEASURED, not asserted: the same fixed probe
+    # set is asked through the ISOLATED path before and after learning, and
+    # the difference is reported as data — gained / lost / still-missing
+    # keys. A "capability" here is exactly what the platform can already
+    # prove: a GOLD answer exists for a key. Nothing is inferred from
+    # model output; no probe passes without a GOLD item behind it.
+
+    def capability_snapshot(self, tenant_id: UUID, probes: Sequence[str]) -> CapabilitySnapshot:
+        """Ask every probe through ``ask_learned``; record found/missing."""
+        ordered = tuple(dict.fromkeys(probes))  # dedupe, keep order
+        found: list[str] = []
+        missing: list[str] = []
+        for key in ordered:
+            (found if self.ask_learned(tenant_id, key)["found"] else missing).append(key)
+        return CapabilitySnapshot(
+            probes=ordered,
+            found=tuple(found),
+            missing=tuple(missing),
+            taken_at=utc_now(),
         )
+
+    @staticmethod
+    def capability_delta(before: CapabilitySnapshot, after: CapabilitySnapshot) -> JsonObject:
+        """before/after as DATA: gained, lost (regression), still missing."""
+        if before.probes != after.probes:
+            raise LearningError("capability delta requires the SAME probe set")
+        b, a = set(before.found), set(after.found)
+        gained = sorted(a - b)
+        lost = sorted(b - a)
+        return {
+            "probes": len(after.probes),
+            "before": {"found": len(before.found), "missing": len(before.missing)},
+            "after": {"found": len(after.found), "missing": len(after.missing)},
+            "gained": gained,
+            "lost": lost,
+            "still_missing": list(after.missing),
+            "improved": bool(gained) and not lost,
+            "regressed": bool(lost),
+        }

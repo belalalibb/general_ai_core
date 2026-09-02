@@ -99,14 +99,10 @@ class EligibilitySignals:
 class TrainingEligibilityGate:
     """The 22 §9 gate: a sample enters training ONLY if ALL conditions hold."""
 
-    def __init__(
-        self, *, minimum_level: VerificationLevel = VerificationLevel.VERIFIED
-    ) -> None:
+    def __init__(self, *, minimum_level: VerificationLevel = VerificationLevel.VERIFIED) -> None:
         self._minimum_index = VERIFICATION_LEVEL_ORDER.index(minimum_level)
 
-    def evaluate(
-        self, sample: LearningSample, signals: EligibilitySignals
-    ) -> dict[str, bool]:
+    def evaluate(self, sample: LearningSample, signals: EligibilitySignals) -> dict[str, bool]:
         """Every condition's verdict, by its 22 §9 name — always ALL of them."""
         level_index = VERIFICATION_LEVEL_ORDER.index(sample.verification_level)
         return {
@@ -120,9 +116,7 @@ class TrainingEligibilityGate:
             "not_poisoned": signals.not_poisoned,
         }
 
-    def admit(
-        self, sample: LearningSample, signals: EligibilitySignals
-    ) -> dict[str, bool]:
+    def admit(self, sample: LearningSample, signals: EligibilitySignals) -> dict[str, bool]:
         """Admit or refuse LOUDLY, naming every failed condition (11 §14)."""
         verdicts = self.evaluate(sample, signals)
         failed = [name for name, held in verdicts.items() if not held]

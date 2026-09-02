@@ -21,6 +21,7 @@ from core.learning.gates import (
 )
 from core.learning.lifecycle import (
     GOLD_KNOWLEDGE_SOURCE,
+    CapabilitySnapshot,
     LearningLifecycleService,
     SampleNotFound,
     SampleSource,
@@ -28,6 +29,7 @@ from core.learning.lifecycle import (
 
 __all__ = [
     "GOLD_KNOWLEDGE_SOURCE",
+    "CapabilitySnapshot",
     "LearningLifecycleService",
     "PROMOTION_CONDITIONS",
     "TRAINING_ELIGIBILITY_CONDITIONS",

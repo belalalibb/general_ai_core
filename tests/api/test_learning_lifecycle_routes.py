@@ -84,9 +84,7 @@ async def _get(app: FastAPI, path: str) -> httpx.Response:
         return await c.get(path)
 
 
-async def _post(
-    app: FastAPI, path: str, body: dict[str, object] | None = None
-) -> httpx.Response:
+async def _post(app: FastAPI, path: str, body: dict[str, object] | None = None) -> httpx.Response:
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
         return await c.post(path, json=body if body is not None else {})
@@ -119,9 +117,7 @@ class TestLifecycleOverHttp:
         assert report.json()["sample"]["eligibility"] == "pending"
 
         # sanitize (explicit act)
-        sanitized = run(
-            _post(app, f"{SAMPLES}/{sample_id}/sanitize", {"passed": True})
-        )
+        sanitized = run(_post(app, f"{SAMPLES}/{sample_id}/sanitize", {"passed": True}))
         assert sanitized.status_code == 200
         assert sanitized.json()["sanitization_state"] == "passed"
 
@@ -236,15 +232,11 @@ class TestHttpEntry:
         )
         assert missing.status_code == 404
         # A REAL execution through the platform's execute path => captured.
-        world.usage.configure_tenant(
-            world.principal.tenant_id, plan="pro", task_units_limit=100.0
-        )
+        world.usage.configure_tenant(world.principal.tenant_id, plan="pro", task_units_limit=100.0)
         transport = httpx.ASGITransport(app=app)
 
         async def execute() -> str:
-            async with httpx.AsyncClient(
-                transport=transport, base_url="http://t"
-            ) as c:
+            async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
                 r = await c.post("/v1/execute", json={"ask": "hello"})
             assert r.status_code == 200, r.text
             execution_id: str = r.json()["execution_id"]
@@ -271,9 +263,7 @@ class TestHttpEntry:
         world = World()
         app = _app(world)
         sample_id = _capture(app, world, "eval.k")
-        evaluated = run(
-            _post(app, f"{SAMPLES}/{sample_id}/evaluate", {"output": {"a": 1}})
-        )
+        evaluated = run(_post(app, f"{SAMPLES}/{sample_id}/evaluate", {"output": {"a": 1}}))
         assert evaluated.status_code == 200, evaluated.text
         assert evaluated.json()["evaluated"] is True
         assert evaluated.json()["sample"]["verification_level"] == "VALIDATED"
@@ -287,9 +277,7 @@ class TestHttpEntry:
         app = _app(world, with_memory=False)
         assert run(_get(app, SAMPLES)).status_code == 404
         assert app.state.learning_lifecycle_service is None
-        catalog = {
-            c.id: c.state.value for c in app.state.capability_catalog
-        }
+        catalog = {c.id: c.state.value for c in app.state.capability_catalog}
         assert catalog["learning.lifecycle"] == "inert"
 
     def test_composed_seam_reports_available_in_catalog(self) -> None:
@@ -297,3 +285,65 @@ class TestHttpEntry:
         app = _app(world)
         catalog = {c.id: c.state.value for c in app.state.capability_catalog}
         assert catalog["learning.lifecycle"] == "available"
+
+
+RETEST = "/v1/admin/learning/capability-retest"
+
+
+class TestMeasurableCapabilityRetest:
+    """R160: self-improvement is MEASURED over one fixed probe set, never asserted."""
+
+    def test_before_after_delta_names_gained_keys(self) -> None:
+        world = World()
+        app = _app(world)
+        probes = ["ops.rollback", "never.taught"]
+        # BEFORE learning: nothing found.
+        before = run(_post(app, RETEST, {"probes": probes}))
+        assert before.status_code == 200, before.text
+        baseline = before.json()["snapshot"]
+        assert baseline["found"] == [] and baseline["missing"] == probes
+        assert baseline["score"] == 0.0
+        assert "delta" not in before.json()
+        # LEARN through the existing pipeline (sanitize → admit → promote).
+        sample_id = _capture(app, world, "ops.rollback")
+        run(_post(app, f"{SAMPLES}/{sample_id}/sanitize", {"passed": True}))
+        assert run(_post(app, f"{SAMPLES}/{sample_id}/admit", ALL_ADMIT)).json()["admitted"]
+        assert run(_post(app, f"{SAMPLES}/{sample_id}/promote", ALL_PROMOTE)).json()["promoted"]
+        # AFTER: same probes, baseline supplied → measured delta.
+        after = run(_post(app, RETEST, {"probes": probes, "baseline": baseline}))
+        assert after.status_code == 200, after.text
+        body = after.json()
+        assert body["snapshot"]["found"] == ["ops.rollback"]
+        assert body["snapshot"]["score"] == 0.5
+        delta = body["delta"]
+        assert delta["gained"] == ["ops.rollback"]
+        assert delta["lost"] == []
+        assert delta["still_missing"] == ["never.taught"]
+        assert delta["improved"] is True and delta["regressed"] is False
+        assert delta["before"] == {"found": 0, "missing": 2}
+        assert delta["after"] == {"found": 1, "missing": 1}
+
+    def test_different_probe_set_baseline_is_refused(self) -> None:
+        world = World()
+        app = _app(world)
+        baseline = run(_post(app, RETEST, {"probes": ["a"]})).json()["snapshot"]
+        bad = run(_post(app, RETEST, {"probes": ["a", "b"], "baseline": baseline}))
+        assert bad.status_code == 422
+        assert bad.json()["error"]["details"]["field"] == "baseline"
+
+    def test_malformed_baseline_is_refused_not_guessed(self) -> None:
+        world = World()
+        app = _app(world)
+        bad = run(_post(app, RETEST, {"probes": ["a"], "baseline": {"probes": "a"}}))
+        assert bad.status_code == 422
+
+    def test_empty_probe_set_is_a_validation_error(self) -> None:
+        world = World()
+        app = _app(world)
+        assert run(_post(app, RETEST, {"probes": []})).status_code == 422
+
+    def test_non_admin_is_denied(self) -> None:
+        world = World(is_admin=False)
+        app = _app(world)
+        response = run(_post(app, RETEST, {"probes": ["a"]}))
+        assert response.status_code in (401, 403)

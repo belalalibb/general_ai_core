@@ -16,9 +16,7 @@ class NotEligibleForTraining(LearningError):
     """
 
     def __init__(self, sample_id: object, failed: list[str]) -> None:
-        super().__init__(
-            f"sample {sample_id} not eligible for training; failed: {failed}"
-        )
+        super().__init__(f"sample {sample_id} not eligible for training; failed: {failed}")
         self.sample_id = sample_id
         self.failed = failed
 

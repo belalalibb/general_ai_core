@@ -62,11 +62,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
+from pydantic import Field
 
 from apps.api.capabilities import Capability, catalog_json
 from apps.api.context_lab import (
@@ -114,6 +116,7 @@ from core.contracts.errors import ErrorCode
 from core.evaluation.errors import EvaluationNotFound
 from core.evaluation.ports import EvaluationStorePort
 from core.learning import (
+    CapabilitySnapshot,
     EligibilitySignals,
     LearningError,
     LearningLifecycleService,
@@ -221,10 +224,36 @@ class LearningPromoteRequest(ContractModel):
         )
 
 
+def _snapshot_from_json(data: JsonObject) -> CapabilitySnapshot:
+    """Rebuild a baseline from a prior ``snapshot`` payload (strict shape)."""
+    probes = data["probes"]
+    found = data["found"]
+    missing = data["missing"]
+    if not all(isinstance(x, list) for x in (probes, found, missing)):
+        raise TypeError("probes/found/missing must be lists")
+    return CapabilitySnapshot(
+        probes=tuple(str(p) for p in probes),
+        found=tuple(str(p) for p in found),
+        missing=tuple(str(p) for p in missing),
+        taken_at=datetime.fromisoformat(str(data["taken_at"])),
+    )
+
+
 class LearningAskRequest(ContractModel):
     """One isolated learned-capability question — a knowledge key."""
 
     key: BoundedStr
+
+
+class LearningRetestRequest(ContractModel):
+    """R160 measurable re-test: a FIXED probe set, optionally a baseline.
+
+    Call once before learning (no ``baseline``) → snapshot. Call again after
+    with that snapshot as ``baseline`` → the same probes re-asked + delta.
+    """
+
+    probes: list[BoundedStr] = Field(min_length=1, max_length=200)
+    baseline: JsonObject | None = None
 
 
 class LearningCaptureRequest(ContractModel):
@@ -755,6 +784,31 @@ def create_admin_router(
             if isinstance(admitted, JSONResponse):
                 return admitted
             return _json({"keys": list(lifecycle.learned_keys(admitted.tenant_id))})
+
+        @router.post("/learning/capability-retest")
+        async def capability_retest(request: Request, body: LearningRetestRequest) -> Response:
+            """POST .../capability-retest: measured before/after over ONE probe set.
+
+            Every probe is answered ONLY from GOLD knowledge (isolated path);
+            the delta names gained / lost / still-missing keys as data —
+            improvement is never asserted, only measured.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            after = lifecycle.capability_snapshot(admitted.tenant_id, list(body.probes))
+            result: JsonObject = {"snapshot": after.as_json()}
+            if body.baseline is not None:
+                try:
+                    before = _snapshot_from_json(body.baseline)
+                    result["delta"] = lifecycle.capability_delta(before, after)
+                except (LearningError, KeyError, TypeError, ValueError) as exc:
+                    return error_response(
+                        ErrorCode.VALIDATION_ERROR,
+                        f"baseline is not a comparable snapshot: {exc}",
+                        details={"field": "baseline"},
+                    )
+            return _json(result)
 
         @router.post("/learning/ask")
         async def ask_learned_capability(request: Request, body: LearningAskRequest) -> Response:
