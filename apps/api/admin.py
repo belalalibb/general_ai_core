@@ -79,7 +79,7 @@ from apps.api.context_lab import (
 from apps.api.errors import error_response
 from apps.api.exercise import ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
-from apps.api.provenance import gold_keys_in_report
+from apps.api.provenance import gold_keys_in_report, stored_context_available
 from apps.api.scenarios import (
     ScenarioNotFound,
     ScenarioSaveRequest,
@@ -842,12 +842,20 @@ def create_admin_router(
                 return {"available": False}
             reports = store.list(tenant_id, limit=_RETEST_EXECUTION_WINDOW)
             reached: dict[str, int] = {key: 0 for key in probes}
+            without_context = 0
             for report in reports:
+                if not stored_context_available(report):
+                    # Root-only rows (durable list after restart) or
+                    # executions without composed context can never count
+                    # as reach — say so instead of folding them into zero.
+                    without_context += 1
+                    continue
                 for key in gold_keys_in_report(report, tenant_id, memory) & reached.keys():
                     reached[key] += 1
             return {
                 "available": True,
                 "executions_examined": len(reports),
+                "executions_without_stored_context": without_context,
                 "window": _RETEST_EXECUTION_WINDOW,
                 "reached_by_key": reached,
                 "reached": sorted(k for k, n in reached.items() if n > 0),

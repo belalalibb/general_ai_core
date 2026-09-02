@@ -225,4 +225,6 @@ class TestRetestMeasuresProductionReach:
         assert production["reached"] == ["ops.rollback"]
         assert production["never_reached"] == ["never.learned"]
         assert production["executions_examined"] >= 2
+        # every row in this hermetic profile carries its stored context
+        assert production["executions_without_stored_context"] == 0
         assert production["window"] == 200

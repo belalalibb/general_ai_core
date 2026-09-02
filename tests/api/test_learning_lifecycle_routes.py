@@ -28,7 +28,11 @@ import httpx
 from fastapi import FastAPI
 
 from apps.api import create_app
-from core.execution.service import ExecutionService
+from apps.api.store import InMemoryExecutionStore
+from core.contracts.base import utc_now
+from core.contracts.execute import ExecutionStatus
+from core.contracts.execution import Execution, ExecutionStrategy
+from core.execution.service import ExecutionReport, ExecutionService
 from core.memory.memory import InMemoryMemoryStore
 from tests.api.test_admin_api import World, _no_sleep
 
@@ -59,7 +63,9 @@ def run[T](coro: Coroutine[Any, Any, T]) -> T:
     return asyncio.run(coro)
 
 
-def _app(world: World, *, with_memory: bool = True) -> FastAPI:
+def _app(
+    world: World, *, with_memory: bool = True, store: InMemoryExecutionStore | None = None
+) -> FastAPI:
     """Composed app with audit + memory seams (the R158 composition)."""
     service = ExecutionService(
         adapters={world.provider.id: world.adapter},
@@ -75,6 +81,7 @@ def _app(world: World, *, with_memory: bool = True) -> FastAPI:
         principal=world.principal,
         admin=dataclasses.replace(world.surface(), audit=world.audit),
         memory=InMemoryMemoryStore() if with_memory else None,
+        store=store,
     )
 
 
@@ -347,3 +354,42 @@ class TestMeasurableCapabilityRetest:
         app = _app(world)
         response = run(_post(app, RETEST, {"probes": ["a"]}))
         assert response.status_code in (401, 403)
+
+    def test_root_only_rows_are_reported_not_counted_as_zero_reach(self) -> None:
+        """Durable ``list`` after restart yields nodes=() rows (R161 follow-up):
+        absence of stored context is REPORTED, never folded into reach=0."""
+        world = World()
+        store = InMemoryExecutionStore()
+        app = _app(world, store=store)
+        now = utc_now()
+        store.put(
+            ExecutionReport(
+                execution=Execution(
+                    id=uuid4(),
+                    tenant_id=world.principal.tenant_id,
+                    user_id=world.principal.user_id,
+                    conversation_id=None,
+                    request_hash="sha256:restart-recovered",
+                    idempotency_key=None,
+                    status=ExecutionStatus.SUCCEEDED,
+                    strategy=ExecutionStrategy.SINGLE,
+                    cost_snapshot={"estimated_units": 1},
+                    created_at=now,
+                    completed_at=now,
+                ),
+                nodes=(),
+                status_history=(ExecutionStatus.SUCCEEDED,),
+            )
+        )
+        production = run(_post(app, RETEST, {"probes": ["ops.rollback"]})).json()["production"]
+        assert production["available"] is True
+        assert production["executions_examined"] == 1
+        assert production["executions_without_stored_context"] == 1
+        assert production["reached_by_key"] == {"ops.rollback": 0}
+
+    def test_without_memory_seam_the_whole_lifecycle_is_absent(self) -> None:
+        """No memory ⇒ no GOLD store ⇒ no lifecycle routes at all (404, not a
+        half-answer with production={available:false})."""
+        world = World()
+        app = _app(world, with_memory=False)
+        assert run(_post(app, RETEST, {"probes": ["ops.rollback"]})).status_code == 404

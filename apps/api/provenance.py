@@ -25,7 +25,12 @@ from core.learning import GOLD_KNOWLEDGE_SOURCE
 from core.memory.errors import MemoryStoreError
 from core.memory.ports import MemoryStorePort
 
-__all__ = ["CONTEXT_PROVENANCE_ARTIFACT", "context_provenance", "gold_keys_in_report"]
+__all__ = [
+    "CONTEXT_PROVENANCE_ARTIFACT",
+    "context_provenance",
+    "gold_keys_in_report",
+    "stored_context_available",
+]
 
 #: Artifact type label for the R161 context-provenance evidence.
 CONTEXT_PROVENANCE_ARTIFACT = "context_provenance"
@@ -45,6 +50,17 @@ def _memory_blocks(report: ExecutionReport) -> list[JsonObject] | None:
     if not isinstance(blocks, list):
         return None
     return [b for b in blocks if isinstance(b, dict)]
+
+
+def stored_context_available(report: ExecutionReport) -> bool:
+    """Whether this report carries a stored composed context at all.
+
+    False for root-only reconstructions (durable ``list`` rows recovered
+    after restart carry ``nodes=()``) and for executions that never had
+    context blocks — callers counting reach MUST report these separately so
+    an absence of evidence is never presented as evidence of absence.
+    """
+    return _memory_blocks(report) is not None
 
 
 def context_provenance(

@@ -1148,7 +1148,7 @@ document.getElementById("learning-retest-form").addEventListener("submit", async
   // model inputs (stored provenance), over a bounded, stated window.
   const p = result.body.production;
   if (p && p.available) {
-    text += `\nproduction reach (newest ${p.executions_examined} of window ${p.window}): reached ${JSON.stringify(p.reached)} · never reached ${JSON.stringify(p.never_reached)}`;
+    text += `\nproduction reach (newest ${p.executions_examined} of window ${p.window}; ${p.executions_without_stored_context} without stored context — not counted): reached ${JSON.stringify(p.reached)} · never reached ${JSON.stringify(p.never_reached)}`;
     text += `\n  per key: ${Object.entries(p.reached_by_key).map(([k, n]) => `${k}=${n}`).join(" · ")}`;
   } else if (p) {
     text += "\nproduction reach: unavailable (execution store or memory seam not composed)";
