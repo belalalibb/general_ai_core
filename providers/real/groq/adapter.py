@@ -264,24 +264,6 @@ class GroqAdapter:
             return self._failed(request, self.normalize_error(exc))
         latency_ms = int((time.monotonic() - started) * 1000)
         if response.status_code != 200:
-            recovered = _recover_untooled_generation(response)
-            if recovered is not None:
-                # R165 live: gpt-oss sometimes answers a tool-DESCRIBING prompt
-                # with a native function call although the request declared
-                # no tools (tool_choice=none). Groq then 400s
-                # ``tool_use_failed`` but returns the model's actual text in
-                # ``failed_generation``. We asked for text; that IS the text.
-                # It goes back as content — the agent's strict validator
-                # refuses it as an invalid proposal and the model corrects
-                # itself on the next step (P4: no coercion here).
-                return ProviderGenerateResponse(
-                    request_id=request.request_id,
-                    succeeded=True,
-                    output={"content": recovered, "finish_reason": "tool_use_failed"},
-                    usage={},
-                    error=None,
-                    latency_ms=latency_ms,
-                )
             return self._failed(
                 request, self._normalize_http_response(response), latency_ms=latency_ms
             )
@@ -573,29 +555,6 @@ def _retry_after_ms(response: httpx.Response) -> int | None:
         return max(0, int(float(raw) * 1000))
     except ValueError:
         return None
-
-
-def _recover_untooled_generation(response: httpx.Response) -> str | None:
-    """The model's text from a 400 ``tool_use_failed`` on a request that
-    declared NO tools, or None for every other failure."""
-    if response.status_code != 400:
-        return None
-    try:
-        error = response.json().get("error", {})
-    except ValueError:
-        return None
-    if not isinstance(error, dict) or error.get("code") != "tool_use_failed":
-        return None
-    generation = error.get("failed_generation")
-    if not isinstance(generation, str) or not generation.strip():
-        return None
-    try:
-        sent = json.loads(response.request.content or b"{}")
-    except ValueError:
-        return None
-    if isinstance(sent, dict) and "tools" in sent:
-        return None  # a real tool-calling request failed — that is an error
-    return generation
 
 
 def _safe_error_code(response: httpx.Response) -> str | None:

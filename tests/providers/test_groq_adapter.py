@@ -333,37 +333,16 @@ class TestErrorNormalization:
         assert response.error is not None
         assert response.error.category is ProviderErrorCategory.CONTENT_REJECTED
 
-    def test_tool_use_failed_without_tools_returns_the_generation_as_text(self) -> None:
-        """R165 (live): gpt-oss answered a tool-DESCRIBING prompt with a native
-        function call although no tools were declared; Groq 400s but hands
-        back the model's text in ``failed_generation``. We asked for text —
-        that IS the text. It flows back as content for the caller's own
-        validator (the agent refuses it as an invalid proposal, P4)."""
-        native = '{"name": "ws_list", "arguments": {"path": ""}}'
-        adapter, _ = _adapter(
-            lambda req: httpx.Response(
-                400,
-                json={
-                    "error": {
-                        "code": "tool_use_failed",
-                        "type": "invalid_request_error",
-                        "message": "Tool choice is none, but model called a tool",
-                        "failed_generation": native,
-                    }
-                },
-            )
-        )
-        response = run(adapter.generate(_generate_request()))
-        assert response.succeeded is True
-        assert response.error is None
-        assert response.output == {"content": native, "finish_reason": "tool_use_failed"}
-
     @pytest.mark.parametrize("code", ["tool_use_failed", "json_validate_failed"])
     def test_generation_failures_are_retryable_not_bad_request(self, code: str) -> None:
-        """R165 (live): Groq 400s when the MODEL's sample failed its own
-        post-check (empty/invalid constrained output, stray tool call) —
-        the identical request succeeds on the next sample. That indicts
-        the generation, not the request: retryable, failover allowed."""
+        """R165 (live): under constrained decoding gpt-oss on Groq fails its
+        own post-check on roughly half the samples — an EMPTY
+        ``json_validate_failed`` generation, or a stray native tool call
+        (``tool_use_failed``) although no tools were declared. The identical
+        request succeeds on the next sample. That indicts the generation,
+        not the request: retryable (bounded, PROVIDER_MAX_RETRIES), failover
+        allowed. The failed generation is never handed back as content — a
+        stray tool call would only burn the agent's invalid-proposal budget."""
         adapter, _ = _adapter(
             lambda req: httpx.Response(
                 400, json={"error": {"code": code, "message": "x", "failed_generation": ""}}
