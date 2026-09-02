@@ -63,8 +63,8 @@ from sqlalchemy import text
 from apps.admin_agent.tools import AgentToolSurface
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal, create_app
-from apps.api.skills_import import SkillReviewSurface
 from apps.api.auth import AuthSurface
+from apps.api.skills_import import SkillReviewSurface
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
 from apps.composition.admin_console import attach_admin_console
@@ -123,12 +123,12 @@ from core.memory.memory import InMemoryConversationStore, InMemoryMemoryStore
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.roles.registry import RoleRegistry, SkillRegistry
-from core.skills.importing import SkillImportService
 from core.routing.router import SimpleScoringRouter
 from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
 from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
 from core.runtime.worker import IdempotencyPort, InMemoryIdempotencyStore, Worker
 from core.secrets.memory import InMemorySecretManager
+from core.skills.importing import SkillImportService
 from core.tools.source_reader import SourceReader
 from core.usage.memory import InMemoryUsageAccounting
 from infrastructure.security.password import Argon2idPasswordHasher
