@@ -433,8 +433,10 @@ class AgentLoop:
         A verifier FAULT is a rejecting verdict naming the fault (P6) —
         deterministic code failing must never silently admit a final.
         """
+        verify = self._verify
+        assert verify is not None  # caller checks; kept explicit for typing
         try:
-            verdict = await self._verify(dict(request), dict(output))
+            verdict = await verify(dict(request), dict(output))
         except Exception as exc:  # noqa: BLE001 — seam fault becomes data
             verdict = {
                 "verified": False,
@@ -528,7 +530,7 @@ class AgentLoop:
                 status=ExecutionNodeStatus.FAILED,
                 error=error,
             )
-            observation: JsonObject = {
+            observation = {
                 "step": index,
                 "tool": proposal.tool,
                 "status": "refused",
