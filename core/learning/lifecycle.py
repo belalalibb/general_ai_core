@@ -59,6 +59,7 @@ Recorded design decisions:
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -82,6 +83,7 @@ from core.learning.gates import (
     PromotionSignals,
     TrainingEligibilityGate,
 )
+from core.learning.sanitizer import SanitizationReport, sanitize_knowledge
 
 #: The machine-checkable source label GOLD knowledge carries in memory —
 #: the isolated test path answers ONLY from items with this source.
@@ -94,6 +96,21 @@ class SampleNotFound(LearningError):
     def __init__(self, sample_id: UUID) -> None:
         super().__init__(f"learning sample not found: {sample_id}")
         self.sample_id = sample_id
+
+
+class SanitizationRefused(LearningError):
+    """``passed=True`` was asserted over unresolved machine findings (R161).
+
+    The reviewer's act cannot override the deterministic sanitizer: the
+    findings are named (path + label, never content) so the refusal is
+    actionable, not silent.
+    """
+
+    def __init__(self, sample_id: UUID, report: SanitizationReport) -> None:
+        labels = sorted({f"{f.path}:{f.label}" for f in report.findings})
+        super().__init__(f"sanitization of {sample_id} refused; findings: {labels}")
+        self.sample_id = sample_id
+        self.report = report
 
 
 class SampleSource(StrEnum):
@@ -168,6 +185,7 @@ class _SampleRecord:
     knowledge_value: JsonObject
     eligibility_verdicts: dict[str, bool] = field(default_factory=dict)
     promotion_verdicts: dict[str, bool] = field(default_factory=dict)
+    sanitization_report: SanitizationReport | None = None
 
 
 class LearningLifecycleService:
@@ -273,6 +291,10 @@ class LearningLifecycleService:
             "knowledge_key": record.knowledge_key,
             "eligibility_verdicts": dict(record.eligibility_verdicts),
             "promotion_verdicts": dict(record.promotion_verdicts),
+            "sanitization_report": (
+                None if record.sanitization_report is None else record.sanitization_report.as_json()
+            ),
+            "derived_signals": self.derived_signals(tenant_id, sample_id),
         }
 
     def _record(self, tenant_id: UUID, sample_id: UUID) -> _SampleRecord:
@@ -283,8 +305,36 @@ class LearningLifecycleService:
 
     # --- sanitization (explicit reviewed act; no silent pass) -------------------
 
-    def mark_sanitized(self, tenant_id: UUID, sample_id: UUID, *, passed: bool) -> LearningSample:
+    def sanitize(self, tenant_id: UUID, sample_id: UUID) -> SanitizationReport:
+        """Run the deterministic 22 §12 secret scan; store the report (R161).
+
+        Pure scan over the sample's knowledge (key + value). The report is
+        evidence for the reviewer's act — it never changes the sample's
+        state by itself.
+        """
         record = self._record(tenant_id, sample_id)
+        report = sanitize_knowledge(record.knowledge_key, record.knowledge_value)
+        record.sanitization_report = report
+        return report
+
+    def mark_sanitized(self, tenant_id: UUID, sample_id: UUID, *, passed: bool) -> LearningSample:
+        """The explicit reviewed ACT — now gated by the machine scan (R161).
+
+        ``passed=True`` is REFUSED while the deterministic sanitizer reports
+        findings (the scan runs here if it has not run yet, so the gate
+        cannot be skipped). ``passed=False`` is always accepted — a
+        reviewer may fail a sample for reasons the scanner cannot see.
+        """
+        record = self._record(tenant_id, sample_id)
+        if record.sanitization_report is None:
+            self.sanitize(tenant_id, sample_id)
+        report = record.sanitization_report
+        assert report is not None  # set by sanitize()
+        if passed and not report.clean:
+            record.sample = record.sample.model_copy(
+                update={"sanitization_state": SanitizationState.FAILED}
+            )
+            raise SanitizationRefused(sample_id, report)
         record.sample = record.sample.model_copy(
             update={
                 "sanitization_state": (
@@ -293,6 +343,56 @@ class LearningLifecycleService:
             }
         )
         return record.sample
+
+    # --- derived eligibility signals (R161: measured, not asserted) -------------
+    #
+    # 22 §9 lists ``deduplicated`` and ``not poisoned`` among the training
+    # conditions. Until R161 both were caller-asserted booleans. Two of
+    # them are decidable from facts the service already holds:
+    #
+    # - deduplicated: no OTHER sample of this tenant carries the same
+    #   (knowledge_key, canonical knowledge_value) — a byte-identical
+    #   duplicate is the one dedup the platform can PROVE without a
+    #   similarity model (semantic dedup stays out of scope, recorded).
+    # - not_poisoned (machine part): the deterministic sanitizer reports
+    #   clean. Poisoning has broader meanings (adversarial content) that
+    #   no regex decides; this derivation only ever LOWERS trust — a
+    #   caller's ``not_poisoned=True`` is overridden to False when the
+    #   scan is dirty, never the other way round.
+
+    @staticmethod
+    def _canonical_value(value: JsonObject) -> str:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+    def derived_signals(self, tenant_id: UUID, sample_id: UUID) -> dict[str, bool]:
+        """Facts the service can decide itself: ``deduplicated``, ``scan_clean``."""
+        record = self._record(tenant_id, sample_id)
+        canonical = self._canonical_value(record.knowledge_value)
+        duplicate = any(
+            owner == tenant_id
+            and other_id != sample_id
+            and other.knowledge_key == record.knowledge_key
+            and self._canonical_value(other.knowledge_value) == canonical
+            for (owner, other_id), other in self._samples.items()
+        )
+        report = record.sanitization_report
+        if report is None:
+            report = sanitize_knowledge(record.knowledge_key, record.knowledge_value)
+        return {"deduplicated": not duplicate, "scan_clean": report.clean}
+
+    def resolve_signals(
+        self, tenant_id: UUID, sample_id: UUID, asserted: EligibilitySignals
+    ) -> EligibilitySignals:
+        """Merge caller assertions with derived facts — derivation only lowers."""
+        derived = self.derived_signals(tenant_id, sample_id)
+        return EligibilitySignals(
+            privacy_policy_allows=asserted.privacy_policy_allows,
+            tenant_user_policy_allows=asserted.tenant_user_policy_allows,
+            sensitive_data_handled=asserted.sensitive_data_handled,
+            deduplicated=asserted.deduplicated and derived["deduplicated"],
+            not_poisoned=asserted.not_poisoned and derived["scan_clean"],
+            source_trace_intact=asserted.source_trace_intact,
+        )
 
     # --- evaluation (delegates to the EXISTING pipeline) ------------------------
 
@@ -330,8 +430,14 @@ class LearningLifecycleService:
         *,
         dataset_id: UUID | None = None,
     ) -> LearningSample:
-        """Run the EXISTING 22 §9 gate; persist the verdict on the sample."""
+        """Run the EXISTING 22 §9 gate; persist the verdict on the sample.
+
+        R161: the caller's signals are merged with the service's DERIVED
+        facts (dedup, scan) before the gate runs — assertions can no
+        longer pass a duplicate or a dirty sample.
+        """
         record = self._record(tenant_id, sample_id)
+        signals = self.resolve_signals(tenant_id, sample_id, signals)
         try:
             verdicts = self._eligibility.admit(record.sample, signals)
         except Exception:

@@ -25,6 +25,13 @@ from core.learning.lifecycle import (
     LearningLifecycleService,
     SampleNotFound,
     SampleSource,
+    SanitizationRefused,
+)
+from core.learning.sanitizer import (
+    SECRET_LABELS,
+    SanitizationFinding,
+    SanitizationReport,
+    sanitize_knowledge,
 )
 
 __all__ = [
@@ -39,7 +46,12 @@ __all__ = [
     "PromotionDenied",
     "PromotionGate",
     "PromotionSignals",
+    "SECRET_LABELS",
     "SampleNotFound",
     "SampleSource",
+    "SanitizationFinding",
+    "SanitizationRefused",
+    "SanitizationReport",
     "TrainingEligibilityGate",
+    "sanitize_knowledge",
 ]
