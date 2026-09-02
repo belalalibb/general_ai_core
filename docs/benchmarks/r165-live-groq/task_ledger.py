@@ -31,8 +31,17 @@ print(
     json.dumps(
         {
             "ask": ask,
-            "execution_policy": {"strategy": "agent", "max_steps": 28, "deadline_ms": 600000},
-            "model_policy": {"type": "explicit_model", "model_id": model},
+            "execution_policy": {"strategy": "agent", "max_steps": 28, "deadline_ms": 1800000},
+            # Groq free tier: per-model TPM (8k) and TPD (200k) caps. When the
+            # explicit model answers a Retry-After the platform will not park
+            # on, the run fails over to the next eligible Groq model (each
+            # has its own quota) instead of dying — 11 §8 max_escalation.
+            "model_policy": {
+                "type": "explicit_model",
+                "model_id": model,
+                "allow_fallback": True,
+                "fallback_scope": "max_escalation",
+            },
             "tools": {
                 "allowed": [
                     "ws_read",
