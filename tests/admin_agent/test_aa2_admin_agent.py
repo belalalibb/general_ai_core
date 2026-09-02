@@ -825,6 +825,8 @@ class TestUIHonestyChecklist:
 
     def test_status_classes_are_contract_values_only(self) -> None:
         """Every STATUS_CLASSES key maps to a backend contract enum value."""
+        # CapabilityState + ProposalState: the UI phase renders both as badges.
+        from apps.api.capabilities import CapabilityState
         from core.contracts.admin import ConfigLifecycleState
         from core.contracts.domain import (
             BindingAvailability,
@@ -836,9 +838,6 @@ class TestUIHonestyChecklist:
         from core.contracts.learning import LearningEligibility, SanitizationState
         from core.contracts.skills import SkillStatus
         from core.contracts.usage import UsageLedgerStatus
-
-        # UI phase: the two closed sets the console now renders as badges.
-        from apps.api.capabilities import CapabilityState
         from core.sourcechange.proposal import ProposalState
 
         allowed: set[str] = set()
