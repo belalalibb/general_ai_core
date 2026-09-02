@@ -203,6 +203,25 @@ def test_failed_run_is_unified_error_with_execution_id() -> None:
     error = response.json()["error"]
     assert error["code"] == "execution_failed"
     assert "execution_id" in error["details"]
+    # R165: the client sees WHY — the loop's stop reason and the failed
+    # node's recorded cause — on the sync error AND on the status route.
+    agent = error["details"]["agent"]
+    assert agent["stop_reason"] == "invalid_proposal"
+    assert agent["node"] == "plan-1"
+    assert agent["error"]["reason"] == "invalid_proposal"
+    assert "invalid_proposal" in error["message"]
+    detail = run(_get(app, f"/v1/executions/{error['details']['execution_id']}"))
+    assert detail.json()["error"]["details"]["agent"] == agent
+
+
+def test_failed_run_cause_is_scrubbed() -> None:
+    leaked = "gsk_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123"
+    world = AgentWorld([{"content": f"{leaked} is not json"}], max_steps=1)
+    app = _app(world)
+    response = run(_post(app, {"ask": "hi", "execution_policy": AGENT}))
+    assert response.status_code >= 400
+    assert leaked not in response.text
+    assert "agent" in response.json()["error"]["details"]
 
 
 def test_other_tenant_cannot_read_agent_record() -> None:

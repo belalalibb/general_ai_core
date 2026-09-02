@@ -142,7 +142,6 @@ from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthe
 from apps.api.capabilities import Capability, CapabilityState
 from apps.api.context_lab import ContextLabService
 from apps.api.engineering_admin import EngineeringAdminSurface
-from apps.admin_agent.secrecy import scrub_object
 from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
@@ -241,6 +240,7 @@ from core.routing.errors import (
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
 from core.runtime.outbox import OutboxPort
 from core.runtime.ports import RateLimitPort
+from core.security.scrub import scrub_object
 from core.skills import SkillResolver
 from core.sourcechange.sandbox import (
     SOURCE_VERIFICATION_CHECKS as _SOURCE_CHECKS,
