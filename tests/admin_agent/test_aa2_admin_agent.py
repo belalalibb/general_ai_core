@@ -831,7 +831,9 @@ class TestUIHonestyChecklist:
             ModelStatus,
             ProviderStatus,
         )
+        from core.contracts.evaluation import VerificationLevel
         from core.contracts.execute import ExecutionStatus
+        from core.contracts.learning import LearningEligibility, SanitizationState
         from core.contracts.skills import SkillStatus
         from core.contracts.usage import UsageLedgerStatus
 
@@ -844,6 +846,10 @@ class TestUIHonestyChecklist:
             BindingAvailability,
             ConfigLifecycleState,
             SkillStatus,
+            # R160 Learning surface: eligibility / sanitization / verification.
+            LearningEligibility,
+            SanitizationState,
+            VerificationLevel,
         ):
             allowed.update(member.value for member in enum_cls)
         # healthz literal + agent ToolClass values (both backend-produced).
@@ -862,7 +868,9 @@ class TestUIHonestyChecklist:
         raw = (UI_DIR / "app.js").read_text(encoding="utf-8")
         match = re.search(r"const STATUS_CLASSES = \{(.*?)\n\};", raw, re.DOTALL)
         assert match is not None, "STATUS_CLASSES block not found"
-        keys = set(re.findall(r"^\s*([a-z_0-9]+):", match.group(1), re.MULTILINE))
+        # Case-sensitive on purpose: VerificationLevel literals are UPPERCASE
+        # and a lowercase alias would render a loud UNKNOWN badge (R160 bug).
+        keys = set(re.findall(r"^\s*([A-Za-z_0-9]+):", match.group(1), re.MULTILINE))
         assert keys, "no keys parsed"
         unknown = keys - allowed
         assert not unknown, f"non-contract status keys in UI: {sorted(unknown)}"
