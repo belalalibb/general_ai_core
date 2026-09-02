@@ -793,8 +793,13 @@ def build_runtime_profile(
         router=router,
         execution_service=execution_service,
         store=store,
-        principal=demo_principal if demo_principal is not None else None,
-        auth=auth if demo_principal is None else None,
+        # R160 HYBRID identity in the in-memory profile: the demo principal
+        # serves header-less calls (zero-config posture kept), while a Bearer
+        # session resolves a REAL user — so ADMIN_EMAILS reaches EVERY
+        # /v1/admin/* route (not only the console's own) and /v1/auth/* is
+        # mounted for the console's login. Durable profile: auth only.
+        principal=demo_principal,
+        auth=auth,
         skills=skills,
         roles=roles,
         conversations=conversations,

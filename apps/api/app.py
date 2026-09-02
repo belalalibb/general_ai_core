@@ -521,10 +521,17 @@ def create_app(
       request-path mutable process state remains — asserted by the
       T-IMPL-072 statelessness suite.
     """
-    # AA-1 (IDN-1): exactly ONE identity mode — loud composition error,
-    # never a silent default (20 §4).
-    if (principal is None) == (auth is None):
-        raise ValueError("exactly one of principal / auth must be provided")
+    # AA-1 (IDN-1): an identity mode is REQUIRED — loud composition error,
+    # never a silent default (20 §4). Three modes:
+    #   principal only  → fixed principal (hermetic tests);
+    #   auth only       → every call authenticates (durable profile);
+    #   principal + auth → HYBRID (R160; in-memory runtime profile): a Bearer
+    #                      token resolves a REAL session (admin via
+    #                      ADMIN_EMAILS), NO token falls back to the fixed
+    #                      principal. Invalid token ⇒ 401, never the fallback
+    #                      (a bad credential is a refusal, not anonymity).
+    if principal is None and auth is None:
+        raise ValueError("exactly one of principal / auth must be provided (or both: hybrid)")
 
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
     execution_store = store if store is not None else InMemoryExecutionStore()
@@ -539,19 +546,22 @@ def create_app(
         idempotency_index = {}
 
     # --- AA-1 (IDN-1): per-request principal resolution -----------------------
-    if principal is not None:
+    if auth is None:
+        assert principal is not None  # checked above
         fixed_principal = principal
 
         def _principal(_request: Request) -> Principal | JSONResponse:
             return fixed_principal
 
     else:
-        assert auth is not None  # exclusivity checked above
         auth_surface = auth
+        fallback_principal = principal  # None ⇒ strict; set ⇒ hybrid
 
         def _principal(_request: Request) -> Principal | JSONResponse:
             token = bearer_token(_request)
             if token is None:
+                if fallback_principal is not None:
+                    return fallback_principal
                 return unauthenticated()
             try:
                 user = auth_surface.identity.get_user_for_session(token)
@@ -563,7 +573,7 @@ def create_app(
                 is_admin=user.email in auth_surface.admin_emails,
             )
 
-        app.include_router(create_auth_router(auth_surface))
+        app.include_router(create_auth_router(auth_surface, fallback=fallback_principal))
 
     @app.exception_handler(RequestValidationError)
     async def _validation_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:

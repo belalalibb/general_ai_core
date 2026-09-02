@@ -56,6 +56,7 @@ Recorded decisions (P-D.1 — operator-authorized end-user surface):
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
@@ -73,6 +74,9 @@ from core.identity.errors import (
 )
 from core.identity.ports import IdentityServicePort
 from core.runtime.ports import RateLimitPort
+
+if TYPE_CHECKING:  # annotation only — apps.api.app imports this module (no cycle)
+    from apps.api.app import Principal
 
 #: One constant client-facing message for EVERY auth failure (20 §6).
 _AUTH_FAILED_MESSAGE = "Authentication failed."
@@ -141,8 +145,14 @@ def unauthenticated() -> JSONResponse:
     return error_response(ErrorCode.UNAUTHENTICATED, _AUTH_FAILED_MESSAGE)
 
 
-def create_auth_router(surface: AuthSurface) -> APIRouter:
-    """Build the /v1/auth/* router over the injected identity service."""
+def create_auth_router(surface: AuthSurface, *, fallback: Principal | None = None) -> APIRouter:
+    """Build the /v1/auth/* router over the injected identity service.
+
+    ``fallback`` (R160 hybrid mode) is the principal an UNAUTHENTICATED
+    caller is resolved to by the app; when set, ``GET /session`` without a
+    token describes it honestly (``mode: "demo"``, ``is_admin: false``)
+    instead of answering 401 — the UI probes this, it never assumes.
+    """
     router = APIRouter(prefix="/v1/auth")
 
     @router.post("/register", status_code=201)
@@ -255,6 +265,17 @@ def create_auth_router(surface: AuthSurface) -> APIRouter:
     async def session_info(request: Request) -> Response:
         token = bearer_token(request)
         if token is None:
+            if fallback is not None:
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "user_id": str(fallback.user_id),
+                        "tenant_id": str(fallback.tenant_id),
+                        "email": None,
+                        "is_admin": False,
+                        "mode": "demo",
+                    },
+                )
             return unauthenticated()
         try:
             user = surface.identity.get_user_for_session(token)
