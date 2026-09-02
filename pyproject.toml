@@ -182,3 +182,12 @@ name = "Core must not import the HTTP client (ADR-0008)"
 type = "forbidden"
 source_modules = ["core"]
 forbidden_modules = ["httpx"]
+
+# ADR-0012: the engineering capability is SHARED. Admin surfaces only
+# authorize/observe through core + composition; they never reach the process
+# or git adapters directly, and never grow a private engineering runtime.
+[[tool.importlinter.contracts]]
+name = "Admin surfaces must not import the engineering adapters (ADR-0012)"
+type = "forbidden"
+source_modules = ["apps.admin_agent", "apps.api.admin", "apps.api.engineering_admin"]
+forbidden_modules = ["infrastructure.engineering"]
