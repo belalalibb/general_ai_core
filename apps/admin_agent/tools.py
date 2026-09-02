@@ -295,9 +295,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
             return {"error": str(exc)}
         return scrub_object(_change_row(change))
 
-    def _lifecycle_tool_step(
-        caller: Principal, args: JsonObject, step: str
-    ) -> JsonObject:
+    def _lifecycle_tool_step(caller: Principal, args: JsonObject, step: str) -> JsonObject:
         raw = args.get("change_id")
         try:
             change_id = UUID(str(raw))
@@ -331,9 +329,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
     if surface.capabilities is not None:
         capability_payload = catalog_json(surface.capabilities)
 
-        async def list_capabilities(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
+        async def list_capabilities(caller: Principal, args: JsonObject) -> JsonObject:
             return scrub_object(capability_payload)
 
         capability_specs.append(
@@ -363,9 +359,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 return scrub_object({"error": "read refused", "reason": refusal.reason})
             return scrub_object(dict(result))
 
-        async def list_source_files(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
+        async def list_source_files(caller: Principal, args: JsonObject) -> JsonObject:
             try:
                 result = source_reader.list_files(
                     str(args.get("path", "")), glob=str(args.get("glob", "**/*"))
@@ -382,9 +376,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                     glob=str(args.get("glob", "**/*.py")),
                 )
             except SourceReadRefused as refusal:
-                return scrub_object(
-                    {"error": "search refused", "reason": refusal.reason}
-                )
+                return scrub_object({"error": "search refused", "reason": refusal.reason})
             return scrub_object(dict(result))
 
         capability_specs.extend(
@@ -431,14 +423,10 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
     if surface.exercise is not None:
         exercise_registry = surface.exercise
 
-        async def list_exercisable(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
+        async def list_exercisable(caller: Principal, args: JsonObject) -> JsonObject:
             return scrub_object({"exercisable": exercise_registry.exercisable()})
 
-        async def exercise_capability(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
+        async def exercise_capability(caller: Principal, args: JsonObject) -> JsonObject:
             capability_id = str(args.get("capability_id", ""))
             handler = exercise_registry.get(capability_id)
             if handler is None:
@@ -446,9 +434,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 # answer (mirrors the route's 404 mapping).
                 return {"error": "unknown exercisable capability id"}
             result = await handler(caller)
-            return scrub_object(
-                {"capability_id": capability_id, "result": result}
-            )
+            return scrub_object({"capability_id": capability_id, "result": result})
 
         capability_specs.append(
             ToolSpec(
@@ -480,14 +466,10 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
     if surface.self_review is not None:
         review_service = surface.self_review
 
-        async def self_review_tool(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
+        async def self_review_tool(caller: Principal, args: JsonObject) -> JsonObject:
             return scrub_object(review_service.self_review(caller.tenant_id))
 
-        async def propose_change_tool(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
+        async def propose_change_tool(caller: Principal, args: JsonObject) -> JsonObject:
             raw_action = str(args.get("action", ""))
             try:
                 action = AdminAction(raw_action)
@@ -537,17 +519,11 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
     if surface.learning_observability is not None:
         observability = surface.learning_observability
 
-        async def changes_since_review(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
-            return scrub_object(
-                observability.changes_since_review(caller.tenant_id)
-            )
+        async def changes_since_review(caller: Principal, args: JsonObject) -> JsonObject:
+            return scrub_object(observability.changes_since_review(caller.tenant_id))
 
         async def mark_reviewed(caller: Principal, args: JsonObject) -> JsonObject:
-            return scrub_object(
-                observability.mark_reviewed(caller.tenant_id, caller.user_id)
-            )
+            return scrub_object(observability.mark_reviewed(caller.tenant_id, caller.user_id))
 
         capability_specs.append(
             ToolSpec(
@@ -585,9 +561,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
         async def list_lab_checks(caller: Principal, args: JsonObject) -> JsonObject:
             return scrub_object({"checks": lab_service.checks()})
 
-        async def validate_context(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
+        async def validate_context(caller: Principal, args: JsonObject) -> JsonObject:
             raw_ask = str(args.get("ask", "")).strip()
             if not raw_ask:
                 return {"error": "ask is required"}
@@ -604,9 +578,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 # Pydantic's named refusal crosses as honest content.
                 return {"error": f"invalid lab request: {exc}"}
             try:
-                result = lab_service.validate(
-                    caller.tenant_id, caller.user_id, request
-                )
+                result = lab_service.validate(caller.tenant_id, caller.user_id, request)
             except ConversationNotAdmitted:
                 # Anti-enumeration: absent and foreign are the same answer.
                 return {"error": "unknown conversation id"}
@@ -625,9 +597,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 name="validate_context",
                 tool_class=ToolClass.R0_READ,
                 handler=validate_context,
-                allowed_args=frozenset(
-                    {"ask", "role_id", "conversation_id", "context_budget"}
-                ),
+                allowed_args=frozenset({"ask", "role_id", "conversation_id", "context_budget"}),
                 description=(
                     "Dry-run the REAL context composer: blocks, named "
                     "exclusions, closed lab verdicts — executes nothing."
@@ -647,9 +617,7 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
 
         async def list_scenarios(caller: Principal, args: JsonObject) -> JsonObject:
             rows = scenario_service.list(caller.tenant_id)
-            return scrub_object(
-                {"scenarios": [scenario_json(s) for s in rows]}
-            )
+            return scrub_object({"scenarios": [scenario_json(s) for s in rows]})
 
         async def save_scenario(caller: Principal, args: JsonObject) -> JsonObject:
             name = str(args.get("name", "")).strip()
@@ -687,12 +655,8 @@ def build_registry(surface: AgentToolSurface) -> ToolRegistry:
                 return {"error": "unknown scenario id"}
             return scrub_object(result)
 
-        async def run_regression_pack(
-            caller: Principal, args: JsonObject
-        ) -> JsonObject:
-            result = await scenario_service.regression_pack(
-                caller.tenant_id, caller.user_id
-            )
+        async def run_regression_pack(caller: Principal, args: JsonObject) -> JsonObject:
+            result = await scenario_service.regression_pack(caller.tenant_id, caller.user_id)
             return scrub_object(result)
 
         capability_specs.append(

@@ -71,10 +71,7 @@ class ToolRegistry:
     ) -> None:
         self._specs: dict[str, ToolSpec] = {}
         for spec in specs:
-            if (
-                spec.tool_class in NEVER_REGISTRABLE_CLASSES
-                or spec.tool_class not in registrable
-            ):
+            if spec.tool_class in NEVER_REGISTRABLE_CLASSES or spec.tool_class not in registrable:
                 allowed = sorted(c.value for c in registrable)
                 msg = (
                     f"tool {spec.name!r} has class {spec.tool_class.value!r}; "
@@ -142,9 +139,7 @@ class ToolDispatcher:
                 refusal=f"unknown arguments: {sorted(unknown)}",
             )
         result = await spec.handler(caller, arguments)
-        return self._record(
-            caller, tool_name, spec.tool_class, arguments, result=result
-        )
+        return self._record(caller, tool_name, spec.tool_class, arguments, result=result)
 
     def _record(
         self,

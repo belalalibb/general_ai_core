@@ -64,6 +64,7 @@ from apps.admin_agent.tools import AgentToolSurface
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal, create_app
 from apps.api.auth import AuthSurface
+from apps.api.engineering_admin import EngineeringAdminSurface
 from apps.api.skills_import import SkillReviewSurface
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
@@ -76,6 +77,11 @@ from apps.composition.database import (
     database_settings_from_env,
 )
 from apps.composition.durability import build_durable_execution_store
+from apps.composition.engineering import (
+    build_engineering,
+    grant_engineering_reads,
+    grant_engineering_writes,
+)
 from apps.composition.gateway import gateway_settings_from_env
 from apps.composition.identity import build_durable_identity_service
 from apps.composition.provider_onboarding import (
@@ -768,6 +774,10 @@ def build_runtime_profile(
     # over the SAME router/execution/audit/usage/store. Read-only source tools
     # appear ONLY when AGENT_SOURCE_ROOT is a directory (mandate §9 jail).
     repo_reader = _source_reader(env.get("AGENT_SOURCE_ROOT", ""))
+    # ADR-0012: the SHARED engineering capability (workspace/commands/git),
+    # opt-in by AGENT_WORKSPACE_ROOT; §14 guard refuses the platform's own
+    # checkout at boot. Same registry, same firewall, same audit log.
+    engineering = build_engineering(env, audit=audit)
     composed_agent = build_agent(
         router=router,
         execution_service=execution_service,
@@ -775,13 +785,30 @@ def build_runtime_profile(
         audit=audit,
         usage=usage,
         repo_reader=repo_reader,
+        engineering=engineering.bundle if engineering is not None else None,
     )
+
+    def _admit_tenant(tenant_id: UUID) -> None:
+        grant_agent_tenant(composed_agent.firewall, tenant_id)
+        if engineering is not None:
+            # Reads by permission; WRITES stay an Admin decision (grants seam).
+            grant_engineering_reads(composed_agent.firewall, tenant_id)
+
     if demo_principal is not None:
-        grant_agent_tenant(composed_agent.firewall, demo_principal.tenant_id)
+        _admit_tenant(demo_principal.tenant_id)
     if isinstance(identity, BudgetGrantingIdentity):
-        identity.on_tenant.append(
-            lambda tenant_id: grant_agent_tenant(composed_agent.firewall, tenant_id)
+        identity.on_tenant.append(_admit_tenant)
+    engineering_admin = (
+        EngineeringAdminSurface(
+            bundle=engineering.bundle,
+            firewall=composed_agent.firewall,
+            remote=engineering.remote,
+            commands=engineering.commands,
+            grant_writes=grant_engineering_writes,
         )
+        if engineering is not None
+        else None
+    )
 
     # --- admin surface (same instances; router doubles as RoutingWeightsPort) -
     admin_service = AdminConfigService(
@@ -906,6 +933,7 @@ def build_runtime_profile(
             # SourceReader itself). Absent/invalid ⇒ absent tools (P2).
             repo_reader=repo_reader,
         ),
+        engineering_admin=engineering_admin,
         auth=auth,
         # Gap 1c: the onboarding route exists ONLY when the gateway binding
         # is configured (canonical-gateway providers only — DECISION 2;

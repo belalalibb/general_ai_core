@@ -141,6 +141,7 @@ from apps.api.agent import AGENT_STRATEGY, AgentSurface, AgentToolSelection, Age
 from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
 from apps.api.capabilities import Capability, CapabilityState
 from apps.api.context_lab import ContextLabService
+from apps.api.engineering_admin import EngineeringAdminSurface
 from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
@@ -446,6 +447,7 @@ def create_app(
     projects: ProjectStorePort | None = None,
     source_snapshots: SnapshotStorePort | None = None,
     agent: AgentSurface | None = None,
+    engineering_admin: EngineeringAdminSurface | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -1937,6 +1939,7 @@ def create_app(
                 self_review=self_review_service,
                 source_changes=source_change_workflow,
                 memory=memory,
+                engineering=engineering_admin,
             )
         )
 

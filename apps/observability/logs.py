@@ -19,9 +19,7 @@ from apps.observability.config import ObservabilityConfig
 
 
 def _compile_value_patterns(config: ObservabilityConfig) -> tuple[re.Pattern[str], ...]:
-    return tuple(
-        re.compile(pattern, re.IGNORECASE) for pattern in config.scrub_value_patterns
-    )
+    return tuple(re.compile(pattern, re.IGNORECASE) for pattern in config.scrub_value_patterns)
 
 
 def scrub_secrets(config: ObservabilityConfig) -> Any:
@@ -62,9 +60,7 @@ def scrub_secrets(config: ObservabilityConfig) -> Any:
             return scrubbed if isinstance(value, list) else tuple(scrubbed)
         return value
 
-    def _processor(
-        logger: WrappedLogger, method_name: str, event_dict: EventDict
-    ) -> EventDict:
+    def _processor(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
         return {k: _scrub_value(str(k), v) for k, v in event_dict.items()}
 
     return _processor
@@ -91,13 +87,8 @@ def scrub_rendered_exception(config: ObservabilityConfig) -> Any:
             text = pattern.sub(replacement, text)
         return text
 
-    def _processor(
-        logger: WrappedLogger, method_name: str, event_dict: EventDict
-    ) -> EventDict:
-        return {
-            k: _scrub_text(v) if isinstance(v, str) else v
-            for k, v in event_dict.items()
-        }
+    def _processor(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
+        return {k: _scrub_text(v) if isinstance(v, str) else v for k, v in event_dict.items()}
 
     return _processor
 

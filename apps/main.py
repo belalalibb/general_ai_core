@@ -80,7 +80,8 @@ def _startup_banner(profile: RuntimeProfile) -> None:
         "event": "runtime_started",
         "profile": "durable" if profile.durable else "in-memory",
         "providers": list(profile.provider_keys),
-        "auth": "session (register/login)" if profile.demo_principal is None
+        "auth": "session (register/login)"
+        if profile.demo_principal is None
         else "demo principal (in-memory profile)",
         "section_14_gate": "authoritative_applier=None (R3 NEVER active)",
     }
