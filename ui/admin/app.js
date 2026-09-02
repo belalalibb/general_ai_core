@@ -744,9 +744,11 @@ async function loadIntelligence() {
       api("/v1/admin/context-lab/checks"),
     ]);
 
-  /* Capabilities: state is composition truth. "inert" is outside the badge
-     vocabulary on purpose — it renders as the loud UNKNOWN badge rather
-     than being quietly absorbed into a softer class. */
+  /* Capabilities: state is composition truth (CapabilityState closed set:
+     available / inert / unavailable — all three are badge vocabulary).
+     The Exercise column exists ONLY for ids the server lists as
+     exercisable — the UI never invents a probe for an unlisted id. */
+  const exercisableIds = new Set(exercisable.ok ? exercisable.body.exercisable || [] : []);
   const capBody = document.querySelector("#capabilities-table tbody");
   capBody.textContent = "";
   if (!capabilities.ok) {
@@ -758,7 +760,14 @@ async function loadIntelligence() {
       const st = document.createElement("td"); st.appendChild(statusBadge(c.state));
       const ev = document.createElement("td"); ev.className = "mono small";
       ev.textContent = typeof c.evidence === "string" ? c.evidence : JSON.stringify(c.evidence);
-      tr.append(id, st, ev);
+      const ex = document.createElement("td");
+      if (exercisableIds.has(c.id)) {
+        ex.appendChild(actionButton("Exercise", () => exerciseCapability(c.id)));
+      } else {
+        ex.className = "muted small";
+        ex.textContent = "not exercisable";
+      }
+      tr.append(id, st, ev, ex);
       capBody.appendChild(tr);
     }
   }
@@ -766,10 +775,10 @@ async function loadIntelligence() {
   if (exercisable.ok) {
     const ids = exercisable.body.exercisable || [];
     exNote.textContent = ids.length
-      ? `Exercisable now (${ids.length}): ${ids.join(", ")}`
+      ? `Exercisable now (${ids.length}): ${ids.join(", ")} \u2014 each exercise is a REAL labeled probe`
       : "Nothing exercisable in this composition.";
   } else {
-    exNote.textContent = "";
+    exNote.textContent = errorText(exercisable.body);
   }
 
   const scBody = document.querySelector("#scenarios-table tbody");
@@ -779,7 +788,7 @@ async function loadIntelligence() {
     if (rows.length === 0) {
       const tr = document.createElement("tr");
       const td = document.createElement("td");
-      td.colSpan = 4;
+      td.colSpan = 5;
       td.className = "muted";
       td.textContent = "No scenarios recorded since process start.";
       tr.appendChild(td);
@@ -792,9 +801,13 @@ async function loadIntelligence() {
       const checks = document.createElement("td"); checks.className = "mono small";
       checks.textContent = JSON.stringify(s.checks);
       const created = document.createElement("td"); created.textContent = s.created_at;
-      tr.append(name, ask, checks, created);
+      const act = document.createElement("td");
+      act.appendChild(actionButton("Replay", () => replayScenario(s.scenario_id)));
+      tr.append(name, ask, checks, created, act);
       scBody.appendChild(tr);
     }
+  } else {
+    renderError(document.getElementById("scenario-error"), scenarios.body);
   }
 
   /* Self-review: real by_state counts, nothing synthesized. */
@@ -821,21 +834,175 @@ async function loadIntelligence() {
     learnEl.appendChild(err);
   }
 
+  /* Scenario check set: the platform's closed deterministic check names,
+     rendered as checkboxes — the UI never types a check name of its own. */
+  const checksField = document.getElementById("scenario-checks");
+  checksField.querySelectorAll("label").forEach((l) => l.remove());
+  for (const name of SCENARIO_CHECK_NAMES) {
+    const label = document.createElement("label");
+    label.className = "check";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.value = name;
+    box.checked = true;
+    box.name = "scenario-check";
+    label.append(box, ` ${name}`);
+    checksField.appendChild(label);
+  }
+
   const labEl = document.getElementById("lab-checks");
   labEl.textContent = "";
+  const labForm = document.getElementById("lab-form");
   if (labChecks.ok) {
     const rows = labChecks.body.checks || [];
     labEl.textContent = rows.length
-      ? JSON.stringify(rows, null, 2)
+      ? `Checks the lab runs (closed set): ${rows.join(", ")}`
       : "No context-lab checks recorded.";
+    labForm.hidden = false;
   } else {
-    /* Seam not composed here — say so verbatim, never pretend. */
+    /* Seam not composed here — say so verbatim, never pretend; the form is
+       hidden because there is nothing to validate against (20 §4). */
     const err = document.createElement("div");
     err.className = "error-box";
     renderError(err, labChecks.body);
     labEl.appendChild(err);
+    labForm.hidden = true;
   }
 }
+
+/* The scenario check set is the platform's OWN deterministic check names
+   (core/evaluation/policy.py MVP_DETERMINISTIC_CHECKS) — the server refuses
+   any other name with a 422 that renders verbatim. Pinned by test. */
+const SCENARIO_CHECK_NAMES = ["output_present", "error_free_output"];
+
+async function exerciseCapability(capabilityId) {
+  /* POST /v1/admin/capabilities/{id}/exercise — a REAL labeled probe; the
+     evidence block is rendered as returned (execution id, counts, source). */
+  const out = document.getElementById("exercise-result");
+  out.hidden = false;
+  out.textContent = `exercising ${capabilityId}\u2026`;
+  const result = await api(`/v1/admin/capabilities/${encodeURIComponent(capabilityId)}/exercise`, { method: "POST" });
+  if (!result.ok) {
+    out.textContent = `${capabilityId}: ${errorText(result.body)}`;
+    return;
+  }
+  out.textContent = JSON.stringify(result.body, null, 2);
+  const evidence = result.body.result && result.body.result.evidence;
+  if (evidence && evidence.execution_id) {
+    const link = actionButton("Open execution", () => {
+      document.querySelector('.rail-item[data-surface="executions"]').click();
+      openExecution(evidence.execution_id);
+    });
+    out.append("\n", link);
+  }
+}
+
+document.getElementById("scenario-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const errorBox = document.getElementById("scenario-error");
+  errorBox.hidden = true;
+  const checks = Array.from(document.querySelectorAll('input[name="scenario-check"]:checked')).map((b) => b.value);
+  const result = await api("/v1/admin/scenarios", {
+    method: "POST",
+    body: {
+      name: document.getElementById("scenario-name").value,
+      ask: document.getElementById("scenario-ask").value,
+      checks,
+    },
+  });
+  if (!result.ok) { renderError(errorBox, result.body); return; }
+  toast(`scenario saved: ${result.body.name}`, "ok");
+  document.getElementById("scenario-form").reset();
+  loadIntelligence();
+});
+
+function renderScenarioVerdict(container, r) {
+  /* Verdict follows stored truth: replayed=false carries the server's named
+     reason; replayed=true carries execution id + per-check rows. */
+  const div = document.createElement("div");
+  div.className = "card";
+  const head = document.createElement("div");
+  if (r.replayed !== true) {
+    head.className = "claim refused";
+    head.textContent = `scenario ${r.scenario_id}: not replayed \u2014 ${r.error || "no reason given"}`;
+    div.appendChild(head);
+  } else {
+    head.append(`scenario ${r.scenario_id} \u2192 execution ${r.execution_id} `, statusBadge(r.execution_status),
+      " \u00b7 verdict ", statusBadge(r.passed === true ? "passed" : "failed"));
+    div.appendChild(head);
+    for (const c of r.checks || []) {
+      const row = document.createElement("div"); row.className = "tool-row mono small";
+      row.textContent = `${c.name}: ${c.passed === true ? "passed" : "failed"}`;
+      div.appendChild(row);
+    }
+  }
+  container.appendChild(div);
+}
+
+async function replayScenario(scenarioId) {
+  const out = document.getElementById("scenario-result");
+  out.hidden = false;
+  out.textContent = "replaying\u2026 (a REAL execution)";
+  const result = await api(`/v1/admin/scenarios/${encodeURIComponent(scenarioId)}/replay`, { method: "POST" });
+  out.textContent = "";
+  if (!result.ok) { renderError(out, result.body); return; }
+  renderScenarioVerdict(out, result.body);
+}
+
+document.getElementById("regression-pack").addEventListener("click", async () => {
+  const out = document.getElementById("scenario-result");
+  out.hidden = false;
+  out.textContent = "running regression pack\u2026 (every saved scenario, REAL executions)";
+  const result = await api("/v1/admin/scenarios/regression-pack", { method: "POST" });
+  out.textContent = "";
+  if (!result.ok) { renderError(out, result.body); return; }
+  const head = document.createElement("p");
+  head.append(`${result.body.scenario_count} scenario(s) \u00b7 regression `,
+    statusBadge(result.body.regression_pass === true ? "passed" : "failed"));
+  if (result.body.scenario_count === 0) {
+    head.append(" \u2014 an empty pack cannot pass; save a scenario first");
+  }
+  out.appendChild(head);
+  for (const r of result.body.results || []) renderScenarioVerdict(out, r);
+});
+
+document.getElementById("lab-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const errorBox = document.getElementById("lab-error");
+  const out = document.getElementById("lab-result");
+  errorBox.hidden = true;
+  out.hidden = true;
+  out.textContent = "";
+  const result = await api("/v1/admin/context-lab/validate", {
+    method: "POST",
+    body: {
+      ask: document.getElementById("lab-ask").value,
+      context_budget: Number(document.getElementById("lab-budget").value),
+      history_limit: Number(document.getElementById("lab-history").value),
+      allow_high_sensitivity: document.getElementById("lab-high").checked,
+    },
+  });
+  if (!result.ok) { renderError(errorBox, result.body); return; }
+  out.hidden = false;
+  const head = document.createElement("p");
+  head.append("composition ", statusBadge(result.body.passed === true ? "passed" : "failed"),
+    " \u2014 dry run, no model called");
+  out.appendChild(head);
+  for (const c of result.body.checks || []) {
+    const row = document.createElement("div"); row.className = "tool-row mono small";
+    row.textContent = `${c.name}: ${c.passed === true ? "passed" : "failed"}`;
+    out.appendChild(row);
+  }
+  const ctx = result.body.context || {};
+  const blocks = document.createElement("div"); blocks.className = "mono small";
+  const excluded = ctx.excluded || [];
+  blocks.textContent =
+    `${(ctx.context_blocks || []).length} context block(s): ` +
+    (ctx.context_blocks || []).map((b) => `${b.type}\u2190${b.source}`).join(", ") +
+    ` \u00b7 ${excluded.length} exclusion(s)` +
+    (excluded.length ? `: ${JSON.stringify(excluded)}` : "");
+  out.appendChild(blocks);
+});
 
 /* --- Surface: Changes & Audit (POST 3 of 4 — explicit human act) ----------------- */
 
