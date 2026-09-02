@@ -63,6 +63,7 @@ from sqlalchemy import text
 from apps.admin_agent.tools import AgentToolSurface
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal, create_app
+from apps.api.skills_import import SkillReviewSurface
 from apps.api.auth import AuthSurface
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
@@ -122,6 +123,7 @@ from core.memory.memory import InMemoryConversationStore, InMemoryMemoryStore
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.roles.registry import RoleRegistry, SkillRegistry
+from core.skills.importing import SkillImportService
 from core.routing.router import SimpleScoringRouter
 from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
 from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
@@ -822,10 +824,15 @@ def build_runtime_profile(
     # become part of the local runtime in BOTH profiles. The optional V7
     # seams are read back from app.state (the recorded "one derivation,
     # two consumers" duty — create_app derived them; we hand the SAME
-    # objects to the agent). skill_review stays absent (P2: absent seam =
-    # absent routes — no SkillReviewSurface is composed here today).
+    # objects to the agent). R160: the external skill acquisition pipeline
+    # (14 §3 import → scan → validate → review → approve → activate) is
+    # composed over the SAME SkillRegistry the /v1/execute skill admission
+    # and /v1/skills listing read — an ACTIVATED import becomes selectable
+    # (and its requires_tools disclosed to the agent) with no second
+    # registry and no new permission system.
     attach_admin_console(
         app,
+        skill_review=SkillReviewSurface(importing=SkillImportService(), registry=skills),
         surface=AgentToolSurface(
             providers=providers,
             models=models,
