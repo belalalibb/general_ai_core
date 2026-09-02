@@ -90,7 +90,11 @@ class TestGensparkLLMLive:
         assert response.succeeded is True, f"live generate failed: {response.error}"
         assert isinstance(response.output["content"], str)
         assert response.output["content"].strip() != ""
-        assert response.usage.get("total_tokens", 0) > 0
+        # Usage is REPORTED by the gateway, not computed here: some upstream
+        # models answer with all-zero usage. Pin the shape (41 §49: record
+        # the fact, never invent tokens); positivity is a gateway property.
+        assert set(response.usage) >= {"prompt_tokens", "completion_tokens", "total_tokens"}
+        assert all(isinstance(v, int) and v >= 0 for v in response.usage.values())
 
     def test_disallowed_model_maps_to_model_unavailable_live(self) -> None:
         # Live confirmation of the structural allowlist mapping.
