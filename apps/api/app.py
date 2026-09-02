@@ -225,8 +225,12 @@ from core.execution.service import (
     PipelineStage,
 )
 from core.identity.errors import SessionInvalid
-from core.learning import LearningLifecycleService, TrainingEligibilityGate
-from core.memory.errors import ConversationNotFound
+from core.learning import (
+    GOLD_KNOWLEDGE_SOURCE,
+    LearningLifecycleService,
+    TrainingEligibilityGate,
+)
+from core.memory.errors import ConversationNotFound, MemoryStoreError
 from core.memory.ports import ConversationStorePort, MemoryStorePort
 from core.providers.registry import BindingRegistry, ModelRegistry
 from core.roles.errors import RoleNotRegistered, RoleNotSelectable
@@ -279,12 +283,78 @@ def _request_hash(payload: ExecuteRequest) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _result_from_output(output: JsonObject, format_hint: str | None) -> ExecutionResult:
+#: Artifact type label for the R161 context-provenance evidence.
+CONTEXT_PROVENANCE_ARTIFACT = "context_provenance"
+
+
+def _context_provenance(
+    report: ExecutionReport,
+    tenant_id: UUID,
+    memory: MemoryStorePort | None,
+) -> JsonObject | None:
+    """Derive the R161 ``context_provenance`` artifact from STORED evidence.
+
+    Phase 3 (real learning improvement) requires that GOLD knowledge reaching
+    a production answer be MEASURABLE, not asserted. The composed 13 §5
+    context already rides the node's ``input_ref["context"]`` (stored
+    execution truth). This reads it back and names, per memory block, the
+    memory id + its ``source`` label (``learning.gold`` for promoted
+    knowledge) — never the content (that already rode the payload once;
+    re-echoing it here would widen the response surface).
+
+    Deny-by-default: no composed context ⇒ no artifact (``None``); an
+    unresolvable memory id ⇒ ``source: null`` (honest, no fabrication).
+    """
+    if not report.nodes:
+        return None
+    input_ref = report.nodes[-1].node.input_ref
+    if not isinstance(input_ref, dict):
+        return None
+    context = input_ref.get("context")
+    if not isinstance(context, dict):
+        return None
+    blocks = context.get("context_blocks")
+    if not isinstance(blocks, list):
+        return None
+    memory_blocks: list[JsonObject] = []
+    gold_count = 0
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        source = block.get("source")
+        if not isinstance(source, str) or not source.startswith("memory:"):
+            continue
+        memory_id = source.removeprefix("memory:")
+        origin: str | None = None
+        if memory is not None:
+            try:
+                origin = memory.get(tenant_id, UUID(memory_id)).source
+            except (ValueError, MemoryStoreError):
+                origin = None
+        if origin == GOLD_KNOWLEDGE_SOURCE:
+            gold_count += 1
+        memory_blocks.append({"memory_id": memory_id, "source": origin, "type": block.get("type")})
+    excluded = context.get("excluded")
+    return {
+        "type": CONTEXT_PROVENANCE_ARTIFACT,
+        "blocks_total": len(blocks),
+        "memory_blocks": memory_blocks,
+        "gold_blocks": gold_count,
+        "excluded": len(excluded) if isinstance(excluded, list) else 0,
+    }
+
+
+def _result_from_output(
+    output: JsonObject,
+    format_hint: str | None,
+    artifacts: list[JsonObject] | None = None,
+) -> ExecutionResult:
     """Shape the final node output as the 10 §3 ``result`` object.
 
     Adapters return normalized JSON objects; when the output carries a string
     ``content`` field it is surfaced verbatim, otherwise the whole object is
-    serialized — the API never invents content.
+    serialized — the API never invents content. ``artifacts`` are evidence
+    objects derived from stored execution truth (R161 context provenance).
     """
     content = output.get("content")
     if not isinstance(content, str):
@@ -293,7 +363,7 @@ def _result_from_output(output: JsonObject, format_hint: str | None) -> Executio
         type="message",
         content=content,
         format=format_hint,
-        artifacts=[],
+        artifacts=list(artifacts or []),
     )
 
 
@@ -1189,10 +1259,13 @@ def create_app(
             output = report.final_output
             assert output is not None  # succeeded => last node has output
             format_hint = body.output.format if body.output is not None else None
+            provenance = _context_provenance(report, report.execution.tenant_id, memory)
             sync = ExecuteSyncResponse(
                 execution_id=str(report.execution.id),
                 status=report.execution.status,
-                result=_result_from_output(output, format_hint),
+                result=_result_from_output(
+                    output, format_hint, [provenance] if provenance else None
+                ),
                 usage=_usage_report(report.usage),
                 evaluation=None,
             )
@@ -1522,7 +1595,10 @@ def create_app(
         result = None
         error_detail = None
         if status is ExecutionStatus.SUCCEEDED and report.final_output is not None:
-            result = _result_from_output(report.final_output, None)
+            provenance = _context_provenance(report, caller.tenant_id, memory)
+            result = _result_from_output(
+                report.final_output, None, [provenance] if provenance else None
+            )
         elif status is ExecutionStatus.FAILED:
             error_detail = execution_failure_detail(execution_id, _last_provider_error(report))
         status_response = ExecutionStatusResponse(

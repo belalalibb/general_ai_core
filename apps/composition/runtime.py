@@ -334,14 +334,28 @@ class LocalEchoAdapter:
 
     async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         ask = request.payload.get("ask", "")
+        output: dict[str, object] = {
+            "provider": "local-echo",
+            "note": "hermetic local adapter — no real model was called",
+            "echo": ask,
+        }
+        # R161: echo the composed 13 §5 context the adapter RECEIVED — the
+        # local profile then shows, honestly, that learned (GOLD) knowledge
+        # reached the model input. The real gateway adapter sends the same
+        # object as a system message; this is the hermetic mirror of that.
+        context = request.payload.get("context")
+        if isinstance(context, dict):
+            blocks = context.get("context_blocks")
+            if isinstance(blocks, list):
+                output["context_blocks"] = [
+                    {"type": b.get("type"), "content": b.get("content"), "source": b.get("source")}
+                    for b in blocks
+                    if isinstance(b, dict)
+                ]
         return ProviderGenerateResponse(
             request_id=request.request_id,
             succeeded=True,
-            output={
-                "provider": "local-echo",
-                "note": "hermetic local adapter — no real model was called",
-                "echo": ask,
-            },
+            output=output,
             usage={"units": 1},
             latency_ms=0,
         )
