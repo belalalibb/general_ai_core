@@ -388,6 +388,26 @@ def test_retry_after_ms_is_honored_via_sleeper() -> None:
     assert _SLEEPS == [1.5]
 
 
+def test_retry_after_beyond_the_wait_cap_fails_over_instead_of_parking() -> None:
+    """R165 (live): Groq free tier answered Retry-After 1335 s / 2655 s for
+    TPM exhaustion. A retry that sleeps 44 minutes is not a retry — the
+    candidate is unavailable; the next candidate gets the request now."""
+    world = World()
+    p1, a1 = world.add_provider(
+        [
+            _error(ProviderErrorCategory.RATE_LIMITED, retryable=True, retry_after_ms=1_335_000),
+            {"text": "never"},
+        ]
+    )
+    p2, a2 = world.add_provider([{"text": "fallback"}])
+    decision = world.decision(world.candidate(p1), world.candidate(p2))
+    report = _single(world, decision, service=world.service(max_retries=3))
+    assert report.execution.status is ExecutionStatus.SUCCEEDED
+    assert len(a1.requests) == 1  # no same-candidate retry
+    assert len(a2.requests) == 1
+    assert _SLEEPS == []  # and no parking
+
+
 def test_zero_retry_budget_fails_over_immediately() -> None:
     world = World()
     p1, a1 = world.add_provider(

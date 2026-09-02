@@ -69,7 +69,7 @@ below is read from the process environment at start.
 | `AGENT_WORKSPACE_COMMANDS` | comma-separated executables `ws_run` may launch (allow-list; `bash`, `sh`, `curl` etc. are refused unless listed) | `python3,pytest,ruff` |
 | `VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_MOUNT` | Vault-backed `SecretManagerPort` (secret refs resolve there) | absent ⇒ env-backed refs |
 | `EXECUTE_RATE_LIMIT`, `REGISTER_RATE_LIMIT` | per-tenant / per-IP limits | recorded defaults |
-| `PROVIDER_MAX_RETRIES` | bounded same-model retries for *retryable* provider errors (rate limit / 5xx), honoring `Retry-After`; the run deadline still caps total wait. Raise (e.g. `4`) on token-per-minute-capped tiers such as Groq free (8k TPM) so a multi-step agent run survives a 429 mid-task (0–8) | `1` |
+| `PROVIDER_MAX_RETRIES` | bounded same-model retries for *retryable* provider errors (rate limit / 5xx / a generation that failed the provider's own post-check), honoring `Retry-After` up to 60 s — a longer `Retry-After` (Groq free tier answered 1335 s live) fails over instead of parking the run. Raise (e.g. `4`) on token-per-minute-capped tiers such as Groq free (8k TPM) so a multi-step agent run survives a 429 mid-task (0–8) | `1` |
 
 Verify what the environment actually composes (evidence, not a claim):
 

@@ -133,6 +133,11 @@ _REQUEST_INDICTING: frozenset[ProviderErrorCategory] = frozenset(
 PREVIOUS_OUTPUT_KEY = "previous_output"
 
 
+#: Longest ``Retry-After`` a same-candidate retry will honor; anything longer
+#: is treated as "candidate unavailable" and fails over (R165 live).
+DEFAULT_MAX_RETRY_WAIT_MS = 60_000
+
+
 async def _default_sleeper(seconds: float) -> None:
     await asyncio.sleep(seconds)
 
@@ -237,6 +242,7 @@ class ExecutionService:
         credential_refs: Mapping[UUID, str],
         bindings: BindingRegistry,
         max_retries_per_candidate: int = 1,
+        max_retry_wait_ms: int = DEFAULT_MAX_RETRY_WAIT_MS,
         usage: UsageAccountingPort | None = None,
         units_per_stage: float = 1.0,
         sleeper: Callable[[float], Awaitable[None]] | None = None,
@@ -249,6 +255,10 @@ class ExecutionService:
         if units_per_stage < 0:
             msg = "units_per_stage must be >= 0"
             raise ValueError(msg)
+        if max_retry_wait_ms < 0:
+            msg = "max_retry_wait_ms must be >= 0"
+            raise ValueError(msg)
+        self._max_retry_wait_ms = max_retry_wait_ms
         self._usage = usage
         self._units_per_stage = units_per_stage
         self._adapters = adapters
@@ -531,8 +541,16 @@ class ExecutionService:
                     # Request-inherent failure: no retry, no failover.
                     return _NodeRun(attempts=tuple(attempts), response=response, error=error)
                 if error.retryable and attempt <= self._max_retries:
-                    if error.retry_after_ms is not None and error.retry_after_ms > 0:
-                        await self._sleeper(error.retry_after_ms / 1000.0)
+                    wait_ms = error.retry_after_ms
+                    if wait_ms is not None and wait_ms > self._max_retry_wait_ms:
+                        # R165 live: Groq's free tier answered Retry-After
+                        # 1335 s / 2655 s for token-per-minute exhaustion.
+                        # Honoring that would park the run for the better
+                        # part of an hour; the provider is telling us it is
+                        # NOT going to serve this candidate soon. Fail over.
+                        break
+                    if wait_ms is not None and wait_ms > 0:
+                        await self._sleeper(wait_ms / 1000.0)
                     continue  # bounded same-candidate retry (40 §4.6)
                 break  # provider failover: next candidate in Router order
 
