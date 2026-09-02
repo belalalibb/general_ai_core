@@ -45,6 +45,8 @@ from apps.api.scenarios import ScenarioService, scenario_json
 from core.admin.service import AdminConfigService
 from core.contracts.admin import AdminAction, ConfigChange, ConfigLifecycleState
 from core.contracts.base import JsonObject
+from core.learning import LearningLifecycleService
+from core.sourcechange.workflow import SourceChangeWorkflow
 
 #: Newest lifecycle records carried as self-review evidence (bounded —
 #: the full list stays readable through GET /v1/admin/changes).
@@ -67,6 +69,10 @@ class SelfReviewService:
     catalog: tuple[Capability, ...] = ()
     scenarios: ScenarioService | None = None
     observability: LearningObservabilityService | None = None
+    # R161: the two evolution substrates, when composed (P2 — pre-R161
+    # constructions stay valid verbatim).
+    learning: LearningLifecycleService | None = None
+    source_changes: SourceChangeWorkflow | None = None
 
     # --- Self-Review (R0: pure read over existing surfaces) --------------------
 
@@ -77,6 +83,7 @@ class SelfReviewService:
             "config_lifecycle": self._lifecycle_section(tenant_id),
             "scenarios": self._scenario_section(tenant_id),
             "review_state": self._review_section(tenant_id),
+            "evolution": self._evolution_section(tenant_id),
             # The posture, restated where the reader is (P6): this report
             # proposes nothing and applies nothing.
             "posture": {
@@ -142,6 +149,69 @@ class SelfReviewService:
             "reviewed": report["reviewed"],
             "since": report["since"],
             "full_report": "GET /v1/admin/learning/changes-since-review",
+        }
+
+    # --- Self-evolution posture (R161: two lanes, stated honestly) --------------
+    #
+    # "Self-evolution" on this platform has exactly two lanes, and the
+    # report names both with their gates — never a blended claim:
+    #
+    # 1. KNOWLEDGE lane (open): captured samples → gates → GOLD → the SAME
+    #    memory the context composer reads → ``/v1/execute`` answers carry
+    #    a ``context_provenance`` artifact whose ``gold_blocks`` count is
+    #    the measurement. Facts here come from the lifecycle service.
+    # 2. SOURCE lane (§14-gated): proposals live in the R3 workflow
+    #    (propose → verify → approve → apply INSIDE the snapshot space).
+    #    Writing authoritative source needs the ``AuthoritativeApplierPort``
+    #    which has NO implementation in this repository; the workflow's
+    #    own ``authoritative_apply_status`` is quoted, not paraphrased.
+
+    def _evolution_section(self, tenant_id: UUID) -> JsonObject:
+        knowledge: JsonObject
+        if self.learning is None:
+            knowledge = {"available": False}
+        else:
+            samples = self.learning.list_samples(tenant_id)
+            by_eligibility: dict[str, int] = {}
+            by_level: dict[str, int] = {}
+            for sample in samples:
+                e = sample.eligibility.value
+                by_eligibility[e] = by_eligibility.get(e, 0) + 1
+                lvl = sample.verification_level.value
+                by_level[lvl] = by_level.get(lvl, 0) + 1
+            knowledge = {
+                "available": True,
+                "samples": len(samples),
+                "by_eligibility": dict(sorted(by_eligibility.items())),
+                "by_verification_level": dict(sorted(by_level.items())),
+                "gold_keys": list(self.learning.learned_keys(tenant_id)),
+                "reaches_production": {
+                    "how": "GOLD items ride the composer's memory store into payload.context",
+                    "measured_by": "result.artifacts[type=context_provenance].gold_blocks",
+                    "retest": "POST /v1/admin/learning/capability-retest",
+                },
+            }
+        source: JsonObject
+        if self.source_changes is None:
+            source = {"available": False}
+        else:
+            proposals = self.source_changes.list(tenant_id)
+            by_state: dict[str, int] = {}
+            for proposal in proposals:
+                s = proposal.state.value
+                by_state[s] = by_state.get(s, 0) + 1
+            source = {
+                "available": True,
+                "proposals": len(proposals),
+                "by_state": dict(sorted(by_state.items())),
+                "apply_scope": "snapshot space only (R3 workflow)",
+                "authoritative_write": self.source_changes.authoritative_apply_status(),
+                "routes": "POST /v1/admin/source-changes → /verify → /approve → /apply",
+            }
+        return {
+            "knowledge_lane": knowledge,
+            "source_lane": source,
+            "auto_apply": "never",
         }
 
     # --- Change Impact Simulator (R2: composes the EXISTING lifecycle) ---------

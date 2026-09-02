@@ -1933,21 +1933,6 @@ def create_app(
         )
     app.state.learning_lifecycle_service = learning_lifecycle_service
 
-    # --- V7 chunk 6: Self-Review + Change Impact Simulator ----------------------
-    # Assembly over the SAME derivations this root already made (catalog
-    # tuple, scenario service, observability service) plus the admin
-    # lifecycle — exists ONLY when an admin surface exists (it reviews and
-    # proposes through admin machinery, 20 §4). NEVER calls publish.
-    self_review_service: SelfReviewService | None = None
-    if admin is not None:
-        self_review_service = SelfReviewService(
-            admin_service=admin.service,
-            catalog=capability_catalog,
-            scenarios=scenario_service,
-            observability=learning_observability_service,
-        )
-    app.state.self_review_service = self_review_service
-
     # --- V8: R3 Source-Change Workflow (ADR-0009) --------------------------------
     # Composed ONLY when an admin surface exists (a human-only admin
     # instrument, 20 §4). Hermetic end to end: in-memory stores, in-process
@@ -1978,6 +1963,26 @@ def create_app(
             authoritative_applier=None,  # §14 OPERATOR GATE — never wired in V8
         )
     app.state.source_change_workflow = source_change_workflow
+
+    # --- V7 chunk 6: Self-Review + Change Impact Simulator ----------------------
+    # Assembly over the SAME derivations this root already made (catalog
+    # tuple, scenario service, observability service) plus the admin
+    # lifecycle — exists ONLY when an admin surface exists (it reviews and
+    # proposes through admin machinery, 20 §4). NEVER calls publish.
+    # Built AFTER the R3 workflow (R161) so the evolution section can quote
+    # the workflow's own §14 authoritative-apply status.
+    self_review_service: SelfReviewService | None = None
+    if admin is not None:
+        self_review_service = SelfReviewService(
+            admin_service=admin.service,
+            catalog=capability_catalog,
+            scenarios=scenario_service,
+            observability=learning_observability_service,
+            # R161: the two self-evolution lanes, reported with their gates.
+            learning=learning_lifecycle_service,
+            source_changes=source_change_workflow,
+        )
+    app.state.self_review_service = self_review_service
 
     # --- /v1/admin/* (T-IMPL-032): mounted ONLY when a surface is injected ----
     if admin is not None:

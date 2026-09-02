@@ -139,7 +139,7 @@ class KnowledgeStorePort(Protocol):
         self,
         tenant_id: UUID,
         user_id: UUID | None = None,
-        scope: object | None = None,
+        scope: MemoryScope | None = None,
         key: str | None = None,
         min_confidence: float = 0.0,
         include_expired: bool = False,
