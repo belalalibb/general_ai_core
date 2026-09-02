@@ -187,3 +187,77 @@ class TestOverHttp:
         assert report.json()["derived_signals"] == {"deduplicated": True, "scan_clean": False}
         # unknown id → 404 (anti-enumeration parity with the other verbs)
         assert run(_post(app, f"{SAMPLES}/{uuid4()}/scan")).status_code == 404
+
+
+class TestPromotionIsTheKnowledgeWrite:
+    """R161 self-audit: GOLD is stamped only AFTER the memory substrate accepted
+    the item. A refused write (backend failure, 13 §7 secret screen) leaves the
+    sample unpromoted — never GOLD-on-paper with nothing retrievable."""
+
+    @staticmethod
+    def _eligible(service: LearningLifecycleService, tenant: Any) -> Any:
+        from core.contracts.evaluation import VerificationLevel
+
+        sample = service.capture_external(
+            tenant, knowledge_key="ops.k", knowledge_value={"answer": "drain then flip"}
+        )
+        service.mark_sanitized(tenant, sample.id, passed=True)
+        service.set_verification_level(tenant, sample.id, VerificationLevel.VERIFIED)
+        service.admit_to_training(tenant, sample.id, ALL_TRUE)
+        return sample
+
+    def test_refused_write_leaves_level_and_audit_untouched(self) -> None:
+        from core.audit.memory import InMemoryAuditLog
+        from core.contracts.audit import AuditEventType
+        from core.contracts.evaluation import VerificationLevel
+        from core.contracts.memory import MemoryItem
+        from core.learning import PromotionSignals
+        from core.memory.errors import MemoryStoreError
+
+        class RefusingStore(InMemoryMemoryStore):
+            def upsert(self, item: MemoryItem) -> MemoryItem:
+                raise MemoryStoreError("backend unavailable")
+
+        audit = InMemoryAuditLog()
+        service = LearningLifecycleService(knowledge=RefusingStore(), audit=audit)
+        tenant = uuid4()
+        sample = self._eligible(service, tenant)
+        signals = PromotionSignals(
+            offline_eval_pass=True,
+            regression_pass=True,
+            security_eval_pass=True,
+            shadow_performance_acceptable=True,
+            canary_performance_acceptable=True,
+            rollback_plan_exists=True,
+            approval_required=True,
+            admin_approved=True,
+        )
+        with pytest.raises(MemoryStoreError):
+            service.promote_to_gold(tenant, sample.id, signals)
+        report = service.sample_report(tenant, sample.id)
+        assert report["sample"]["verification_level"] == VerificationLevel.VERIFIED.value
+        assert audit.read(tenant, AuditEventType.TRAINING_DATASET_PROMOTED) == ()
+        assert service.ask_learned(tenant, "ops.k")["found"] is False
+
+    def test_route_reports_refused_write_honestly(self) -> None:
+        from core.contracts.memory import MemoryItem
+        from core.memory.errors import MemoryStoreError
+        from tests.api.test_admin_api import World
+        from tests.api.test_learning_lifecycle_routes import ALL_PROMOTE, SAMPLES, _app, _post
+
+        world = World()
+        app = _app(world)
+        service = app.state.learning_lifecycle_service
+        tenant = world.principal.tenant_id
+        sample = self._eligible(service, tenant)
+
+        def refuse(item: MemoryItem) -> MemoryItem:
+            raise MemoryStoreError("backend unavailable")
+
+        service._knowledge.upsert = refuse  # type: ignore[method-assign]
+        response = run(_post(app, f"{SAMPLES}/{sample.id}/promote", ALL_PROMOTE))
+        assert response.status_code == 200
+        body = response.json()
+        assert body["promoted"] is False
+        assert body["stage"] == "knowledge_write"
+        assert "backend unavailable" in body["reason"]

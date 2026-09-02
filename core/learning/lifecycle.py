@@ -483,9 +483,10 @@ class LearningLifecycleService:
             raise LearningError("sample must pass training eligibility before promotion (22 §8)")
         verdicts = self._promotion.admit(str(sample_id), signals)
         record.promotion_verdicts = verdicts
-        record.sample = record.sample.model_copy(
-            update={"verification_level": VerificationLevel.GOLD}
-        )
+        # R161: the knowledge write is the promotion. Write FIRST, stamp
+        # GOLD only after the substrate accepted the item — a refused write
+        # (backend down, 13 §7 secret screen) leaves the sample unpromoted
+        # instead of reading GOLD while nothing is retrievable.
         item = self._knowledge.upsert(
             MemoryItem(
                 id=uuid4(),
@@ -499,6 +500,9 @@ class LearningLifecycleService:
                 evidence_count=1,
                 last_seen=utc_now(),
             )
+        )
+        record.sample = record.sample.model_copy(
+            update={"verification_level": VerificationLevel.GOLD}
         )
         if self._audit is not None:
             self._audit.append(

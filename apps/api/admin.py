@@ -127,6 +127,7 @@ from core.learning import (
     SampleNotFound,
     SanitizationRefused,
 )
+from core.memory.errors import MemoryStoreError
 from core.memory.ports import MemoryStorePort
 from core.providers.registry import ModelRegistry, ProviderRegistry
 from core.sourcechange.errors import (
@@ -813,6 +814,16 @@ def create_admin_router(
                 )
             except (PromotionDenied, LearningError) as exc:
                 return _json({"promoted": False, "reason": str(exc)})
+            except MemoryStoreError as exc:
+                # The retrieval substrate refused the write (13 §7 secret
+                # screen or backend failure): the sample stays unpromoted.
+                return _json(
+                    {
+                        "promoted": False,
+                        "reason": f"knowledge store refused the write: {exc}",
+                        "stage": "knowledge_write",
+                    }
+                )
             return _json(
                 {
                     "promoted": True,
