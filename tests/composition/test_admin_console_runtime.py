@@ -25,6 +25,7 @@ Hermetic: in-memory profile, ASGI transport, no network.
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Coroutine
 from pathlib import Path
 from typing import Any
@@ -390,5 +391,130 @@ class TestAdminParityAgentCatalog:
             assert as_tenant.status_code == 200
             assert as_tenant.json()["tools"] == body["tools"]
             assert as_tenant.json()["max_steps"] == body["max_steps"]
+
+        run(scenario())
+
+
+# --- 7: R160 admin surfaces are wired to REAL routes -------------------------
+
+
+def _shape(path: str) -> str:
+    """Reduce a route (served ``{param}`` or JS ``${expr}``) to one comparable shape."""
+    return re.sub(r"\$?\{[^}]*\}", "{x}", path)
+
+
+class TestAdminSurfacesR160:
+    def test_every_rail_surface_has_a_section_and_a_loader(self) -> None:
+        """Structural: no dead rail button — each data-surface has its
+        <section id="surface-…"> and an entry in loadSurface's loaders map."""
+        html = ADMIN_INDEX.read_text(encoding="utf-8")
+        js = ADMIN_APP_JS.read_text(encoding="utf-8")
+        surfaces = set(re.findall(r'data-surface="([a-z-]+)"', html))
+        assert {"learning", "skills", "onboarding"} <= surfaces
+        loaders_block = js.split("const loaders = {", 1)[1].split("};", 1)[0]
+        for name in surfaces:
+            assert f'id="surface-{name}"' in html, name
+            assert f"{name}: load" in loaders_block, name
+
+    def test_every_api_path_the_console_calls_is_served(self, profile: RuntimeProfile) -> None:
+        """Evidence rule: the console may only name routes the composed
+        default profile actually serves. ONE recorded exception: the gateway
+        onboarding route is absent by design without a gateway binding
+        (20 §4) — the UI renders that absence as an honest note."""
+        js = ADMIN_APP_JS.read_text(encoding="utf-8")
+        served = [_shape(p).split("/") for p in profile.app.openapi()["paths"]]
+        called = {_shape(p) for p in re.findall(r'api\([`"](/v1/[^`"]+)[`"]', js)}
+        assert called, "no api() calls found"
+        gateway_gated = {"/v1/admin/providers/onboard"}
+        assert "route absent" in js  # the honest rendering of the gated one
+
+        def is_served(path: str) -> bool:
+            # A {x} segment on EITHER side is a wildcard for one segment: the
+            # UI's `${step}` verbs and the server's `{sample_id}` params both
+            # stand for a family of concrete paths.
+            parts = path.split("/")
+            return any(
+                len(parts) == len(s)
+                and all(a == b or "{x}" in (a, b) for a, b in zip(parts, s, strict=True))
+                for s in served
+            )
+
+        missing = sorted(p for p in called - gateway_gated if not is_served(p))
+        assert missing == [], f"console calls routes that are not served: {missing}"
+
+    def test_no_raw_secret_field_in_onboarding_form(self) -> None:
+        """20 §5: the onboarding form carries REFS only — no key/token input."""
+        html = ADMIN_INDEX.read_text(encoding="utf-8")
+        form = html.split('id="onboard-form"', 1)[1].split("</form>", 1)[0]
+        assert "credential_ref" in form and "route_token_ref" in form
+        assert 'type="password"' not in form
+        assert "api_key" not in form.lower() and "secret_value" not in form.lower()
+
+    def test_learning_verdicts_have_no_defaults(self) -> None:
+        """Every lifecycle step in the UI sends the API's closed shape with an
+        explicit human decision — never a pre-filled 'true'."""
+        js = ADMIN_APP_JS.read_text(encoding="utf-8")
+        for key in (
+            "privacy_policy_allows",
+            "tenant_user_policy_allows",
+            "sensitive_data_handled",
+            "offline_eval_pass",
+            "regression_pass",
+            "security_eval_pass",
+        ):
+            assert f"{key}: true" not in js, key
+            assert key in js
+        assert '"sanitize", { passed: true }' in js and '"sanitize", { passed: false }' in js
+
+    def test_learning_surface_drives_the_real_lifecycle(self) -> None:
+        """The exact request shapes the UI sends succeed over the runtime with
+        an ADMIN_EMAILS session (R160 hybrid identity): capture → list →
+        sanitize → retest → retest-with-baseline (delta) → ask."""
+        profile = build_runtime_profile(environ={"ADMIN_EMAILS": ADMIN_EMAIL})
+        headers = {"Authorization": f"Bearer {_admin_token(profile)}"}
+
+        async def scenario() -> None:
+            async with _client(profile.app) as c:
+                captured = await c.post(
+                    "/v1/admin/learning/samples",
+                    json={"knowledge_key": "ui.k1", "knowledge_value": {"answer": 42}},
+                    headers=headers,
+                )
+                assert captured.status_code in (200, 201), captured.text
+                sid = captured.json()["id"]
+                listed = await c.get("/v1/admin/learning/samples", headers=headers)
+                assert sid in [s["id"] for s in listed.json()["samples"]]
+                san = await c.post(
+                    f"/v1/admin/learning/samples/{sid}/sanitize",
+                    json={"passed": True},
+                    headers=headers,
+                )
+                assert san.status_code == 200, san.text
+                retest = await c.post(
+                    "/v1/admin/learning/capability-retest",
+                    json={"probes": ["ui.k1", "ui.k2"]},
+                    headers=headers,
+                )
+                assert retest.status_code == 200, retest.text
+                snap = retest.json()["snapshot"]
+                assert set(snap) >= {"probes", "found", "missing", "score"}
+                again = await c.post(
+                    "/v1/admin/learning/capability-retest",
+                    json={"probes": ["ui.k1", "ui.k2"], "baseline": snap},
+                    headers=headers,
+                )
+                assert again.status_code == 200 and "delta" in again.json()
+                asked = await c.post(
+                    "/v1/admin/learning/ask", json={"key": "ui.k1"}, headers=headers
+                )
+                assert asked.status_code in (200, 404)
+                # R160: usage + system read-models are served in the runtime.
+                usage = await c.get("/v1/admin/usage", headers=headers)
+                assert usage.status_code == 200, usage.text
+                system = await c.get("/v1/admin/system", headers=headers)
+                assert system.status_code == 200, system.text
+                body = system.json()
+                assert body["scope"] == "process"
+                assert body["profile"] == "in-memory" and body["identity_mode"] == "hybrid"
 
         run(scenario())

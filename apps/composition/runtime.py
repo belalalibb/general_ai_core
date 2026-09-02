@@ -779,7 +779,20 @@ def build_runtime_profile(
         routing=router,
         evaluations=evaluations,
         audit=audit,
+        # R160: USG-2 drill-down (GET /v1/admin/usage) over the SAME execution
+        # store the API writes — one derivation, two consumers.
+        executions=store,
     )
+
+    # R160: SYS-1 read-model (GET /v1/admin/system) — process-local facts only,
+    # every value is composition DATA already in hand (41 §49: no fleet claims).
+    def _system_info() -> dict[str, object]:
+        return {
+            "profile": "durable" if durable else "in-memory",
+            "identity_mode": "auth" if demo_principal is None else "hybrid",
+            "provider_keys": list(provider_keys),
+            "admin_emails_configured": len(admin_emails),
+        }
 
     # --- context composition (13 §5) — same registry/store instances ---------
     conversations = InMemoryConversationStore()
@@ -800,6 +813,7 @@ def build_runtime_profile(
         # mounted for the console's login. Durable profile: auth only.
         principal=demo_principal,
         auth=auth,
+        system_info=_system_info,
         skills=skills,
         roles=roles,
         conversations=conversations,

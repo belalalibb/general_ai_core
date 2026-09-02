@@ -96,7 +96,7 @@ from apps.api.source_changes import (
     build_snapshot,
     proposal_json,
 )
-from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
+from apps.api.store import ExecutionStorePort
 from core.admin.errors import (
     ChangeNotFound,
     InactiveAdminArea,
@@ -160,7 +160,7 @@ class AdminSurface:
     # AA-1 optional seams — absent ⇒ the corresponding route is absent
     # entirely (nothing to probe, 20 §4).
     audit: AuditLogPort | None = None
-    executions: InMemoryExecutionStore | None = None
+    executions: ExecutionStorePort | None = None  # any store binding (list(tenant_id))
 
 
 def _json(payload: object, status: int = 200) -> JSONResponse:
