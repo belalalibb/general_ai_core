@@ -229,6 +229,27 @@ class TestBounds:
         assert outcome.report.stop_reason == STOP_PROPOSE_FAILED
         assert not outcome.report.succeeded
 
+    def test_provider_failure_is_propose_failed_naming_category_and_code(self) -> None:
+        """R165 (live): the propose_failed detail names the provider's
+        normalized failure (category/code) — never its raw message."""
+        from core.contracts.provider import ProviderError, ProviderErrorCategory
+
+        rejected = ProviderError(
+            category=ProviderErrorCategory.BAD_REQUEST,
+            retryable=False,
+            provider_code="tool_use_failed",
+            safe_message="provider rejected the request",
+        )
+        world = AgentWorld([rejected])
+        outcome = world.run(TASK)
+        assert outcome.report.stop_reason == STOP_PROPOSE_FAILED
+        failed_planner = [n for n in outcome.report.nodes if n.error is not None][-1]
+        assert failed_planner.error is not None
+        detail = failed_planner.error["detail"]
+        assert "reasoning execution did not succeed" in detail
+        assert "bad_request/tool_use_failed" in detail
+        assert "provider rejected the request" not in detail
+
     def test_no_eligible_model_is_propose_failed(self) -> None:
         world = AgentWorld([model_says(final("x"))])
         world.bindings = None  # not used after construction; router holds its own refs

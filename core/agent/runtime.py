@@ -485,7 +485,8 @@ class AgentRuntime:
         output = result.final_output
         if output is None:
             raise ReasoningFailed(
-                "reasoning execution did not succeed", execution_id=result.execution.id
+                "reasoning execution did not succeed" + _failure_suffix(result),
+                execution_id=result.execution.id,
             )
         content = output.get("content")
         if not isinstance(content, str):
@@ -514,6 +515,25 @@ class AgentRuntime:
             label=merged,
         )
         return _parse_json_object(text), execution_id
+
+
+def _failure_suffix(result: ExecutionReport) -> str:
+    """Name the provider's normalized failure (category + code), never its text.
+
+    R165 (live): a ``propose_failed`` step read only "reasoning execution
+    did not succeed" while the real cause (Groq 400 ``tool_use_failed``)
+    sat in the child execution's node error — the operator had to hunt
+    for it. The category/code are already the tenant-safe surface.
+    """
+    for node in reversed(result.nodes):
+        error = node.node.error
+        if isinstance(error, dict) and error:
+            category = error.get("category")
+            code = error.get("provider_code") or error.get("code")
+            parts = [str(x) for x in (category, code) if x]
+            if parts:
+                return " (" + "/".join(parts) + ")"
+    return ""
 
 
 def _parse_json_object(text: str) -> JsonObject:

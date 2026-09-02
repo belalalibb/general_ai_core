@@ -192,6 +192,11 @@ class TestGenerateContract:
         assert sent["model"] == "allam-2-7b"
         assert sent["stream"] is False
         assert {"role": "user", "content": "hello"} in sent["messages"]
+        # R165 (live): GENERATE_TEXT declares no function tools, and says so —
+        # gpt-oss otherwise emits a native tool call when the PROMPT names
+        # tools and Groq answers 400 tool_use_failed.
+        assert sent["tool_choice"] == "none"
+        assert "tools" not in sent
 
     def test_role_and_context_and_previous_output_map_to_messages(self) -> None:
         adapter, recorder = _adapter(_ok_chat)

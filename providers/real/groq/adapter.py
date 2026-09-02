@@ -477,6 +477,13 @@ def _chat_completion_body(request: ProviderGenerateRequest) -> dict[str, Any]:
         "messages": messages,
         "max_completion_tokens": _DEFAULT_MAX_COMPLETION_TOKENS,
         "stream": False,
+        # R165 (live): GENERATE_TEXT never declares provider-side function
+        # tools — the platform's agent protocol rides plain text (P4/P7).
+        # Groq's gpt-oss models still emit a native function call whenever
+        # the PROMPT describes tools, and Groq then rejects the request as
+        # 400 ``tool_use_failed`` ("Tool choice is none, but model called a
+        # tool"). Saying so explicitly makes the model answer in text.
+        "tool_choice": "none",
     }
     generation = payload.get("generation")
     if isinstance(generation, dict):
