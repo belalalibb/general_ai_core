@@ -150,7 +150,9 @@ class AuthorizationLedger:
         """
         ticket = self._tickets.get(authorization_id) if authorization_id else None
         if ticket is None:
-            reason = "authorization_id missing" if authorization_id is None else "authorization unknown"
+            reason = (
+                "authorization_id missing" if authorization_id is None else "authorization unknown"
+            )
             self._refuse(UUID(int=0), act, authorization_id, actor_id, reason, detail)
         return self.consume(
             tenant_id=ticket.tenant_id,
