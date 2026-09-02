@@ -100,7 +100,10 @@ class OutputSpec(ContractModel):
 class ExecuteRequest(ContractModel):
     """POST /v1/execute request body (10 §2). Only ``ask`` is required."""
 
-    ask: BoundedStr = Field(max_length=100_000)
+    # R165: an explicit Annotated type — ``BoundedStr = Field(max_length=…)``
+    # STACKED the two constraints and the inner 512 won, so any real
+    # engineering brief was rejected as "at most 512 characters".
+    ask: Annotated[str, Field(min_length=1, max_length=100_000)]
     mode: BoundedStr | None = None
     conversation_id: BoundedStr | None = None
     project_id: BoundedStr | None = None

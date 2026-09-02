@@ -278,3 +278,22 @@ def test_execute_request_json_schema_export() -> None:
     assert "async" in exec_policy and "async_" not in exec_policy
     output_spec = schema["$defs"]["OutputSpec"]["properties"]
     assert "schema" in output_spec and "schema_" not in output_spec
+
+
+# --- ask length bound (R165) -----------------------------------------------------------
+
+
+def test_ask_accepts_a_real_engineering_brief_up_to_100k() -> None:
+    """R165: ``ask`` is bounded at 100_000 chars — NOT the 512 BoundedStr cap.
+
+    The field used to be ``BoundedStr = Field(max_length=100_000)``; pydantic
+    STACKED both constraints and the inner 512 won, so a multi-step task
+    brief was rejected live as "at most 512 characters".
+    """
+    ExecuteRequest(ask="x" * 5_000)
+    ExecuteRequest(ask="x" * 100_000)
+    with pytest.raises(ValidationError):
+        ExecuteRequest(ask="")
+    with pytest.raises(ValidationError):
+        ExecuteRequest(ask="x" * 100_001)
+    assert ExecuteRequest.model_json_schema()["properties"]["ask"]["maxLength"] == 100_000
