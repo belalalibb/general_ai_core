@@ -9,15 +9,16 @@ claims more than what is pinned).
 
 Weaknesses exposed by this benchmark (honest, not fixed here):
 
-- W1  The runtime cannot tell that ``run_tests`` SUCCEEDED-as-a-tool while
-      the tests FAILED: tool status is transport-level. A final may cite a
-      "succeeded" run_tests step whose result says ``passed: False``.
-      Semantic verification of tool results is a consumer verifier concern
-      (``verify=``) — pinned below as the ONLY way to catch it today.
-- W2  Repeated-failure refusal keys on FAILED (tool, args): a model that
-      keeps rewriting the SAME wrong content passes (each write succeeds)
-      and burns the step budget. The loop stops at ``max_steps_exceeded`` —
-      bounded, but late.
+- W1  (CLOSED generically) Without a result rule the runtime cannot tell
+      that ``run_tests`` SUCCEEDED-as-a-tool while the tests FAILED: tool
+      status is transport-level. ``AgentToolSpec.verify_result`` lets the
+      tool declare its own success rule; a rejected result is recorded
+      FAILED (never evidence) and identical retries trip the repeated-
+      failure refusal. Both the open weakness and its closure are pinned.
+- W2  (OPEN) Repeated-failure refusal keys on FAILED (tool, args): a model
+      that keeps rewriting the SAME wrong content passes (each write
+      succeeds) and burns the step budget. The loop stops at
+      ``max_steps_exceeded`` — bounded, but late.
 - W3  No plan artifact: the runtime records observations, not the model's
       plan, so a reviewer cannot see WHY a step was chosen beyond the
       ``reasoning`` string the proposal carried.
@@ -27,12 +28,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from core.agent import AgentToolSpec
+from core.agent import AgentToolSpec, ToolResultRejected
 from core.contracts.base import JsonObject
 from core.execution.loop import (
     STOP_FINAL,
     STOP_MAX_STEPS,
     STOP_PROPOSE_FAILED,
+    STOP_REPEATED_FAILURE,
     STOP_VERIFICATION_FAILED,
 )
 from core.security.firewall import TenantPolicy
@@ -80,8 +82,13 @@ def _grant(world: AgentWorld, *permissions: str) -> None:
     )
 
 
+def rule_tests_passed(result: JsonObject) -> str | None:
+    """The run_tests tool's OWN success rule (verify_result)."""
+    return None if result.get("passed") is True else f"tests failed: {result.get('failed')}"
+
+
 def _coding_world(
-    script: list[object], **kw: Any
+    script: list[object], *, strict_tests: bool = False, **kw: Any
 ) -> tuple[AgentWorld, FakeRunner, list[AgentToolSpec]]:
     world = AgentWorld(script, **kw)
     world.fs.files = {"calc.py": BUGGY, "test_calc.py": TEST}
@@ -99,6 +106,7 @@ def _coding_world(
             resource="fs:workspace",
             entitlement=ENTITLEMENT,
             description="Run the test suite; returns passed/failed counts.",
+            verify_result=rule_tests_passed if strict_tests else None,
         ),
     ]
     return world, runner, tools
@@ -157,6 +165,62 @@ class TestWeaknessW1:
         outcome = world.run(TASK, tools=tools, verify=verify_tests_passed)
         assert outcome.report.stop_reason == STOP_VERIFICATION_FAILED
         assert not outcome.report.succeeded
+
+
+class TestW1ClosedByResultRule:
+    def test_failed_test_run_is_recorded_failed_not_evidence(self) -> None:
+        world, runner, tools = _coding_world(
+            [
+                model_says(tool_call("run_tests")),
+                model_says(final("done", 1)),  # cites the failed run
+            ],
+            strict_tests=True,
+            max_steps=2,
+        )
+        outcome = world.run(TASK, tools=tools)
+        first = outcome.report.steps[0].observation
+        assert first["status"] == "failed"
+        assert "ToolResultRejected" in first["error"]["detail"]
+        assert "tests failed: 1" in first["error"]["detail"]
+        assert outcome.report.evidence == ()  # never evidence
+        # The final citing step 1 is now INVENTED evidence → rejected; with
+        # no budget left the honest stop reason is verification_failed.
+        assert outcome.report.stop_reason == STOP_VERIFICATION_FAILED
+        assert outcome.report.verification["invented"] == [1]
+        assert not outcome.report.succeeded
+        assert runner.runs == 1
+
+    def test_rerunning_tests_without_a_fix_is_refused_as_repeated_failure(self) -> None:
+        world, runner, tools = _coding_world(
+            [model_says(tool_call("run_tests"))] * 4, strict_tests=True, max_steps=4
+        )
+        outcome = world.run(TASK, tools=tools)
+        # 2 real (failed) runs, then identical calls are REFUSED without
+        # running; refusing on the last step is the honest stop reason.
+        assert runner.runs == 2
+        assert outcome.report.summary["repeated_failure_refusals"] == 2
+        assert outcome.report.steps[2].observation["status"] == "refused"
+        assert outcome.report.stop_reason == STOP_REPEATED_FAILURE
+        assert not outcome.report.succeeded
+
+    def test_fix_then_passing_run_is_evidence(self) -> None:
+        world, runner, tools = _coding_world(
+            [
+                model_says(tool_call("run_tests")),
+                model_says(tool_call("fs_write", path="calc.py", content=FIXED)),
+                model_says(tool_call("run_tests")),
+                model_says(final("fixed", 2, 3)),
+            ],
+            strict_tests=True,
+        )
+        outcome = world.run(TASK, tools=tools)
+        assert outcome.report.succeeded
+        assert [e["step"] for e in outcome.report.evidence] == [2, 3]
+        assert outcome.report.evidence[1]["result"]["passed"] is True
+
+    def test_rule_exception_type_is_exported(self) -> None:
+        exc = ToolResultRejected("r", {"k": 1})
+        assert exc.reason == "r" and exc.result == {"k": 1} and "k" in str(exc)
 
 
 class TestWeaknessW2:

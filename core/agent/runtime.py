@@ -85,6 +85,29 @@ class ReasoningFailed(Exception):
     """
 
 
+ResultCheck = Callable[[JsonObject], str | None]
+"""Semantic success predicate for ONE tool's result: ``None`` = the result
+satisfies the tool's own success rule; a string = the reason it does not."""
+
+
+class ToolResultRejected(Exception):
+    """A tool ran (transport succeeded) but its result failed its own rule.
+
+    Raised INSIDE the bound handler so the ONE executor records the attempt
+    as ``failed`` with this reason as data — the result never enters the
+    evidence ledger and repeated identical calls trip the loop's
+    repeated-failure refusal. Closes coding-benchmark weakness W1
+    ("run_tests succeeded as a tool while the tests failed") generically.
+    """
+
+    def __init__(self, reason: str, result: JsonObject) -> None:
+        self.reason = reason
+        self.result = result
+        super().__init__(
+            f"{reason}; result={json.dumps(result, sort_keys=True, default=str)[:500]}"
+        )
+
+
 @dataclass(frozen=True)
 class AgentToolSpec:
     """One agent-visible tool: core Tool + handler + firewall inputs.
@@ -93,6 +116,8 @@ class AgentToolSpec:
     runtime is composed with (the runtime looks it up; it never registers).
     ``permission`` must be one of ``tool.permissions``. ``description`` and
     ``arguments`` are what the model is shown (progressive disclosure).
+    ``verify_result`` (optional) is the tool's semantic success rule — see
+    :class:`ToolResultRejected`.
     """
 
     tool: Tool
@@ -105,6 +130,7 @@ class AgentToolSpec:
     scope: str = "tenant"
     risk_level: str = "low"
     estimated_units: float = 0.0
+    verify_result: ResultCheck | None = None
 
     def __post_init__(self) -> None:
         if self.permission not in self.tool.permissions:
@@ -126,6 +152,22 @@ class AgentToolSpec:
             "permission": self.permission,
             "risk_level": self.risk_level,
         }
+
+    def bound_handler(self) -> ToolHandler:
+        """The handler the executor runs: raw, or wrapped by ``verify_result``."""
+        check = self.verify_result
+        if check is None:
+            return self.handler
+        handler = self.handler
+
+        async def checked(arguments: JsonObject) -> JsonObject:
+            result = await handler(arguments)
+            reason = check(result)
+            if reason is not None:
+                raise ToolResultRejected(reason, result)
+            return result
+
+        return checked
 
     def binding(self) -> AgentToolBinding:
         return AgentToolBinding(
@@ -307,7 +349,7 @@ class AgentRuntime:
 
         executor = ToolExecutor(
             gate=ToolCallGate(tools=self._tools, firewall=self._firewall, devices=self._devices),
-            handlers={spec.tool.id: spec.handler for spec in specs},
+            handlers={spec.tool.id: spec.bound_handler() for spec in specs},
             audit=self._audit,
             usage=self._usage,
         )
