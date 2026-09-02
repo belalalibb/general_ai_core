@@ -65,6 +65,8 @@
     </div>
     <div class="topbar-right">
       <span id="health-dot" class="badge neutral" title="GET /healthz">health: ?</span>
+      <span id="session-who" class="muted small mono" title="GET /v1/auth/session"></span>
+      <button id="logout" class="btn-ghost small" type="button" title="POST /v1/auth/logout">Logout</button>
       <button id="agent-toggle" class="btn-ghost small" type="button"
         aria-pressed="true" title="Toggle the agent companion panel">◨ Agent</button>
     </div>
@@ -162,11 +164,15 @@
         </table>
         <div id="execution-detail" class="panel" hidden>
           <div class="tabs">
-            <button class="tab active" data-tab="trace">Trace (as recorded)</button>
+            <button class="tab active" data-tab="record">Record (GET /v1/executions/{id})</button>
+            <button class="tab" data-tab="trace">Trace (as recorded)</button>
             <button class="tab" data-tab="diagnosis">Diagnosis</button>
+            <button class="tab" data-tab="evaluations">Evaluations (22 §7)</button>
           </div>
-          <div id="tab-trace" class="tab-body"></div>
+          <div id="tab-record" class="tab-body"></div>
+          <div id="tab-trace" class="tab-body" hidden></div>
           <div id="tab-diagnosis" class="tab-body" hidden></div>
+          <div id="tab-evaluations" class="tab-body" hidden></div>
         </div>
       </section>
 
@@ -203,23 +209,44 @@
           <h2>Capabilities &amp; Scenarios</h2>
           <button id="intelligence-refresh" class="btn-ghost small" type="button">Refresh</button>
         </div>
-        <h3>Capabilities <span class="muted small">(closed set — state is composition truth)</span></h3>
+        <h3>Capabilities <span class="muted small">(closed set — state is composition truth; scope: process)</span></h3>
         <div id="exercisable-note" class="muted small"></div>
         <table class="data-table" id="capabilities-table">
-          <thead><tr><th>Capability</th><th>State</th><th>Evidence</th></tr></thead>
+          <thead><tr><th>Capability</th><th>State</th><th>Evidence</th><th>Exercise</th></tr></thead>
           <tbody></tbody>
         </table>
-        <h3>Scenarios <span class="muted small">(replays are REAL executions — run them via the agent)</span></h3>
+        <div id="exercise-result" class="panel mono small" hidden></div>
+        <h3>Scenarios <span class="muted small">(replays are REAL labeled executions; verdicts follow stored truth)</span></h3>
+        <form id="scenario-form" class="inline-form">
+          <label>Name <input id="scenario-name" type="text" maxlength="512" required></label>
+          <label>Ask <input id="scenario-ask" type="text" maxlength="512" required></label>
+          <fieldset id="scenario-checks" class="check-row">
+            <legend class="muted small">Checks (closed set from the server)</legend>
+          </fieldset>
+          <button type="submit">Save scenario</button>
+          <button id="regression-pack" type="button" class="danger">Run regression pack (all)</button>
+        </form>
+        <div id="scenario-error" class="error-box" hidden></div>
         <table class="data-table" id="scenarios-table">
-          <thead><tr><th>Name</th><th>Ask</th><th>Checks</th><th>Created</th></tr></thead>
+          <thead><tr><th>Name</th><th>Ask</th><th>Checks</th><th>Created</th><th>Act</th></tr></thead>
           <tbody></tbody>
         </table>
+        <div id="scenario-result" class="panel mono small" hidden></div>
         <h3>Self-review</h3>
         <div id="self-review-body" class="cards"></div>
         <h3>Changes since last learning review</h3>
         <div id="learning-review" class="panel"></div>
-        <h3>Context-lab checks</h3>
+        <h3>Context Validation Lab <span class="muted small">(dry-run composition — no model is called)</span></h3>
         <div id="lab-checks" class="panel muted small"></div>
+        <form id="lab-form" class="inline-form">
+          <label>Ask <textarea id="lab-ask" rows="2" required></textarea></label>
+          <label>Context budget <input id="lab-budget" type="number" min="1" max="2000000" value="16000"></label>
+          <label>History limit <input id="lab-history" type="number" min="0" max="1000" value="20"></label>
+          <label class="check"><input id="lab-high" type="checkbox"> allow high sensitivity</label>
+          <button type="submit">Validate composition</button>
+        </form>
+        <div id="lab-error" class="error-box" hidden></div>
+        <div id="lab-result" class="panel" hidden></div>
       </section>
 
       <!-- Surface: Changes & Audit — publish/rollback are explicit HUMAN
@@ -231,12 +258,20 @@
         </div>
         <p class="muted small">Publish and rollback are explicit admin acts —
         the Agent can only draft, validate and preview. Denials render verbatim.</p>
+        <h3>Draft a config change <span class="muted small">(POST /v1/admin/changes — enters DRAFT; validate → preview → publish are separate acts)</span></h3>
+        <form id="change-form" class="inline-form">
+          <label>Action <select id="change-action" required><option value="">— pick —</option></select></label>
+          <label>Payload (JSON object) <textarea id="change-payload" rows="2" placeholder="{}"></textarea></label>
+          <button type="submit">Draft</button>
+        </form>
+        <div id="change-form-error" class="error-box" hidden></div>
         <h3>Config changes</h3>
         <table class="data-table" id="changes-table">
           <thead><tr><th>ID</th><th>Area</th><th>Action</th><th>State</th><th>Validation</th><th>Created</th><th>Act</th></tr></thead>
           <tbody></tbody>
         </table>
         <div id="lifecycle-error" class="error-box" hidden></div>
+        <div id="change-detail" class="panel mono small" hidden></div>
         <h3>Audit events</h3>
         <table class="data-table" id="audit-table">
           <thead><tr><th>ID</th><th>Type</th><th>Occurred</th><th>Details</th></tr></thead>
@@ -255,10 +290,26 @@
         <p class="muted small">Proposal lifecycle (draft → verified → approved
         → applied, with terminal refusal states). Approval cites the exact
         patch hash. Authoritative apply is §14-gated: snapshot-space only.</p>
+        <div id="source-authoritative" class="muted small"></div>
+        <h3>Snapshot + proposal <span class="muted small">(snapshot space only — bytes cross as base64; content is entered as text here)</span></h3>
+        <form id="snapshot-form" class="inline-form">
+          <label>Snapshot files (JSON object path → text) <textarea id="snapshot-files" rows="2" placeholder='{"README.md": "hello"}' required></textarea></label>
+          <button type="submit">Create snapshot</button>
+        </form>
+        <form id="propose-form" class="inline-form">
+          <label>Base snapshot id <input id="propose-base" type="text" minlength="64" maxlength="64" class="mono" required></label>
+          <label>Operation <select id="propose-kind"><option value="add_file">add_file</option><option value="modify_file">modify_file</option><option value="delete_file">delete_file</option></select></label>
+          <label>Path <input id="propose-path" type="text" maxlength="1000" required></label>
+          <label>Content (text; ignored for delete_file) <textarea id="propose-content" rows="2"></textarea></label>
+          <label>Rationale <input id="propose-rationale" type="text" maxlength="10000" required></label>
+          <button type="submit">Propose</button>
+        </form>
+        <div id="source-error" class="error-box" hidden></div>
         <table class="data-table" id="source-table">
-          <thead><tr><th>ID</th><th>State</th><th>Patch hash</th><th>Rationale</th><th>Approval</th><th>Created</th></tr></thead>
+          <thead><tr><th>ID</th><th>State</th><th>Patch hash</th><th>Rationale</th><th>Approval</th><th>Created</th><th>Act</th></tr></thead>
           <tbody></tbody>
         </table>
+        <div id="source-detail" class="panel mono small" hidden></div>
       </section>
 
       <!-- Surface: Engineering authorizations (ADR-0012 §4 — Admin AUTHORIZES, never runs) -->
@@ -328,6 +379,14 @@
           <h2>Tenants &amp; Usage</h2>
           <button id="usage-refresh" class="btn-ghost small" type="button">Refresh</button>
         </div>
+        <h3>Plan <span class="muted small">(GET /v1/admin/plans/{tenant_id} — SET_PLAN travels through the config-change lifecycle)</span></h3>
+        <form id="plan-form" class="inline-form">
+          <label>Tenant ID <input id="plan-tenant" type="text" class="mono" placeholder="defaults to your session tenant"></label>
+          <button type="submit">Read plan</button>
+        </form>
+        <div id="plan-error" class="error-box" hidden></div>
+        <div id="plan-body" class="cards"></div>
+        <h3>Usage drill-down</h3>
         <table class="data-table" id="usage-table">
           <thead><tr><th>Execution</th><th>Status</th><th>Created</th><th>Ledger</th></tr></thead>
           <tbody></tbody>

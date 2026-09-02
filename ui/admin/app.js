@@ -21,7 +21,7 @@
  */
 "use strict";
 
-const state = { token: null, surface: "overview" };
+const state = { token: null, surface: "overview", tenantId: null };
 
 /* Status → badge class. KEYS MUST BE CONTRACT VALUES ONLY (tested). */
 const STATUS_CLASSES = {
@@ -41,10 +41,16 @@ const STATUS_CLASSES = {
   disabled: "neutral",
   deprecated: "warn",
   maintenance: "warn",
-  /* BindingAvailability */
+  /* BindingAvailability (available/unavailable shared with CapabilityState) */
   available: "ok",
   unavailable: "err",
   degraded: "warn",
+  /* CapabilityState (apps/api/capabilities.py) — third closed value */
+  inert: "warn",
+  /* ProposalState (core/sourcechange/proposal.py) — values not shared above */
+  verified: "info",
+  failed_verification: "err",
+  applied: "ok",
   /* ConfigLifecycleState */
   draft: "info",
   validated: "info",
@@ -191,6 +197,9 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
     state.token = null;
     return;
   }
+  state.tenantId = session.body.tenant_id || null;
+  document.getElementById("session-who").textContent =
+    `${session.body.email || "?"} \u00b7 tenant ${String(session.body.tenant_id || "?").slice(0, 8)}\u2026`;
   document.getElementById("login-view").hidden = true;
   document.getElementById("console-view").hidden = false;
   collapseAgentPanelIfNarrow();
@@ -198,6 +207,23 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
   loadAgent();
   loadPlatformAgentTools();
   loadSurface("overview");
+});
+
+/* --- logout (POST /v1/auth/logout — the server ends the session; the UI
+   forgets the token only AFTER the server confirmed, never before) ---------- */
+
+document.getElementById("logout").addEventListener("click", async () => {
+  const result = await api("/v1/auth/logout", { method: "POST" });
+  if (!result.ok) {
+    toast(errorText(result.body), "err");
+    return;
+  }
+  state.token = null;
+  state.tenantId = null;
+  document.getElementById("session-who").textContent = "";
+  document.getElementById("console-view").hidden = true;
+  document.getElementById("login-view").hidden = false;
+  document.getElementById("login-password").value = "";
 });
 
 /* --- navigation --------------------------------------------------------------- */
@@ -515,10 +541,32 @@ async function loadExecutions() {
 async function openExecution(executionId) {
   const detail = document.getElementById("execution-detail");
   detail.hidden = false;
+  const recordEl = document.getElementById("tab-record");
   const traceEl = document.getElementById("tab-trace");
   const diagEl = document.getElementById("tab-diagnosis");
+  const evalEl = document.getElementById("tab-evaluations");
+  recordEl.textContent = "";
   traceEl.textContent = "";
   diagEl.textContent = "";
+  evalEl.textContent = "";
+
+  /* Record: the tenant-scoped execution read (P2) — status, result and
+     artifacts exactly as stored. */
+  const record = await api(`/v1/executions/${executionId}`);
+  if (!record.ok) {
+    renderError(recordEl.appendChild(document.createElement("div")), record.body);
+  } else {
+    const head = document.createElement("p");
+    head.append("status: ", statusBadge(record.body.status));
+    if (record.body.progress) {
+      head.append(` \u00b7 stage ${record.body.progress.current_stage ?? "\u2014"}`);
+    }
+    recordEl.appendChild(head);
+    const pre = document.createElement("pre");
+    pre.className = "mono small";
+    pre.textContent = JSON.stringify(record.body.result ?? record.body.error ?? record.body, null, 2);
+    recordEl.appendChild(pre);
+  }
 
   const trace = await api(`/v1/agent/executions/${executionId}/trace`);
   if (!trace.ok) {
@@ -578,14 +626,41 @@ async function openExecution(executionId) {
       diagEl.appendChild(div);
     }
   }
+
+  /* Evaluations (22 §7, admin-only): level / score / confidence /
+     evidence_ref per record. An empty list is an empty list. */
+  const evals = await api(`/v1/admin/executions/${executionId}/evaluations`);
+  if (!evals.ok) {
+    renderError(evalEl.appendChild(document.createElement("div")), evals.body);
+  } else {
+    const rows = evals.body.evaluations || [];
+    if (rows.length === 0) {
+      const p = document.createElement("p"); p.className = "muted";
+      p.textContent = "No evaluation records stored for this execution.";
+      evalEl.appendChild(p);
+    }
+    for (const r of rows) {
+      const div = document.createElement("div"); div.className = "card";
+      const head = document.createElement("div");
+      head.append(`evaluation ${r.id} \u2014 `, statusBadge(r.level));
+      const body = document.createElement("div"); body.className = "mono small";
+      body.textContent =
+        `score ${r.score ?? "null"} \u00b7 confidence ${r.confidence ?? "null"} \u00b7 ` +
+        `evidence_ref ${r.evidence_ref ?? "null"}`;
+      div.append(head, body);
+      evalEl.appendChild(div);
+    }
+  }
 }
 
-document.querySelectorAll(".tab").forEach((tab) => {
+const EXECUTION_TABS = ["record", "trace", "diagnosis", "evaluations"];
+document.querySelectorAll("#execution-detail .tab").forEach((tab) => {
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+    document.querySelectorAll("#execution-detail .tab").forEach((t) => t.classList.remove("active"));
     tab.classList.add("active");
-    document.getElementById("tab-trace").hidden = tab.dataset.tab !== "trace";
-    document.getElementById("tab-diagnosis").hidden = tab.dataset.tab !== "diagnosis";
+    for (const name of EXECUTION_TABS) {
+      document.getElementById(`tab-${name}`).hidden = tab.dataset.tab !== name;
+    }
   });
 });
 
