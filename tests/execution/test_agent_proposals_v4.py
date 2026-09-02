@@ -162,10 +162,17 @@ def test_published_schema_agrees_with_the_validator() -> None:
     """R165 (live): the JSON Schema handed to providers for constrained
     decoding admits exactly what ``parse_agent_proposal`` accepts — the
     closed action vocabulary and the declared keys, nothing more."""
-    props = AGENT_PROPOSAL_SCHEMA["properties"]
-    assert set(props["action"]["enum"]) == {"tool_call", "final"}
-    assert set(props) == {"action", "tool", "arguments", "output", "reasoning"}
-    assert AGENT_PROPOSAL_SCHEMA["additionalProperties"] is False
+    variants = {v["properties"]["action"]["enum"][0]: v for v in AGENT_PROPOSAL_SCHEMA["anyOf"]}
+    assert set(variants) == {"tool_call", "final"}
+    call_schema, final_schema = variants["tool_call"], variants["final"]
+    # Discriminated: a tool_call cannot omit tool/arguments, a final cannot
+    # omit output (R165 live: the flat schema let the decoder do exactly that).
+    assert set(call_schema["required"]) == {"action", "tool", "arguments", "reasoning"}
+    assert set(final_schema["required"]) == {"action", "output", "reasoning"}
+    assert set(call_schema["properties"]) == {"action", "tool", "arguments", "reasoning"}
+    assert set(final_schema["properties"]) == {"action", "output", "reasoning"}
+    assert call_schema["additionalProperties"] is False
+    assert final_schema["additionalProperties"] is False
     # A schema-shaped tool_call and final both pass the validator verbatim.
     call = {"action": "tool_call", "tool": "fs", "arguments": {"path": "x"}, "reasoning": "r"}
     assert isinstance(parse_agent_proposal(call), ToolCallProposal)

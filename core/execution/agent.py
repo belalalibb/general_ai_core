@@ -56,17 +56,37 @@ _FINAL_KEYS = frozenset({"action", "output", "reasoning"})
 #: otherwise answers a tool-describing prompt with a NATIVE function call,
 #: which Groq rejects as 400 tool_use_failed). The schema narrows what the
 #: model can emit; :func:`parse_agent_proposal` still disposes (P4/P7).
-AGENT_PROPOSAL_SCHEMA: JsonObject = {
+_TOOL_CALL_SCHEMA: JsonObject = {
     "type": "object",
     "properties": {
-        "action": {"type": "string", "enum": [_ACTION_TOOL_CALL, _ACTION_FINAL]},
-        "tool": {"type": "string"},
+        "action": {"type": "string", "enum": [_ACTION_TOOL_CALL]},
+        "tool": {"type": "string", "minLength": 1},
         "arguments": {"type": "object", "additionalProperties": True},
+        "reasoning": {"type": "string"},
+    },
+    "required": ["action", "tool", "arguments", "reasoning"],
+    "additionalProperties": False,
+}
+
+_FINAL_SCHEMA: JsonObject = {
+    "type": "object",
+    "properties": {
+        "action": {"type": "string", "enum": [_ACTION_FINAL]},
         "output": {"type": "object", "additionalProperties": True},
         "reasoning": {"type": "string"},
     },
-    "required": ["action", "reasoning"],
+    "required": ["action", "output", "reasoning"],
     "additionalProperties": False,
+}
+
+#: Discriminated on ``action``: a tool_call MUST carry tool + arguments, a
+#: final MUST carry output. R165 live: the earlier flat schema (all keys
+#: optional but action/reasoning) let constrained decoding emit
+#: ``{"action": "tool_call", "tool": "ws_write, "}`` with no arguments —
+#: two of those in a row and the run stops on invalid_proposal.
+AGENT_PROPOSAL_SCHEMA: JsonObject = {
+    "type": "object",
+    "anyOf": [_TOOL_CALL_SCHEMA, _FINAL_SCHEMA],
 }
 
 
