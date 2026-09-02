@@ -1021,6 +1021,53 @@ async function lifecycleAct(changeId, step) {
   loadChanges();
 }
 
+/* AdminAction — the CLOSED control-matrix verb set (core/contracts/admin.py).
+   The server refuses anything else at parse time (422); this list is pinned
+   against the enum by test so the UI can never offer a verb that does not
+   exist. */
+const ADMIN_ACTIONS = [
+  "enable_model", "disable_model",
+  "enable_provider", "disable_provider",
+  "set_plan", "set_routing_weights",
+  "enable_skill", "disable_skill", "set_skill_sources",
+  "enable_tool", "disable_tool",
+  "register_provider", "register_model",
+];
+
+(function populateActionSelect() {
+  const select = document.getElementById("change-action");
+  for (const action of ADMIN_ACTIONS) {
+    const opt = document.createElement("option");
+    opt.value = action;
+    opt.textContent = action;
+    select.appendChild(opt);
+  }
+})();
+
+document.getElementById("change-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const errorBox = document.getElementById("change-form-error");
+  errorBox.hidden = true;
+  const payload = parseJsonObject(document.getElementById("change-payload").value || "{}", "payload");
+  if (payload === null) return;
+  const result = await api("/v1/admin/changes", {
+    method: "POST",
+    body: { action: document.getElementById("change-action").value, payload },
+  });
+  if (!result.ok) { renderError(errorBox, result.body); return; }
+  toast(`drafted ${result.body.action} \u2192 ${result.body.state}`, "ok");
+  loadChanges();
+});
+
+async function showChangeDetail(changeId) {
+  /* GET /v1/admin/changes/{id}: the full record incl. validation_result and
+     impact_preview — rendered verbatim, so a refusal reads as a refusal. */
+  const out = document.getElementById("change-detail");
+  out.hidden = false;
+  const result = await api(`/v1/admin/changes/${encodeURIComponent(changeId)}`);
+  out.textContent = result.ok ? JSON.stringify(result.body, null, 2) : errorText(result.body);
+}
+
 async function loadChanges() {
   const [changes, audit] = await Promise.all([
     api("/v1/admin/changes"),
@@ -1031,7 +1078,8 @@ async function loadChanges() {
   if (changes.ok) {
     for (const c of changes.body.changes || []) {
       const tr = document.createElement("tr");
-      const id = document.createElement("td"); id.className = "mono"; id.textContent = c.id;
+      const id = document.createElement("td"); id.className = "mono";
+      id.appendChild(actionButton(c.id, () => showChangeDetail(c.id)));
       const area = document.createElement("td"); area.textContent = c.area;
       const action = document.createElement("td"); action.textContent = c.action;
       const stateCell = document.createElement("td"); stateCell.appendChild(statusBadge(c.state));
@@ -1039,7 +1087,13 @@ async function loadChanges() {
       validation.textContent = c.validation_result || "\u2014";
       const created = document.createElement("td"); created.textContent = c.created_at;
       const act = document.createElement("td");
-      if (c.state === "validated" && c.impact_preview !== undefined) {
+      if (c.state === "draft") {
+        /* draft → validate is the first lifecycle act; the server decides
+           the outcome (validated / rejected) and says why. */
+        act.appendChild(actionButton("Validate", () => lifecycleAct(c.id, "validate")));
+      } else if (c.state === "validated" && c.impact_preview === undefined) {
+        act.appendChild(actionButton("Preview", () => lifecycleAct(c.id, "preview")));
+      } else if (c.state === "validated" && c.impact_preview !== undefined) {
         const btn = document.createElement("button");
         btn.className = "danger";
         btn.textContent = "Publish";
@@ -1076,16 +1130,97 @@ async function loadChanges() {
 
 /* --- Surface: Source changes (ADR-0009 pipeline — read-only surface) -------------- */
 
+function utf8ToBase64(text) {
+  /* Bytes are bytes: the API takes base64; the form takes text (UTF-8). */
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+async function sourceAct(proposalId, step, body) {
+  /* ADR-0009 lifecycle acts. approve MUST cite the exact patch hash — the
+     caller passes it from the row it is looking at; the server compares. */
+  const errorBox = document.getElementById("source-error");
+  errorBox.hidden = true;
+  const result = await api(`/v1/admin/source-changes/${encodeURIComponent(proposalId)}/${step}`, {
+    method: "POST",
+    body,
+  });
+  if (!result.ok) {
+    renderError(errorBox, result.body);
+    toast(`${step} refused`, "err");
+  } else {
+    toast(`${step}: ${result.body.state}`, "ok");
+  }
+  loadSource();
+}
+
+async function showProposalDetail(proposalId) {
+  /* GET /v1/admin/source-changes/{id}: operations carry sha256 + size only
+     (never file bytes), plus the authoritative_apply gate status verbatim. */
+  const out = document.getElementById("source-detail");
+  out.hidden = false;
+  const result = await api(`/v1/admin/source-changes/${encodeURIComponent(proposalId)}`);
+  out.textContent = result.ok ? JSON.stringify(result.body, null, 2) : errorText(result.body);
+}
+
+document.getElementById("snapshot-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const errorBox = document.getElementById("source-error");
+  errorBox.hidden = true;
+  const files = parseJsonObject(document.getElementById("snapshot-files").value, "snapshot files");
+  if (files === null) return;
+  const encoded = {};
+  for (const [path, text] of Object.entries(files)) {
+    if (typeof text !== "string") { toast(`snapshot files: ${path} must map to text`, "err"); return; }
+    encoded[path] = utf8ToBase64(text);
+  }
+  const result = await api("/v1/admin/source-changes/snapshots", { method: "POST", body: { files: encoded } });
+  if (!result.ok) { renderError(errorBox, result.body); return; }
+  const snapshotId = result.body.snapshot_id;
+  document.getElementById("propose-base").value = snapshotId || "";
+  toast(`snapshot ${String(snapshotId).slice(0, 12)}\u2026 created`, "ok");
+});
+
+document.getElementById("propose-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const errorBox = document.getElementById("source-error");
+  errorBox.hidden = true;
+  const kind = document.getElementById("propose-kind").value;
+  const operation = { kind, path: document.getElementById("propose-path").value };
+  if (kind !== "delete_file") {
+    operation.content_b64 = utf8ToBase64(document.getElementById("propose-content").value);
+  }
+  const result = await api("/v1/admin/source-changes", {
+    method: "POST",
+    body: {
+      base_snapshot_id: document.getElementById("propose-base").value,
+      operations: [operation],
+      rationale: document.getElementById("propose-rationale").value,
+    },
+  });
+  if (!result.ok) { renderError(errorBox, result.body); return; }
+  toast(`proposal ${result.body.state}: ${String(result.body.proposal_id).slice(0, 8)}\u2026`, "ok");
+  loadSource();
+});
+
 async function loadSource() {
   const result = await api("/v1/admin/source-changes");
   const tbody = document.querySelector("#source-table tbody");
   tbody.textContent = "";
   if (!result.ok) { renderError(document.getElementById("global-error"), result.body); return; }
   const rows = result.body.proposals || [];
+  /* The §14 gate status is quoted from the server when the list carries it;
+     otherwise the per-proposal detail carries it. */
+  const gate = document.getElementById("source-authoritative");
+  gate.textContent = result.body.authoritative_apply
+    ? `authoritative apply: ${JSON.stringify(result.body.authoritative_apply)}`
+    : "";
   if (rows.length === 0) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
-    td.colSpan = 6;
+    td.colSpan = 7;
     td.className = "muted";
     td.textContent = "No source-change proposals since process start.";
     tr.appendChild(td);
@@ -1094,9 +1229,10 @@ async function loadSource() {
   }
   for (const p of rows) {
     const tr = document.createElement("tr");
-    const id = document.createElement("td"); id.className = "mono"; id.textContent = p.proposal_id;
-    /* Proposal verification states are outside the badge vocabulary on
-       purpose — they render as the loud UNKNOWN badge, never absorbed. */
+    const id = document.createElement("td"); id.className = "mono";
+    id.appendChild(actionButton(p.proposal_id, () => showProposalDetail(p.proposal_id)));
+    /* ProposalState is a closed set (core/sourcechange/proposal.py) — every
+       value is badge vocabulary, incl. the refusal states. */
     const st = document.createElement("td"); st.appendChild(statusBadge(p.state));
     const hash = document.createElement("td"); hash.className = "mono";
     hash.title = p.patch_hash || "";
@@ -1110,7 +1246,34 @@ async function loadSource() {
       approval.textContent = "\u2014";
     }
     const created = document.createElement("td"); created.textContent = p.created_at;
-    tr.append(id, st, hash, rationale, approval, created);
+    const act = document.createElement("td");
+    /* Acts offered per state — the server is the judge; a refused act
+       renders its reason verbatim in #source-error. */
+    if (p.state === "draft") {
+      act.appendChild(actionButton("Verify", () => sourceAct(p.proposal_id, "verify")));
+    } else if (p.state === "verified") {
+      const approve = actionButton("Approve (cite hash)", () =>
+        sourceAct(p.proposal_id, "approve", { cited_hash: p.patch_hash }));
+      approve.className = "danger";
+      approve.title = `cites ${p.patch_hash}`;
+      act.appendChild(approve);
+      act.appendChild(actionButton("Reject", () => {
+        const reason = window.prompt("Rejection reason (recorded verbatim):");
+        if (reason) sourceAct(p.proposal_id, "reject", { reason });
+      }));
+    } else if (p.state === "approved") {
+      const apply = actionButton("Apply (snapshot space)", () => sourceAct(p.proposal_id, "apply"));
+      apply.className = "danger";
+      act.appendChild(apply);
+    } else if (p.state === "applied") {
+      const rb = actionButton("Rollback", () => sourceAct(p.proposal_id, "rollback"));
+      rb.className = "danger";
+      act.appendChild(rb);
+    } else {
+      act.className = "muted small";
+      act.textContent = "terminal";
+    }
+    tr.append(id, st, hash, rationale, approval, created, act);
     tbody.appendChild(tr);
   }
 }
@@ -1153,7 +1316,41 @@ async function loadNotifications() {
 
 /* --- Surface: Tenants & Usage ------------------------------------------------------ */
 
+async function loadPlan(tenantId) {
+  /* GET /v1/admin/plans/{tenant_id}: plan name + task-unit headroom exactly
+     as the usage seam reports it. An unknown tenant is the server's answer. */
+  const errorBox = document.getElementById("plan-error");
+  const body = document.getElementById("plan-body");
+  errorBox.hidden = true;
+  body.textContent = "";
+  if (!tenantId) {
+    renderError(errorBox, { error: { code: "validation_error", message: "no tenant id (session tenant unknown)" } });
+    return;
+  }
+  const result = await api(`/v1/admin/plans/${encodeURIComponent(tenantId)}`);
+  if (!result.ok) { renderError(errorBox, result.body); return; }
+  const plan = result.body;
+  body.appendChild(card("Plan", String(plan.plan ?? "\u2014")));
+  const tu = plan.task_units || {};
+  const units = document.createElement("div");
+  units.append(String(tu.remaining ?? "\u2014"));
+  const sub = document.createElement("div");
+  sub.className = "muted small";
+  sub.textContent = `remaining \u00b7 ${tu.used ?? "\u2014"} used of ${tu.limit ?? "\u2014"}`;
+  units.appendChild(sub);
+  body.appendChild(card("Task units", units));
+  const modality = plan.modality_limits || {};
+  body.appendChild(card("Modality limits",
+    Object.keys(modality).length ? JSON.stringify(modality) : "none configured"));
+}
+
+document.getElementById("plan-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  loadPlan(document.getElementById("plan-tenant").value.trim() || state.tenantId);
+});
+
 async function loadUsage() {
+  loadPlan(document.getElementById("plan-tenant").value.trim() || state.tenantId);
   const [drill, webhooks] = await Promise.all([
     api("/v1/admin/usage"),
     api("/v1/webhooks"),
