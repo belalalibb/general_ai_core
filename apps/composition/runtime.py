@@ -93,6 +93,11 @@ from apps.composition.provider_onboarding import (
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
 from core.admin.service import AdminConfigService
+from core.agent import (
+    DEFAULT_AGENT_DEADLINE_MS,
+    DEFAULT_AGENT_MAX_STEPS,
+    MAX_AGENT_MAX_STEPS,
+)
 from core.audit.memory import InMemoryAuditLog
 from core.context.composer import ContextComposer
 from core.contracts.domain import (
@@ -183,6 +188,10 @@ DEFAULT_TASK_UNITS = 1_000_000.0
 #: ui/admin StaticFiles posture, apps/composition/admin_console.py).
 UI_APP_DIR = Path(__file__).resolve().parents[2] / "ui" / "app"
 _ENV_ADMIN_EMAILS = "ADMIN_EMAILS"
+#: R165 operator caps for the shared agent runtime (per run). Bounded by the
+#: runtime's hard cap (32 steps); invalid/absent ⇒ the core defaults.
+_ENV_AGENT_MAX_STEPS = "AGENT_MAX_STEPS"
+_ENV_AGENT_DEADLINE_MS = "AGENT_DEADLINE_MS"
 _ENV_GROQ_KEY = "GROQ_API_KEY"
 _ENV_GSK_KEY = "GSK_API_KEY"
 
@@ -560,6 +569,19 @@ def _bind_real_providers(
     return bound
 
 
+def _agent_cap(raw: str | None, *, default: int, low: int, high: int) -> int:
+    """R165: an operator cap from env, or ``default``. Out-of-range / non-int
+    values fall back to the default (the platform never boots with a cap it
+    cannot honour, and never silently exceeds the core hard cap)."""
+    if raw is None or not raw.strip():
+        return default
+    try:
+        value = int(raw.strip())
+    except ValueError:
+        return default
+    return value if low <= value <= high else default
+
+
 def _source_reader(root: str) -> SourceReader | None:
     """Mandate §9 seam: a jailed reader over AGENT_SOURCE_ROOT, or None.
 
@@ -786,6 +808,18 @@ def build_runtime_profile(
         usage=usage,
         repo_reader=repo_reader,
         engineering=engineering.bundle if engineering is not None else None,
+        max_steps=_agent_cap(
+            env.get(_ENV_AGENT_MAX_STEPS),
+            default=DEFAULT_AGENT_MAX_STEPS,
+            low=1,
+            high=MAX_AGENT_MAX_STEPS,
+        ),
+        deadline_ms=_agent_cap(
+            env.get(_ENV_AGENT_DEADLINE_MS),
+            default=DEFAULT_AGENT_DEADLINE_MS,
+            low=1_000,
+            high=3_600_000,
+        ),
     )
 
     def _admit_tenant(tenant_id: UUID) -> None:

@@ -67,9 +67,7 @@ def make_item(
     )
 
 
-def make_role(
-    status: RoleStatus = RoleStatus.ACTIVE, objective: str = "Be helpful."
-) -> Role:
+def make_role(status: RoleStatus = RoleStatus.ACTIVE, objective: str = "Be helpful.") -> Role:
     return Role(
         id=uuid4(),
         scope=RoleScope.SYSTEM,
@@ -105,9 +103,7 @@ def request(**overrides: object) -> ContextComposeRequest:
     return ContextComposeRequest.model_validate(payload)
 
 
-def _seed_history(
-    conversations: InMemoryConversationStore, contents: list[str]
-) -> Conversation:
+def _seed_history(conversations: InMemoryConversationStore, contents: list[str]) -> Conversation:
     conversation = Conversation(
         id=uuid4(),
         tenant_id=TENANT,
@@ -183,21 +179,13 @@ def test_deterministic_same_inputs_same_output(stores: Stores) -> None:
 def test_scope_conflict_more_specific_wins(stores: Stores) -> None:
     """13 §10: project memory overrides broader memory for the same key."""
     memory, _, _ = stores
-    tenant_item = memory.upsert(
-        make_item(value="en", scope=MemoryScope.TENANT, user_id=None)
-    )
+    tenant_item = memory.upsert(make_item(value="en", scope=MemoryScope.TENANT, user_id=None))
     project_item = memory.upsert(make_item(value="ar", scope=MemoryScope.PROJECT))
     composed = make_composer(stores).compose(request())
-    prefs = [
-        b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE
-    ]
+    prefs = [b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE]
     assert [b.content for b in prefs] == ['preferred_language = "ar"']
     assert prefs[0].source == f"memory:{project_item.id}"
-    conflict = [
-        e
-        for e in composed.excluded
-        if e.reason is ContextExclusionReason.SCOPE_CONFLICT
-    ]
+    conflict = [e for e in composed.excluded if e.reason is ContextExclusionReason.SCOPE_CONFLICT]
     assert [e.memory_id for e in conflict] == [tenant_item.id]
 
 
@@ -206,20 +194,13 @@ def test_scope_conflict_user_owned_beats_tenant_shared_same_tier(
 ) -> None:
     """13 §4 'User' rank = user ownership within the same scope tier."""
     memory, _, _ = stores
-    shared = memory.upsert(
-        make_item(value="en", scope=MemoryScope.TENANT, user_id=None)
-    )
-    owned = memory.upsert(
-        make_item(value="ar", scope=MemoryScope.TENANT, user_id=USER)
-    )
+    shared = memory.upsert(make_item(value="en", scope=MemoryScope.TENANT, user_id=None))
+    owned = memory.upsert(make_item(value="ar", scope=MemoryScope.TENANT, user_id=USER))
     composed = make_composer(stores).compose(request())
-    prefs = [
-        b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE
-    ]
+    prefs = [b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE]
     assert prefs[0].source == f"memory:{owned.id}"
     assert any(
-        e.memory_id == shared.id
-        and e.reason is ContextExclusionReason.SCOPE_CONFLICT
+        e.memory_id == shared.id and e.reason is ContextExclusionReason.SCOPE_CONFLICT
         for e in composed.excluded
     )
 
@@ -234,13 +215,10 @@ def test_low_confidence_specific_loses_to_confident_broad(stores: Stores) -> Non
         make_item(value="ar", scope=MemoryScope.TENANT, user_id=None, confidence=0.9)
     )
     composed = make_composer(stores).compose(request())
-    prefs = [
-        b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE
-    ]
+    prefs = [b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE]
     assert prefs[0].source == f"memory:{strong_broad.id}"
     assert any(
-        e.memory_id == weak_specific.id
-        and e.reason is ContextExclusionReason.LOW_CONFIDENCE
+        e.memory_id == weak_specific.id and e.reason is ContextExclusionReason.LOW_CONFIDENCE
         for e in composed.excluded
     )
 
@@ -250,9 +228,7 @@ def test_different_keys_do_not_conflict(stores: Stores) -> None:
     memory.upsert(make_item(key="language", scope=MemoryScope.TENANT, user_id=None))
     memory.upsert(make_item(key="tone", value="formal"))
     composed = make_composer(stores).compose(request())
-    prefs = [
-        b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE
-    ]
+    prefs = [b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE]
     assert len(prefs) == 2
     assert not composed.excluded
 
@@ -304,12 +280,8 @@ def test_relevance_allowlist_excludes_other_keys(stores: Stores) -> None:
     memory, _, _ = stores
     relevant = memory.upsert(make_item(key="preferred_language"))
     noise = memory.upsert(make_item(key="favorite_color", value="blue"))
-    composed = make_composer(stores).compose(
-        request(relevant_keys=["preferred_language"])
-    )
-    prefs = [
-        b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE
-    ]
+    composed = make_composer(stores).compose(request(relevant_keys=["preferred_language"]))
+    prefs = [b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE]
     assert [b.source for b in prefs] == [f"memory:{relevant.id}"]
     assert composed.excluded[0].reason is ContextExclusionReason.IRRELEVANT
     assert composed.excluded[0].memory_id == noise.id
@@ -318,9 +290,7 @@ def test_relevance_allowlist_excludes_other_keys(stores: Stores) -> None:
 def test_tenant_isolation_via_store(stores: Stores) -> None:
     """13 §10 tenant isolation: other tenants' memory never composes."""
     memory, _, _ = stores
-    memory.upsert(
-        make_item(tenant_id=OTHER_TENANT, user_id=None, scope=MemoryScope.TENANT)
-    )
+    memory.upsert(make_item(tenant_id=OTHER_TENANT, user_id=None, scope=MemoryScope.TENANT))
     composed = make_composer(stores).compose(request())
     assert [b.type for b in composed.context_blocks] == [ContextBlockType.ASK]
     assert not composed.excluded  # invisible at the port, not merely excluded
@@ -368,9 +338,7 @@ def test_role_scoped_memory_composes_only_with_role(stores: Stores) -> None:
     assert without_role.excluded[0].memory_id == item.id
 
     with_role = make_composer(stores).compose(request(role_id=role.id))
-    prefs = [
-        b for b in with_role.context_blocks if b.type is ContextBlockType.PREFERENCE
-    ]
+    prefs = [b for b in with_role.context_blocks if b.type is ContextBlockType.PREFERENCE]
     assert [b.source for b in prefs] == [f"memory:{item.id}"]
 
 
@@ -382,11 +350,7 @@ def test_role_scoped_memory_never_wins_scope_conflict(stores: Stores) -> None:
     memory.upsert(make_item(key="lang", value="en", scope=MemoryScope.ROLE))
     memory.upsert(make_item(key="lang", value="ar", scope=MemoryScope.PROJECT))
     composed = make_composer(stores).compose(request(role_id=role.id))
-    prefs = [
-        b.content
-        for b in composed.context_blocks
-        if b.type is ContextBlockType.PREFERENCE
-    ]
+    prefs = [b.content for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE]
     assert prefs == ['lang = "ar"', 'lang = "en"']  # chain winner first
     assert not composed.excluded
 
@@ -400,23 +364,15 @@ def test_history_tail_oldest_first_with_role_prefix(stores: Stores) -> None:
     composed = make_composer(stores).compose(
         request(conversation_id=conversation.id, history_limit=2)
     )
-    history = [
-        b.content
-        for b in composed.context_blocks
-        if b.type is ContextBlockType.HISTORY
-    ]
+    history = [b.content for b in composed.context_blocks if b.type is ContextBlockType.HISTORY]
     assert history == ["assistant: two", "user: three"]
 
 
 def test_history_blocks_carry_message_provenance(stores: Stores) -> None:
     _, conversations, _ = stores
     conversation = _seed_history(conversations, ["one"])
-    composed = make_composer(stores).compose(
-        request(conversation_id=conversation.id)
-    )
-    history = [
-        b for b in composed.context_blocks if b.type is ContextBlockType.HISTORY
-    ]
+    composed = make_composer(stores).compose(request(conversation_id=conversation.id))
+    history = [b for b in composed.context_blocks if b.type is ContextBlockType.HISTORY]
     assert history[0].source.startswith("message:")
 
 
@@ -444,9 +400,7 @@ def test_budget_counts_role_as_mandatory(stores: Stores) -> None:
     role = make_role(objective="o" * 40)
     roles.register(role)
     with pytest.raises(ContextBudgetExceeded) as exc:
-        make_composer(stores).compose(
-            request(role_id=role.id, ask="x" * 20, context_budget=59)
-        )
+        make_composer(stores).compose(request(role_id=role.id, ask="x" * 20, context_budget=59))
     assert exc.value.required == 60
 
 
@@ -454,18 +408,12 @@ def test_budget_excludes_memory_over_budget_with_named_reason(
     stores: Stores,
 ) -> None:
     memory, _, _ = stores
-    small = memory.upsert(
-        make_item(key="a", value="x", scope=MemoryScope.CONVERSATION)
-    )
-    big = memory.upsert(
-        make_item(key="big_note", value="y" * 500, scope=MemoryScope.PROJECT)
-    )
+    small = memory.upsert(make_item(key="a", value="x", scope=MemoryScope.CONVERSATION))
+    big = memory.upsert(make_item(key="big_note", value="y" * 500, scope=MemoryScope.PROJECT))
     ask = "hi"
     budget = len(ask) + len('a = "x"') + 10  # room for small, not big
     composed = make_composer(stores).compose(request(ask=ask, context_budget=budget))
-    prefs = [
-        b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE
-    ]
+    prefs = [b for b in composed.context_blocks if b.type is ContextBlockType.PREFERENCE]
     assert [b.source for b in prefs] == [f"memory:{small.id}"]
     assert composed.excluded[0].reason is ContextExclusionReason.OVER_BUDGET
     assert composed.excluded[0].memory_id == big.id
@@ -479,11 +427,7 @@ def test_budget_keeps_newest_contiguous_history_tail(stores: Stores) -> None:
     composed = make_composer(stores).compose(
         request(conversation_id=conversation.id, ask=ask, context_budget=len(ask) + 10)
     )
-    history = [
-        b.content
-        for b in composed.context_blocks
-        if b.type is ContextBlockType.HISTORY
-    ]
+    history = [b.content for b in composed.context_blocks if b.type is ContextBlockType.HISTORY]
     assert history == ["user: cccc"]
 
 

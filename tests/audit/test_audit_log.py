@@ -140,13 +140,9 @@ class TestAppendOnly:
         )
         assert log.append(event) == event
 
-    def test_non_admin_event_rejects_admin_record(
-        self, log: InMemoryAuditLog
-    ) -> None:
+    def test_non_admin_event_rejects_admin_record(self, log: InMemoryAuditLog) -> None:
         with pytest.raises(InvalidAuditEvent):
-            log.append(
-                make_event(AuditEventType.LOGIN, admin_change=make_admin_record())
-            )
+            log.append(make_event(AuditEventType.LOGIN, admin_change=make_admin_record()))
 
 
 class TestReads:
@@ -164,9 +160,7 @@ class TestReads:
         denied = make_event(AuditEventType.PERMISSION_DENIED)
         log.append(login)
         log.append(denied)
-        assert log.read(TENANT_A, event_type=AuditEventType.PERMISSION_DENIED) == (
-            denied,
-        )
+        assert log.read(TENANT_A, event_type=AuditEventType.PERMISSION_DENIED) == (denied,)
 
     def test_limit_keeps_newest(self, log: InMemoryAuditLog) -> None:
         t = lambda h: datetime(2026, 8, 25, h, 0, tzinfo=UTC)  # noqa: E731
@@ -197,9 +191,7 @@ class TestTenantIsolation:
         log.append(make_event(tenant_id=TENANT_A))
         assert log.count(TENANT_B) == 0
 
-    def test_cross_tenant_denial_recorded_in_probed_tenant(
-        self, log: InMemoryAuditLog
-    ) -> None:
+    def test_cross_tenant_denial_recorded_in_probed_tenant(self, log: InMemoryAuditLog) -> None:
         denial = make_event(
             AuditEventType.CROSS_TENANT_ACCESS_DENIED,
             tenant_id=TENANT_A,

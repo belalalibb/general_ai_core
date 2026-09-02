@@ -71,9 +71,7 @@ def make_tool(
             "version": "1.0.0",
             "location": location,
             "permissions": (
-                permissions
-                if permissions is not None
-                else [PERM_READ, PERM_COMMIT, PERM_MERGE]
+                permissions if permissions is not None else [PERM_READ, PERM_COMMIT, PERM_MERGE]
             ),
             "approval_policy": (
                 approval_policy
@@ -208,9 +206,7 @@ def test_ungranted_permission_denied() -> None:
 def test_unknown_tenant_denied_through_gate() -> None:
     tool = make_tool()
     gate = make_gate(tool)
-    decision = gate.admit(
-        tool_id=tool.id, request=make_request(tenant_id=uuid4())
-    )
+    decision = gate.admit(tool_id=tool.id, request=make_request(tenant_id=uuid4()))
     assert not decision.admitted
     assert decision.decision is FirewallDecision.DENY
 
@@ -231,9 +227,7 @@ def test_github_write_requires_approval_by_default() -> None:
 def test_approval_required_then_approved_allows() -> None:
     tool = make_tool()
     gate = make_gate(tool)
-    unapproved = gate.admit(
-        tool_id=tool.id, request=make_request(permission=PERM_MERGE)
-    )
+    unapproved = gate.admit(tool_id=tool.id, request=make_request(permission=PERM_MERGE))
     assert unapproved.decision is FirewallDecision.REQUIRE_APPROVAL
     approved = gate.admit(
         tool_id=tool.id,
@@ -324,9 +318,7 @@ def test_client_tool_with_trusted_device_admitted() -> None:
     devices = DeviceRegistry(clock=lambda: datetime(2026, 8, 28, tzinfo=UTC))
     device_id = trusted_device(devices)
     gate = make_gate(tool, devices=devices)
-    decision = gate.admit(
-        tool_id=tool.id, request=make_request(), device_id=device_id
-    )
+    decision = gate.admit(tool_id=tool.id, request=make_request(), device_id=device_id)
     assert decision.admitted
 
 
@@ -337,9 +329,7 @@ def test_client_tool_with_revoked_device_denied() -> None:
     device_id = trusted_device(devices)
     devices.revoke(device_id)
     gate = make_gate(tool, devices=devices)
-    decision = gate.admit(
-        tool_id=tool.id, request=make_request(), device_id=device_id
-    )
+    decision = gate.admit(tool_id=tool.id, request=make_request(), device_id=device_id)
     assert not decision.admitted
     assert decision.reason == "device_not_trusted"
 
@@ -350,9 +340,7 @@ def test_client_tool_with_merely_paired_device_denied() -> None:
     devices = DeviceRegistry(clock=lambda: datetime(2026, 8, 28, tzinfo=UTC))
     device = devices.pair(tenant_id=TENANT, user_id=uuid4(), name="laptop")
     gate = make_gate(tool, devices=devices)
-    decision = gate.admit(
-        tool_id=tool.id, request=make_request(), device_id=device.id
-    )
+    decision = gate.admit(tool_id=tool.id, request=make_request(), device_id=device.id)
     assert not decision.admitted
     assert decision.reason == "device_not_trusted"
 
@@ -360,9 +348,7 @@ def test_client_tool_with_merely_paired_device_denied() -> None:
 def test_client_tool_with_unknown_device_denied() -> None:
     tool = make_tool(location="client")
     gate = make_gate(tool)
-    decision = gate.admit(
-        tool_id=tool.id, request=make_request(), device_id=uuid4()
-    )
+    decision = gate.admit(tool_id=tool.id, request=make_request(), device_id=uuid4())
     assert not decision.admitted
     assert decision.reason == "device_unknown"
 
@@ -375,9 +361,7 @@ def test_foreign_tenant_device_behaves_as_unknown() -> None:
     foreign = devices.pair(tenant_id=uuid4(), user_id=uuid4(), name="other")
     devices.trust(foreign.id)
     gate = make_gate(tool, devices=devices)
-    decision = gate.admit(
-        tool_id=tool.id, request=make_request(), device_id=foreign.id
-    )
+    decision = gate.admit(tool_id=tool.id, request=make_request(), device_id=foreign.id)
     assert not decision.admitted
     assert decision.reason == "device_unknown"
 

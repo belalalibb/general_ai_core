@@ -66,9 +66,7 @@ class FakeAgentModule:
             usage={"tokens": 3},
         )
 
-    async def create_agent_run(
-        self, request: ProviderAgentRequest
-    ) -> ProviderAgentRun:
+    async def create_agent_run(self, request: ProviderAgentRequest) -> ProviderAgentRun:
         self._counter += 1
         run_id = f"fake_thread/{self._counter}"  # provider-namespace handle
         self._runs[run_id] = ProviderAgentRunStatus(
@@ -90,9 +88,7 @@ class FakeAgentModule:
 
     def stream_agent_run(self, run_id: str) -> AsyncIterator[ProviderAgentEvent]:
         async def _events() -> AsyncIterator[ProviderAgentEvent]:
-            yield ProviderAgentEvent(
-                type=ProviderAgentEventType.STARTED, run_id=run_id
-            )
+            yield ProviderAgentEvent(type=ProviderAgentEventType.STARTED, run_id=run_id)
             yield ProviderAgentEvent(
                 type=ProviderAgentEventType.MESSAGE_DELTA,
                 run_id=run_id,
@@ -107,9 +103,7 @@ class FakeAgentModule:
                     error=status.error,
                 )
             else:
-                yield ProviderAgentEvent(
-                    type=ProviderAgentEventType.COMPLETED, run_id=run_id
-                )
+                yield ProviderAgentEvent(type=ProviderAgentEventType.COMPLETED, run_id=run_id)
 
         return _events()
 

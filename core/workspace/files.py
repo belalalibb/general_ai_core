@@ -108,9 +108,7 @@ class WorkspaceFiles:
     ) -> WorkspaceFile:
         """Store ``data`` at ``path`` within the workspace; overwrite allowed."""
         validate_path(path)
-        stored = self._storage.put(
-            tenant_id, _key(workspace_id, path), data, content_type
-        )
+        stored = self._storage.put(tenant_id, _key(workspace_id, path), data, content_type)
         return WorkspaceFile(
             workspace_id=workspace_id,
             path=path,
@@ -141,9 +139,7 @@ class WorkspaceFiles:
         validate_path(path)
         self._storage.delete(tenant_id, _key(workspace_id, path))
 
-    def list_paths(
-        self, tenant_id: UUID, workspace_id: UUID, prefix: str = ""
-    ) -> tuple[str, ...]:
+    def list_paths(self, tenant_id: UUID, workspace_id: UUID, prefix: str = "") -> tuple[str, ...]:
         """List file paths under ``prefix`` — only within this workspace.
 
         A prefix MAY end with ``/`` (directory-style listing); the same

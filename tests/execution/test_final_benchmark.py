@@ -315,9 +315,7 @@ class BenchmarkWorld:
         )
         self.firewall = firewall
         self.executor = ToolExecutor(
-            gate=ToolCallGate(
-                tools=registry, firewall=firewall, devices=DeviceRegistry()
-            ),
+            gate=ToolCallGate(tools=registry, firewall=firewall, devices=DeviceRegistry()),
             handlers=handlers,
             audit=self.audit,
             usage=self.usage,
@@ -431,9 +429,7 @@ class TestFinalBenchmark:
     def world(self, tmp_path: Path) -> BenchmarkWorld:
         return BenchmarkWorld(tmp_path)
 
-    def test_full_target_loop_on_a_real_coding_task(
-        self, world: BenchmarkWorld
-    ) -> None:
+    def test_full_target_loop_on_a_real_coding_task(self, world: BenchmarkWorld) -> None:
         # --- SELECT (real router + real skill resolver, evidence first) ------
         model_key, skill, exclusions = _selection_evidence()
         assert any("marketing-copy" in e for e in exclusions)  # named exclusion
@@ -502,9 +498,7 @@ class TestFinalBenchmark:
         assert "correcting" in report.steps[4].proposal_raw["reasoning"]
 
         # --- VERIFICATION nodes: FAILED then SUCCEEDED -------------------------
-        validators = [
-            n for n in report.nodes if n.type is ExecutionNodeType.VALIDATOR
-        ]
+        validators = [n for n in report.nodes if n.type is ExecutionNodeType.VALIDATOR]
         assert [v.status for v in validators] == [
             ExecutionNodeStatus.FAILED,
             ExecutionNodeStatus.SUCCEEDED,
@@ -512,9 +506,7 @@ class TestFinalBenchmark:
 
         # --- SECURITY: every act passed the real gate (audit trail) -----------
         tool_events = [
-            e
-            for e in world.audit.read(TENANT)
-            if e.event_type is AuditEventType.TOOL_CALL
+            e for e in world.audit.read(TENANT) if e.event_type is AuditEventType.TOOL_CALL
         ]
         assert len(tool_events) == 4  # read, test, patch, patch
         assert all(e.tenant_id == TENANT for e in tool_events)
@@ -530,17 +522,13 @@ class TestFinalBenchmark:
             assert set(payload) == {"request", "observations", "budget"}
             assert set(payload["budget"]) == {"step", "max_steps"}
 
-    def test_deny_by_default_blocks_undeclared_tool_capability(
-        self, world: BenchmarkWorld
-    ) -> None:
+    def test_deny_by_default_blocks_undeclared_tool_capability(self, world: BenchmarkWorld) -> None:
         """Capability != authority: revoking ONE permission blocks the write
         path THROUGH THE GATE even though the tool stays registered+bound."""
         world.firewall.set_tenant_policy(
             TENANT,
             TenantPolicy(  # revoke write permission only
-                granted_permissions=frozenset(
-                    {"workspace.source.read", "workspace.tests.run"}
-                ),
+                granted_permissions=frozenset({"workspace.source.read", "workspace.tests.run"}),
                 granted_entitlements=frozenset({"workspace_dev"}),
             ),
         )
@@ -572,14 +560,11 @@ class TestFinalBenchmark:
         assert refused["status"] != "succeeded"
         assert refused["error"]["reason"] == "capability_denied"
         # The file was NOT touched (authority enforced, not advisory).
-        assert "attempt 2" not in (world.workspace / "stats.py").read_text(
-            encoding="utf-8"
-        )
+        assert "attempt 2" not in (world.workspace / "stats.py").read_text(encoding="utf-8")
         # The refusal is recorded evidence (FAILED tool node).
         failed_nodes = [
             n
             for n in report.nodes
-            if n.type is ExecutionNodeType.TOOL_CALL
-            and n.status is ExecutionNodeStatus.FAILED
+            if n.type is ExecutionNodeType.TOOL_CALL and n.status is ExecutionNodeStatus.FAILED
         ]
         assert failed_nodes

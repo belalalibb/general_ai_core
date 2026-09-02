@@ -83,9 +83,7 @@ def _worker(
 @requires_live_postgres
 class TestDurableAsyncChain:
     @pytest.mark.asyncio()
-    async def test_full_chain_over_durable_outbox_and_idempotency(
-        self, engine: Any
-    ) -> None:
+    async def test_full_chain_over_durable_outbox_and_idempotency(self, engine: Any) -> None:
         factory = create_session_factory(engine)
         outbox = PostgresOutbox(factory)
         idempotency = PostgresIdempotencyStore(factory)

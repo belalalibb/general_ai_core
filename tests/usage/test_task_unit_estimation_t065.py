@@ -62,9 +62,7 @@ class TestTaskUnitEstimator:
     @pytest.mark.parametrize(
         ("complexity", "units"), [("simple", 1.0), ("medium", 2.0), ("complex", 3.0)]
     )
-    def test_estimate_prices_by_complexity(
-        self, complexity: str, units: float
-    ) -> None:
+    def test_estimate_prices_by_complexity(self, complexity: str, units: float) -> None:
         estimate = TaskUnitEstimator().estimate(make_task(complexity))
         assert estimate.estimated_units == units
         assert estimate.complexity == complexity
@@ -108,9 +106,7 @@ class TestFixedCostSnapshot:
 
         return World()
 
-    def _run_single(
-        self, world: Any, provider_script: list[object], **service_kwargs: Any
-    ) -> Any:
+    def _run_single(self, world: Any, provider_script: list[object], **service_kwargs: Any) -> Any:
         from uuid import uuid4
 
         from core.contracts.provider import ProviderOperation
@@ -137,9 +133,7 @@ class TestFixedCostSnapshot:
         from core.contracts.provider import ProviderErrorCategory
         from tests.execution.test_execution_service import _error
 
-        report, _ = self._run_single(
-            self._world(), [_error(ProviderErrorCategory.BAD_REQUEST)]
-        )
+        report, _ = self._run_single(self._world(), [_error(ProviderErrorCategory.BAD_REQUEST)])
         assert report.execution.cost_snapshot["estimated_units"] == 1.0
 
     def test_retry_does_not_multiply_cost(self) -> None:
@@ -188,9 +182,7 @@ class TestFixedCostSnapshot:
 class TestEstimateReserveWiring:
     """41 §19 flow: Estimate → Reserve — the estimator prices the hold."""
 
-    def _execute(
-        self, *, estimated_units: float | None, with_usage: bool = True
-    ) -> Any:
+    def _execute(self, *, estimated_units: float | None, with_usage: bool = True) -> Any:
         from uuid import uuid4
 
         from core.contracts.provider import ProviderOperation

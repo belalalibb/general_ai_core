@@ -219,9 +219,7 @@ class ProviderManifest(ContractModel):
         ``[]`` verbatim (31 §7). A functional, non-template manifest with no
         auth types is a contract violation, not a style choice.
         """
-        is_template_like = (
-            self.is_template or self.real_provider_required or not self.is_functional
-        )
+        is_template_like = self.is_template or self.real_provider_required or not self.is_functional
         if not is_template_like and not self.auth.types:
             msg = "real provider manifests must declare at least one auth type (30 §7)"
             raise ValueError(msg)

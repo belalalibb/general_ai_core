@@ -98,17 +98,13 @@ class FakeIdentityRepository:
     async def get_account_by_email(self, email: str) -> AccountRecord | None:
         for user in self.users.values():
             if user.email == email:
-                return AccountRecord(
-                    user=user, password_hash=self.credentials[user.id]
-                )
+                return AccountRecord(user=user, password_hash=self.credentials[user.id])
         return None
 
     async def get_user_by_id(self, user_id: UUID) -> User | None:
         return self.users.get(user_id)
 
-    async def redeem_verification_token(
-        self, token_sha256: str, *, now: datetime
-    ) -> User | None:
+    async def redeem_verification_token(self, token_sha256: str, *, now: datetime) -> User | None:
         email = self.verification_tokens.pop(token_sha256, None)
         if email is None:
             return None
@@ -201,16 +197,12 @@ class TestRegistrationParity:
         assert tenant.type is TenantType.PERSONAL
         assert tenant.status is TenantStatus.ACTIVE
 
-    def test_duplicate_email_rejected(
-        self, service: DurableIdentityService
-    ) -> None:
+    def test_duplicate_email_rejected(self, service: DurableIdentityService) -> None:
         service.register("a@example.com", "pw12345678", "en")
         with pytest.raises(RegistrationError):
             service.register("A@EXAMPLE.COM", "other-pw-99", "en")
 
-    def test_empty_email_or_password_rejected(
-        self, service: DurableIdentityService
-    ) -> None:
+    def test_empty_email_or_password_rejected(self, service: DurableIdentityService) -> None:
         with pytest.raises(RegistrationError):
             service.register("  ", "pw12345678", "en")
         with pytest.raises(RegistrationError):
@@ -229,7 +221,8 @@ class TestTokenDigestsAtRest:
     """The durability-specific 20 §5 facts — raw tokens never at rest."""
 
     def test_verification_token_stored_as_digest_only(
-        self, service: DurableIdentityService,
+        self,
+        service: DurableIdentityService,
         sender: RecordingEmailSender,
         repository: FakeIdentityRepository,
     ) -> None:
@@ -239,7 +232,8 @@ class TestTokenDigestsAtRest:
         assert _digest(raw) in repository.verification_tokens
 
     def test_session_token_stored_as_digest_only(
-        self, service: DurableIdentityService,
+        self,
+        service: DurableIdentityService,
         sender: RecordingEmailSender,
         repository: FakeIdentityRepository,
     ) -> None:
@@ -267,17 +261,13 @@ class TestVerificationParity:
         with pytest.raises(VerificationFailed):
             service.verify_email(token)
 
-    def test_unknown_token_rejected(
-        self, service: DurableIdentityService
-    ) -> None:
+    def test_unknown_token_rejected(self, service: DurableIdentityService) -> None:
         with pytest.raises(VerificationFailed):
             service.verify_email("no-such-token")
 
 
 class TestLoginParity:
-    def test_login_denied_before_verification(
-        self, service: DurableIdentityService
-    ) -> None:
+    def test_login_denied_before_verification(self, service: DurableIdentityService) -> None:
         service.register("a@example.com", "pw12345678", "en")
         with pytest.raises(AuthenticationFailed):
             service.login("a@example.com", "pw12345678")
@@ -310,9 +300,7 @@ class TestLoginParity:
             service.login("a@example.com", "wrong")
         assert str(unknown.value) == str(wrong.value)
 
-    def test_invalid_session_token_denied(
-        self, service: DurableIdentityService
-    ) -> None:
+    def test_invalid_session_token_denied(self, service: DurableIdentityService) -> None:
         with pytest.raises(SessionInvalid):
             service.resolve_session("forged-token")
 
@@ -349,9 +337,7 @@ class TestTenantIsolationParity:
         with pytest.raises(SessionInvalid):
             service.get_tenant(user_b.tenant_id, session_token=session_a.token)
 
-    def test_each_registration_gets_distinct_tenant(
-        self, service: DurableIdentityService
-    ) -> None:
+    def test_each_registration_gets_distinct_tenant(self, service: DurableIdentityService) -> None:
         user_a = service.register("a@example.com", "pw-aaaaaa", "en")
         user_b = service.register("b@example.com", "pw-bbbbbb", "en")
         assert user_a.tenant_id != user_b.tenant_id
@@ -452,10 +438,7 @@ class TestLiveIdentityDurability:
                 async with bindings.engine.begin() as conn:
                     row = (
                         await conn.execute(
-                            text(
-                                "SELECT id, tenant_id FROM users"
-                                " WHERE email = :email"
-                            ),
+                            text("SELECT id, tenant_id FROM users WHERE email = :email"),
                             {"email": email},
                         )
                     ).one_or_none()
@@ -466,13 +449,11 @@ class TestLiveIdentityDurability:
                                 {"uid": row.id},
                             ),
                             (
-                                "DELETE FROM user_credentials"
-                                " WHERE user_id = :uid",
+                                "DELETE FROM user_credentials WHERE user_id = :uid",
                                 {"uid": row.id},
                             ),
                             (
-                                "DELETE FROM email_verification_tokens"
-                                " WHERE email = :email",
+                                "DELETE FROM email_verification_tokens WHERE email = :email",
                                 {"email": email},
                             ),
                             (
@@ -505,9 +486,7 @@ class TestLiveIdentityDurability:
                     hasher=FakeHasher(),
                     email_sender=RecordingEmailSender(),
                     default_plan_id=plan_id,
-                    repository=PostgresIdentityRepository(
-                        bindings.session_factory
-                    ),
+                    repository=PostgresIdentityRepository(bindings.session_factory),
                     bridge=bridge,
                 )
                 user = second.get_user_for_session(session.token)

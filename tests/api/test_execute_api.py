@@ -65,9 +65,7 @@ def run[T](coro: Coroutine[Any, Any, T]) -> T:
 # --- fake adapter (scripted, mirrors tests/execution posture) ------------------------
 
 
-def _provider_error(
-    category: ProviderErrorCategory, *, retryable: bool = False
-) -> ProviderError:
+def _provider_error(category: ProviderErrorCategory, *, retryable: bool = False) -> ProviderError:
     return ProviderError(
         category=category,
         retryable=retryable,
@@ -91,9 +89,7 @@ class FakeAdapter:
         raise NotImplementedError
 
     async def validate_credential(self, credential_ref: str) -> CredentialHealth:
-        return CredentialHealth(
-            credential_ref=credential_ref, status=CredentialStatus.ACTIVE
-        )
+        return CredentialHealth(credential_ref=credential_ref, status=CredentialStatus.ACTIVE)
 
     async def discover_models(
         self, account_id: UUID | None = None
@@ -103,9 +99,7 @@ class FakeAdapter:
     async def get_capabilities(self) -> ProviderCapabilities:  # pragma: no cover
         return ProviderCapabilities()
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         self.requests.append(request)
         step: object = self.script.pop(0) if self.script else {"ok": True}
         if isinstance(step, ProviderError):
@@ -204,9 +198,7 @@ class World:
     def grant_budget(self, limit: float) -> InMemoryUsageAccounting:
         """Bind usage accounting with a configured tenant budget (21 §5 seam)."""
         self.usage = InMemoryUsageAccounting()
-        self.usage.configure_tenant(
-            self.principal.tenant_id, plan="pro", task_units_limit=limit
-        )
+        self.usage.configure_tenant(self.principal.tenant_id, plan="pro", task_units_limit=limit)
         return self.usage
 
     def app(self) -> FastAPI:
@@ -329,9 +321,7 @@ def test_valid_conversation_id_reaches_execution() -> None:
     conversation_id = str(uuid4())
     response = run(_post(world.app(), {"ask": "hi", "conversation_id": conversation_id}))
     assert response.status_code == 200
-    report = world.store.get(
-        world.principal.tenant_id, UUID(response.json()["execution_id"])
-    )
+    report = world.store.get(world.principal.tenant_id, UUID(response.json()["execution_id"]))
     assert str(report.execution.conversation_id) == conversation_id
 
 
@@ -468,9 +458,7 @@ def test_get_succeeded_execution_status() -> None:
 def test_get_failed_execution_status_carries_unified_error() -> None:
     world = World(script=[_provider_error(ProviderErrorCategory.PROVIDER_UNAVAILABLE)])
     app = world.app()
-    execution_id = run(_post(app, {"ask": "hi"})).json()["error"]["details"][
-        "execution_id"
-    ]
+    execution_id = run(_post(app, {"ask": "hi"})).json()["error"]["details"]["execution_id"]
     response = run(_get(app, f"/v1/executions/{execution_id}"))
     assert response.status_code == 200
     body = response.json()
@@ -544,9 +532,7 @@ def test_budget_depletes_across_requests_then_denies() -> None:
 def test_failed_execution_ledger_recorded_without_usage_in_error_body() -> None:
     """Failure keeps the unified envelope (10 §9) — the ledger is still
     resolved (failed, 0 settled) and the budget hold released."""
-    world = World(
-        script=[_provider_error(ProviderErrorCategory.NON_RETRYABLE_ERROR)]
-    )
+    world = World(script=[_provider_error(ProviderErrorCategory.NON_RETRYABLE_ERROR)])
     accounting = world.grant_budget(5.0)
     response = run(_post(world.app(), {"ask": "hi"}))
     assert response.status_code >= 400

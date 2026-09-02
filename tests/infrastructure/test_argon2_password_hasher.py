@@ -120,9 +120,7 @@ def test_identity_service_full_flow_over_real_argon2id() -> None:
     service = InMemoryIdentityService(
         hasher=_fast_hasher(), email_sender=email_port, default_plan_id=uuid4()
     )
-    user = service.register(
-        email="a@example.com", password="pw-12345", preferred_language="en"
-    )
+    user = service.register(email="a@example.com", password="pw-12345", preferred_language="en")
     token = email_port.sent[0][1]
     service.verify_email(token)
     session = service.login(email="a@example.com", password="pw-12345")

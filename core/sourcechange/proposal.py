@@ -55,22 +55,16 @@ class ProposalState(StrEnum):
 #: The complete transition map. Absence = refusal. FAILED_VERIFICATION,
 #: REJECTED and ROLLED_BACK map to the EMPTY set explicitly (terminal —
 #: written out so the closure is visible, not implied).
-PROPOSAL_TRANSITIONS: Mapping[ProposalState, frozenset[ProposalState]] = (
-    MappingProxyType(
-        {
-            ProposalState.DRAFT: frozenset(
-                {ProposalState.VERIFIED, ProposalState.FAILED_VERIFICATION}
-            ),
-            ProposalState.VERIFIED: frozenset(
-                {ProposalState.APPROVED, ProposalState.REJECTED}
-            ),
-            ProposalState.FAILED_VERIFICATION: frozenset(),
-            ProposalState.APPROVED: frozenset({ProposalState.APPLIED}),
-            ProposalState.REJECTED: frozenset(),
-            ProposalState.APPLIED: frozenset({ProposalState.ROLLED_BACK}),
-            ProposalState.ROLLED_BACK: frozenset(),
-        }
-    )
+PROPOSAL_TRANSITIONS: Mapping[ProposalState, frozenset[ProposalState]] = MappingProxyType(
+    {
+        ProposalState.DRAFT: frozenset({ProposalState.VERIFIED, ProposalState.FAILED_VERIFICATION}),
+        ProposalState.VERIFIED: frozenset({ProposalState.APPROVED, ProposalState.REJECTED}),
+        ProposalState.FAILED_VERIFICATION: frozenset(),
+        ProposalState.APPROVED: frozenset({ProposalState.APPLIED}),
+        ProposalState.REJECTED: frozenset(),
+        ProposalState.APPLIED: frozenset({ProposalState.ROLLED_BACK}),
+        ProposalState.ROLLED_BACK: frozenset(),
+    }
 )
 
 
@@ -136,9 +130,7 @@ class ChangeProposal:
             raise ApprovalHashMismatch(self.patch_hash, approval.approved_patch_hash)
         return replace(self, state=ProposalState.APPROVED, approval=approval)
 
-    def with_applied(
-        self, applied_snapshot_id: str, inverse_patch: SourcePatch
-    ) -> ChangeProposal:
+    def with_applied(self, applied_snapshot_id: str, inverse_patch: SourcePatch) -> ChangeProposal:
         """APPROVED -> APPLIED, recording the evidence pair.
 
         The applied snapshot id and the inverse patch (the rollback

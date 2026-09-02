@@ -249,16 +249,12 @@ class TestUsageEndpoint:
         body = response.json()
         assert body["plan"] == "pro"
         assert body["task_units"] == {"limit": 100.0, "used": 0.0, "remaining": 100.0}
-        assert body["modality_limits"] == {
-            "image_generation": {"limit": 20, "used": 4}
-        }
+        assert body["modality_limits"] == {"image_generation": {"limit": 20, "used": 4}}
 
     def test_reflects_reservations_and_settlements(self) -> None:
         world = World()
         world.usage = InMemoryUsageAccounting()
-        world.usage.configure_tenant(
-            world.principal.tenant_id, plan="pro", task_units_limit=10.0
-        )
+        world.usage.configure_tenant(world.principal.tenant_id, plan="pro", task_units_limit=10.0)
         execution_id = uuid4()
         world.usage.reserve(world.principal.tenant_id, execution_id, 3.0)
         app = world.app(with_usage=True)

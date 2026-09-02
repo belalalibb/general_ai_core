@@ -407,9 +407,7 @@ class ExecutionService:
                     payload=stage_payload,
                     timeout_ms=timeout_ms,
                 )
-                node_reports.append(
-                    self._completed_node(execution_id, stage, stage_payload, run)
-                )
+                node_reports.append(self._completed_node(execution_id, stage, stage_payload, run))
                 if run.succeeded and run.response is not None:
                     previous_output = run.response.output
                     if run.response.usage:
@@ -435,16 +433,12 @@ class ExecutionService:
         ledger: UsageLedger | None = None
         if reserved and self._usage is not None:
             succeeded_stages = sum(
-                1
-                for entry in node_reports
-                if entry.node.status is ExecutionNodeStatus.SUCCEEDED
+                1 for entry in node_reports if entry.node.status is ExecutionNodeStatus.SUCCEEDED
             )
             actual_units = self._units_per_stage * succeeded_stages
             modality_costs: JsonObject = {"provider_usage": provider_usage}
             if failed:
-                ledger = self._usage.fail(
-                    execution_id, actual_units, modality_costs=modality_costs
-                )
+                ledger = self._usage.fail(execution_id, actual_units, modality_costs=modality_costs)
             else:
                 ledger = self._usage.settle(
                     execution_id, actual_units, modality_costs=modality_costs
@@ -529,17 +523,13 @@ class ExecutionService:
                     )
                 )
                 if response is not None and response.succeeded:
-                    return _NodeRun(
-                        attempts=tuple(attempts), response=response, error=None
-                    )
+                    return _NodeRun(attempts=tuple(attempts), response=response, error=None)
 
                 assert error is not None  # non-success always carries an error
                 last_error = error
                 if error.category in _REQUEST_INDICTING:
                     # Request-inherent failure: no retry, no failover.
-                    return _NodeRun(
-                        attempts=tuple(attempts), response=response, error=error
-                    )
+                    return _NodeRun(attempts=tuple(attempts), response=response, error=error)
                 if error.retryable and attempt <= self._max_retries:
                     if error.retry_after_ms is not None and error.retry_after_ms > 0:
                         await self._sleeper(error.retry_after_ms / 1000.0)
@@ -587,20 +577,12 @@ class ExecutionService:
             execution_id=execution_id,
             node_key=stage.node_key,
             type=ExecutionNodeType.MODEL_CALL,
-            status=(
-                ExecutionNodeStatus.SUCCEEDED
-                if succeeded
-                else ExecutionNodeStatus.FAILED
-            ),
+            status=(ExecutionNodeStatus.SUCCEEDED if succeeded else ExecutionNodeStatus.FAILED),
             input_ref=payload,
-            output_ref=(
-                run.response.output if succeeded and run.response is not None else None
-            ),
+            output_ref=(run.response.output if succeeded and run.response is not None else None),
             retry_count=max(len(run.attempts) - 1, 0),
             error=(
-                None
-                if run.error is None
-                else run.error.model_dump(mode="json", exclude_none=True)
+                None if run.error is None else run.error.model_dump(mode="json", exclude_none=True)
             ),
         )
         return NodeReport(node=node, attempts=run.attempts, response=run.response)

@@ -126,15 +126,9 @@ async def outbox(engine: Any) -> PostgresOutbox:
 @requires_live_postgres
 class TestLivePostgres:
     @pytest.mark.asyncio()
-    async def test_append_pending_dispatch_round_trip(
-        self, outbox: PostgresOutbox
-    ) -> None:
-        rid_1 = await outbox.append(
-            "executions.requests", {"execution_id": "e1"}, "k1"
-        )
-        rid_2 = await outbox.append(
-            "executions.requests", {"execution_id": "e2"}, "k2"
-        )
+    async def test_append_pending_dispatch_round_trip(self, outbox: PostgresOutbox) -> None:
+        rid_1 = await outbox.append("executions.requests", {"execution_id": "e1"}, "k1")
+        rid_2 = await outbox.append("executions.requests", {"execution_id": "e2"}, "k2")
         # Oldest first, payload verbatim.
         got = await outbox.pending(max_records=10)
         assert [r.record_id for r in got] == [rid_1, rid_2]
@@ -146,9 +140,7 @@ class TestLivePostgres:
         assert [r.record_id for r in remaining] == [rid_2]
 
     @pytest.mark.asyncio()
-    async def test_mark_dispatched_is_settle_once_and_loud(
-        self, outbox: PostgresOutbox
-    ) -> None:
+    async def test_mark_dispatched_is_settle_once_and_loud(self, outbox: PostgresOutbox) -> None:
         rid = await outbox.append("s", {"a": "1"}, "k")
         await outbox.mark_dispatched(rid)
         with pytest.raises(RecordNotPending):
@@ -157,9 +149,7 @@ class TestLivePostgres:
             await outbox.mark_dispatched("999999999")  # unknown id
 
     @pytest.mark.asyncio()
-    async def test_pending_respects_max_records(
-        self, outbox: PostgresOutbox
-    ) -> None:
+    async def test_pending_respects_max_records(self, outbox: PostgresOutbox) -> None:
         for n in range(3):
             await outbox.append("s", {"n": str(n)}, f"k{n}")
         got = await outbox.pending(max_records=2)
@@ -180,8 +170,6 @@ class TestLivePostgres:
         assert await relay.relay_once(max_records=10) == 2
         assert await outbox.pending(max_records=10) == ()
         # Both messages actually arrived on the bus, in order.
-        delivered = await queue.consume(
-            "executions.requests", "workers", "w1", max_messages=10
-        )
+        delivered = await queue.consume("executions.requests", "workers", "w1", max_messages=10)
         assert [m.payload["execution_id"] for m in delivered] == ["e1", "e2"]
         assert [m.idempotency_key for m in delivered] == ["k1", "k2"]

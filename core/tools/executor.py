@@ -134,9 +134,7 @@ class ToolExecutor:
         """
         call_id = self._id_factory()
         # (1) The gate verdict — unconditionally first, no bypass parameter.
-        decision = self._gate.admit(
-            tool_id=tool_id, request=request, device_id=device_id
-        )
+        decision = self._gate.admit(tool_id=tool_id, request=request, device_id=device_id)
         if not decision.admitted:
             code = (
                 ErrorCode.TOOL_APPROVAL_REQUIRED

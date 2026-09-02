@@ -334,9 +334,7 @@ def test_concurrent_executions_get_distinct_ids_and_exact_accounting() -> None:
 
     async def fan_out() -> list[httpx.Response]:
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             return list(
                 await asyncio.gather(
                     *(client.post("/v1/execute", json={"ask": f"q{i}"}) for i in range(8))
@@ -372,9 +370,7 @@ def test_concurrent_mixed_success_and_failure_settle_exactly() -> None:
 
     async def fan_out() -> list[httpx.Response]:
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             return list(
                 await asyncio.gather(
                     *(client.post("/v1/execute", json={"ask": f"q{i}"}) for i in range(8))

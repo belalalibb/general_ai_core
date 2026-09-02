@@ -118,8 +118,7 @@ class VerificationReport:
                 "snapshot_id": self.snapshot_id,
                 "suite_name": self.suite_name,
                 "results": [
-                    {"name": r.name, "passed": r.passed, "detail": r.detail}
-                    for r in self.results
+                    {"name": r.name, "passed": r.passed, "detail": r.detail} for r in self.results
                 ],
             },
             sort_keys=True,
@@ -224,9 +223,7 @@ class NonDeterministicVerification(Exception):
 
     def __init__(self, snapshot_id: str) -> None:
         self.snapshot_id = snapshot_id
-        super().__init__(
-            f"verification over snapshot {snapshot_id!r} is not deterministic"
-        )
+        super().__init__(f"verification over snapshot {snapshot_id!r} is not deterministic")
 
 
 class DifferentialVerdict(StrEnum):

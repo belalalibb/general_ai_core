@@ -191,9 +191,7 @@ class TestAdminCannotBreak:
             "DISABLE_MODEL",  # case attack on a real verb
         ]
         for action in attacks:
-            response = run(
-                _post(app, "/v1/admin/changes", {"action": action, "payload": {}})
-            )
+            response = run(_post(app, "/v1/admin/changes", {"action": action, "payload": {}}))
             assert response.status_code == 422, action
             assert response.json()["error"]["code"] == "validation_error"
         assert list(world.admin.list_changes(world.principal.tenant_id)) == []
@@ -308,9 +306,7 @@ class TestAdversarialRedaction:
     def test_non_string_values_survive_and_leak_nothing(self) -> None:
         """Non-string values under marker keys are replaced wholesale; under
         clean keys they pass through unchanged (no crash, no coercion)."""
-        out = self._scrub(
-            {"event": "e", "token": 12345, "count": 7, "ratio": 0.5, "flag": True}
-        )
+        out = self._scrub({"event": "e", "token": 12345, "count": 7, "ratio": 0.5, "flag": True})
         assert out["token"] == "[SCRUBBED]"
         assert out["count"] == 7 and out["ratio"] == 0.5 and out["flag"] is True
 
@@ -361,13 +357,9 @@ class TestAdversarialRedaction:
             )
         )
         assert draft.status_code == 201
-        events: list[AuditEvent] = list(
-            admin_world.audit.read(admin_world.principal.tenant_id)
-        )
+        events: list[AuditEvent] = list(admin_world.audit.read(admin_world.principal.tenant_id))
         for event in events:
-            assert "secret-ref://" not in json.dumps(
-                event.model_dump(mode="json"), default=str
-            )
+            assert "secret-ref://" not in json.dumps(event.model_dump(mode="json"), default=str)
 
 
 # ---------------------------------------------------------------------------
@@ -413,9 +405,7 @@ class TestStructuralGuarantees:
         can be smuggled in."""
         world = ExecuteWorld()
         app = world.app()
-        response = run(
-            _execute_post(app, {"ask": "hi", "url": "http://169.254.169.254/meta-data"})
-        )
+        response = run(_execute_post(app, {"ask": "hi", "url": "http://169.254.169.254/meta-data"}))
         assert response.status_code == 422
         response = run(_execute_post(app, {"ask": "hi", "path": "../../etc/passwd"}))
         assert response.status_code == 422

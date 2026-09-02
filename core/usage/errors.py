@@ -44,9 +44,7 @@ class BudgetExceeded(UsageError):
     (10 §9 ``entitlement_exceeded``) without exposing other tenants' data.
     """
 
-    def __init__(
-        self, tenant_id: UUID, *, requested: float, remaining: float
-    ) -> None:
+    def __init__(self, tenant_id: UUID, *, requested: float, remaining: float) -> None:
         super().__init__(
             f"tenant {tenant_id} has {remaining} task units remaining; "
             f"reservation of {requested} denied"
@@ -66,8 +64,7 @@ class UnknownComplexity(UsageError):
 
     def __init__(self, complexity: str, *, known: list[str]) -> None:
         super().__init__(
-            f"no task-unit value configured for complexity {complexity!r}; "
-            f"known: {known}"
+            f"no task-unit value configured for complexity {complexity!r}; known: {known}"
         )
         self.complexity = complexity
         self.known = known
@@ -90,8 +87,7 @@ class ReservationAlreadyResolved(UsageError):
 
     def __init__(self, execution_id: UUID, status: str) -> None:
         super().__init__(
-            f"usage reservation for execution {execution_id} already resolved "
-            f"(status={status})"
+            f"usage reservation for execution {execution_id} already resolved (status={status})"
         )
         self.execution_id = execution_id
         self.status = status

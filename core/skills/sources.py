@@ -145,8 +145,7 @@ class SkillSourceCatalog:
         unknown = disabled_set - set(urls)
         if unknown:
             raise InvalidSourceUrl(
-                "disabled urls must appear in the source list: "
-                + ", ".join(sorted(unknown))
+                "disabled urls must appear in the source list: " + ", ".join(sorted(unknown))
             )
         new_entries = _build_entries(list(urls), disabled=disabled_set)
         with self._lock:

@@ -72,9 +72,7 @@ def test_grader_type_set_matches_spec_all_ten() -> None:
 
 def test_mvp_active_grader_types_is_the_r049_boundary() -> None:
     # R049 boundary (c): only deterministic + model_based RUN in MVP.
-    assert MVP_ACTIVE_GRADER_TYPES == frozenset(
-        {GraderType.DETERMINISTIC, GraderType.MODEL_BASED}
-    )
+    assert MVP_ACTIVE_GRADER_TYPES == frozenset({GraderType.DETERMINISTIC, GraderType.MODEL_BASED})
     assert MVP_ACTIVE_GRADER_TYPES < set(GraderType)  # strictly narrower
 
 
@@ -91,9 +89,7 @@ def test_check_style_grader_row_validates() -> None:
 
 def test_judgment_style_grader_row_validates() -> None:
     # 22 §6 example: {"type": "model_based", "name": ..., "score": .., "confidence": ..}
-    row = GraderResult(
-        type=GraderType.MODEL_BASED, name="judge", score=0.86, confidence=0.7
-    )
+    row = GraderResult(type=GraderType.MODEL_BASED, name="judge", score=0.86, confidence=0.7)
     assert row.passed is None
     assert row.score == 0.86
     assert row.confidence == 0.7
@@ -151,9 +147,7 @@ def test_evaluation_record_validates_field_for_field() -> None:
 
 def test_raw_record_carries_no_judgment() -> None:
     # 22 §3: RAW = generated but NOT evaluated.
-    record = EvaluationRecord(
-        tenant_id=uuid4(), execution_id=uuid4(), level=VerificationLevel.RAW
-    )
+    record = EvaluationRecord(tenant_id=uuid4(), execution_id=uuid4(), level=VerificationLevel.RAW)
     assert record.score is None
     assert record.confidence is None
     assert record.graders == ()
@@ -242,8 +236,6 @@ def test_unknown_fields_rejected() -> None:
 
 
 def test_instances_are_frozen() -> None:
-    record = EvaluationRecord(
-        tenant_id=uuid4(), execution_id=uuid4(), level=VerificationLevel.RAW
-    )
+    record = EvaluationRecord(tenant_id=uuid4(), execution_id=uuid4(), level=VerificationLevel.RAW)
     with pytest.raises(ValidationError):
         record.level = VerificationLevel.GOLD  # type: ignore[misc]

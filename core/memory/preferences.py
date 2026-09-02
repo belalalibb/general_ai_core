@@ -111,9 +111,7 @@ class PreferenceLearningGate:
             )
         # 4. sensitivity is acceptable (HIGH refused — default-deny posture)
         if sensitivity is MemorySensitivity.HIGH:
-            return LearningDecision(
-                learnable=False, reason="sensitivity_unacceptable:high"
-            )
+            return LearningDecision(learnable=False, reason="sensitivity_unacceptable:high")
         # 5. user/admin policy allows memory (explicit; deny-by-default)
         if not policy_allows_memory:
             return LearningDecision(learnable=False, reason="memory_policy_denies")

@@ -133,9 +133,7 @@ class TestTick:
             scheduler.add(_entry(entry_id="a", next_due=T0))
             scheduler.add(_entry(entry_id="b", next_due=T0 + timedelta(seconds=30)))
             assert len(await scheduler.tick(now=T0)) == 1  # only "a"
-            assert (
-                len(await scheduler.tick(now=T0 + timedelta(seconds=30))) == 1
-            )  # only "b"
+            assert len(await scheduler.tick(now=T0 + timedelta(seconds=30))) == 1  # only "b"
 
         asyncio.run(run())
 

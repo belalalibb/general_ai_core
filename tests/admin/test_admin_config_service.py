@@ -142,21 +142,15 @@ class _World:
         return provider, model
 
 
-def _through_preview(
-    world: _World, action: AdminAction, payload: dict[str, object]
-) -> UUID:
+def _through_preview(world: _World, action: AdminAction, payload: dict[str, object]) -> UUID:
     """Draft + validate + preview; returns the change id (ready to publish)."""
-    change = world.admin.draft(
-        tenant_id=TENANT, actor_id=ACTOR, action=action, payload=payload
-    )
+    change = world.admin.draft(tenant_id=TENANT, actor_id=ACTOR, action=action, payload=payload)
     world.admin.validate(TENANT, change.id)
     world.admin.preview(TENANT, change.id)
     return change.id
 
 
-def _published(
-    world: _World, action: AdminAction, payload: dict[str, object]
-) -> UUID:
+def _published(world: _World, action: AdminAction, payload: dict[str, object]) -> UUID:
     change_id = _through_preview(world, action, payload)
     world.admin.publish(TENANT, change_id)
     return change_id
@@ -275,10 +269,7 @@ class TestValidation:
                 action=AdminAction.SET_PLAN,
                 payload=payload,
             )
-            assert (
-                world.admin.validate(TENANT, change.id).state
-                is ConfigLifecycleState.REJECTED
-            )
+            assert world.admin.validate(TENANT, change.id).state is ConfigLifecycleState.REJECTED
 
     def test_template_provider_cannot_be_enabled(self) -> None:
         # 21 §9 "security invariant cannot be disabled" (31 §10 boundary).
@@ -338,27 +329,21 @@ class TestLifecycleOrder:
     def test_rollback_requires_published(self) -> None:
         world = _World()
         world.seed()
-        change_id = _through_preview(
-            world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"}
-        )
+        change_id = _through_preview(world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"})
         with pytest.raises(InvalidLifecycleTransition):
             world.admin.rollback(TENANT, change_id)
 
     def test_double_publish_denied(self) -> None:
         world = _World()
         world.seed()
-        change_id = _published(
-            world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"}
-        )
+        change_id = _published(world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"})
         with pytest.raises(InvalidLifecycleTransition):
             world.admin.publish(TENANT, change_id)
 
     def test_preview_content_recorded(self) -> None:
         world = _World()
         world.seed()
-        change_id = _through_preview(
-            world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"}
-        )
+        change_id = _through_preview(world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"})
         change = world.admin.get(TENANT, change_id)
         assert "routing pool" in (change.impact_preview or "")
 
@@ -370,9 +355,7 @@ class TestPublish:
     def test_publish_creates_version(self) -> None:
         world = _World()
         world.seed()
-        change_id = _published(
-            world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"}
-        )
+        change_id = _published(world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"})
         change = world.admin.get(TENANT, change_id)
         assert change.state is ConfigLifecycleState.PUBLISHED
         assert change.published_version == "models-v1"
@@ -389,10 +372,7 @@ class TestPublish:
         )
         assert world.admin.get(TENANT, second).published_version == "models-v2"
         # Different area starts its own counter.
-        assert (
-            world.admin.get(TENANT, weights).published_version
-            == "routing_policies-v1"
-        )
+        assert world.admin.get(TENANT, weights).published_version == "routing_policies-v1"
 
     def test_disable_model_removes_from_routing_pool(self) -> None:
         # No parallel state: the router sees the published change immediately.
@@ -411,9 +391,7 @@ class TestPublish:
         world.seed()
         request = RoutingRequest.model_validate({"operation": "generate_text"})
         _published(world, AdminAction.DISABLE_PROVIDER, {"provider_key": "prov_a"})
-        assert (
-            world.providers.get("prov_a").provider.status is ProviderStatus.DISABLED
-        )
+        assert world.providers.get("prov_a").provider.status is ProviderStatus.DISABLED
         with pytest.raises(NoEligibleCandidates):
             world.router.route(request)
 
@@ -447,9 +425,7 @@ class TestPublish:
             {"weights": {"version": "admin-w9", "quality": 0.9, "cost": 0.1}},
         )
         assert world.router.default_weights.version == "admin-w9"
-        decision = world.router.route(
-            RoutingRequest.model_validate({"operation": "generate_text"})
-        )
+        decision = world.router.route(RoutingRequest.model_validate({"operation": "generate_text"}))
         assert decision.weights.version == "admin-w9"
 
 
@@ -460,24 +436,18 @@ class TestRollback:
     def test_rollback_restores_model_status(self) -> None:
         world = _World()
         world.seed()
-        change_id = _published(
-            world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"}
-        )
+        change_id = _published(world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"})
         result = world.admin.rollback(TENANT, change_id)
         assert result.state is ConfigLifecycleState.ROLLED_BACK
         assert world.models.get("model-a").status is ModelStatus.ACTIVE
         # Routing works again — restoration is live, not cosmetic.
-        decision = world.router.route(
-            RoutingRequest.model_validate({"operation": "generate_text"})
-        )
+        decision = world.router.route(RoutingRequest.model_validate({"operation": "generate_text"}))
         assert decision.selected.model_id == world.models.get("model-a").id
 
     def test_rollback_restores_provider_status(self) -> None:
         world = _World()
         world.seed()
-        change_id = _published(
-            world, AdminAction.DISABLE_PROVIDER, {"provider_key": "prov_a"}
-        )
+        change_id = _published(world, AdminAction.DISABLE_PROVIDER, {"provider_key": "prov_a"})
         world.admin.rollback(TENANT, change_id)
         assert world.providers.get("prov_a").provider.status is ProviderStatus.ACTIVE
 
@@ -534,9 +504,7 @@ class TestAudit:
         world.seed()
         _published(world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"})
         events = world.audit.read(TENANT)
-        assert [e.event_type for e in events] == [
-            AuditEventType.ADMIN_CONFIG_PUBLISHED
-        ]
+        assert [e.event_type for e in events] == [AuditEventType.ADMIN_CONFIG_PUBLISHED]
         record = events[0].admin_change
         assert record is not None  # who/what/versions/validation/preview (21 §8)
         assert events[0].actor_id == ACTOR
@@ -549,9 +517,7 @@ class TestAudit:
     def test_rollback_lands_second_audit_event(self) -> None:
         world = _World()
         world.seed()
-        change_id = _published(
-            world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"}
-        )
+        change_id = _published(world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"})
         world.admin.rollback(TENANT, change_id)
         events = world.audit.read(TENANT)
         assert [e.event_type for e in events] == [
@@ -570,9 +536,7 @@ class TestTenantIsolation:
     def test_foreign_change_unaddressable(self) -> None:
         world = _World()
         world.seed()
-        change_id = _through_preview(
-            world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"}
-        )
+        change_id = _through_preview(world, AdminAction.DISABLE_MODEL, {"model_key": "model-a"})
         # Same error for absent and foreign (anti-enumeration).
         with pytest.raises(ChangeNotFound):
             world.admin.get(OTHER_TENANT, change_id)
@@ -611,6 +575,4 @@ class TestTenantIsolation:
         world.admin.validate(TENANT, draft.id)
         # The originally returned frozen instance is untouched.
         assert draft.state is ConfigLifecycleState.DRAFT
-        assert world.admin.get(TENANT, draft.id).state is (
-            ConfigLifecycleState.VALIDATED
-        )
+        assert world.admin.get(TENANT, draft.id).state is (ConfigLifecycleState.VALIDATED)

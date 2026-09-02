@@ -205,9 +205,9 @@ class TestHermetic:
             stmt = pg_insert(table).values(**values)
             update_cols = {k: v for k, v in values.items() if k != "id"}
             compiled = str(
-                stmt.on_conflict_do_update(
-                    index_elements=[conflict_col], set_=update_cols
-                ).compile(dialect=postgresql.dialect())
+                stmt.on_conflict_do_update(index_elements=[conflict_col], set_=update_cols).compile(
+                    dialect=postgresql.dialect()
+                )
             )
             assert f"ON CONFLICT ({conflict_col}) DO UPDATE" in compiled, table.name
 
@@ -241,18 +241,14 @@ async def engine() -> Any:
             await conn.execute(delete(table))
         # providers may be FK'd by credentials in other suites' leftovers;
         # this suite only deletes what it inserted by unique keys.
-        await conn.execute(
-            delete(providers).where(providers.c.provider_key.like("cat-%"))
-        )
+        await conn.execute(delete(providers).where(providers.c.provider_key.like("cat-%")))
     await eng.dispose()
 
 
 @requires_live_postgres
 class TestLiveCatalogs:
     @pytest.mark.asyncio
-    async def test_hydration_path_feeds_the_existing_registries(
-        self, engine: AsyncEngine
-    ) -> None:
+    async def test_hydration_path_feeds_the_existing_registries(self, engine: AsyncEngine) -> None:
         factory = create_session_factory(engine)
         role_catalog = PostgresRoleCatalog(factory)
         skill_catalog = PostgresSkillCatalog(factory)
@@ -295,9 +291,7 @@ class TestLiveCatalogs:
         assert loaded[0].status is ModelStatus.DISABLED
 
     @pytest.mark.asyncio
-    async def test_provider_round_trip_and_deterministic_order(
-        self, engine: AsyncEngine
-    ) -> None:
+    async def test_provider_round_trip_and_deterministic_order(self, engine: AsyncEngine) -> None:
         factory = create_session_factory(engine)
         catalog = PostgresProviderCatalog(factory)
         b = make_provider(provider_key="cat-bbb")

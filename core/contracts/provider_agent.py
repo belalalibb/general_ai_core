@@ -106,8 +106,7 @@ class ProviderAgentEvent(ContractModel):
     def _failed_events_carry_normalized_error(self) -> ProviderAgentEvent:
         if self.type is ProviderAgentEventType.FAILED and self.error is None:
             msg = (
-                "provider_agent.failed events must carry a normalized"
-                " ProviderError (30 §14/§15.3)"
+                "provider_agent.failed events must carry a normalized ProviderError (30 §14/§15.3)"
             )
             raise ValueError(msg)
         if self.type is not ProviderAgentEventType.FAILED and self.error is not None:

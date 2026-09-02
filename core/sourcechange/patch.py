@@ -61,13 +61,9 @@ class PatchOperation:
         validate_path(self.path)
         if self.kind is PatchOpKind.DELETE_FILE:
             if self.content is not None:
-                raise MalformedPatch(
-                    f"delete_file at {self.path!r} must not carry content"
-                )
+                raise MalformedPatch(f"delete_file at {self.path!r} must not carry content")
         elif self.content is None:
-            raise MalformedPatch(
-                f"{self.kind.value} at {self.path!r} requires content"
-            )
+            raise MalformedPatch(f"{self.kind.value} at {self.path!r} requires content")
 
 
 @dataclass(frozen=True)
@@ -96,12 +92,8 @@ def _canonical(patch: SourcePatch) -> bytes:
     hash is order-independent, matching the order-independent semantics)."""
     digest_parts: list[bytes] = []
     for op in sorted(patch.operations, key=lambda item: item.path):
-        content_hash = (
-            file_content_hash(op.content) if op.content is not None else ""
-        )
-        digest_parts.append(
-            f"{op.kind.value}\x00{op.path}\x00{content_hash}\x01".encode()
-        )
+        content_hash = file_content_hash(op.content) if op.content is not None else ""
+        digest_parts.append(f"{op.kind.value}\x00{op.path}\x00{content_hash}\x01".encode())
     return b"".join(digest_parts)
 
 
@@ -159,14 +151,10 @@ def invert_patch(patch: SourcePatch, base: SourceSnapshot) -> SourcePatch:
         if op.kind is PatchOpKind.ADD_FILE:
             if exists:
                 raise PatchNotApplicable(op.path, "add_file target already exists")
-            inverse_ops.append(
-                PatchOperation(kind=PatchOpKind.DELETE_FILE, path=op.path)
-            )
+            inverse_ops.append(PatchOperation(kind=PatchOpKind.DELETE_FILE, path=op.path))
         elif op.kind is PatchOpKind.MODIFY_FILE:
             if not exists:
-                raise PatchNotApplicable(
-                    op.path, "modify_file target does not exist"
-                )
+                raise PatchNotApplicable(op.path, "modify_file target does not exist")
             inverse_ops.append(
                 PatchOperation(
                     kind=PatchOpKind.MODIFY_FILE,
@@ -176,9 +164,7 @@ def invert_patch(patch: SourcePatch, base: SourceSnapshot) -> SourcePatch:
             )
         else:  # DELETE_FILE
             if not exists:
-                raise PatchNotApplicable(
-                    op.path, "delete_file target does not exist"
-                )
+                raise PatchNotApplicable(op.path, "delete_file target does not exist")
             inverse_ops.append(
                 PatchOperation(
                     kind=PatchOpKind.ADD_FILE,

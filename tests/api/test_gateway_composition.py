@@ -125,9 +125,7 @@ class TestGatewaySettings:
             gateway_settings_from_env(env)
 
     def test_repr_scrubs_secret(self) -> None:
-        settings = GatewaySettings(
-            base_url="https://gw.example", secret=SECRET, secret_version=2
-        )
+        settings = GatewaySettings(base_url="https://gw.example", secret=SECRET, secret_version=2)
         text = repr(settings)
         assert SECRET not in text
         assert "[SCRUBBED]" in text
@@ -135,9 +133,7 @@ class TestGatewaySettings:
 
 class TestBuildGatewayAdapter:
     def test_builder_produces_bound_working_adapter(self) -> None:
-        settings = GatewaySettings(
-            base_url="https://gw.example", secret=SECRET, secret_version=5
-        )
+        settings = GatewaySettings(base_url="https://gw.example", secret=SECRET, secret_version=5)
         seen: list[httpx.Request] = []
 
         def _responder(request: httpx.Request) -> httpx.Response:

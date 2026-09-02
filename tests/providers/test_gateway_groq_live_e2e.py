@@ -205,9 +205,7 @@ class TestLiveGatewayEndToEnd:
         # ---- Entry point 1 (decision D): platform HTTP API, {"ask": ...} ----
         async def api_call() -> httpx.Response:
             transport = httpx.ASGITransport(app=world["app"])
-            async with httpx.AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
                 return await client.post(
                     "/v1/execute",
                     json={"ask": "Reply with exactly the word: OK"},
@@ -229,9 +227,7 @@ class TestLiveGatewayEndToEnd:
 
         # ---- Entry point 2 (decision D): Router + ExecutionService direct,
         # caller-supplied CANONICAL messages payload (idempotent pass-through)
-        decision = world["router"].route(
-            RoutingRequest(operation=ProviderOperation.GENERATE_TEXT)
-        )
+        decision = world["router"].route(RoutingRequest(operation=ProviderOperation.GENERATE_TEXT))
         service: ExecutionService = world["service"]
         report = run(
             service.execute_single(
@@ -240,9 +236,7 @@ class TestLiveGatewayEndToEnd:
                 decision=decision,
                 operation=ProviderOperation.GENERATE_TEXT,
                 payload={
-                    "messages": [
-                        {"role": "user", "content": "Reply with exactly the word: YES"}
-                    ],
+                    "messages": [{"role": "user", "content": "Reply with exactly the word: YES"}],
                     "max_tokens": 16,
                 },
                 request_hash="live-e2e-router-entry",

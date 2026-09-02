@@ -82,9 +82,7 @@ class TestS3LiveSmoke:
         with pytest.raises(ObjectNotFound):
             storage.delete(TENANT, f"never-written/{uuid4()}")
 
-    def test_listing_and_tenant_prefix_on_real_server(
-        self, storage: S3ObjectStorage
-    ) -> None:
+    def test_listing_and_tenant_prefix_on_real_server(self, storage: S3ObjectStorage) -> None:
         keys = {f"smoke/a-{uuid4()}", f"smoke/b-{uuid4()}"}
         for key in keys:
             storage.put(TENANT, key, b"x", "text/plain")
@@ -94,9 +92,7 @@ class TestS3LiveSmoke:
         # Logical keys only — the tenant prefix must not leak.
         assert all(str(TENANT) not in key for key in listed)
 
-    def test_foreign_tenant_isolation_on_real_server(
-        self, storage: S3ObjectStorage
-    ) -> None:
+    def test_foreign_tenant_isolation_on_real_server(self, storage: S3ObjectStorage) -> None:
         key = f"smoke/{uuid4()}"
         storage.put(TENANT, key, b"mine", "text/plain")
         with pytest.raises(ObjectNotFound):

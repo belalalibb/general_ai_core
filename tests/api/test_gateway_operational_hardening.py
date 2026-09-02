@@ -387,9 +387,7 @@ def _world(responder: Any) -> dict[str, Any]:
 
 
 async def _execute(world: dict[str, Any]) -> Any:
-    decision = world["router"].route(
-        RoutingRequest(operation=ProviderOperation.GENERATE_TEXT)
-    )
+    decision = world["router"].route(RoutingRequest(operation=ProviderOperation.GENERATE_TEXT))
     return await world["service"].execute_single(
         tenant_id=world["tenant_id"],
         user_id=world["user_id"],

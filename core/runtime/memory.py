@@ -35,13 +35,9 @@ class InMemoryQueue:
         # (stream, group) -> message_id -> (consumer, delivered_at, delivery_count)
         self._pending: dict[tuple[str, str], dict[str, tuple[str, float, int]]] = {}
 
-    async def publish(
-        self, stream: str, payload: Mapping[str, str], idempotency_key: str
-    ) -> str:
+    async def publish(self, stream: str, payload: Mapping[str, str], idempotency_key: str) -> str:
         message_id = f"{next(self._seq)}-0"
-        self._streams.setdefault(stream, []).append(
-            (message_id, dict(payload), idempotency_key)
-        )
+        self._streams.setdefault(stream, []).append((message_id, dict(payload), idempotency_key))
         return message_id
 
     async def consume(
@@ -130,18 +126,14 @@ class InMemoryLeaseManager:
         # resource -> (owner, fencing_token, expires_at)
         self._held: dict[str, tuple[str, int, float]] = {}
 
-    async def acquire(
-        self, resource: str, owner: str, ttl_seconds: float
-    ) -> Lease | None:
+    async def acquire(self, resource: str, owner: str, ttl_seconds: float) -> Lease | None:
         now = self._clock()
         current = self._held.get(resource)
         if current is not None and current[2] > now and current[0] != owner:
             return None  # held by another live owner
         token = next(self._token)  # strictly increasing across holders
         self._held[resource] = (owner, token, now + ttl_seconds)
-        return Lease(
-            resource=resource, owner=owner, fencing_token=token, ttl_seconds=ttl_seconds
-        )
+        return Lease(resource=resource, owner=owner, fencing_token=token, ttl_seconds=ttl_seconds)
 
     async def renew(self, lease: Lease, ttl_seconds: float) -> Lease:
         self._require_holder(lease)
@@ -189,9 +181,7 @@ class InMemoryCache:
             return None
         return value
 
-    async def set(
-        self, tenant_id: str, key: str, value: str, ttl_seconds: float
-    ) -> None:
+    async def set(self, tenant_id: str, key: str, value: str, ttl_seconds: float) -> None:
         self._entries[(tenant_id, key)] = (value, self._clock() + ttl_seconds)
 
     async def delete(self, tenant_id: str, key: str) -> None:

@@ -675,6 +675,16 @@ def create_app(
                     "Agent strategy runs synchronously in this slice.",
                     details={"field": "execution_policy.async"},
                 )
+            # R165: the caller may ask for LESS budget than the runtime cap,
+            # never more — the cap is the operator's (S4); above it is loud.
+            if policy is not None and policy.max_steps is not None:
+                cap = agent.runtime.max_steps
+                if policy.max_steps > cap:
+                    return error_response(
+                        ErrorCode.VALIDATION_ERROR,
+                        f"execution_policy.max_steps exceeds this runtime's cap ({cap}).",
+                        details={"field": "execution_policy.max_steps", "max": cap},
+                    )
             # Allow-list names are validated HERE (before any admission work);
             # the full selection (skill-required tools) is made once skills
             # are admitted below — same catalog, one rule.
@@ -1088,6 +1098,8 @@ def create_app(
                         if multi_model_policy is None and not node_decisions
                         else None
                     ),
+                    max_steps=policy.max_steps if policy is not None else None,
+                    deadline_ms=policy.deadline_ms if policy is not None else None,
                     conversation_id=conversation_id,
                     idempotency_key=idempotency_key,
                     label={"surface": "v1.execute"},

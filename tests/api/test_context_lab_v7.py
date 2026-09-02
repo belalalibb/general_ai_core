@@ -71,9 +71,7 @@ async def _get(app: FastAPI, path: str) -> httpx.Response:
         return await client.get(path)
 
 
-async def _post(
-    app: FastAPI, path: str, body: dict[str, object] | None = None
-) -> httpx.Response:
+async def _post(app: FastAPI, path: str, body: dict[str, object] | None = None) -> httpx.Response:
     async with _client(app) as client:
         return await client.post(path, json=body)
 
@@ -259,9 +257,7 @@ class TestLabRoutes:
         lab = LabWorld()
         conversation = lab.add_conversation()
         lab.add_memory()
-        before_history = lab.conversations.get_history(
-            lab.principal.tenant_id, conversation.id
-        )
+        before_history = lab.conversations.get_history(lab.principal.tenant_id, conversation.id)
         body = run(
             _post(
                 lab.app(),
@@ -271,12 +267,8 @@ class TestLabRoutes:
         ).json()
         assert body["validated"] is True
         # History composed as a block, but NOTHING was appended (dry-run).
-        assert any(
-            b["type"] == "history" for b in body["context"]["context_blocks"]
-        )
-        after_history = lab.conversations.get_history(
-            lab.principal.tenant_id, conversation.id
-        )
+        assert any(b["type"] == "history" for b in body["context"]["context_blocks"])
+        after_history = lab.conversations.get_history(lab.principal.tenant_id, conversation.id)
         assert after_history == before_history
 
     def test_unadmitted_conversation_ids_answer_identically(self) -> None:
@@ -300,9 +292,7 @@ class TestLabRoutes:
         app = lab.app()
         for response in (
             run(_get(app, "/v1/admin/context-lab/checks")),
-            run(
-                _post(app, "/v1/admin/context-lab/validate", {"ask": "hello"})
-            ),
+            run(_post(app, "/v1/admin/context-lab/validate", {"ask": "hello"})),
         ):
             assert response.status_code == 403
             assert response.json()["error"]["code"] == "unauthorized"
@@ -310,30 +300,19 @@ class TestLabRoutes:
     def test_absent_composer_means_no_lab_routes(self) -> None:
         lab = LabWorld()
         app = lab.app(with_composer=False)
-        assert (
-            run(_get(app, "/v1/admin/context-lab/checks")).status_code == 404
-        )
-        assert (
-            run(
-                _post(app, "/v1/admin/context-lab/validate", {"ask": "x"})
-            ).status_code
-            == 404
-        )
+        assert run(_get(app, "/v1/admin/context-lab/checks")).status_code == 404
+        assert run(_post(app, "/v1/admin/context-lab/validate", {"ask": "x"})).status_code == 404
 
     def test_absent_admin_surface_means_no_lab_routes(self) -> None:
         lab = LabWorld()
         app = lab.app(with_admin=False)
-        assert (
-            run(_get(app, "/v1/admin/context-lab/checks")).status_code == 404
-        )
+        assert run(_get(app, "/v1/admin/context-lab/checks")).status_code == 404
 
 
 # --- agent tools -------------------------------------------------------------------
 
 
-def _agent_surface(
-    lab: LabWorld, service: ContextLabService | None
-) -> AgentToolSurface:
+def _agent_surface(lab: LabWorld, service: ContextLabService | None) -> AgentToolSurface:
     world = lab.world
     execution_service = ExecutionService(
         adapters={world.provider.id: world.adapter},
@@ -407,9 +386,7 @@ class TestAgentLabTools:
         registry = build_registry(_agent_surface(lab, service))
         dispatcher = ToolDispatcher(registry, audit=lab.world.audit)
         # Missing ask.
-        record = run(
-            dispatcher.dispatch(lab.principal, "validate_context", {"ask": ""})
-        )
+        record = run(dispatcher.dispatch(lab.principal, "validate_context", {"ask": ""}))
         assert record.ok and record.result == {"error": "ask is required"}
         # Malformed role id — pydantic's named refusal as content.
         record = run(

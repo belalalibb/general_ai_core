@@ -27,7 +27,12 @@ from uuid import UUID, uuid4
 
 from apps.api.agent import AgentSurface
 from apps.api.store import ExecutionStorePort
-from core.agent import AgentRuntime, AgentToolSpec
+from core.agent import (
+    DEFAULT_AGENT_DEADLINE_MS,
+    DEFAULT_AGENT_MAX_STEPS,
+    AgentRuntime,
+    AgentToolSpec,
+)
 from core.audit.ports import AuditLogPort
 from core.contracts.base import JsonObject
 from core.contracts.tools import Tool
@@ -163,11 +168,18 @@ def build_agent(
     usage: UsageAccountingPort,
     repo_reader: SourceReader | None,
     engineering: EngineeringBundle | None = None,
+    max_steps: int = DEFAULT_AGENT_MAX_STEPS,
+    deadline_ms: int | None = DEFAULT_AGENT_DEADLINE_MS,
 ) -> ComposedAgent:
     """Compose the shared agent authority chain + runtime + catalog.
 
     ``engineering`` (ADR-0012) adds the 17 workspace/command/git tools to the
     SAME registry and catalog; absent ⇒ absent tools (P2).
+
+    ``max_steps`` / ``deadline_ms`` (R165) are the OPERATOR's per-run caps for
+    this runtime (``AgentRuntime`` enforces the hard cap of 32); a request may
+    only ask for less. Engineering turns (inspect → change → test → diagnose →
+    fix → verify → git) need more than the 8-step default.
     """
     tool_registry = ToolRegistry()
     firewall = CapabilityFirewall()
@@ -181,6 +193,8 @@ def build_agent(
         audit=audit,
         usage=usage,
         store_report=store.put,
+        max_steps=max_steps,
+        deadline_ms=deadline_ms,
     )
     catalog: dict[str, AgentToolSpec] = {}
     if repo_reader is not None:

@@ -87,17 +87,13 @@ class AdmissionController:
     ) -> AdmissionDecision:
         """Check every configured gate; on admit, count the enqueue."""
         if max_queue_depth is not None and self._gauge.depth(stream) >= max_queue_depth:
-            return AdmissionDecision(
-                admitted=False, reason=f"queue_limit:{stream}"
-            )
+            return AdmissionDecision(admitted=False, reason=f"queue_limit:{stream}")
         if tenant_limit is not None:
             within = await self._rate_limits.hit(
                 f"admission:{tenant_id}", tenant_limit, window_seconds
             )
             if not within:
-                return AdmissionDecision(
-                    admitted=False, reason=f"tenant_window:{tenant_id}"
-                )
+                return AdmissionDecision(admitted=False, reason=f"tenant_window:{tenant_id}")
         self._gauge.enqueued(stream)
         return AdmissionDecision(admitted=True)
 
@@ -143,9 +139,7 @@ class FairScheduler:
         tier[tenant_id].append((next(self._seq), item))
 
     def backlog(self) -> int:
-        return sum(
-            len(q) for tier in self._tiers.values() for q in tier.values()
-        )
+        return sum(len(q) for tier in self._tiers.values() for q in tier.values())
 
     def next_item(self) -> tuple[str, str] | None:
         """Pop ``(tenant_id, item)`` — best priority, round-robin tenants."""

@@ -57,8 +57,7 @@ class InvalidLifecycleStep(SkillImportError):
         self.current = current
         self.step = step
         super().__init__(
-            f"invalid lifecycle step for {skill_id}: "
-            f"cannot {step} from status={current}"
+            f"invalid lifecycle step for {skill_id}: cannot {step} from status={current}"
         )
 
 
@@ -72,8 +71,7 @@ class ScanFindingsBlock(SkillImportError):
     def __init__(self, skill_id: object, findings: tuple[str, ...]) -> None:
         self.findings = findings
         super().__init__(
-            f"scan blocked skill {skill_id}: {len(findings)} finding(s): "
-            + "; ".join(findings)
+            f"scan blocked skill {skill_id}: {len(findings)} finding(s): " + "; ".join(findings)
         )
 
 

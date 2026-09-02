@@ -140,20 +140,13 @@ class ToolCallGate:
         # 4. Capability Firewall — EVERY call passes through (41 §17).
         verdict = self._firewall.decide(request)
         if verdict is FirewallDecision.DENY:
-            return ToolCallDecision(
-                admitted=False, decision=verdict, reason="firewall_deny"
-            )
+            return ToolCallDecision(admitted=False, decision=verdict, reason="firewall_deny")
 
         # 5. Tool approval policy (14 §4) — tightening only. A declared
         #    permission absent from approval_policy resolves to ALWAYS
         #    (deny-by-default, DEFAULT_APPROVAL_REQUIREMENT).
-        needs_approval = tool.approval_policy.get(
-            request.permission, ApprovalRequirement.ALWAYS
-        )
-        if (
-            needs_approval is not ApprovalRequirement.NONE
-            and request.approval_state != "approved"
-        ):
+        needs_approval = tool.approval_policy.get(request.permission, ApprovalRequirement.ALWAYS)
+        if needs_approval is not ApprovalRequirement.NONE and request.approval_state != "approved":
             return ToolCallDecision(
                 admitted=False,
                 decision=FirewallDecision.REQUIRE_APPROVAL,
@@ -169,9 +162,7 @@ class ToolCallGate:
 
     # -- internals ------------------------------------------------------------------
 
-    def _check_device(
-        self, tool: Tool, tenant_id: UUID, device_id: UUID | None
-    ) -> str | None:
+    def _check_device(self, tool: Tool, tenant_id: UUID, device_id: UUID | None) -> str | None:
         """Device-trust rule for client/hybrid tools; None = check passed."""
         if tool.location is ToolLocation.SERVER:
             return None  # server tools carry no device requirement

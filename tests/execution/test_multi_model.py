@@ -141,9 +141,7 @@ class ScriptedAdapter:
     async def get_capabilities(self) -> ProviderCapabilities:  # pragma: no cover
         return ProviderCapabilities()
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         self.requests.append(request)
         step: object = self.script.pop(0) if self.script else {"ok": True}
         if isinstance(step, ProviderError):
@@ -207,9 +205,7 @@ class World:
             max_retries_per_candidate=0,
             sleeper=_no_sleep,
         )
-        self.executor = MultiModelExecutor(
-            router=self.router, execution=self.execution
-        )
+        self.executor = MultiModelExecutor(router=self.router, execution=self.execution)
 
     def _provider(self, key: str) -> Provider:
         provider = Provider(
@@ -316,9 +312,7 @@ class TestFallbackChain:
 class TestParallelCompare:
     def test_all_branches_execute_and_first_success_wins(self) -> None:
         world = World(script_a=[{"text": "A"}], script_b=[{"text": "B"}])
-        report = world.execute(
-            _policy(selection_strategy="parallel_compare", allow_partial=True)
-        )
+        report = world.execute(_policy(selection_strategy="parallel_compare", allow_partial=True))
         assert report.winner is not None
         assert report.winner.model_id == "model-a"  # policy order
         assert report.final_report.final_output == {"text": "A"}
@@ -328,9 +322,7 @@ class TestParallelCompare:
 
     def test_failed_first_branch_second_wins_with_allow_partial(self) -> None:
         world = World(script_a=[_FAIL], script_b=[{"text": "B"}])
-        report = world.execute(
-            _policy(selection_strategy="parallel_compare", allow_partial=True)
-        )
+        report = world.execute(_policy(selection_strategy="parallel_compare", allow_partial=True))
         assert report.winner is not None
         assert report.winner.model_id == "model-b"
 
@@ -353,9 +345,7 @@ class TestParallelCompare:
 
     def test_all_branches_failed_returns_last_failed_report(self) -> None:
         world = World(script_a=[_FAIL], script_b=[_FAIL])
-        report = world.execute(
-            _policy(selection_strategy="parallel_compare", allow_partial=True)
-        )
+        report = world.execute(_policy(selection_strategy="parallel_compare", allow_partial=True))
         assert report.winner is None
         assert report.final_report.final_output is None
 
@@ -444,9 +434,7 @@ class TestResolveNodePolicy:
             {
                 "type": "agent_node_mapping",
                 "default_model_policy": {"type": "auto"},
-                "node_model_policies": {
-                    "single": {"type": "tier", "tier": "max"}
-                },
+                "node_model_policies": {"single": {"type": "tier", "tier": "max"}},
             }
         )
         resolved = resolve_node_policy(mapping, "single")
@@ -464,7 +452,5 @@ class TestResolveNodePolicy:
         assert isinstance(resolved, AutoModelPolicy)
 
     def test_none_when_mapping_is_silent(self) -> None:
-        mapping = AgentNodeMappingPolicy.model_validate(
-            {"type": "agent_node_mapping"}
-        )
+        mapping = AgentNodeMappingPolicy.model_validate({"type": "agent_node_mapping"})
         assert resolve_node_policy(mapping, "single") is None

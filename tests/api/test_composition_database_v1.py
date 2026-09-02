@@ -54,9 +54,7 @@ class TestDatabaseSettings:
 
     @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "on"])
     def test_echo_truthy_values(self, value: str) -> None:
-        settings = database_settings_from_env(
-            {"DATABASE_URL": URL, "DATABASE_ECHO": value}
-        )
+        settings = database_settings_from_env({"DATABASE_URL": URL, "DATABASE_ECHO": value})
         assert settings is not None and settings.echo is True
 
     def test_echo_defaults_off_and_unknown_values_off(self) -> None:

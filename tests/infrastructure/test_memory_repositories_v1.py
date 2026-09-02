@@ -239,10 +239,7 @@ async def engine() -> Any:
 async def seeded(engine: AsyncEngine) -> AsyncEngine:
     async with engine.begin() as conn:
         await conn.execute(
-            text(
-                "INSERT INTO plans (id, name) VALUES (:id, :name)"
-                " ON CONFLICT (id) DO NOTHING"
-            ),
+            text("INSERT INTO plans (id, name) VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"),
             {"id": PLAN_ID, "name": f"plan-{PLAN_ID}"},
         )
         for tenant_id in (TENANT, OTHER_TENANT):
@@ -275,9 +272,7 @@ async def seeded(engine: AsyncEngine) -> AsyncEngine:
 @requires_live_postgres
 class TestLiveConversations:
     @pytest.mark.asyncio
-    async def test_create_get_status_history_round_trip(
-        self, seeded: AsyncEngine
-    ) -> None:
+    async def test_create_get_status_history_round_trip(self, seeded: AsyncEngine) -> None:
         repo = PostgresConversationRepository(create_session_factory(seeded))
         conv = make_conversation()
         await repo.create_conversation(conv)
@@ -296,14 +291,10 @@ class TestLiveConversations:
 
         archived = await repo.set_status(TENANT, conv.id, ConversationStatus.ARCHIVED)
         assert archived.status is ConversationStatus.ARCHIVED
-        assert (
-            await repo.get_conversation(TENANT, conv.id)
-        ).status is ConversationStatus.ARCHIVED
+        assert (await repo.get_conversation(TENANT, conv.id)).status is ConversationStatus.ARCHIVED
 
     @pytest.mark.asyncio
-    async def test_anti_enumeration_and_duplicate_create(
-        self, seeded: AsyncEngine
-    ) -> None:
+    async def test_anti_enumeration_and_duplicate_create(self, seeded: AsyncEngine) -> None:
         repo = PostgresConversationRepository(create_session_factory(seeded))
         conv = make_conversation()
         await repo.create_conversation(conv)
@@ -337,9 +328,7 @@ class TestLiveConversations:
 @requires_live_postgres
 class TestLiveMemory:
     @pytest.mark.asyncio
-    async def test_upsert_preserves_id_and_accumulates_evidence(
-        self, seeded: AsyncEngine
-    ) -> None:
+    async def test_upsert_preserves_id_and_accumulates_evidence(self, seeded: AsyncEngine) -> None:
         repo = PostgresMemoryRepository(create_session_factory(seeded))
         first = await repo.upsert(make_item(value="ar"))
         assert first.evidence_count == 1
@@ -354,9 +343,7 @@ class TestLiveMemory:
     @pytest.mark.asyncio
     async def test_query_user_scoping_and_recency(self, seeded: AsyncEngine) -> None:
         repo = PostgresMemoryRepository(create_session_factory(seeded))
-        shared = await repo.upsert(
-            make_item(user_id=None, key="tz", value="UTC", last_seen=NOW)
-        )
+        shared = await repo.upsert(make_item(user_id=None, key="tz", value="UTC", last_seen=NOW))
         mine = await repo.upsert(
             make_item(key="lang", value="ar", last_seen=NOW + timedelta(minutes=1))
         )
@@ -370,13 +357,9 @@ class TestLiveMemory:
         assert {r.id for r in only_shared} == {shared.id}
 
     @pytest.mark.asyncio
-    async def test_expiry_confidence_filters_and_delete(
-        self, seeded: AsyncEngine
-    ) -> None:
+    async def test_expiry_confidence_filters_and_delete(self, seeded: AsyncEngine) -> None:
         repo = PostgresMemoryRepository(create_session_factory(seeded))
-        expired = await repo.upsert(
-            make_item(key="stale", expires_at=NOW - timedelta(days=1))
-        )
+        expired = await repo.upsert(make_item(key="stale", expires_at=NOW - timedelta(days=1)))
         low = await repo.upsert(make_item(key="weak", confidence=0.2))
         live = await repo.upsert(make_item(key="fresh", confidence=0.9))
         default = await repo.query(TENANT, user_id=USER)

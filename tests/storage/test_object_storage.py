@@ -42,9 +42,7 @@ class TestPortContract:
         assert meta.content_type == "text/plain"
         assert meta.created_at.tzinfo is not None
 
-    def test_head_returns_metadata_without_payload(
-        self, storage: InMemoryObjectStorage
-    ) -> None:
+    def test_head_returns_metadata_without_payload(self, storage: InMemoryObjectStorage) -> None:
         storage.put(TENANT_A, "k", b"data", "application/octet-stream")
         meta = storage.head(TENANT_A, "k")
         assert meta.size_bytes == 4
@@ -73,9 +71,7 @@ class TestPortContract:
         with pytest.raises(ValueError):
             storage.put(TENANT_A, "", b"data", "text/plain")
 
-    def test_list_keys_prefix_filter_sorted(
-        self, storage: InMemoryObjectStorage
-    ) -> None:
+    def test_list_keys_prefix_filter_sorted(self, storage: InMemoryObjectStorage) -> None:
         storage.put(TENANT_A, "images/b.png", b"1", "image/png")
         storage.put(TENANT_A, "images/a.png", b"2", "image/png")
         storage.put(TENANT_A, "files/doc.txt", b"3", "text/plain")
@@ -93,17 +89,13 @@ class TestPortContract:
 class TestTenantIsolation:
     """20 §6: tenant data must never leak — not even its existence."""
 
-    def test_same_key_is_independent_per_tenant(
-        self, storage: InMemoryObjectStorage
-    ) -> None:
+    def test_same_key_is_independent_per_tenant(self, storage: InMemoryObjectStorage) -> None:
         storage.put(TENANT_A, "shared-key", b"tenant-a-data", "text/plain")
         storage.put(TENANT_B, "shared-key", b"tenant-b-data", "text/plain")
         assert storage.get(TENANT_A, "shared-key") == b"tenant-a-data"
         assert storage.get(TENANT_B, "shared-key") == b"tenant-b-data"
 
-    def test_foreign_tenant_read_raises_not_found(
-        self, storage: InMemoryObjectStorage
-    ) -> None:
+    def test_foreign_tenant_read_raises_not_found(self, storage: InMemoryObjectStorage) -> None:
         storage.put(TENANT_A, "secret.bin", b"a-only", "application/octet-stream")
         with pytest.raises(ObjectNotFound):
             storage.get(TENANT_B, "secret.bin")
@@ -119,17 +111,13 @@ class TestTenantIsolation:
             storage.get(TENANT_B, "never-anywhere")
         assert type(foreign.value) is type(absent.value)
 
-    def test_foreign_delete_cannot_remove_data(
-        self, storage: InMemoryObjectStorage
-    ) -> None:
+    def test_foreign_delete_cannot_remove_data(self, storage: InMemoryObjectStorage) -> None:
         storage.put(TENANT_A, "k", b"survives", "text/plain")
         with pytest.raises(ObjectNotFound):
             storage.delete(TENANT_B, "k")
         assert storage.get(TENANT_A, "k") == b"survives"
 
-    def test_listing_never_crosses_tenants(
-        self, storage: InMemoryObjectStorage
-    ) -> None:
+    def test_listing_never_crosses_tenants(self, storage: InMemoryObjectStorage) -> None:
         storage.put(TENANT_A, "a-file", b"1", "text/plain")
         storage.put(TENANT_B, "b-file", b"2", "text/plain")
         assert storage.list_keys(TENANT_A) == ("a-file",)

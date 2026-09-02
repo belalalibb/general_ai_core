@@ -143,9 +143,7 @@ def parse_agent_proposal(output: object) -> AgentProposal:
     if action == _ACTION_TOOL_CALL:
         extra = set(output) - _TOOL_CALL_KEYS
         if extra:
-            raise InvalidAgentProposal(
-                f"unexpected keys for tool_call: {sorted(extra)}"
-            )
+            raise InvalidAgentProposal(f"unexpected keys for tool_call: {sorted(extra)}")
         if "arguments" not in output:
             raise InvalidAgentProposal("tool_call requires arguments")
         arguments = output["arguments"]
@@ -165,9 +163,5 @@ def parse_agent_proposal(output: object) -> AgentProposal:
         final_output = output["output"]
         if not isinstance(final_output, dict):
             raise InvalidAgentProposal("output must be a JSON object")
-        return FinalProposal(
-            output=final_output, reasoning=_optional_reasoning(output)
-        )
-    raise InvalidAgentProposal(
-        f"action must be one of ['final', 'tool_call'], got {action!r}"
-    )
+        return FinalProposal(output=final_output, reasoning=_optional_reasoning(output))
+    raise InvalidAgentProposal(f"action must be one of ['final', 'tool_call'], got {action!r}")

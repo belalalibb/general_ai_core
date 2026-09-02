@@ -139,10 +139,7 @@ class TestPipelineShape:
         import structlog
 
         processors = build_processors(ObservabilityConfig())
-        names = [
-            getattr(p, "__name__", getattr(p, "__qualname__", repr(p)))
-            for p in processors
-        ]
+        names = [getattr(p, "__name__", getattr(p, "__qualname__", repr(p))) for p in processors]
         fmt_index = processors.index(structlog.processors.format_exc_info)
         # The processor right after format_exc_info is the post-render scrub
         post = processors[fmt_index + 1]

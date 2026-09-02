@@ -76,9 +76,7 @@ class TestAdaptiveSampler:
 
     def test_ratio_one_samples_all_normal_traffic(self) -> None:
         sampler = AdaptiveSampler(ObservabilityConfig(normal_sample_ratio=1.0))
-        assert all(
-            _sample(sampler, tid, {}) is Decision.RECORD_AND_SAMPLE for tid in range(1, 50)
-        )
+        assert all(_sample(sampler, tid, {}) is Decision.RECORD_AND_SAMPLE for tid in range(1, 50))
 
     def test_parent_based_children_follow_sampled_root(self) -> None:
         config = ObservabilityConfig(normal_sample_ratio=0.0)
@@ -87,9 +85,7 @@ class TestAdaptiveSampler:
         provider.add_span_processor(SimpleSpanProcessor(exporter))
         tracer = provider.get_tracer("test")
 
-        with tracer.start_as_current_span(
-            "root-debug", attributes={config.debug_attribute: True}
-        ):
+        with tracer.start_as_current_span("root-debug", attributes={config.debug_attribute: True}):
             with tracer.start_as_current_span("child"):
                 pass
         provider.shutdown()

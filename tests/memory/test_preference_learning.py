@@ -31,9 +31,7 @@ def obs(
     key: str = "preferred_language",
     scope: MemoryScope = MemoryScope.CONVERSATION,
 ) -> PreferenceObservation:
-    return PreferenceObservation.model_validate(
-        {"key": key, "value": value, "scope": scope}
-    )
+    return PreferenceObservation.model_validate({"key": key, "value": value, "scope": scope})
 
 
 def evaluate(
@@ -110,9 +108,7 @@ def test_strict_supporting_majority_admits() -> None:
 
 
 def test_mixed_scope_evidence_refuses_with_named_scopes() -> None:
-    decision = evaluate(
-        [obs(scope=MemoryScope.CONVERSATION), obs(scope=MemoryScope.PROJECT)]
-    )
+    decision = evaluate([obs(scope=MemoryScope.CONVERSATION), obs(scope=MemoryScope.PROJECT)])
     assert not decision.learnable
     assert decision.reason == "scope_unclear:conversation,project"
 
@@ -190,9 +186,7 @@ def test_refusals_carry_no_confidence() -> None:
 
 def test_conditions_checked_in_documented_order() -> None:
     """Evidence failure is reported even when later conditions also fail."""
-    decision = evaluate(
-        [obs()], sensitivity=MemorySensitivity.HIGH, policy_allows_memory=False
-    )
+    decision = evaluate([obs()], sensitivity=MemorySensitivity.HIGH, policy_allows_memory=False)
     assert decision.reason == "insufficient_evidence:1<2"
 
 

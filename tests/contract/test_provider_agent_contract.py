@@ -106,9 +106,7 @@ def test_response_success_must_not_carry_error() -> None:
 
 
 def test_response_success_and_failure_shapes_roundtrip() -> None:
-    ok = ProviderAgentResponse(
-        request_id=uuid4(), succeeded=True, output={"text": "done"}
-    )
+    ok = ProviderAgentResponse(request_id=uuid4(), succeeded=True, output={"text": "done"})
     assert ok.error is None
     failed = ProviderAgentResponse(request_id=uuid4(), succeeded=False, error=_error())
     assert failed.error is not None
@@ -139,9 +137,7 @@ def test_run_status_failed_requires_normalized_error() -> None:
 
 def test_run_status_non_failed_must_not_carry_error() -> None:
     with pytest.raises(ValidationError):
-        ProviderAgentRunStatus(
-            run_id="r1", state=ProviderAgentRunState.SUCCEEDED, error=_error()
-        )
+        ProviderAgentRunStatus(run_id="r1", state=ProviderAgentRunState.SUCCEEDED, error=_error())
 
 
 def test_run_status_every_non_failed_state_expressible_without_error() -> None:
@@ -162,9 +158,7 @@ def test_failed_event_requires_normalized_error() -> None:
 
 def test_non_failed_events_must_not_carry_error() -> None:
     with pytest.raises(ValidationError):
-        ProviderAgentEvent(
-            type=ProviderAgentEventType.COMPLETED, run_id="r1", error=_error()
-        )
+        ProviderAgentEvent(type=ProviderAgentEventType.COMPLETED, run_id="r1", error=_error())
 
 
 def test_every_event_type_expressible_with_opaque_payload() -> None:
@@ -183,9 +177,7 @@ def test_every_event_type_expressible_with_opaque_payload() -> None:
 
 
 def test_contracts_are_frozen_and_reject_unknown_fields() -> None:
-    run = ProviderAgentRun(
-        run_id="r1", request_id=uuid4(), state=ProviderAgentRunState.PENDING
-    )
+    run = ProviderAgentRun(run_id="r1", request_id=uuid4(), state=ProviderAgentRunState.PENDING)
     with pytest.raises(ValidationError):
         run.state = ProviderAgentRunState.RUNNING  # type: ignore[misc]
     with pytest.raises(ValidationError):

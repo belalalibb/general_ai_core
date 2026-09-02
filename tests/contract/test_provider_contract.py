@@ -181,9 +181,7 @@ def test_template_manifest_allows_empty_auth_types() -> None:
 def test_capabilities_include_diversity_categories() -> None:
     # 31 §6 categories 8-10 + §8: embeddings/rerank/moderation/tool_use are
     # declarable capability keys (still deny-by-default).
-    caps = ProviderCapabilities(
-        embeddings=True, rerank=True, moderation=True, tool_use=True
-    )
+    caps = ProviderCapabilities(embeddings=True, rerank=True, moderation=True, tool_use=True)
     assert caps.embeddings and caps.rerank and caps.moderation and caps.tool_use
     assert ProviderCapabilities().embeddings is False
 

@@ -95,9 +95,7 @@ class TestVerifySeam:
     def test_rejected_final_is_corrected_and_reverified(self) -> None:
         """Detect failure → observation → correct → verify again → final."""
         world = AgentWorld()
-        loop, proposer = _loop_with_verify(
-            world, [FINAL_BAD, FINAL_GOOD], verify=_answer_checker
-        )
+        loop, proposer = _loop_with_verify(world, [FINAL_BAD, FINAL_GOOD], verify=_answer_checker)
         report = _execute(loop)
         assert report.stop_reason == STOP_FINAL
         assert report.succeeded
@@ -130,9 +128,7 @@ class TestVerifySeam:
             raise RuntimeError(msg)
 
         world = AgentWorld()
-        loop, _ = _loop_with_verify(
-            world, [FINAL_GOOD], max_steps=1, verify=broken
-        )
+        loop, _ = _loop_with_verify(world, [FINAL_GOOD], max_steps=1, verify=broken)
         report = _execute(loop)
         assert report.stop_reason == STOP_VERIFICATION_FAILED
         assert not report.succeeded
@@ -151,13 +147,9 @@ class TestVerifySeam:
 
     def test_every_verdict_is_a_validator_node(self) -> None:
         world = AgentWorld()
-        loop, _ = _loop_with_verify(
-            world, [FINAL_BAD, FINAL_GOOD], verify=_answer_checker
-        )
+        loop, _ = _loop_with_verify(world, [FINAL_BAD, FINAL_GOOD], verify=_answer_checker)
         report = _execute(loop)
-        validators = [
-            n for n in report.nodes if n.type is ExecutionNodeType.VALIDATOR
-        ]
+        validators = [n for n in report.nodes if n.type is ExecutionNodeType.VALIDATOR]
         assert len(validators) == 2
         assert validators[0].status is ExecutionNodeStatus.FAILED
         assert validators[0].output_ref["verified"] is False

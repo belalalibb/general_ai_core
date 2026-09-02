@@ -82,9 +82,7 @@ def _app(
     )
 
 
-async def _post(
-    app: FastAPI, path: str, body: dict[str, Any]
-) -> httpx.Response:
+async def _post(app: FastAPI, path: str, body: dict[str, Any]) -> httpx.Response:
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
         return await c.post(path, json=body)
@@ -144,9 +142,7 @@ class TestRegistrationAdmission:
             ("  https://example.com/hook", "whitespace"),
         ],
     )
-    def test_inadmissible_urls_refused_named_422(
-        self, url: str, fragment: str
-    ) -> None:
+    def test_inadmissible_urls_refused_named_422(self, url: str, fragment: str) -> None:
         world = World()
         app = _app(world)
         response = run(_post(app, "/v1/webhooks", {"url": url}))
@@ -326,8 +322,7 @@ class TestWorkerTerminalStaging:
         payload = _execute_message_payload(world, execution_id)
         # An unroutable policy: pin a model id that is not registered.
         payload["request"] = (
-            '{"ask": "hi", "model_policy": '
-            '{"type": "explicit_model", "model_id": "no-such-model"}}'
+            '{"ask": "hi", "model_policy": {"type": "explicit_model", "model_id": "no-such-model"}}'
         )
         run(handler(_queue_message(payload)))
         # The denial is stored terminal truth (pre-V6 behavior kept) …
@@ -380,9 +375,7 @@ def test_end_to_end_async_execute_to_webhook_delivery() -> None:
     subscriptions = {world.principal.tenant_id: [subscription]}
 
     app = _app(world, outbox=outbox, subscriptions=subscriptions)
-    response = run(
-        _post(app, "/v1/execute", {"ask": "go", "execution_policy": {"async": True}})
-    )
+    response = run(_post(app, "/v1/execute", {"ask": "go", "execution_policy": {"async": True}}))
     assert response.status_code == 202
     execution_id = response.json()["execution_id"]
 
@@ -423,10 +416,7 @@ def test_end_to_end_async_execute_to_webhook_delivery() -> None:
     ]
     # Every delivery hit the registered URL; the payload tenant matches.
     assert all(url == subscription.url for url, _ in sender.deliveries)
-    assert all(
-        p.tenant_id == str(world.principal.tenant_id)
-        for _, p in sender.deliveries
-    )
+    assert all(p.tenant_id == str(world.principal.tenant_id) for _, p in sender.deliveries)
     # The poll surface agrees with the narrated truth (P6).
     report = world.store.get(world.principal.tenant_id, UUID(execution_id))
     assert report.execution.status.value == "succeeded"

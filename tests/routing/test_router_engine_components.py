@@ -211,9 +211,7 @@ def test_bootstrap_is_deterministic() -> None:
     world, _, _ = _routed_world()
     world_model_b = world.add_model("model-b")
     world.bind(world.providers.get("prov_a").provider, world_model_b)
-    bootstrap = BootstrapRouter(
-        world.router(), policy=TierModelPolicy(type="tier", tier="medium")
-    )
+    bootstrap = BootstrapRouter(world.router(), policy=TierModelPolicy(type="tier", tier="medium"))
     first = bootstrap.select_analysis_model()
     second = bootstrap.select_analysis_model()
     assert first.selected.model_id == second.selected.model_id
@@ -227,9 +225,7 @@ def test_bootstrap_applies_the_same_hard_filters() -> None:
     world.add_model("model-a")  # deliberately unbound => ineligible
     bootstrap = BootstrapRouter(
         world.router(),
-        policy=ExplicitModelPolicy(
-            type="explicit_model", model_id="model-a", allow_fallback=False
-        ),
+        policy=ExplicitModelPolicy(type="explicit_model", model_id="model-a", allow_fallback=False),
     )
     with pytest.raises(NoEligibleCandidates):
         bootstrap.select_analysis_model()
@@ -262,7 +258,9 @@ def test_explicit_strategy_request_wins() -> None:
     # 11 §13: explicit user choice outranks Router preference.
     planner = StrategyPlanner()
     analysis = TaskAnalysis(
-        task_type="code_review", complexity="medium", risk_level="medium",
+        task_type="code_review",
+        complexity="medium",
+        risk_level="medium",
         needs_agent=True,
     )
     assert (
@@ -286,22 +284,17 @@ def test_unknown_strategy_rejected_never_coerced() -> None:
 def test_auto_maps_needs_agent_to_agent() -> None:
     # 11 §3 needs_agent is the only documented analysis→strategy signal.
     planner = StrategyPlanner()
-    analysis = TaskAnalysis(
-        task_type="ops", complexity="high", risk_level="high", needs_agent=True
-    )
+    analysis = TaskAnalysis(task_type="ops", complexity="high", risk_level="high", needs_agent=True)
     assert planner.plan(task_analysis=analysis) is ExecutionStrategy.AGENT
     assert (
-        planner.plan(requested_strategy="auto", task_analysis=analysis)
-        is ExecutionStrategy.AGENT
+        planner.plan(requested_strategy="auto", task_analysis=analysis) is ExecutionStrategy.AGENT
     )
 
 
 def test_auto_defaults_to_single() -> None:
     planner = StrategyPlanner()
     assert planner.plan() is ExecutionStrategy.SINGLE
-    no_agent = TaskAnalysis(
-        task_type="chat", complexity="low", risk_level="low", needs_agent=False
-    )
+    no_agent = TaskAnalysis(task_type="chat", complexity="low", risk_level="low", needs_agent=False)
     assert planner.plan(task_analysis=no_agent) is ExecutionStrategy.SINGLE
     unset = TaskAnalysis(task_type="chat", complexity="low", risk_level="low")
     assert planner.plan(task_analysis=unset) is ExecutionStrategy.SINGLE
@@ -392,9 +385,7 @@ def test_selection_takes_no_lease() -> None:
 
     from core.providers import lease_resource_for
 
-    lease = asyncio.run(
-        world.leases.acquire(lease_resource_for(account.id), "exec-1", 30.0)
-    )
+    lease = asyncio.run(world.leases.acquire(lease_resource_for(account.id), "exec-1", 30.0))
     assert lease is not None
 
 

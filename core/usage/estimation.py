@@ -73,9 +73,7 @@ class TaskUnitEstimator:
     default survives misconfiguration).
     """
 
-    def __init__(
-        self, unit_values: Mapping[str, float] = DEFAULT_TASK_UNIT_VALUES
-    ) -> None:
+    def __init__(self, unit_values: Mapping[str, float] = DEFAULT_TASK_UNIT_VALUES) -> None:
         for key, value in unit_values.items():
             if value < 0:
                 msg = f"unit value for {key!r} must be >= 0, got {value}"

@@ -104,21 +104,15 @@ class FakeAdapter:
     async def validate_credential(self, credential_ref: str) -> CredentialHealth:
         self.seen_credential_refs.append(credential_ref)
         status = "active" if self._credential_ok else "invalid"
-        return CredentialHealth.model_validate(
-            {"credential_ref": credential_ref, "status": status}
-        )
+        return CredentialHealth.model_validate({"credential_ref": credential_ref, "status": status})
 
-    async def discover_models(
-        self, account_id: UUID | None = None
-    ) -> list[DiscoveredModel]:
+    async def discover_models(self, account_id: UUID | None = None) -> list[DiscoveredModel]:
         return [DiscoveredModel.model_validate(m) for m in self._models]
 
     async def get_capabilities(self) -> ProviderCapabilities:
         return self._manifest.capabilities
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         return ProviderGenerateResponse(
             request_id=request.request_id, succeeded=True, output={"text": "ok"}
         )
@@ -252,9 +246,7 @@ class TestGates:
 
     def test_unknown_modality_refused_never_guessed(self) -> None:
         world = World()
-        adapter = FakeAdapter(
-            models=[{"provider_model_name": "x", "modalities": ["telepathy"]}]
-        )
+        adapter = FakeAdapter(models=[{"provider_model_name": "x", "modalities": ["telepathy"]}])
         with pytest.raises(OnboardingRefused) as exc:
             world.onboard(adapter)
         assert exc.value.step == "step-12-register-bindings"
@@ -267,9 +259,7 @@ class TestGates:
         # Pre-register the model key the onboarding will collide with.
         world.onboard(FakeAdapter(), key="first")
         # Second provider whose model produces the SAME key via prefix.
-        adapter = FakeAdapter(
-            models=[{"provider_model_name": "cand-1", "modalities": ["text"]}]
-        )
+        adapter = FakeAdapter(models=[{"provider_model_name": "cand-1", "modalities": ["text"]}])
         with pytest.raises(OnboardingRefused) as exc:
             run(
                 world.service.onboard(

@@ -105,9 +105,7 @@ class TestTrainingEligibilityGate:
         )
 
     def test_verdicts_cover_exactly_the_condition_set(self) -> None:
-        verdicts = TrainingEligibilityGate().evaluate(
-            make_sample(), passing_signals()
-        )
+        verdicts = TrainingEligibilityGate().evaluate(make_sample(), passing_signals())
         assert tuple(verdicts) == TRAINING_ELIGIBILITY_CONDITIONS
 
     def test_all_conditions_held_admits(self) -> None:
@@ -152,31 +150,23 @@ class TestTrainingEligibilityGate:
 
     @pytest.mark.parametrize(
         "level",
-        [VerificationLevel.RAW, VerificationLevel.EVALUATED,
-         VerificationLevel.VALIDATED],
+        [VerificationLevel.RAW, VerificationLevel.EVALUATED, VerificationLevel.VALIDATED],
     )
-    def test_below_verified_fails_quality_by_default(
-        self, level: VerificationLevel
-    ) -> None:
+    def test_below_verified_fails_quality_by_default(self, level: VerificationLevel) -> None:
         sample = make_sample(level=level)
         with pytest.raises(NotEligibleForTraining) as exc:
             TrainingEligibilityGate().admit(sample, passing_signals())
         assert exc.value.failed == ["quality_level_sufficient"]
 
-    @pytest.mark.parametrize(
-        "level", [VerificationLevel.VERIFIED, VerificationLevel.GOLD]
-    )
+    @pytest.mark.parametrize("level", [VerificationLevel.VERIFIED, VerificationLevel.GOLD])
     def test_verified_and_gold_pass_quality(self, level: VerificationLevel) -> None:
-        verdicts = TrainingEligibilityGate().admit(
-            make_sample(level=level), passing_signals()
-        )
+        verdicts = TrainingEligibilityGate().admit(make_sample(level=level), passing_signals())
         assert verdicts["quality_level_sufficient"] is True
 
     def test_minimum_level_is_injectable_configuration(self) -> None:
         gate = TrainingEligibilityGate(minimum_level=VerificationLevel.GOLD)
         with pytest.raises(NotEligibleForTraining) as exc:
-            gate.admit(make_sample(level=VerificationLevel.VERIFIED),
-                       passing_signals())
+            gate.admit(make_sample(level=VerificationLevel.VERIFIED), passing_signals())
         assert exc.value.failed == ["quality_level_sufficient"]
 
     def test_broken_external_trace_fails_source_trace(self) -> None:
@@ -311,7 +301,5 @@ def test_learning_package_performs_no_io() -> None:
 
     for module in (gates_module, errors_module):
         source = inspect.getsource(module)
-        for forbidden in (
-            "httpx", "requests", "urllib", "socket", "aiohttp", "subprocess"
-        ):
+        for forbidden in ("httpx", "requests", "urllib", "socket", "aiohttp", "subprocess"):
             assert forbidden not in source

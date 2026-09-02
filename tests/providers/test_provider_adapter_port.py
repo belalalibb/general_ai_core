@@ -71,13 +71,9 @@ class FakeTextAdapter:
 
     async def validate_credential(self, credential_ref: str) -> CredentialHealth:
         status = "active" if credential_ref in self._known_credential_refs else "invalid"
-        return CredentialHealth.model_validate(
-            {"credential_ref": credential_ref, "status": status}
-        )
+        return CredentialHealth.model_validate({"credential_ref": credential_ref, "status": status})
 
-    async def discover_models(
-        self, account_id: UUID | None = None
-    ) -> list[DiscoveredModel]:
+    async def discover_models(self, account_id: UUID | None = None) -> list[DiscoveredModel]:
         return [
             DiscoveredModel.model_validate(
                 {"provider_model_name": "fake-text-1", "modalities": ["text"]}
@@ -87,9 +83,7 @@ class FakeTextAdapter:
     async def get_capabilities(self) -> ProviderCapabilities:
         return self._manifest.capabilities
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         if request.operation not in self._manifest.operations:
             return ProviderGenerateResponse(
                 request_id=request.request_id,
@@ -120,9 +114,7 @@ class FakeTextAdapter:
                     "accounts": {"acct-1": "READY", "acct-2": "AUTH_EXPIRED"},
                 }
             )
-        return ProviderHealth.model_validate(
-            {"provider_id": "fake_text", "state": "HEALTHY"}
-        )
+        return ProviderHealth.model_validate({"provider_id": "fake_text", "state": "HEALTHY"})
 
     def normalize_error(self, error: object) -> ProviderError:
         # Raw provider failure objects never cross the boundary (30 §14).

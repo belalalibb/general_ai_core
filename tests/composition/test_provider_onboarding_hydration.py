@@ -51,9 +51,7 @@ from core.providers import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.secrets.memory import InMemorySecretManager
 from providers.real.gateway import RemoteGatewayAdapter
 
-SETTINGS = GatewaySettings(
-    base_url="http://localhost:9999", secret="gw-secret", secret_version=1
-)
+SETTINGS = GatewaySettings(base_url="http://localhost:9999", secret="gw-secret", secret_version=1)
 
 
 def _definition(provider_key: str = "gw_alpha") -> dict[str, Any]:
@@ -208,9 +206,7 @@ class TestHydration:
         # One derivation, two consumers: hydration's manifest equals the
         # route's manifest for the same stored definition.
         definition = GatewayOnboardRequest.model_validate(_definition())
-        assert manifest_from_definition(definition) == manifest_from_definition(
-            definition
-        )
+        assert manifest_from_definition(definition) == manifest_from_definition(definition)
 
     def test_platform_custody_scope_is_deterministic(self) -> None:
         # Refs stored under this scope must stay resolvable across restarts.

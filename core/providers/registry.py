@@ -160,9 +160,7 @@ class ProviderRegistry:
 
     # -- eligibility (the registry's real job) -----------------------------------
 
-    def supports_operation(
-        self, provider_key: str, operation: ProviderOperation
-    ) -> bool:
+    def supports_operation(self, provider_key: str, operation: ProviderOperation) -> bool:
         """Manifest-declared operation check (30 §5). Unknown => False."""
         entry = self.get(provider_key)
         return operation in entry.manifest.operations
@@ -307,11 +305,7 @@ class ModelRegistry:
         Compares against ``Modality.value`` strings so callers do not need
         the enum type.
         """
-        return [
-            m
-            for m in self.active_models()
-            if modality in {mod.value for mod in m.modalities}
-        ]
+        return [m for m in self.active_models() if modality in {mod.value for mod in m.modalities}]
 
 
 class BindingRegistry:
@@ -396,9 +390,7 @@ def aggregate_provider_health(
         )
 
     unhealthy = [
-        key
-        for key, state in accounts.items()
-        if state is not AccountHealthCheckState.READY
+        key for key, state in accounts.items() if state is not AccountHealthCheckState.READY
     ]
     if unhealthy:
         return ProviderHealth(

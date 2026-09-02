@@ -81,9 +81,7 @@ def test_non_admin_cannot_register_system_role() -> None:
     assert registry.list_all() == []  # refusal writes nothing
 
 
-@pytest.mark.parametrize(
-    "scope", [RoleScope.TENANT, RoleScope.USER, RoleScope.PROJECT]
-)
+@pytest.mark.parametrize("scope", [RoleScope.TENANT, RoleScope.USER, RoleScope.PROJECT])
 def test_non_admin_creates_custom_roles(scope: RoleScope) -> None:
     """41 §15: Custom Roles are user/project created."""
     registry = RoleRegistry()
@@ -95,17 +93,13 @@ def test_non_admin_creates_custom_roles(scope: RoleScope) -> None:
 
 def test_admin_may_also_create_custom_roles() -> None:
     registry = RoleRegistry()
-    decision = RoleGovernance(registry).register(
-        make_role(scope=RoleScope.PROJECT), is_admin=True
-    )
+    decision = RoleGovernance(registry).register(make_role(scope=RoleScope.PROJECT), is_admin=True)
     assert decision.admitted
 
 
 def test_evaluate_is_pure_and_writes_nothing() -> None:
     registry = RoleRegistry()
-    decision = RoleGovernance(registry).evaluate(
-        make_role(scope=RoleScope.USER), is_admin=False
-    )
+    decision = RoleGovernance(registry).evaluate(make_role(scope=RoleScope.USER), is_admin=False)
     assert decision.admitted
     assert registry.list_all() == []
 
@@ -126,9 +120,7 @@ def test_governed_registration_still_rejects_duplicates() -> None:
 def test_custom_role_capability_requests_recorded_never_granted() -> None:
     """Requesting is legal (03 §8); the decision RECORDS, grants nothing."""
     registry = RoleRegistry()
-    role = make_role(
-        scope=RoleScope.USER, capabilities=["coding", "web_search"]
-    )
+    role = make_role(scope=RoleScope.USER, capabilities=["coding", "web_search"])
     decision = RoleGovernance(registry).register(role, is_admin=False)
     assert decision.admitted
     assert decision.capabilities_requested == ("coding", "web_search")
@@ -139,9 +131,7 @@ def test_custom_role_capability_requests_recorded_never_granted() -> None:
 def test_runtime_override_cannot_carry_capability_fields() -> None:
     """The runtime-escalation channel is structurally closed."""
     with pytest.raises(ValidationError):
-        RoleRuntimeOverride.model_validate(
-            {"capabilities_requested": ["admin_access"]}
-        )
+        RoleRuntimeOverride.model_validate({"capabilities_requested": ["admin_access"]})
     with pytest.raises(ValidationError):
         RoleRuntimeOverride.model_validate({"scope": "system"})
     with pytest.raises(ValidationError):
@@ -214,6 +204,4 @@ def test_override_never_mutates_the_persisted_entity() -> None:
 def test_profile_rejects_unknown_fields() -> None:
     """No smuggled surfaces: the profile is exactly the documented items."""
     with pytest.raises(ValidationError):
-        RoleProfile.model_validate(
-            {"role": make_role(), "permissions": ["admin"]}
-        )
+        RoleProfile.model_validate({"role": make_role(), "permissions": ["admin"]})

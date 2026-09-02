@@ -58,9 +58,7 @@ class TestObjectStorageSettings:
 
     def test_ambient_credentials_allowed(self) -> None:
         # IAM-role deployments: bucket only, both keys absent.
-        settings = object_storage_settings_from_env(
-            {"OBJECT_STORAGE_BUCKET": "platform-blobs"}
-        )
+        settings = object_storage_settings_from_env({"OBJECT_STORAGE_BUCKET": "platform-blobs"})
         assert settings is not None
         assert settings.access_key is None
         assert settings.secret_key is None
@@ -124,9 +122,7 @@ class TestVaultSettings:
         )
 
     def test_mount_defaults_to_secret(self) -> None:
-        settings = vault_settings_from_env(
-            {"VAULT_ADDR": "http://v:8200", "VAULT_TOKEN": TOKEN}
-        )
+        settings = vault_settings_from_env({"VAULT_ADDR": "http://v:8200", "VAULT_TOKEN": TOKEN})
         assert settings is not None
         assert settings.mount_point == "secret"
 
@@ -135,9 +131,7 @@ class TestVaultSettings:
             vault_settings_from_env({"VAULT_ADDR": "http://v:8200"})
 
     def test_repr_never_contains_token(self) -> None:
-        settings = vault_settings_from_env(
-            {"VAULT_ADDR": "http://v:8200", "VAULT_TOKEN": TOKEN}
-        )
+        settings = vault_settings_from_env({"VAULT_ADDR": "http://v:8200", "VAULT_TOKEN": TOKEN})
         assert TOKEN not in repr(settings)
         assert "[SCRUBBED]" in repr(settings)
 

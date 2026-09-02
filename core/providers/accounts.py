@@ -118,10 +118,7 @@ class AccountPool:
         if self._side is not None:
             pool_is_platform = self._side is OwnerType.PLATFORM
             if pool_is_platform != incoming_is_platform:
-                msg = (
-                    "never mix platform and user credentials in one account"
-                    " pool (30 §10.5)"
-                )
+                msg = "never mix platform and user credentials in one account pool (30 §10.5)"
                 raise PoolOwnershipViolation(msg)
         if account.id in self._accounts:
             msg = f"account already registered: {account.id}"
@@ -129,9 +126,7 @@ class AccountPool:
         self._accounts[account.id] = account
         self._credentials[account.id] = credential
         if self._side is None:
-            self._side = (
-                OwnerType.PLATFORM if incoming_is_platform else account.owner_type
-            )
+            self._side = OwnerType.PLATFORM if incoming_is_platform else account.owner_type
 
     def replace_account(self, account: ProviderAccount) -> None:
         """Update a registered account's record (lifecycle transitions).
@@ -310,18 +305,13 @@ class AccountPoolManager:
             model_id=model_id,
         )
         for account in candidates:
-            lease = await self._leases.acquire(
-                lease_resource_for(account.id), owner, ttl_seconds
-            )
+            lease = await self._leases.acquire(lease_resource_for(account.id), owner, ttl_seconds)
             if lease is None:
                 continue  # held elsewhere — concurrency working as intended
             self._use_seq += 1
             self._last_used[account.id] = self._use_seq
             return account, lease
-        msg = (
-            f"no eligible, leasable account for provider {provider_key!r}"
-            " (30 §10.3/§10.4)"
-        )
+        msg = f"no eligible, leasable account for provider {provider_key!r} (30 §10.3/§10.4)"
         raise NoEligibleAccount(msg)
 
     async def release_account(self, lease: Lease) -> None:

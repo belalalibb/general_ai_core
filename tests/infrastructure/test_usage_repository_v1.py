@@ -104,9 +104,7 @@ class TestHermetic:
         point_read = select(worker_idempotency_keys.c.key).where(
             worker_idempotency_keys.c.key == "k"
         )
-        assert "worker_idempotency_keys" in str(
-            point_read.compile(dialect=postgresql.dialect())
-        )
+        assert "worker_idempotency_keys" in str(point_read.compile(dialect=postgresql.dialect()))
 
     @pytest.mark.asyncio
     async def test_negative_units_refused_before_any_io(self) -> None:
@@ -125,11 +123,7 @@ class TestHermetic:
             await repo.configure_tenant(TENANT, plan="pro", task_units_limit=-1.0)
 
     def test_usage_repository_surface_is_port_plus_admin_seam(self) -> None:
-        public = {
-            name
-            for name in dir(PostgresUsageRepository)
-            if not name.startswith("_")
-        }
+        public = {name for name in dir(PostgresUsageRepository) if not name.startswith("_")}
         # UsageAccountingPort methods + the configure_tenant admin seam
         # (core/usage/memory.py surface, verbatim) — nothing else.
         assert public == {
@@ -143,11 +137,7 @@ class TestHermetic:
         }
 
     def test_idempotency_store_surface_is_exactly_the_port(self) -> None:
-        public = {
-            name
-            for name in dir(PostgresIdempotencyStore)
-            if not name.startswith("_")
-        }
+        public = {name for name in dir(PostgresIdempotencyStore) if not name.startswith("_")}
         assert public == {"seen", "record"}
 
 
@@ -177,10 +167,7 @@ async def repo(engine: AsyncEngine) -> PostgresUsageRepository:
     factory = create_session_factory(engine)
     async with engine.begin() as conn:
         await conn.execute(
-            text(
-                "INSERT INTO plans (id, name) VALUES (:id, :name)"
-                " ON CONFLICT (id) DO NOTHING"
-            ),
+            text("INSERT INTO plans (id, name) VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"),
             {"id": SEED_PLAN_ID, "name": f"seed-{SEED_PLAN_ID}"},
         )
         for tenant_id in (TENANT, OTHER_TENANT):
@@ -249,9 +236,7 @@ class TestLiveUsageAccounting:
         assert mid.task_units.remaining == 6.0
         assert mid.modality_limits == {"image_generations": 5}
 
-        settled = await repo.settle(
-            execution_id, 3.0, modality_costs={"image_generations": 1}
-        )
+        settled = await repo.settle(execution_id, 3.0, modality_costs={"image_generations": 1})
         assert settled.status is UsageLedgerStatus.SETTLED
         assert settled.units_settled == 3.0
         assert settled.modality_costs == {"image_generations": 1}
@@ -343,9 +328,7 @@ class TestLiveUsageAccounting:
 @requires_live_postgres
 class TestLiveIdempotencyStore:
     @pytest.mark.asyncio
-    async def test_seen_record_and_duplicate_record_is_noop(
-        self, engine: AsyncEngine
-    ) -> None:
+    async def test_seen_record_and_duplicate_record_is_noop(self, engine: AsyncEngine) -> None:
         store = PostgresIdempotencyStore(create_session_factory(engine))
         key = f"task:{uuid4()}"
         assert await store.seen(key) is False

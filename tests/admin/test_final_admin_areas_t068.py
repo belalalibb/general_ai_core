@@ -156,9 +156,7 @@ class TestActivationBoundary:
         world = World(active_areas=MVP_ACTIVE_ADMIN_AREAS)
         for action in (AdminAction.ENABLE_SKILL, AdminAction.DISABLE_TOOL):
             with pytest.raises(InactiveAdminArea):
-                world.service.draft(
-                    tenant_id=TENANT, actor_id=ACTOR, action=action, payload={}
-                )
+                world.service.draft(tenant_id=TENANT, actor_id=ACTOR, action=action, payload={})
 
     def test_inert_areas_stay_inert_under_final_set(self) -> None:
         """Learning/Security/etc have NO actions — structurally inert."""
@@ -289,9 +287,7 @@ class TestPublishNewAreas:
         world = World()
         skill = make_skill(SkillStatus.ACTIVE)
         world.skills.register(skill)
-        published = world.publish(
-            AdminAction.DISABLE_SKILL, {"skill_id": str(skill.id)}
-        )
+        published = world.publish(AdminAction.DISABLE_SKILL, {"skill_id": str(skill.id)})
         assert published.published_version == "skills-v1"
 
     def test_skill_publish_lands_audit_event(self) -> None:
@@ -300,9 +296,7 @@ class TestPublishNewAreas:
         world.skills.register(skill)
         world.publish(AdminAction.DISABLE_SKILL, {"skill_id": str(skill.id)})
         events = world.audit.read(TENANT)
-        assert any(
-            e.event_type is AuditEventType.ADMIN_CONFIG_PUBLISHED for e in events
-        )
+        assert any(e.event_type is AuditEventType.ADMIN_CONFIG_PUBLISHED for e in events)
 
 
 # --- rollback restores previous version (21 §9) -----------------------------------------
@@ -313,9 +307,7 @@ class TestRollbackNewAreas:
         world = World()
         skill = make_skill(SkillStatus.ACTIVE)
         world.skills.register(skill)
-        published = world.publish(
-            AdminAction.DISABLE_SKILL, {"skill_id": str(skill.id)}
-        )
+        published = world.publish(AdminAction.DISABLE_SKILL, {"skill_id": str(skill.id)})
         assert world.skills.get(skill.id).status is SkillStatus.DISABLED
         world.service.rollback(TENANT, published.id)
         restored = world.skills.get(skill.id)

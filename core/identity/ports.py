@@ -67,9 +67,7 @@ class IdentityServicePort(Protocol):
     in-memory service and the durable service satisfy this as-is.
     """
 
-    def register(
-        self, email: str, password: str, preferred_language: str
-    ) -> User: ...
+    def register(self, email: str, password: str, preferred_language: str) -> User: ...
 
     def verify_email(self, token: str) -> User: ...
 

@@ -295,3 +295,83 @@ class TestSkillToolIntelligence:
         assert response.status_code == 200
         assert world.fs.writes == []  # disclosed by the skill, REFUSED by the firewall
         assert "refused" in world.adapter.requests[1].payload["ask"]
+
+
+# --- R165: caller-requested agent budget (execution_policy.max_steps / deadline_ms) ---
+
+
+def test_requested_max_steps_above_runtime_cap_is_loud_validation_error() -> None:
+    world = AgentWorld([model_says(final("x"))], max_steps=4)
+    app = _app(world)
+    response = run(
+        _post(
+            app,
+            {
+                "ask": "hi",
+                "execution_policy": {"strategy": "agent", "max_steps": 5},
+                "tools": {"allowed": []},
+            },
+        )
+    )
+    assert response.status_code == 422, response.text
+    err = response.json()["error"]
+    assert err["details"]["field"] == "execution_policy.max_steps"
+    assert err["details"]["max"] == 4
+    # No reasoning call was made — rejected before any admission work.
+    assert world.adapter.requests == []
+
+
+def test_requested_budget_within_cap_is_honoured_and_recorded() -> None:
+    world = AgentWorld([model_says(final("x"))], max_steps=8, deadline_ms=60_000)
+    store = InMemoryExecutionStore()
+    app = _app(world, store=store)
+    response = run(
+        _post(
+            app,
+            {
+                "ask": "hi",
+                "execution_policy": {"strategy": "agent", "max_steps": 2, "deadline_ms": 5_000},
+                "tools": {"allowed": []},
+            },
+        )
+    )
+    assert response.status_code == 200, response.text
+    # The model was told the SMALLER budget it must finalize within.
+    first_ask = world.adapter.requests[0].payload["ask"]
+    assert '"max_steps": 2' in first_ask
+    record = store.get(TENANT, UUID(response.json()["execution_id"]))
+    assert record.execution.cost_snapshot["deadline_ms"] == 5_000
+
+
+def test_requested_deadline_above_runtime_deadline_is_clamped_not_rejected() -> None:
+    # Wall-clock is clamped by the runtime (existing rule); steps are the loud one.
+    world = AgentWorld([model_says(final("x"))], deadline_ms=1_000)
+    store = InMemoryExecutionStore()
+    app = _app(world, store=store)
+    response = run(
+        _post(
+            app,
+            {
+                "ask": "hi",
+                "execution_policy": {"strategy": "agent", "deadline_ms": 999_000},
+                "tools": {"allowed": []},
+            },
+        )
+    )
+    assert response.status_code == 200, response.text
+    record = store.get(TENANT, UUID(response.json()["execution_id"]))
+    assert record.execution.cost_snapshot["deadline_ms"] == 1_000
+
+
+def test_execution_policy_budget_fields_are_bounded() -> None:
+    from pydantic import ValidationError
+
+    from core.contracts.execute import ExecutionPolicy
+
+    assert ExecutionPolicy.model_validate({"max_steps": 1, "deadline_ms": 1000}).max_steps == 1
+    for bad in ({"max_steps": 0}, {"deadline_ms": 999}, {"max_steps": "many"}):
+        try:
+            ExecutionPolicy.model_validate(bad)
+        except ValidationError:
+            continue
+        raise AssertionError(f"accepted {bad}")

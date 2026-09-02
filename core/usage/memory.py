@@ -101,9 +101,7 @@ class InMemoryUsageAccounting:
 
     # --- port implementation ---------------------------------------------------
 
-    def reserve(
-        self, tenant_id: UUID, execution_id: UUID, units: float
-    ) -> UsageLedger:
+    def reserve(self, tenant_id: UUID, execution_id: UUID, units: float) -> UsageLedger:
         if units < 0:
             msg = "reservation units must be >= 0"
             raise ValueError(msg)
@@ -114,9 +112,7 @@ class InMemoryUsageAccounting:
         if existing is not None:
             raise ReservationAlreadyResolved(execution_id, existing.status.value)
         if units > budget.remaining:
-            raise BudgetExceeded(
-                tenant_id, requested=units, remaining=max(budget.remaining, 0.0)
-            )
+            raise BudgetExceeded(tenant_id, requested=units, remaining=max(budget.remaining, 0.0))
         budget.held += units
         entry = UsageLedger(
             id=self._id_factory(),

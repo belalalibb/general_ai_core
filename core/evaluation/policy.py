@@ -122,9 +122,7 @@ class ModelJudgePort(Protocol):
     the policy service CONTAINS that failure (degrade, never crash).
     """
 
-    async def judge(
-        self, tenant_id: UUID, execution_id: UUID, output: JsonObject
-    ) -> GraderResult:
+    async def judge(self, tenant_id: UUID, execution_id: UUID, output: JsonObject) -> GraderResult:
         """Judge one execution output; raise ``JudgeFailure`` on any problem."""
         ...
 
@@ -160,9 +158,7 @@ class AdapterModelJudge:
         self._timeout_ms = timeout_ms
         self._id_factory = id_factory
 
-    async def judge(
-        self, tenant_id: UUID, execution_id: UUID, output: JsonObject
-    ) -> GraderResult:
+    async def judge(self, tenant_id: UUID, execution_id: UUID, output: JsonObject) -> GraderResult:
         request = ProviderGenerateRequest(
             request_id=self._id_factory(),
             tenant_id=tenant_id,
@@ -279,9 +275,7 @@ class EvaluationPolicyService:
             score=score if level is not VerificationLevel.RAW else None,
             confidence=confidence if level is not VerificationLevel.RAW else None,
             evidence_ref=(
-                f"object://evidence/{record_id}"
-                if level is not VerificationLevel.RAW
-                else None
+                f"object://evidence/{record_id}" if level is not VerificationLevel.RAW else None
             ),
             graders=tuple(rows),
         )
@@ -345,10 +339,7 @@ class EvaluationPolicyService:
         achieved = order.index(VerificationLevel.EVALUATED)
         if checks and all_checks_passed:
             achieved = order.index(VerificationLevel.VALIDATED)
-        if (
-            confidence is not None
-            and confidence >= self._verified_confidence_threshold
-        ):
+        if confidence is not None and confidence >= self._verified_confidence_threshold:
             achieved = order.index(VerificationLevel.VERIFIED)
 
         return order[min(achieved, cap)]

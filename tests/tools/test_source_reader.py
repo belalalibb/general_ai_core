@@ -109,9 +109,7 @@ class TestBounds:
 class TestSearch:
     def test_literal_match_with_line_numbers(self, tree: Path) -> None:
         result = reader(tree).search("needle_here")
-        assert result["matches"] == [
-            {"path": "pkg/mod.py", "line": 2, "text": "needle_here"}
-        ]
+        assert result["matches"] == [{"path": "pkg/mod.py", "line": 2, "text": "needle_here"}]
 
     def test_search_is_literal_not_regex(self, tree: Path) -> None:
         (tree / "pkg" / "lit.py").write_text("a.*b literal\n")

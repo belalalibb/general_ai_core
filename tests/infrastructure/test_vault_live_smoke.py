@@ -45,9 +45,7 @@ def manager() -> VaultSecretManager:
 
 @requires_live_vault
 class TestVaultLiveSmoke:
-    def test_store_resolve_revoke_round_trip(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_store_resolve_revoke_round_trip(self, manager: VaultSecretManager) -> None:
         value = f"smoke-secret-{uuid4()}"
         ref = manager.store(TENANT, value)
         assert ref.startswith("vault:")
@@ -67,9 +65,7 @@ class TestVaultLiveSmoke:
         with pytest.raises(SecretNotFound):
             manager.revoke(TENANT, f"vault:{uuid4()}")
 
-    def test_revocation_is_final_on_real_server(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_revocation_is_final_on_real_server(self, manager: VaultSecretManager) -> None:
         # KV v2 soft-delete would leave the value recoverable; the adapter
         # uses metadata deletion — a re-read after revoke must be NOT FOUND,
         # not a "deleted version" response.
@@ -78,9 +74,7 @@ class TestVaultLiveSmoke:
         with pytest.raises(SecretNotFound):
             manager.resolve(TENANT, ref)
 
-    def test_foreign_tenant_isolation_on_real_server(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_foreign_tenant_isolation_on_real_server(self, manager: VaultSecretManager) -> None:
         value = f"smoke-{uuid4()}"
         ref = manager.store(TENANT, value)
         try:

@@ -132,9 +132,7 @@ class AgentWorld:
         loop = AgentLoop(
             propose=proposer,
             tools=self.executor,
-            bindings=(
-                bindings if bindings is not None else {"github.read": self.binding}
-            ),
+            bindings=(bindings if bindings is not None else {"github.read": self.binding}),
             max_steps=max_steps,
         )
         return loop, proposer
@@ -181,9 +179,7 @@ def test_report_strategy_is_agent() -> None:
 
 def test_tool_call_flows_through_gated_executor() -> None:
     world = AgentWorld()
-    loop, proposer = world.loop(
-        [_tool_call(path="README.md"), _final(done=True)]
-    )
+    loop, proposer = world.loop([_tool_call(path="README.md"), _final(done=True)])
     report = world.run(loop)
     assert report.succeeded is True
     # the handler saw exactly the model's arguments
@@ -191,9 +187,7 @@ def test_tool_call_flows_through_gated_executor() -> None:
     # observation carried the tool result back into the next proposal payload
     second_payload = proposer.payloads[1]
     assert second_payload["observations"][0]["status"] == "succeeded"
-    assert second_payload["observations"][0]["result"] == {
-        "echo": {"path": "README.md"}
-    }
+    assert second_payload["observations"][0]["result"] == {"echo": {"path": "README.md"}}
     # the act passed the gate: exactly one TOOL_CALL audit event exists
     events = world.audit.read(tenant_id=TENANT)
     assert len(events) == 1
@@ -273,9 +267,7 @@ def test_gate_refusal_becomes_observation_model_can_react_to() -> None:
     registry = ToolRegistry()
     registry.register(disabled)
     executor = ToolExecutor(
-        gate=ToolCallGate(
-            tools=registry, firewall=granting_firewall(), devices=DeviceRegistry()
-        ),
+        gate=ToolCallGate(tools=registry, firewall=granting_firewall(), devices=DeviceRegistry()),
         handlers={disabled.id: world.handler},
         audit=world.audit,
         usage=world.usage,
@@ -306,9 +298,7 @@ def test_gate_refusal_becomes_observation_model_can_react_to() -> None:
 def test_unknown_tool_name_refused_without_execution() -> None:
     """A name outside the composition bindings executes NOTHING."""
     world = AgentWorld()
-    loop, proposer = world.loop(
-        [_tool_call(tool="filesystem.delete_everything"), _final(ok=True)]
-    )
+    loop, proposer = world.loop([_tool_call(tool="filesystem.delete_everything"), _final(ok=True)])
     report = world.run(loop)
     assert report.succeeded is True
     obs = proposer.payloads[1]["observations"][0]
@@ -392,9 +382,7 @@ def test_handler_failure_observed_and_run_continues() -> None:
     registry = ToolRegistry()
     registry.register(world.tool)
     executor = ToolExecutor(
-        gate=ToolCallGate(
-            tools=registry, firewall=granting_firewall(), devices=DeviceRegistry()
-        ),
+        gate=ToolCallGate(tools=registry, firewall=granting_firewall(), devices=DeviceRegistry()),
         handlers={world.tool.id: failing},
         audit=world.audit,
         usage=world.usage,

@@ -80,11 +80,7 @@ class SourceReader:
 
     def _admit(self, rel_path: str) -> Path:
         """Resolve ``rel_path`` inside the jail or refuse with typed data."""
-        if (
-            not rel_path
-            or rel_path.startswith(("/", "\\"))
-            or ".." in Path(rel_path).parts
-        ):
+        if not rel_path or rel_path.startswith(("/", "\\")) or ".." in Path(rel_path).parts:
             raise SourceReadRefused("path must be relative and inside the source root")
         candidate = (self.root / rel_path).resolve()
         if candidate != self.root and self.root not in candidate.parents:
@@ -133,9 +129,7 @@ class SourceReader:
             entries.append(rel_posix)
         return {"files": entries, "truncated": truncated}
 
-    def search(
-        self, text: str, rel_path: str = "", glob: str = "**/*.py"
-    ) -> dict[str, object]:
+    def search(self, text: str, rel_path: str = "", glob: str = "**/*.py") -> dict[str, object]:
         """Literal substring search (no regex) — match- and byte-capped."""
         if not text:
             raise SourceReadRefused("search text must be non-empty")
@@ -165,7 +159,5 @@ class SourceReader:
                     if len(matches) >= self.max_entries:
                         truncated = True
                         break
-                    matches.append(
-                        {"path": rel_posix, "line": number, "text": line[:512]}
-                    )
+                    matches.append({"path": rel_posix, "line": number, "text": line[:512]})
         return {"matches": matches, "truncated": truncated}

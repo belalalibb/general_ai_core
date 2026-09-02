@@ -59,9 +59,7 @@ def run[T](coro: Coroutine[Any, Any, T]) -> T:
 
 
 def _client(app: FastAPI) -> httpx.AsyncClient:
-    return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    )
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
 @pytest.fixture()
@@ -96,9 +94,7 @@ class TestInMemoryProfile:
 
     def test_env_dict_selects_durable_branch(self) -> None:
         # Structure-only proof of the branch condition the builder uses.
-        settings = database_settings_from_env(
-            {"DATABASE_URL": "postgresql+asyncpg://u:p@h/db"}
-        )
+        settings = database_settings_from_env({"DATABASE_URL": "postgresql+asyncpg://u:p@h/db"})
         assert settings is not None
 
 
@@ -120,9 +116,7 @@ class TestEndToEndLoop:
 
         run(scenario())
 
-    def test_async_execute_drains_through_relay_and_worker(
-        self, profile: RuntimeProfile
-    ) -> None:
+    def test_async_execute_drains_through_relay_and_worker(self, profile: RuntimeProfile) -> None:
         """202 → relay_once → run_once → terminal poll (main.py's bodies)."""
 
         async def scenario() -> None:
@@ -180,9 +174,7 @@ class TestRealProviderBranch:
         assert "openai/gpt-oss-20b" in model_keys
 
     def test_both_keys_bind_both_providers(self) -> None:
-        prof = build_runtime_profile(
-            environ={"GROQ_API_KEY": "k1", "GSK_API_KEY": "k2"}
-        )
+        prof = build_runtime_profile(environ={"GROQ_API_KEY": "k1", "GSK_API_KEY": "k2"})
         assert set(prof.provider_keys) == {"groq", "genspark_llm"}
         # No echo fallback when real providers exist:
         assert "local_echo" not in prof.provider_keys
@@ -355,12 +347,8 @@ def _cleanup_tenant(prof: RuntimeProfile, email: str) -> None:
                 text("DELETE FROM email_verification_tokens WHERE email = :e"),
                 {"e": email},
             )
-            await session.execute(
-                text("DELETE FROM users WHERE id = :uid"), {"uid": user_id}
-            )
-            await session.execute(
-                text("DELETE FROM tenants WHERE id = :tid"), {"tid": tenant_id}
-            )
+            await session.execute(text("DELETE FROM users WHERE id = :uid"), {"uid": user_id})
+            await session.execute(text("DELETE FROM tenants WHERE id = :tid"), {"tid": tenant_id})
             await session.commit()
 
     prof.bridge.run(_delete())

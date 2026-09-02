@@ -98,9 +98,7 @@ def validate_webhook_url(url: str) -> str:
     _ = port
     if not hostname:
         raise WebhookUrlRefused(url, "missing host")
-    if hostname.lower() in _REFUSED_HOSTNAMES or hostname.lower().endswith(
-        ".localhost"
-    ):
+    if hostname.lower() in _REFUSED_HOSTNAMES or hostname.lower().endswith(".localhost"):
         raise WebhookUrlRefused(url, "localhost target refused")
     try:
         address = ipaddress.ip_address(hostname)
@@ -122,9 +120,7 @@ def validate_webhook_url(url: str) -> str:
     return url
 
 
-def _idempotency_key(
-    subscription_id: str, event: WebhookEventType, execution_id: str
-) -> str:
+def _idempotency_key(subscription_id: str, event: WebhookEventType, execution_id: str) -> str:
     # One delivery per (subscription, event, execution) — duplicate
     # staging or duplicate bus delivery dedupes at the Worker (40 §4.3).
     return f"webhook:{subscription_id}:{event.value}:{execution_id}"

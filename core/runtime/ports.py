@@ -62,9 +62,7 @@ class Lease:
 class QueuePort(Protocol):
     """At-least-once stream queue with consumer groups (40 §4.1, §4.7)."""
 
-    async def publish(
-        self, stream: str, payload: Mapping[str, str], idempotency_key: str
-    ) -> str:
+    async def publish(self, stream: str, payload: Mapping[str, str], idempotency_key: str) -> str:
         """Append a message; returns the broker message id."""
         ...
 
@@ -114,9 +112,7 @@ class QueuePort(Protocol):
 class LeasePort(Protocol):
     """Fencing-token leases for exclusive resources ONLY (40 §4.4)."""
 
-    async def acquire(
-        self, resource: str, owner: str, ttl_seconds: float
-    ) -> Lease | None:
+    async def acquire(self, resource: str, owner: str, ttl_seconds: float) -> Lease | None:
         """Try to acquire; returns ``None`` if held by another owner."""
         ...
 
@@ -144,9 +140,7 @@ class CachePort(Protocol):
         """Return the cached value or ``None`` (miss is a normal outcome)."""
         ...
 
-    async def set(
-        self, tenant_id: str, key: str, value: str, ttl_seconds: float
-    ) -> None:
+    async def set(self, tenant_id: str, key: str, value: str, ttl_seconds: float) -> None:
         """Store ``value`` under ``(tenant, key)`` for ``ttl_seconds``."""
         ...
 

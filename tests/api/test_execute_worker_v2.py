@@ -132,8 +132,7 @@ def test_routing_denial_stores_failed_terminal_report() -> None:
     payload = _valid_payload(world, execution_id)
     # An explicit_models policy is unsupported by the router — a denial.
     payload["request"] = (
-        '{"ask": "hi", "model_policy":'
-        ' {"type": "explicit_models", "models": [{"model_id": "x"}]}}'
+        '{"ask": "hi", "model_policy": {"type": "explicit_models", "models": [{"model_id": "x"}]}}'
     )
     run(handler(_message(payload)))
     report = world.store.get(world.principal.tenant_id, execution_id)
@@ -151,9 +150,7 @@ def test_budget_denial_stores_failed_terminal_report() -> None:
     run(handler(_message(_valid_payload(world, execution_id))))
     report = world.store.get(world.principal.tenant_id, execution_id)
     assert report.execution.status.value == "failed"
-    assert (
-        report.execution.cost_snapshot["denied"]["reason"] == "entitlement_exceeded"
-    )
+    assert report.execution.cost_snapshot["denied"]["reason"] == "entitlement_exceeded"
     assert world.adapter.requests == []
 
 

@@ -213,9 +213,7 @@ class CounterEvaluator:
         self._judge = judge
         self._tolerance = tolerance
 
-    async def challenge(
-        self, record: EvaluationRecord, output: JsonObject
-    ) -> GraderResult:
+    async def challenge(self, record: EvaluationRecord, output: JsonObject) -> GraderResult:
         """Independent re-judgment; passed = original upheld within tolerance."""
         if record.score is None:
             raise NothingToChallenge(record.id)

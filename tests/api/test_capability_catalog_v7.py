@@ -218,9 +218,7 @@ class TestCapabilityRoute:
 # --- agent R0 tool: same payload, deny-by-default registration ---------------------
 
 
-def _agent_surface(
-    world: World, capabilities: tuple[Capability, ...] | None
-) -> AgentToolSurface:
+def _agent_surface(world: World, capabilities: tuple[Capability, ...] | None) -> AgentToolSurface:
     from apps.api.store import InMemoryExecutionStore
     from core.execution.service import ExecutionService
     from tests.api.test_admin_api import _no_sleep
@@ -291,11 +289,7 @@ class TestAgentCapabilityTool:
         catalog = world.app().state.capability_catalog
         registry = build_registry(_agent_surface(world, catalog))
         dispatcher = ToolDispatcher(registry, audit=world.audit)
-        record = run(
-            dispatcher.dispatch(
-                world.principal, "list_capabilities", {"surprise": True}
-            )
-        )
+        record = run(dispatcher.dispatch(world.principal, "list_capabilities", {"surprise": True}))
         assert not record.ok
         assert record.refusal is not None
         assert "unknown arguments" in record.refusal

@@ -180,9 +180,7 @@ def test_manifest_is_frozen() -> None:
 
 def test_credentials_spec_reuses_03_s4_owner_closed_set() -> None:
     """No duplicate owner enum: values are the 03 §4 platform/tenant/user set."""
-    spec = ToolCredentialsSpec.model_validate(
-        {"supported_owners": ["platform", "tenant", "user"]}
-    )
+    spec = ToolCredentialsSpec.model_validate({"supported_owners": ["platform", "tenant", "user"]})
     assert [o.value for o in spec.supported_owners] == ["platform", "tenant", "user"]
     with pytest.raises(ValidationError):
         ToolCredentialsSpec.model_validate({"supported_owners": ["provider"]})

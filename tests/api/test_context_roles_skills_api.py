@@ -103,9 +103,7 @@ class FakeAdapter:
         raise NotImplementedError
 
     async def validate_credential(self, credential_ref: str) -> CredentialHealth:
-        return CredentialHealth(
-            credential_ref=credential_ref, status=CredentialStatus.ACTIVE
-        )
+        return CredentialHealth(credential_ref=credential_ref, status=CredentialStatus.ACTIVE)
 
     async def discover_models(
         self, account_id: UUID | None = None
@@ -115,9 +113,7 @@ class FakeAdapter:
     async def get_capabilities(self) -> ProviderCapabilities:  # pragma: no cover
         return ProviderCapabilities()
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         self.requests.append(request)
         step: object = self.script.pop(0) if self.script else {"content": "answer"}
         if isinstance(step, ProviderError):
@@ -273,9 +269,7 @@ class World:
             sleeper=_no_sleep,
         )
         composer = (
-            ContextComposer(self.memory, self.conversations, self.roles)
-            if with_composer
-            else None
+            ContextComposer(self.memory, self.conversations, self.roles) if with_composer else None
         )
         return create_app(
             router=router,
@@ -316,9 +310,7 @@ def test_skills_empty_registry_lists_nothing() -> None:
 
 def test_skills_lists_selectable_rows_in_10_7_shape() -> None:
     world = World()
-    world.skills.register(
-        make_skill(manifest_id="code_review", required_tools=["github"])
-    )
+    world.skills.register(make_skill(manifest_id="code_review", required_tools=["github"]))
     response = run(_get(world.app(), "/v1/skills"))
     assert response.status_code == 200
     assert response.json() == {
@@ -338,15 +330,9 @@ def test_skills_listing_excludes_non_selectable_registrations() -> None:
     but NEVER listed (loadable-not-selectable surfaced to the API)."""
     world = World()
     world.skills.register(make_skill(manifest_id="active_local"))
-    world.skills.register(
-        make_skill(manifest_id="still_reviewed", status=SkillStatus.REVIEWED)
-    )
-    world.skills.register(
-        make_skill(manifest_id="switched_off", status=SkillStatus.DISABLED)
-    )
-    world.skills.register(
-        make_skill(manifest_id="from_outside", source=SkillSource.IMPORTED)
-    )
+    world.skills.register(make_skill(manifest_id="still_reviewed", status=SkillStatus.REVIEWED))
+    world.skills.register(make_skill(manifest_id="switched_off", status=SkillStatus.DISABLED))
+    world.skills.register(make_skill(manifest_id="from_outside", source=SkillSource.IMPORTED))
     response = run(_get(world.app(), "/v1/skills"))
     rows = response.json()["skills"]
     assert [row["id"] for row in rows] == ["active_local"]
@@ -453,9 +439,7 @@ def test_success_appends_user_then_assistant_turn() -> None:
     body = {"ask": "first question", "conversation_id": str(conversation_id)}
     response = run(_post(world.app(), body))
     assert response.status_code == 200
-    history = world.conversations.get_history(
-        world.principal.tenant_id, conversation_id
-    )
+    history = world.conversations.get_history(world.principal.tenant_id, conversation_id)
     assert [(m.role.value, m.content) for m in history] == [
         ("user", "first question"),
         ("assistant", "the answer"),
@@ -466,9 +450,7 @@ def test_unknown_conversation_id_is_auto_created_under_caller() -> None:
     world = World()
     conversation_id = uuid4()
     run(_post(world.app(), {"ask": "hello", "conversation_id": str(conversation_id)}))
-    conversation = world.conversations.get_conversation(
-        world.principal.tenant_id, conversation_id
-    )
+    conversation = world.conversations.get_conversation(world.principal.tenant_id, conversation_id)
     assert conversation.user_id == world.principal.user_id
     assert conversation.title == "hello"
 
@@ -476,13 +458,9 @@ def test_unknown_conversation_id_is_auto_created_under_caller() -> None:
 def test_failed_execution_keeps_the_ask_only() -> None:
     world = World(script=[_provider_error()])
     conversation_id = uuid4()
-    response = run(
-        _post(world.app(), {"ask": "doomed", "conversation_id": str(conversation_id)})
-    )
+    response = run(_post(world.app(), {"ask": "doomed", "conversation_id": str(conversation_id)}))
     assert response.status_code == 502
-    history = world.conversations.get_history(
-        world.principal.tenant_id, conversation_id
-    )
+    history = world.conversations.get_history(world.principal.tenant_id, conversation_id)
     assert [(m.role.value, m.content) for m in history] == [("user", "doomed")]
 
 
@@ -509,9 +487,7 @@ def test_cross_user_conversation_denies_unauthorized() -> None:
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "unauthorized"
     # 13 §7: nothing was appended to the other user's history.
-    history = world.conversations.get_history(
-        world.principal.tenant_id, other_user_conversation
-    )
+    history = world.conversations.get_history(world.principal.tenant_id, other_user_conversation)
     assert history == ()
 
 
@@ -524,9 +500,7 @@ def test_idempotent_replay_does_not_duplicate_turns() -> None:
     first = run(_post(app, body, headers))
     second = run(_post(app, body, headers))
     assert first.json()["execution_id"] == second.json()["execution_id"]
-    history = world.conversations.get_history(
-        world.principal.tenant_id, conversation_id
-    )
+    history = world.conversations.get_history(world.principal.tenant_id, conversation_id)
     assert len(history) == 2  # one user + one assistant turn, not four
 
 
@@ -651,9 +625,7 @@ def test_execute_with_selectable_skill_rides_payload_as_data() -> None:
     response = run(_post(world.app(), body))
     assert response.status_code == 200
     sent = world.adapter.requests[0].payload
-    assert sent["skills"] == [
-        {"id": "code_review", "name": "code_review", "version": "1.0.0"}
-    ]
+    assert sent["skills"] == [{"id": "code_review", "name": "code_review", "version": "1.0.0"}]
 
 
 def test_execute_without_skills_field_sends_no_skills_key() -> None:
@@ -678,12 +650,8 @@ def test_non_selectable_skill_same_denial_as_unknown() -> None:
     # 20 §6 anti-enumeration: reviewed-but-not-active and imported-non-local
     # produce the SAME refusal an unknown id gets.
     world = World()
-    world.skills.register(
-        make_skill(manifest_id="still_reviewed", status=SkillStatus.REVIEWED)
-    )
-    world.skills.register(
-        make_skill(manifest_id="foreign", source=SkillSource.IMPORTED)
-    )
+    world.skills.register(make_skill(manifest_id="still_reviewed", status=SkillStatus.REVIEWED))
+    world.skills.register(make_skill(manifest_id="foreign", source=SkillSource.IMPORTED))
     for requested in ("still_reviewed", "foreign", "ghost"):
         response = run(_post(world.app(), {"ask": "hi", "skills": [requested]}))
         assert response.status_code == 422, requested
@@ -695,9 +663,7 @@ def test_non_selectable_skill_same_denial_as_unknown() -> None:
 def test_duplicate_skill_selection_refused() -> None:
     world = World()
     world.skills.register(make_skill(manifest_id="code_review"))
-    response = run(
-        _post(world.app(), {"ask": "hi", "skills": ["code_review", "code_review"]})
-    )
+    response = run(_post(world.app(), {"ask": "hi", "skills": ["code_review", "code_review"]}))
     assert response.status_code == 422
     assert "twice" in response.json()["error"]["message"]
 

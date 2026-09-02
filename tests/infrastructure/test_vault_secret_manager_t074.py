@@ -54,9 +54,7 @@ class StubKvV2:
             raise InvalidPath(f"no value at {mount_point}/data/{path}") from None
         return {"data": {"data": dict(data)}}
 
-    def delete_metadata_and_all_versions(
-        self, *, path: str, mount_point: str
-    ) -> dict[str, Any]:
+    def delete_metadata_and_all_versions(self, *, path: str, mount_point: str) -> dict[str, Any]:
         # Faithful to Vault: silent no-op for absent paths.
         self.paths.pop((mount_point, path), None)
         return {}
@@ -85,9 +83,7 @@ class TestPortConformance:
         ref = manager.store(TENANT_A, SECRET)
         assert manager.resolve(TENANT_A, ref) == SECRET
 
-    def test_ref_is_opaque_and_recognizable(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_ref_is_opaque_and_recognizable(self, manager: VaultSecretManager) -> None:
         ref = manager.store(TENANT_A, SECRET)
         assert ref.startswith("vault:")
         assert SECRET not in ref
@@ -104,9 +100,7 @@ class TestPortConformance:
         with pytest.raises(SecretNotFound):
             manager.resolve(TENANT_A, "vault:never-minted")
 
-    def test_malformed_ref_raises_not_found_without_backend_call(
-        self, kv: StubKvV2
-    ) -> None:
+    def test_malformed_ref_raises_not_found_without_backend_call(self, kv: StubKvV2) -> None:
         class Exploding(StubKvV2):
             def read_secret_version(self, **kwargs: Any) -> dict[str, Any]:
                 raise AssertionError("backend must not be called for malformed refs")
@@ -122,9 +116,7 @@ class TestPortConformance:
         manager.revoke(TENANT_A, ref)
         assert manager.exists(TENANT_A, ref) is False
 
-    def test_revoked_ref_no_longer_resolves(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_revoked_ref_no_longer_resolves(self, manager: VaultSecretManager) -> None:
         ref = manager.store(TENANT_A, SECRET)
         manager.revoke(TENANT_A, ref)
         with pytest.raises(SecretNotFound):
@@ -144,9 +136,7 @@ class TestPortConformance:
         with pytest.raises(SecretNotFound):
             manager.revoke(TENANT_A, "vault:never-minted")
 
-    def test_revoked_and_unknown_are_indistinguishable(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_revoked_and_unknown_are_indistinguishable(self, manager: VaultSecretManager) -> None:
         ref = manager.store(TENANT_A, SECRET)
         manager.revoke(TENANT_A, ref)
         with pytest.raises(SecretNotFound) as revoked:
@@ -157,9 +147,7 @@ class TestPortConformance:
 
 
 class TestNoSecretLeakage:
-    def test_not_found_error_never_contains_secret(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_not_found_error_never_contains_secret(self, manager: VaultSecretManager) -> None:
         ref = manager.store(TENANT_A, SECRET)
         manager.revoke(TENANT_A, ref)
         try:
@@ -168,9 +156,7 @@ class TestNoSecretLeakage:
             assert SECRET not in repr(error)
             assert SECRET not in str(error)
 
-    def test_manager_repr_never_contains_secret(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_manager_repr_never_contains_secret(self, manager: VaultSecretManager) -> None:
         manager.store(TENANT_A, SECRET)
         assert SECRET not in repr(manager)
 
@@ -183,18 +169,14 @@ class TestNoSecretLeakage:
 
 
 class TestTenantIsolation:
-    def test_paths_are_tenant_segmented(
-        self, manager: VaultSecretManager, kv: StubKvV2
-    ) -> None:
+    def test_paths_are_tenant_segmented(self, manager: VaultSecretManager, kv: StubKvV2) -> None:
         # The 20 §6 mechanism itself: every physical path carries the tenant.
         manager.store(TENANT_A, "a-secret")
         manager.store(TENANT_B, "b-secret")
         prefixes = {path.split("/")[0] for _, path in kv.paths}
         assert prefixes == {str(TENANT_A), str(TENANT_B)}
 
-    def test_foreign_tenant_cannot_resolve(
-        self, manager: VaultSecretManager
-    ) -> None:
+    def test_foreign_tenant_cannot_resolve(self, manager: VaultSecretManager) -> None:
         ref = manager.store(TENANT_A, SECRET)
         with pytest.raises(SecretNotFound):
             manager.resolve(TENANT_B, ref)

@@ -82,9 +82,7 @@ def manifest(
             "capabilities": capabilities if capabilities is not None else [],
             "runtime": {
                 "invocation": "user_or_model",
-                "compatible_roles": (
-                    compatible_roles if compatible_roles is not None else []
-                ),
+                "compatible_roles": (compatible_roles if compatible_roles is not None else []),
             },
         }
     )
@@ -296,9 +294,7 @@ def test_activation_requires_recorded_reviewer() -> None:
     service = SkillImportService()
     reviewed = pipeline_to(service, SkillStatus.REVIEWED)
     stripped = reviewed.model_copy(
-        update={
-            "provenance": reviewed.provenance.model_copy(update={"reviewed_by": None})
-        }
+        update={"provenance": reviewed.provenance.model_copy(update={"reviewed_by": None})}
     )
     with pytest.raises(MissingProvenance) as exc:
         service.approve(stripped)
@@ -350,9 +346,7 @@ def make_role_profile(
             "status": "active",
         }
     )
-    return RoleProfile(
-        role=role, preferred_skills=preferred if preferred is not None else []
-    )
+    return RoleProfile(role=role, preferred_skills=preferred if preferred is not None else [])
 
 
 def make_task(*, capabilities: list[str] | None = None) -> TaskAnalysis:
@@ -360,9 +354,7 @@ def make_task(*, capabilities: list[str] | None = None) -> TaskAnalysis:
         {
             "task_type": "code_review",
             "complexity": "medium",
-            "capabilities_required": (
-                capabilities if capabilities is not None else []
-            ),
+            "capabilities_required": (capabilities if capabilities is not None else []),
             "risk_level": "low",
         }
     )
@@ -411,9 +403,7 @@ def test_resolver_candidates_come_from_registry_admission() -> None:
 
 def test_role_incompatibility_excluded_with_named_reason() -> None:
     registry = SkillRegistry()
-    registry.register(
-        local_skill(name="Reviewer Only", compatible_roles=["reviewer"])
-    )
+    registry.register(local_skill(name="Reviewer Only", compatible_roles=["reviewer"]))
     resolver = SkillResolver(registry)
     result = resolver.resolve(task=make_task(), role=make_role_profile())
     assert result.selected == ()
@@ -459,16 +449,10 @@ def test_ranking_preferred_first_then_coverage_then_name() -> None:
 
 def test_ranking_coverage_counts_task_relevant_capabilities() -> None:
     registry = SkillRegistry()
-    registry.register(
-        local_skill(name="Covers Both", capabilities=["review", "summarize"])
-    )
-    registry.register(
-        local_skill(name="Covers One Plus Noise", capabilities=["review", "poetry"])
-    )
+    registry.register(local_skill(name="Covers Both", capabilities=["review", "summarize"]))
+    registry.register(local_skill(name="Covers One Plus Noise", capabilities=["review", "poetry"]))
     resolver = SkillResolver(registry)
-    result = resolver.resolve(
-        task=make_task(capabilities=["review"]), role=make_role_profile()
-    )
+    result = resolver.resolve(task=make_task(capabilities=["review"]), role=make_role_profile())
     # Both cover the single required capability — tie broken by name.
     assert [s.name for s in result.selected] == ["Covers Both", "Covers One Plus Noise"]
 

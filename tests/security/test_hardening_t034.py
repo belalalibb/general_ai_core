@@ -148,9 +148,7 @@ class _RaisingAdapter(FakeAdapter):
     The exception text carries a secret-shaped token and vendor internals;
     NONE of it may reach the client (only normalize_error's safe output)."""
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         self.requests.append(request)
         msg = "VENDOR-STACK-INTERNAL sk-live_abcdefghij0123456789 exploded"
         raise RuntimeError(msg)
@@ -160,9 +158,7 @@ class _BreachingAdapter(FakeAdapter):
     """Adapter that returns succeeded=False WITHOUT a normalized error —
     a contract breach the service must normalize, not propagate."""
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         self.requests.append(request)
         return ProviderGenerateResponse(
             request_id=request.request_id, succeeded=False, error=None, latency_ms=3
@@ -289,11 +285,7 @@ def test_unknown_rate_limit_state_is_never_available() -> None:
 def test_retryable_rate_limited_crosses_with_retryable_true_and_429() -> None:
     """The client-facing envelope must carry the retryability signal for
     rate limits so callers can back off honestly."""
-    world = World(
-        script=[
-            _provider_error(ProviderErrorCategory.RATE_LIMITED, retryable=True)
-        ]
-    )
+    world = World(script=[_provider_error(ProviderErrorCategory.RATE_LIMITED, retryable=True)])
     response = run(_post(world.app(), {"ask": "hi"}))
     assert response.status_code == 429
     payload = response.json()
@@ -302,11 +294,7 @@ def test_retryable_rate_limited_crosses_with_retryable_true_and_429() -> None:
 
 
 def test_nonretryable_rate_limited_crosses_with_retryable_false() -> None:
-    world = World(
-        script=[
-            _provider_error(ProviderErrorCategory.RATE_LIMITED, retryable=False)
-        ]
-    )
+    world = World(script=[_provider_error(ProviderErrorCategory.RATE_LIMITED, retryable=False)])
     response = run(_post(world.app(), {"ask": "hi"}))
     assert response.status_code == 429
     assert response.json()["error"]["retryable"] is False

@@ -29,13 +29,9 @@ class InMemoryAuditLog:
     def append(self, event: AuditEvent) -> AuditEvent:
         is_admin = event.event_type in ADMIN_CHANGE_EVENT_TYPES
         if is_admin and event.admin_change is None:
-            raise InvalidAuditEvent(
-                f"{event.event_type} requires an AdminChangeRecord (21 §8)"
-            )
+            raise InvalidAuditEvent(f"{event.event_type} requires an AdminChangeRecord (21 §8)")
         if not is_admin and event.admin_change is not None:
-            raise InvalidAuditEvent(
-                f"{event.event_type} must not carry an AdminChangeRecord"
-            )
+            raise InvalidAuditEvent(f"{event.event_type} must not carry an AdminChangeRecord")
         self._events.append(event)
         return event
 

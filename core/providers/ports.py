@@ -82,9 +82,7 @@ class ProviderAdapterPort(Protocol):
         """Check one opaque credential reference and report its health."""
         ...
 
-    async def discover_models(
-        self, account_id: UUID | None = None
-    ) -> list[DiscoveredModel]:
+    async def discover_models(self, account_id: UUID | None = None) -> list[DiscoveredModel]:
         """Report the provider's declared models (possibly empty)."""
         ...
 
@@ -92,9 +90,7 @@ class ProviderAdapterPort(Protocol):
         """Return the declared capability set (deny-by-default keys)."""
         ...
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         """Execute one normalized operation; never leak raw errors."""
         ...
 

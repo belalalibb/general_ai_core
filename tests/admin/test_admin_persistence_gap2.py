@@ -176,13 +176,9 @@ class _World:
         return provider, model
 
     def publish(self, action: AdminAction, payload: JsonObject):
-        change = self.admin.draft(
-            tenant_id=TENANT, actor_id=ACTOR, action=action, payload=payload
-        )
+        change = self.admin.draft(tenant_id=TENANT, actor_id=ACTOR, action=action, payload=payload)
         validated = self.admin.validate(TENANT, change.id)
-        assert validated.state is ConfigLifecycleState.VALIDATED, (
-            validated.validation_result
-        )
+        assert validated.state is ConfigLifecycleState.VALIDATED, validated.validation_result
         self.admin.preview(TENANT, change.id)
         return self.admin.publish(TENANT, change.id)
 
@@ -201,9 +197,7 @@ class TestStatusWriteThrough:
     def test_disable_provider_persists_the_disabled_entity(self) -> None:
         world, spy = _world_with_spy()
         provider, _ = world.seed()
-        world.publish(
-            AdminAction.DISABLE_PROVIDER, {"provider_key": provider.provider_key}
-        )
+        world.publish(AdminAction.DISABLE_PROVIDER, {"provider_key": provider.provider_key})
         assert spy.names() == ["persist_provider"]
         persisted = spy.calls[0][1]
         assert isinstance(persisted, Provider)
@@ -263,15 +257,9 @@ class TestStatusWriteThrough:
         published = world.publish(
             AdminAction.DISABLE_PROVIDER, {"provider_key": provider.provider_key}
         )
-        assert (
-            world.providers.get(provider.provider_key).provider.status
-            is ProviderStatus.DISABLED
-        )
+        assert world.providers.get(provider.provider_key).provider.status is ProviderStatus.DISABLED
         world.admin.rollback(TENANT, published.id)
-        assert (
-            world.providers.get(provider.provider_key).provider.status
-            is ProviderStatus.ACTIVE
-        )
+        assert world.providers.get(provider.provider_key).provider.status is ProviderStatus.ACTIVE
 
 
 # --- write-through: register verbs -------------------------------------------------
@@ -294,9 +282,7 @@ def _register_provider_payload(key: str) -> JsonObject:
 class TestRegisterWriteThrough:
     def test_register_provider_persists_the_entity_row(self) -> None:
         world, spy = _world_with_spy()
-        world.publish(
-            AdminAction.REGISTER_PROVIDER, _register_provider_payload("acme")
-        )
+        world.publish(AdminAction.REGISTER_PROVIDER, _register_provider_payload("acme"))
         assert spy.names() == ["persist_provider"]
         persisted = spy.calls[0][1]
         assert isinstance(persisted, Provider)
@@ -393,9 +379,7 @@ class _FakeCatalog:
         return list(self._rows)
 
 
-def _fake_database(
-    providers: list[Provider], models: list[Model]
-) -> SimpleNamespace:
+def _fake_database(providers: list[Provider], models: list[Model]) -> SimpleNamespace:
     return SimpleNamespace(
         provider_catalog=_FakeCatalog(providers),
         model_catalog=_FakeCatalog(models),

@@ -78,9 +78,7 @@ def make_app(
     register_rate_limit: int = 0,
 ) -> tuple[FastAPI, InMemoryIdentityService, _MailSink]:
     sink = _MailSink()
-    identity = InMemoryIdentityService(
-        hasher=_Hasher(), email_sender=sink, default_plan_id=uuid4()
-    )
+    identity = InMemoryIdentityService(hasher=_Hasher(), email_sender=sink, default_plan_id=uuid4())
     app = FastAPI()
     app.include_router(
         create_auth_router(
@@ -95,9 +93,7 @@ def make_app(
 
 
 def _client(app: FastAPI) -> httpx.AsyncClient:
-    return httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://test"
-    )
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
 
 
 # --- register -----------------------------------------------------------------
@@ -138,9 +134,7 @@ class TestRegister:
                     json={"email": EMAIL, "password": PASSWORD},
                 )
                 assert created.status_code == 201
-                verified = await c.post(
-                    "/v1/auth/verify", json={"token": sink.tokens[EMAIL]}
-                )
+                verified = await c.post("/v1/auth/verify", json={"token": sink.tokens[EMAIL]})
                 assert verified.status_code == 200, verified.text
                 assert verified.json()["email_verified"] is True
                 assert verified.json()["status"] == "active"
@@ -240,9 +234,7 @@ class TestVerify:
                 first = await c.post("/v1/auth/verify", json={"token": token})
                 assert first.status_code == 200
                 reused = await c.post("/v1/auth/verify", json={"token": token})
-                garbage = await c.post(
-                    "/v1/auth/verify", json={"token": "not-a-token"}
-                )
+                garbage = await c.post("/v1/auth/verify", json={"token": "not-a-token"})
             assert reused.status_code == 422
             assert garbage.status_code == 422
             assert reused.json() == garbage.json()
@@ -257,9 +249,7 @@ class TestVerify:
 class TestRegisterRateLimit:
     def test_limited_caller_creates_no_account_and_sends_no_email(self) -> None:
         """429 beyond the limit; zero residue (no account, no email)."""
-        app, identity, sink = make_app(
-            rate_limits=InMemoryRateLimiter(), register_rate_limit=1
-        )
+        app, identity, sink = make_app(rate_limits=InMemoryRateLimiter(), register_rate_limit=1)
 
         async def scenario() -> None:
             async with _client(app) as c:

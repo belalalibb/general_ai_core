@@ -86,9 +86,7 @@ async def _get(app: FastAPI, path: str) -> httpx.Response:
         return await client.get(path)
 
 
-async def _post(
-    app: FastAPI, path: str, body: dict[str, object] | None = None
-) -> httpx.Response:
+async def _post(app: FastAPI, path: str, body: dict[str, object] | None = None) -> httpx.Response:
     async with _client(app) as client:
         return await client.post(path, json=body)
 
@@ -124,9 +122,7 @@ class TestServiceModule:
         world = World()
         _seed_audit(world, 3)
         _seed_config_change(world)
-        service = LearningObservabilityService(
-            audit=world.audit, admin_service=world.admin
-        )
+        service = LearningObservabilityService(audit=world.audit, admin_service=world.admin)
         report = service.changes_since_review(world.principal.tenant_id)
         assert report["reviewed"] is False
         assert report["since"] is None
@@ -143,9 +139,7 @@ class TestServiceModule:
     def test_mark_reviewed_is_self_evidencing_and_windows_the_report(self) -> None:
         world = World()
         _seed_audit(world, 2)
-        service = LearningObservabilityService(
-            audit=world.audit, admin_service=world.admin
-        )
+        service = LearningObservabilityService(audit=world.audit, admin_service=world.admin)
         tenant = world.principal.tenant_id
         first = service.mark_reviewed(tenant, world.principal.user_id)
         assert first["previous"] is None
@@ -187,9 +181,7 @@ class TestServiceModule:
         machinery = report["learning_machinery"]
         assert isinstance(machinery, dict)
         assert machinery["placeholder"] is True
-        assert machinery["training_eligibility_conditions"] == list(
-            TRAINING_ELIGIBILITY_CONDITIONS
-        )
+        assert machinery["training_eligibility_conditions"] == list(TRAINING_ELIGIBILITY_CONDITIONS)
         assert machinery["promotion_conditions"] == list(PROMOTION_CONDITIONS)
 
     def test_markers_are_tenant_scoped(self) -> None:
@@ -262,9 +254,7 @@ class TestRoutes:
 # --- agent tools -------------------------------------------------------------------
 
 
-def _agent_surface(
-    world: World, service: LearningObservabilityService | None
-) -> AgentToolSurface:
+def _agent_surface(world: World, service: LearningObservabilityService | None) -> AgentToolSurface:
     execution_service = ExecutionService(
         adapters={world.provider.id: world.adapter},
         credential_refs={world.provider.id: f"secret-ref://{world.provider.id}"},
@@ -308,9 +298,7 @@ class TestAgentTools:
         service = app.state.learning_observability_service
         registry = build_registry(_agent_surface(world, service))
         dispatcher = ToolDispatcher(registry, audit=world.audit)
-        record = run(
-            dispatcher.dispatch(world.principal, "changes_since_review", {})
-        )
+        record = run(dispatcher.dispatch(world.principal, "changes_since_review", {}))
         assert record.ok
         route_body = run(_get(app, REPORT)).json()
         assert record.result is not None
@@ -319,9 +307,7 @@ class TestAgentTools:
         # compare the sections, not the whole audit count).
         assert record.result["reviewed"] == route_body["reviewed"]
         assert record.result["config_changes"] == route_body["config_changes"]
-        assert record.result["learning_machinery"] == (
-            route_body["learning_machinery"]
-        )
+        assert record.result["learning_machinery"] == (route_body["learning_machinery"])
 
     def test_agent_mark_windows_the_shared_service(self) -> None:
         world = World()

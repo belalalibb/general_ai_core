@@ -45,9 +45,7 @@ def _node(node_id: str, node_type: GraphNodeType = GraphNodeType.MODEL_CALL) -> 
 
 
 def _edge(from_node: str, to_node: str, condition: str = "success") -> GraphEdgeSpec:
-    return GraphEdgeSpec.model_validate(
-        {"from": from_node, "to": to_node, "condition": condition}
-    )
+    return GraphEdgeSpec.model_validate({"from": from_node, "to": to_node, "condition": condition})
 
 
 # --- closed sets (doc 12, verbatim) ---------------------------------------------------
@@ -320,9 +318,7 @@ class FakeWorkflowRuntime:
         self._by_key[idempotency_key] = workflow_id
         self._graphs[workflow_id] = graph
         self._status[workflow_id] = ExecutionStatus.RUNNING
-        self._nodes[workflow_id] = {
-            n.id: GraphNodeLifecycle.PENDING for n in graph.nodes
-        }
+        self._nodes[workflow_id] = {n.id: GraphNodeLifecycle.PENDING for n in graph.nodes}
         return workflow_id
 
     async def status(self, workflow_id: str) -> ExecutionStatus:
@@ -371,9 +367,7 @@ def test_node_states_report_the_12_s6_lifecycle() -> None:
     runtime = FakeWorkflowRuntime()
 
     async def scenario() -> dict[str, GraphNodeLifecycle]:
-        workflow_id = await runtime.submit(
-            _pipeline(), idempotency_key="k1", inputs={}
-        )
+        workflow_id = await runtime.submit(_pipeline(), idempotency_key="k1", inputs={})
         return await runtime.node_states(workflow_id)
 
     states = run(scenario())
@@ -388,9 +382,7 @@ def test_cancellation_reaches_status_and_nodes() -> None:
     runtime = FakeWorkflowRuntime()
 
     async def scenario() -> tuple[ExecutionStatus, dict[str, GraphNodeLifecycle]]:
-        workflow_id = await runtime.submit(
-            _pipeline(), idempotency_key="k1", inputs={}
-        )
+        workflow_id = await runtime.submit(_pipeline(), idempotency_key="k1", inputs={})
         await runtime.cancel(workflow_id)
         return await runtime.status(workflow_id), await runtime.node_states(workflow_id)
 
@@ -410,9 +402,7 @@ def test_approval_signal_carries_auditable_actor() -> None:
             nodes=[_node("gate", GraphNodeType.APPROVAL_GATE)],
         )
         workflow_id = await runtime.submit(graph, idempotency_key="k1", inputs={})
-        await runtime.signal_approval(
-            workflow_id, "gate", granted=True, approver_ref="user:alice"
-        )
+        await runtime.signal_approval(workflow_id, "gate", granted=True, approver_ref="user:alice")
 
     run(scenario())
     assert runtime.approval_log == [("wf-1", "gate", True, "user:alice")]
@@ -428,9 +418,7 @@ def test_denied_approval_fails_the_node() -> None:
             nodes=[_node("gate", GraphNodeType.APPROVAL_GATE)],
         )
         workflow_id = await runtime.submit(graph, idempotency_key="k1", inputs={})
-        await runtime.signal_approval(
-            workflow_id, "gate", granted=False, approver_ref="user:bob"
-        )
+        await runtime.signal_approval(workflow_id, "gate", granted=False, approver_ref="user:bob")
         return (await runtime.node_states(workflow_id))["gate"]
 
     assert run(scenario()) is GraphNodeLifecycle.FAILED

@@ -60,6 +60,8 @@ below is read from the process environment at start.
 | `GSK_API_KEY` | binds the real Genspark LLM proxy adapter (direct) | absent |
 | `GATEWAY_BASE_URL`, `GATEWAY_SECRET`, `GATEWAY_SECRET_VERSION` | binds the remote gateway adapter; enables provider onboarding routes (`/v1/admin/providers/onboard*`) | absent ⇒ onboarding routes NOT mounted (404) |
 | `AGENT_SOURCE_ROOT` | directory jail; enables the read-only source tools for agent mode | absent ⇒ 0 source tools |
+| `AGENT_MAX_STEPS` | operator cap on proposals per agent run (1–32); a request may ask for fewer via `execution_policy.max_steps`, never more (422) | `8` |
+| `AGENT_DEADLINE_MS` | operator wall-clock cap per agent run (1 000–3 600 000); requests may lower it via `execution_policy.deadline_ms` | `120000` |
 | `AGENT_WORKSPACE_ROOT` | **engineering workspace** (ADR-0012): a git checkout the shared agent may read, write, run allow-listed commands in and commit/push/merge — under Admin authorization. Refused if it is (or contains / is inside) the platform's own checkout (ADR-0009 §14) | absent ⇒ 0 engineering tools, `/v1/admin/engineering/*` NOT mounted (404) |
 | `AGENT_WORKSPACE_REMOTE` | git remote name used by `git_push` / `git_compare` | `origin` |
 | `AGENT_WORKSPACE_COMMANDS` | comma-separated executables `ws_run` may launch (allow-list; `bash`, `sh`, `curl` etc. are refused unless listed) | `python3,pytest,ruff` |
@@ -137,7 +139,7 @@ the answer carries `evidence` indices into the ledger.
 `strategy=agent` runs `core/agent/runtime.py::AgentRuntime` over the shared
 `core/execution/loop.py::AgentLoop`: understand → plan → select → act →
 observe → reassess → recover → verify → finalize/stop. Bounded by
-`DEFAULT_AGENT_MAX_STEPS=8` (hard cap 32), `DEFAULT_AGENT_DEADLINE_MS=120000`,
+`AGENT_MAX_STEPS` (default 8, hard cap 32), `AGENT_DEADLINE_MS` (default 120000) — per request lowered via `execution_policy.max_steps/deadline_ms` —,
 repeated-identical-failure refusal, invented-evidence rejection. Tools flow
 ToolRegistry → CapabilityFirewall → DeviceRegistry (one chain, shared with the
 admin agent). **Deny by default:** with no allow-list and no skills the agent

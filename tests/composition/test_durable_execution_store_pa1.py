@@ -100,9 +100,7 @@ def make_node(
     )
 
 
-def make_report(
-    execution: Execution, nodes: tuple[ExecutionNode, ...]
-) -> ExecutionReport:
+def make_report(execution: Execution, nodes: tuple[ExecutionNode, ...]) -> ExecutionReport:
     node_reports = tuple(
         NodeReport(
             node=node,
@@ -138,13 +136,9 @@ class FakeExecutionRepository:
         self.records: dict[UUID, ExecutionRecord] = {}
         self.put_calls = 0
 
-    async def put(
-        self, execution: Execution, nodes: tuple[ExecutionNode, ...] = ()
-    ) -> None:
+    async def put(self, execution: Execution, nodes: tuple[ExecutionNode, ...] = ()) -> None:
         self.put_calls += 1
-        self.records[execution.id] = ExecutionRecord(
-            execution=execution, nodes=nodes
-        )
+        self.records[execution.id] = ExecutionRecord(execution=execution, nodes=nodes)
 
     async def get(self, tenant_id: UUID, execution_id: UUID) -> ExecutionRecord:
         record = self.records.get(execution_id)
@@ -167,17 +161,9 @@ class FakeExecutionRepository:
             for record in self.records.values()
             if record.execution.tenant_id == tenant_id
             and (status is None or record.execution.status is status)
-            and (
-                initiated_by is None or record.execution.user_id == initiated_by
-            )
-            and (
-                created_after is None
-                or record.execution.created_at > created_after
-            )
-            and (
-                created_before is None
-                or record.execution.created_at < created_before
-            )
+            and (initiated_by is None or record.execution.user_id == initiated_by)
+            and (created_after is None or record.execution.created_at > created_after)
+            and (created_before is None or record.execution.created_at < created_before)
         ]
         rows.sort(key=lambda e: e.created_at, reverse=True)
         if limit is not None:
@@ -188,9 +174,7 @@ class FakeExecutionRepository:
 class ExplodingRepository(FakeExecutionRepository):
     """put() fails — proves write-through never caches unpersisted state."""
 
-    async def put(
-        self, execution: Execution, nodes: tuple[ExecutionNode, ...] = ()
-    ) -> None:
+    async def put(self, execution: Execution, nodes: tuple[ExecutionNode, ...] = ()) -> None:
         raise RuntimeError("database unavailable")
 
 
@@ -206,9 +190,7 @@ def repository() -> FakeExecutionRepository:
 
 
 @pytest.fixture()
-def store(
-    bridge: AsyncBridge, repository: FakeExecutionRepository
-) -> DurableExecutionStore:
+def store(bridge: AsyncBridge, repository: FakeExecutionRepository) -> DurableExecutionStore:
     return DurableExecutionStore(repository=repository, bridge=bridge)
 
 
@@ -229,9 +211,7 @@ class TestBridge:
             bridge.run(boom())
         assert excinfo.value.execution_id == marker
 
-    def test_usable_from_inside_a_running_event_loop(
-        self, bridge: AsyncBridge
-    ) -> None:
+    def test_usable_from_inside_a_running_event_loop(self, bridge: AsyncBridge) -> None:
         """The FastAPI-handler scenario: sync store call inside async code."""
         import asyncio
 
@@ -347,9 +327,7 @@ class TestReadThroughReconstruction:
         DurableExecutionStore(repository=repository, bridge=bridge).put(
             make_report(execution, nodes)
         )
-        got = DurableExecutionStore(repository=repository, bridge=bridge).get(
-            TENANT, execution.id
-        )
+        got = DurableExecutionStore(repository=repository, bridge=bridge).get(TENANT, execution.id)
         terminal = ("succeeded", "failed", "skipped")
         done = sum(1 for e in got.nodes if e.node.status.value in terminal)
         assert done == 2 and len(got.nodes) == 2  # → 100% progress
@@ -362,9 +340,7 @@ class TestReadThroughReconstruction:
             make_report(execution, (make_node(execution.id),))
         )
         cache = InMemoryExecutionStore()
-        second = DurableExecutionStore(
-            repository=repository, bridge=bridge, cache=cache
-        )
+        second = DurableExecutionStore(repository=repository, bridge=bridge, cache=cache)
         assert len(cache) == 0
         second.get(TENANT, execution.id)
         assert len(cache) == 1  # repeated polls stay off the database
@@ -376,9 +352,7 @@ class TestTenantIsolation:
     ) -> None:
         """20 §6 through BOTH layers: cache miss → repo refusal → app error."""
         execution = make_execution(tenant_id=TENANT)
-        DurableExecutionStore(repository=repository, bridge=bridge).put(
-            make_report(execution, ())
-        )
+        DurableExecutionStore(repository=repository, bridge=bridge).put(make_report(execution, ()))
         second = DurableExecutionStore(repository=repository, bridge=bridge)
         with pytest.raises(ExecutionNotFound) as excinfo:
             second.get(OTHER_TENANT, execution.id)
@@ -386,9 +360,7 @@ class TestTenantIsolation:
         # matches, indistinguishable from truly absent.
         assert excinfo.value.execution_id == execution.id
 
-    def test_list_never_leaks_foreign_rows(
-        self, store: DurableExecutionStore
-    ) -> None:
+    def test_list_never_leaks_foreign_rows(self, store: DurableExecutionStore) -> None:
         mine = make_execution(tenant_id=TENANT)
         foreign = make_execution(tenant_id=OTHER_TENANT)
         store.put(make_report(mine, ()))
@@ -422,9 +394,7 @@ class TestListParity:
         limited = second.list(TENANT, limit=1)
         assert [r.execution.id for r in limited] == [failed.id]
 
-    def test_cached_rows_present_full_reports(
-        self, store: DurableExecutionStore
-    ) -> None:
+    def test_cached_rows_present_full_reports(self, store: DurableExecutionStore) -> None:
         execution = make_execution()
         node = make_node(execution.id, output_ref={"answer": "42"})
         report = make_report(execution, (node,))
@@ -434,9 +404,7 @@ class TestListParity:
 
 
 class TestPortConformance:
-    def test_both_stores_satisfy_the_port(
-        self, store: DurableExecutionStore
-    ) -> None:
+    def test_both_stores_satisfy_the_port(self, store: DurableExecutionStore) -> None:
         """create_app/worker annotations accept either binding (P2)."""
         durable: ExecutionStorePort = store
         in_memory: ExecutionStorePort = InMemoryExecutionStore()
@@ -444,9 +412,7 @@ class TestPortConformance:
 
     def test_report_from_record_handles_empty_nodes(self) -> None:
         execution = make_execution(status=ExecutionStatus.FAILED)
-        report = report_from_record(
-            ExecutionRecord(execution=execution, nodes=())
-        )
+        report = report_from_record(ExecutionRecord(execution=execution, nodes=()))
         assert report.nodes == ()
         assert report.final_output is None
         assert report.status_history == (ExecutionStatus.FAILED,)
@@ -524,10 +490,7 @@ class TestLiveRestartParity:
             async def cleanup() -> None:
                 async with bindings.engine.begin() as conn:
                     await conn.execute(
-                        text(
-                            "DELETE FROM execution_nodes WHERE execution_id"
-                            " = :id"
-                        ),
+                        text("DELETE FROM execution_nodes WHERE execution_id = :id"),
                         {"id": execution.id},
                     )
                     await conn.execute(
@@ -539,14 +502,10 @@ class TestLiveRestartParity:
             bridge.run(prepare())
             try:
                 node = make_node(execution.id, output_ref={"answer": "live"})
-                first = DurableExecutionStore(
-                    repository=bindings.executions, bridge=bridge
-                )
+                first = DurableExecutionStore(repository=bindings.executions, bridge=bridge)
                 first.put(make_report(execution, (node,)))
                 # "Restart": fresh store + fresh cache, same database.
-                second = DurableExecutionStore(
-                    repository=bindings.executions, bridge=bridge
-                )
+                second = DurableExecutionStore(repository=bindings.executions, bridge=bridge)
                 got = second.get(TENANT, execution.id)
                 assert got.final_output == {"answer": "live"}
                 assert got.execution.status is ExecutionStatus.SUCCEEDED

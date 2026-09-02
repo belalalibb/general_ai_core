@@ -80,9 +80,7 @@ async def _get(app: FastAPI, path: str) -> httpx.Response:
         return await client.get(path)
 
 
-async def _post(
-    app: FastAPI, path: str, body: dict[str, object] | None = None
-) -> httpx.Response:
+async def _post(app: FastAPI, path: str, body: dict[str, object] | None = None) -> httpx.Response:
     async with _client(app) as client:
         return await client.post(path, json=body if body is not None else {})
 
@@ -119,17 +117,13 @@ GOOD_PATCHED = "def greet() -> str:\n    return 'patched hello'\n"
 BROKEN_MODULE = "def broken(:\n"
 
 
-async def _make_snapshot(
-    app: FastAPI, files: dict[str, str] | None = None
-) -> str:
+async def _make_snapshot(app: FastAPI, files: dict[str, str] | None = None) -> str:
     """Create a base snapshot over HTTP; returns its content address."""
     payload = files or {
         "pkg/mod.py": _b64(GOOD_MODULE),
         "pkg/secret_config.py": _b64(f"TOKEN = '{SYNTHETIC_SECRET}'\n"),
     }
-    response = await _post(
-        app, "/v1/admin/source-changes/snapshots", {"files": payload}
-    )
+    response = await _post(app, "/v1/admin/source-changes/snapshots", {"files": payload})
     assert response.status_code == 201, response.text
     body = response.json()
     snapshot_id = body["snapshot_id"]
@@ -199,9 +193,7 @@ class TestSourceChangeLifecycleOverHttp:
             _assert_no_bytes(proposal)
             pid = proposal["proposal_id"]
 
-            verified = await _post(
-                app, f"/v1/admin/source-changes/{pid}/verify"
-            )
+            verified = await _post(app, f"/v1/admin/source-changes/{pid}/verify")
             assert verified.status_code == 200, verified.text
             vbody = verified.json()
             assert vbody["state"] == "verified"
@@ -216,10 +208,7 @@ class TestSourceChangeLifecycleOverHttp:
             assert approved.status_code == 200, approved.text
             abody = approved.json()
             assert abody["state"] == "approved"
-            assert (
-                abody["approval"]["approved_patch_hash"]
-                == proposal["patch_hash"]
-            )
+            assert abody["approval"]["approved_patch_hash"] == proposal["patch_hash"]
             _assert_s14_posture(abody)
 
             applied = await _post(app, f"/v1/admin/source-changes/{pid}/apply")
@@ -231,9 +220,7 @@ class TestSourceChangeLifecycleOverHttp:
             # The APPLIED state is hermetic — the §14 posture says so.
             _assert_s14_posture(apbody)
 
-            rolled = await _post(
-                app, f"/v1/admin/source-changes/{pid}/rollback"
-            )
+            rolled = await _post(app, f"/v1/admin/source-changes/{pid}/rollback")
             assert rolled.status_code == 200, rolled.text
             rbody = rolled.json()
             assert rbody["state"] == "rolled_back"
@@ -367,14 +354,10 @@ class TestLifecycleRefusalsOverHttp:
 
         async def scenario() -> None:
             snapshot_id = await _make_snapshot(app)
-            proposal = await _propose(
-                app, snapshot_id, content=BROKEN_MODULE, rationale="break it"
-            )
+            proposal = await _propose(app, snapshot_id, content=BROKEN_MODULE, rationale="break it")
             pid = proposal["proposal_id"]
 
-            verified = await _post(
-                app, f"/v1/admin/source-changes/{pid}/verify"
-            )
+            verified = await _post(app, f"/v1/admin/source-changes/{pid}/verify")
             assert verified.status_code == 200
             assert verified.json()["state"] == "failed_verification"
 
@@ -417,9 +400,7 @@ class TestLifecycleRefusalsOverHttp:
                 "/v1/admin/source-changes",
                 {
                     "base_snapshot_id": "0" * 64,
-                    "operations": [
-                        {"kind": "delete_file", "path": "pkg/mod.py"}
-                    ],
+                    "operations": [{"kind": "delete_file", "path": "pkg/mod.py"}],
                     "rationale": "ghost base",
                 },
             )
@@ -474,15 +455,9 @@ class TestAntiEnumeration:
             snapshot_id = await _make_snapshot(foreign_app)
             foreign = await _propose(foreign_app, snapshot_id)
 
-            absent = await _get(
-                app, f"/v1/admin/source-changes/{uuid4()}"
-            )
-            foreign_probe = await _get(
-                app, f"/v1/admin/source-changes/{foreign['proposal_id']}"
-            )
-            malformed = await _get(
-                app, "/v1/admin/source-changes/not-a-uuid"
-            )
+            absent = await _get(app, f"/v1/admin/source-changes/{uuid4()}")
+            foreign_probe = await _get(app, f"/v1/admin/source-changes/{foreign['proposal_id']}")
+            malformed = await _get(app, "/v1/admin/source-changes/not-a-uuid")
             assert absent.status_code == 404
             assert foreign_probe.status_code == 404
             assert malformed.status_code == 404
@@ -521,9 +496,7 @@ class TestGates:
                     "/v1/admin/source-changes",
                     {
                         "base_snapshot_id": "0" * 64,
-                        "operations": [
-                            {"kind": "delete_file", "path": "a.py"}
-                        ],
+                        "operations": [{"kind": "delete_file", "path": "a.py"}],
                         "rationale": "denied",
                     },
                 ),
@@ -545,9 +518,7 @@ class TestGates:
                 for method, path, body in cases:
                     response = await client.request(method, path, json=body)
                     assert response.status_code == 403, (method, path)
-                    assert (
-                        response.json()["error"]["code"] == "unauthorized"
-                    )
+                    assert response.json()["error"]["code"] == "unauthorized"
 
         run(scenario())
 
@@ -610,9 +581,7 @@ class TestAdversarialAgentBoundary:
         """The agent's composition surface structurally CANNOT carry the
         workflow: no field exists to put it in (absence by shape, not by
         discipline)."""
-        field_names = {
-            f.name for f in dataclasses.fields(AgentToolSurface)
-        }
+        field_names = {f.name for f in dataclasses.fields(AgentToolSurface)}
         assert not any("source" in name for name in field_names)
 
     def test_no_authoritative_applier_implementation_exists_in_app_layer(
@@ -627,10 +596,7 @@ class TestAdversarialAgentBoundary:
         for module_name, module in list(sys.modules.items()):
             if module is None:
                 continue
-            if not (
-                module_name.startswith("apps.")
-                or module_name.startswith("core.")
-            ):
+            if not (module_name.startswith("apps.") or module_name.startswith("core.")):
                 continue
             for attr_name in dir(module):
                 attr = getattr(module, attr_name, None)
@@ -660,9 +626,7 @@ class TestAdversarialSecretBoundary:
                     json={
                         "files": {
                             "pkg/mod.py": _b64(GOOD_MODULE),
-                            "pkg/secret_config.py": _b64(
-                                f"TOKEN = '{SYNTHETIC_SECRET}'\n"
-                            ),
+                            "pkg/secret_config.py": _b64(f"TOKEN = '{SYNTHETIC_SECRET}'\n"),
                         }
                     },
                 )
@@ -677,9 +641,7 @@ class TestAdversarialSecretBoundary:
                             {
                                 "kind": "modify_file",
                                 "path": "pkg/secret_config.py",
-                                "content_b64": _b64(
-                                    f"TOKEN = '{SYNTHETIC_SECRET}-v2'\n"
-                                ),
+                                "content_b64": _b64(f"TOKEN = '{SYNTHETIC_SECRET}-v2'\n"),
                             }
                         ],
                         "rationale": "rotate the embedded token",
@@ -695,17 +657,11 @@ class TestAdversarialSecretBoundary:
                     ("apply", None),
                     ("rollback", None),
                 ]:
-                    r = await client.post(
-                        f"/v1/admin/source-changes/{pid}/{act}", json=body
-                    )
+                    r = await client.post(f"/v1/admin/source-changes/{pid}/{act}", json=body)
                     responses.append(r)
 
-                responses.append(
-                    await client.get("/v1/admin/source-changes")
-                )
-                responses.append(
-                    await client.get(f"/v1/admin/source-changes/{pid}")
-                )
+                responses.append(await client.get("/v1/admin/source-changes"))
+                responses.append(await client.get(f"/v1/admin/source-changes/{pid}"))
 
             for response in responses:
                 assert SYNTHETIC_SECRET not in response.text, response.url
@@ -732,9 +688,7 @@ class TestAdversarialSecretBoundary:
 
         async def scenario() -> None:
             snapshot_id = await _make_snapshot(app)
-            proposal = await _propose(
-                app, snapshot_id, rationale=hostile
-            )
+            proposal = await _propose(app, snapshot_id, rationale=hostile)
             # Stored as data on the human-only surface, verbatim.
             assert proposal["rationale"] == hostile
 
@@ -764,9 +718,7 @@ class TestAdversarialSecretBoundary:
                 if e.details.get("surface") == "source_change_workflow"
             ]
             assert rows
-            dumped = json.dumps(
-                [e.details for e in rows], default=str
-            )
+            dumped = json.dumps([e.details for e in rows], default=str)
             assert SYNTHETIC_SECRET not in dumped
             assert GOOD_PATCHED not in dumped
 

@@ -121,9 +121,7 @@ def make_record(
     """A pre-existing judgment to challenge (above-RAW needs >=1 grader)."""
     graders: tuple[GraderResult, ...]
     if score is None and confidence is None:
-        graders = (
-            GraderResult(type=GraderType.DETERMINISTIC, name="check", passed=True),
-        )
+        graders = (GraderResult(type=GraderType.DETERMINISTIC, name="check", passed=True),)
     else:
         graders = (
             GraderResult(
@@ -170,21 +168,15 @@ class FakePairwiseJudge:
 class FakeCounterJudge:
     """Scripted ModelJudgePort for counter evaluation."""
 
-    def __init__(
-        self, *, score: float | None = 0.8, confidence: float | None = 0.9
-    ) -> None:
+    def __init__(self, *, score: float | None = 0.8, confidence: float | None = 0.9) -> None:
         self.score = score
         self.confidence = confidence
         self.calls: list[tuple[UUID, UUID]] = []
 
-    async def judge(
-        self, tenant_id: UUID, execution_id: UUID, output: JsonObject
-    ) -> GraderResult:
+    async def judge(self, tenant_id: UUID, execution_id: UUID, output: JsonObject) -> GraderResult:
         self.calls.append((tenant_id, execution_id))
         if self.score is None and self.confidence is None:
-            return GraderResult(
-                type=GraderType.MODEL_BASED, name="counter_judge", passed=True
-            )
+            return GraderResult(type=GraderType.MODEL_BASED, name="counter_judge", passed=True)
         return GraderResult(
             type=GraderType.MODEL_BASED,
             name="counter_judge",
@@ -218,9 +210,7 @@ class TestSkillFormatGrader:
 
     def test_no_declared_format_passes(self) -> None:
         """A skill that declares no format has no requirement to violate."""
-        row = SkillFormatGrader(make_skill(outputs_format=None)).row(
-            {"type": "anything"}
-        )
+        row = SkillFormatGrader(make_skill(outputs_format=None)).row({"type": "anything"})
         assert row.passed is True
 
     def test_row_names_the_manifest_id(self) -> None:
@@ -261,9 +251,7 @@ class TestRoleContractGrader:
         )
         without_override_key = RoleContractGrader(profile).row({"summary": "s"})
         assert without_override_key.passed is False
-        with_both = RoleContractGrader(profile).row(
-            {"summary": "s", "risk_note": "low"}
-        )
+        with_both = RoleContractGrader(profile).row({"summary": "s", "risk_note": "low"})
         assert with_both.passed is True
 
     def test_row_names_the_role(self) -> None:
@@ -282,9 +270,7 @@ class TestRoleContractGrader:
 class TestPairwise:
     def test_winner_zero_marks_first_candidate_preferred(self) -> None:
         decision = run(
-            PairwiseEvaluator(FakePairwiseJudge(winner=0)).compare(
-                TENANT, {"a": 1}, {"b": 2}
-            )
+            PairwiseEvaluator(FakePairwiseJudge(winner=0)).compare(TENANT, {"a": 1}, {"b": 2})
         )
         assert decision.winner_index == 0
         assert decision.rows[0].passed is True
@@ -292,9 +278,7 @@ class TestPairwise:
 
     def test_winner_one_marks_second_candidate_preferred(self) -> None:
         decision = run(
-            PairwiseEvaluator(FakePairwiseJudge(winner=1)).compare(
-                TENANT, {"a": 1}, {"b": 2}
-            )
+            PairwiseEvaluator(FakePairwiseJudge(winner=1)).compare(TENANT, {"a": 1}, {"b": 2})
         )
         assert decision.winner_index == 1
         assert decision.rows[0].passed is False
@@ -303,9 +287,7 @@ class TestPairwise:
     def test_confidence_rides_both_rows(self) -> None:
         """The judge's trust facet applies to the COMPARISON — both rows."""
         decision = run(
-            PairwiseEvaluator(FakePairwiseJudge(winner=0, confidence=0.65)).compare(
-                TENANT, {}, {}
-            )
+            PairwiseEvaluator(FakePairwiseJudge(winner=0, confidence=0.65)).compare(TENANT, {}, {})
         )
         assert decision.rows[0].confidence == 0.65
         assert decision.rows[1].confidence == 0.65
@@ -330,11 +312,7 @@ class TestPairwise:
     @pytest.mark.parametrize("bad_winner", [-1, 2, 7])
     def test_invalid_winner_index_is_a_judge_error(self, bad_winner: int) -> None:
         with pytest.raises(ValueError, match="invalid winner index"):
-            run(
-                PairwiseEvaluator(FakePairwiseJudge(winner=bad_winner)).compare(
-                    TENANT, {}, {}
-                )
-            )
+            run(PairwiseEvaluator(FakePairwiseJudge(winner=bad_winner)).compare(TENANT, {}, {}))
 
     def test_judge_receives_both_candidates(self) -> None:
         judge = FakePairwiseJudge()
@@ -359,18 +337,14 @@ class TestCounterEvaluator:
     def test_disagreement_beyond_tolerance_challenges(self) -> None:
         record = make_record(score=0.9)
         row = run(
-            CounterEvaluator(FakeCounterJudge(score=0.3), tolerance=0.2).challenge(
-                record, {}
-            )
+            CounterEvaluator(FakeCounterJudge(score=0.3), tolerance=0.2).challenge(record, {})
         )
         assert row.passed is False
 
     def test_boundary_agreement_exactly_at_tolerance_upholds(self) -> None:
         record = make_record(score=0.8)
         row = run(
-            CounterEvaluator(FakeCounterJudge(score=0.6), tolerance=0.2).challenge(
-                record, {}
-            )
+            CounterEvaluator(FakeCounterJudge(score=0.6), tolerance=0.2).challenge(record, {})
         )
         assert row.passed is True
 
@@ -378,9 +352,7 @@ class TestCounterEvaluator:
         """The row records what the COUNTER judge found — both facets, separate."""
         record = make_record(score=0.8)
         row = run(
-            CounterEvaluator(
-                FakeCounterJudge(score=0.75, confidence=0.6)
-            ).challenge(record, {})
+            CounterEvaluator(FakeCounterJudge(score=0.75, confidence=0.6)).challenge(record, {})
         )
         assert row.score == 0.75
         assert row.confidence == 0.6
@@ -389,9 +361,7 @@ class TestCounterEvaluator:
         """A counter judge that produced no score agrees with nothing."""
         record = make_record(score=0.8)
         row = run(
-            CounterEvaluator(
-                FakeCounterJudge(score=None, confidence=None)
-            ).challenge(record, {})
+            CounterEvaluator(FakeCounterJudge(score=None, confidence=None)).challenge(record, {})
         )
         assert row.passed is False
 
@@ -443,27 +413,19 @@ class TestActivationBoundary:
 
     def test_all_ten_22s5_types_are_accounted_for(self) -> None:
         """FINAL-active + still-inactive partitions the whole 22 §5 enum."""
-        assert FINAL_ACTIVE_GRADER_TYPES | STILL_INACTIVE_TYPES == frozenset(
-            GraderType
-        )
+        assert FINAL_ACTIVE_GRADER_TYPES | STILL_INACTIVE_TYPES == frozenset(GraderType)
 
     @pytest.mark.parametrize("new_type", sorted(FINAL_NEW_TYPES, key=lambda t: t.value))
-    def test_final_service_admits_each_newly_active_type(
-        self, new_type: GraderType
-    ) -> None:
+    def test_final_service_admits_each_newly_active_type(self, new_type: GraderType) -> None:
         service = EvaluationPolicyService(
             InMemoryEvaluationStore(), active_types=FINAL_ACTIVE_GRADER_TYPES
         )
         # Admission must not raise; the pipeline itself runs only its
         # deterministic/model steps, so a specialty-only request lands RAW.
-        record = run(
-            service.evaluate(TENANT, uuid4(), {"x": 1}, grader_types={new_type})
-        )
+        record = run(service.evaluate(TENANT, uuid4(), {"x": 1}, grader_types={new_type}))
         assert record.level is VerificationLevel.RAW
 
-    @pytest.mark.parametrize(
-        "inactive_type", sorted(STILL_INACTIVE_TYPES, key=lambda t: t.value)
-    )
+    @pytest.mark.parametrize("inactive_type", sorted(STILL_INACTIVE_TYPES, key=lambda t: t.value))
     def test_final_service_still_denies_the_undocumented_types(
         self, inactive_type: GraderType
     ) -> None:
@@ -471,21 +433,13 @@ class TestActivationBoundary:
             InMemoryEvaluationStore(), active_types=FINAL_ACTIVE_GRADER_TYPES
         )
         with pytest.raises(InactiveGraderType):
-            run(
-                service.evaluate(
-                    TENANT, uuid4(), {"x": 1}, grader_types={inactive_type}
-                )
-            )
+            run(service.evaluate(TENANT, uuid4(), {"x": 1}, grader_types={inactive_type}))
 
     def test_default_service_keeps_the_mvp_posture(self) -> None:
         """No active_types given -> MVP boundary unchanged (R049 (c))."""
         service = EvaluationPolicyService(InMemoryEvaluationStore())
         with pytest.raises(InactiveGraderType):
-            run(
-                service.evaluate(
-                    TENANT, uuid4(), {"x": 1}, grader_types={GraderType.PAIRWISE}
-                )
-            )
+            run(service.evaluate(TENANT, uuid4(), {"x": 1}, grader_types={GraderType.PAIRWISE}))
 
     def test_final_default_request_still_runs_the_pipeline(self) -> None:
         """grader_types=None under the FINAL set: deterministic step runs."""

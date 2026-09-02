@@ -64,9 +64,7 @@ class ModelListEntry(ContractModel):
     availability: BindingAvailability
 
     @classmethod
-    def from_model(
-        cls, model: Model, bindings: list[ProviderModelBinding]
-    ) -> ModelListEntry:
+    def from_model(cls, model: Model, bindings: list[ProviderModelBinding]) -> ModelListEntry:
         """Project a registry Model + its bindings onto the 10 §6 row."""
         return cls(
             id=str(model.id),

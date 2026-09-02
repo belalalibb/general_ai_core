@@ -47,9 +47,7 @@ def test_only_trusted_is_usable() -> None:
 
 def test_terminal_states_have_no_outgoing_transitions() -> None:
     """Anti-resurrection: no allowed transition leaves revoked/compromised."""
-    assert TERMINAL_DEVICE_STATES == frozenset(
-        {DeviceState.REVOKED, DeviceState.COMPROMISED}
-    )
+    assert TERMINAL_DEVICE_STATES == frozenset({DeviceState.REVOKED, DeviceState.COMPROMISED})
     for src, _dst in ALLOWED_DEVICE_TRANSITIONS:
         assert src not in TERMINAL_DEVICE_STATES
 

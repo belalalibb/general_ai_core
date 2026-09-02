@@ -152,11 +152,7 @@ def test_unknown_tool_raises_not_registered() -> None:
     """Unknown tool id = caller defect (gate posture), never a verdict."""
     executor, _, _, _, _ = make_world()
     with pytest.raises(ToolNotRegistered):
-        run(
-            executor.execute(
-                tool_id=uuid4(), request=make_request(), arguments={}
-            )
-        )
+        run(executor.execute(tool_id=uuid4(), request=make_request(), arguments={}))
 
 
 def test_execute_has_no_verdict_injection_channel() -> None:
@@ -206,9 +202,7 @@ def test_admitted_tool_without_handler_is_loud() -> None:
     registry = ToolRegistry()
     registry.register(tool)
     executor = ToolExecutor(
-        gate=ToolCallGate(
-            tools=registry, firewall=granting_firewall(), devices=DeviceRegistry()
-        ),
+        gate=ToolCallGate(tools=registry, firewall=granting_firewall(), devices=DeviceRegistry()),
         handlers={},
         audit=InMemoryAuditLog(),
         usage=InMemoryUsageAccounting(),
@@ -227,9 +221,7 @@ def test_handlers_snapshot_frozen_at_construction() -> None:
     usage = InMemoryUsageAccounting()
     usage.configure_tenant(TENANT, plan="test", task_units_limit=10.0)
     executor = ToolExecutor(
-        gate=ToolCallGate(
-            tools=registry, firewall=granting_firewall(), devices=DeviceRegistry()
-        ),
+        gate=ToolCallGate(tools=registry, firewall=granting_firewall(), devices=DeviceRegistry()),
         handlers=source,
         audit=InMemoryAuditLog(),
         usage=usage,
@@ -296,9 +288,7 @@ def test_every_attempt_emits_exactly_one_tool_call_audit_event() -> None:
     assert events[0].details["gate_reason"] == "tool_not_selectable:disabled"
 
     # failed
-    executor, tool, _, audit, _ = make_world(
-        handler=_Recorder(error=ValueError("bad"))
-    )
+    executor, tool, _, audit, _ = make_world(handler=_Recorder(error=ValueError("bad")))
     run(executor.execute(tool_id=tool.id, request=make_request(), arguments={}))
     events = audit.read(tenant_id=TENANT)
     assert len(events) == 1

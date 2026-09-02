@@ -123,9 +123,7 @@ def test_patch_refuses_empty_and_duplicate_paths() -> None:
 def test_apply_add_modify_delete() -> None:
     patch = SourcePatch(
         operations=(
-            PatchOperation(
-                kind=PatchOpKind.ADD_FILE, path="src/new.py", content=b"new\n"
-            ),
+            PatchOperation(kind=PatchOpKind.ADD_FILE, path="src/new.py", content=b"new\n"),
             PatchOperation(
                 kind=PatchOpKind.MODIFY_FILE, path="src/app.py", content=b"print('v2')\n"
             ),
@@ -148,9 +146,7 @@ def test_apply_refusals_are_named_and_total() -> None:
             BASE,
             SourcePatch(
                 operations=(
-                    PatchOperation(
-                        kind=PatchOpKind.ADD_FILE, path="src/app.py", content=b"x"
-                    ),
+                    PatchOperation(kind=PatchOpKind.ADD_FILE, path="src/app.py", content=b"x"),
                 )
             ),
         )
@@ -160,9 +156,7 @@ def test_apply_refusals_are_named_and_total() -> None:
             apply_patch(
                 BASE,
                 SourcePatch(
-                    operations=(
-                        PatchOperation(kind=kind, path="ghost.py", content=content),
-                    )
+                    operations=(PatchOperation(kind=kind, path="ghost.py", content=content),)
                 ),
             )
 
@@ -171,9 +165,7 @@ def test_apply_is_all_or_nothing() -> None:
     """One inapplicable op anywhere -> NOTHING is applied (P6)."""
     patch = SourcePatch(
         operations=(
-            PatchOperation(
-                kind=PatchOpKind.ADD_FILE, path="src/new.py", content=b"new\n"
-            ),
+            PatchOperation(kind=PatchOpKind.ADD_FILE, path="src/new.py", content=b"new\n"),
             PatchOperation(kind=PatchOpKind.DELETE_FILE, path="ghost.py"),
         )
     )
@@ -203,14 +195,10 @@ def test_apply_is_deterministic() -> None:
 
 def test_patch_hash_binds_content_and_base() -> None:
     patch_a = SourcePatch(
-        operations=(
-            PatchOperation(kind=PatchOpKind.ADD_FILE, path="a.txt", content=b"one"),
-        )
+        operations=(PatchOperation(kind=PatchOpKind.ADD_FILE, path="a.txt", content=b"one"),)
     )
     patch_b = SourcePatch(
-        operations=(
-            PatchOperation(kind=PatchOpKind.ADD_FILE, path="a.txt", content=b"two"),
-        )
+        operations=(PatchOperation(kind=PatchOpKind.ADD_FILE, path="a.txt", content=b"two"),)
     )
     other_base = SourceSnapshot.from_files({"x.txt": b"x"})
     h = patch_hash(patch_a, BASE.snapshot_id)
@@ -226,13 +214,8 @@ def test_patch_hash_is_operation_order_independent() -> None:
     op2 = PatchOperation(kind=PatchOpKind.DELETE_FILE, path="README.md")
     forward = SourcePatch(operations=(op1, op2))
     reverse = SourcePatch(operations=(op2, op1))
-    assert patch_hash(forward, BASE.snapshot_id) == patch_hash(
-        reverse, BASE.snapshot_id
-    )
-    assert (
-        apply_patch(BASE, forward).snapshot_id
-        == apply_patch(BASE, reverse).snapshot_id
-    )
+    assert patch_hash(forward, BASE.snapshot_id) == patch_hash(reverse, BASE.snapshot_id)
+    assert apply_patch(BASE, forward).snapshot_id == apply_patch(BASE, reverse).snapshot_id
 
 
 # --- Rollback law (criterion 8 substrate) --------------------------------------------
@@ -241,9 +224,7 @@ def test_patch_hash_is_operation_order_independent() -> None:
 def test_invert_round_trip_every_kind() -> None:
     patch = SourcePatch(
         operations=(
-            PatchOperation(
-                kind=PatchOpKind.ADD_FILE, path="src/new.py", content=b"new\n"
-            ),
+            PatchOperation(kind=PatchOpKind.ADD_FILE, path="src/new.py", content=b"new\n"),
             PatchOperation(
                 kind=PatchOpKind.MODIFY_FILE, path="src/app.py", content=b"print('v2')\n"
             ),
@@ -260,9 +241,7 @@ def test_invert_round_trip_every_kind() -> None:
 def test_invert_restores_exact_prior_content() -> None:
     patch = SourcePatch(
         operations=(
-            PatchOperation(
-                kind=PatchOpKind.MODIFY_FILE, path="src/util.py", content=b"changed\n"
-            ),
+            PatchOperation(kind=PatchOpKind.MODIFY_FILE, path="src/util.py", content=b"changed\n"),
         )
     )
     inverse = invert_patch(patch, BASE)

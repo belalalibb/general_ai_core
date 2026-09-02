@@ -192,9 +192,7 @@ def _world(responder: Any) -> dict[str, Any]:
 
 
 def _decision(world: dict[str, Any]) -> Any:
-    return world["router"].route(
-        RoutingRequest(operation=ProviderOperation.GENERATE_TEXT)
-    )
+    return world["router"].route(RoutingRequest(operation=ProviderOperation.GENERATE_TEXT))
 
 
 async def _execute(world: dict[str, Any], payload: dict[str, Any]) -> Any:
@@ -294,9 +292,7 @@ class TestApiEntryFullChainHermetic:
 
         async def call() -> httpx.Response:
             transport = httpx.ASGITransport(app=app)
-            async with httpx.AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as client:
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
                 return await client.post(
                     "/v1/execute", json={"ask": "Reply with exactly the word: OK"}
                 )

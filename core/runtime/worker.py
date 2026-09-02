@@ -107,9 +107,7 @@ class Worker:
         )
         return await self._process(messages)
 
-    async def recover_once(
-        self, idle_ms: int, max_messages: int = 1
-    ) -> WorkerReport:
+    async def recover_once(self, idle_ms: int, max_messages: int = 1) -> WorkerReport:
         """Claim messages stuck pending past ``idle_ms`` and process them.
 
         Crash recovery (41 §13 worker crash / stale worker): the dead
@@ -131,16 +129,12 @@ class Worker:
             try:
                 await self._handler(message)
             except PermanentTaskError:
-                await self._queue.dead_letter(
-                    self._stream, self._group, message.message_id
-                )
+                await self._queue.dead_letter(self._stream, self._group, message.message_id)
                 report.dead_lettered.append(message.message_id)
             except Exception:  # noqa: BLE001 — boundary containment (30 §14)
                 if message.delivery_count >= self._max_deliveries:
                     # 40 §4.7 — no infinite retry.
-                    await self._queue.dead_letter(
-                        self._stream, self._group, message.message_id
-                    )
+                    await self._queue.dead_letter(self._stream, self._group, message.message_id)
                     report.dead_lettered.append(message.message_id)
                 else:
                     # Transient: leave pending; claim_stale is the retry path.

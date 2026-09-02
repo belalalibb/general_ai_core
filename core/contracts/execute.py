@@ -52,13 +52,21 @@ class RoleSelector(ContractModel):
 
 
 class ExecutionPolicy(ContractModel):
-    """``execution_policy`` object: strategy/async/stream/cost/approval knobs."""
+    """``execution_policy`` object: strategy/async/stream/cost/approval knobs.
+
+    ``max_steps`` / ``deadline_ms`` (R165) are the caller's *requested* agent
+    budget for ``strategy="agent"``: a run may ask for fewer steps / less
+    time than the runtime's composed cap, never more (S4 — the cap is the
+    operator's; a request above it is a loud validation error, not a clamp).
+    """
 
     strategy: BoundedStr | None = None
     async_: Annotated[bool | None, Field(alias="async")] = None
     stream: bool | None = None
     max_cost_units: Annotated[int | None, Field(ge=0)] = None
     approval_required_for_tools: bool | None = None
+    max_steps: Annotated[int | None, Field(ge=1)] = None
+    deadline_ms: Annotated[int | None, Field(ge=1_000)] = None
 
 
 class ToolsPolicy(ContractModel):

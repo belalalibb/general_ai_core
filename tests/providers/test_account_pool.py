@@ -244,9 +244,7 @@ def test_replace_account_updates_lifecycle_in_place() -> None:
     provider = _provider("real_text")
     manager, _, _ = _manager(provider)
     account = _registered(manager, provider)
-    updated = account.model_copy(
-        update={"lifecycle_state": AccountLifecycleState.COOLDOWN}
-    )
+    updated = account.model_copy(update={"lifecycle_state": AccountLifecycleState.COOLDOWN})
     pool = manager.pool_for(provider.id)
     pool.replace_account(updated)
     assert pool.get(account.id).lifecycle_state is AccountLifecycleState.COOLDOWN
@@ -293,26 +291,18 @@ def test_filter_5_platform_only_policy_excludes_user_side() -> None:
     provider = _provider("real_text")
     manager, _, _ = _manager(provider)
     platform = _registered(manager, provider, OwnerType.PLATFORM)
-    assert manager.eligible_accounts(
-        "real_text", policy=CredentialPolicy.PLATFORM_ONLY
-    ) == [platform]
-    assert (
-        manager.eligible_accounts("real_text", policy=CredentialPolicy.USER_ONLY)
-        == []
-    )
+    assert manager.eligible_accounts("real_text", policy=CredentialPolicy.PLATFORM_ONLY) == [
+        platform
+    ]
+    assert manager.eligible_accounts("real_text", policy=CredentialPolicy.USER_ONLY) == []
 
 
 def test_filter_5_user_only_policy_excludes_platform() -> None:
     provider = _provider("real_text")
     manager, _, _ = _manager(provider)
     user = _registered(manager, provider, OwnerType.USER)
-    assert manager.eligible_accounts(
-        "real_text", policy=CredentialPolicy.USER_ONLY
-    ) == [user]
-    assert (
-        manager.eligible_accounts("real_text", policy=CredentialPolicy.PLATFORM_ONLY)
-        == []
-    )
+    assert manager.eligible_accounts("real_text", policy=CredentialPolicy.USER_ONLY) == [user]
+    assert manager.eligible_accounts("real_text", policy=CredentialPolicy.PLATFORM_ONLY) == []
 
 
 def test_filter_6_limited_rate_state_excludes() -> None:
@@ -368,10 +358,7 @@ def test_filter_7_missing_binding_excludes() -> None:
     _registered(manager, provider)
     model = _model("real-text-1")
     assert (
-        manager.eligible_accounts(
-            "real_text", bindings=BindingRegistry(), model_id=model.id
-        )
-        == []
+        manager.eligible_accounts("real_text", bindings=BindingRegistry(), model_id=model.id) == []
     )
 
 
@@ -396,10 +383,7 @@ def test_filter_7_unavailable_binding_excludes_available_admits() -> None:
             )
         )
         assert (
-            manager.eligible_accounts(
-                "real_text", bindings=bindings, model_id=model.id
-            )
-            == expected
+            manager.eligible_accounts("real_text", bindings=bindings, model_id=model.id) == expected
         )
 
 
@@ -414,9 +398,7 @@ def test_prefer_user_orders_user_side_before_platform() -> None:
     # nothing and orders the user side first when the pool IS user-side.
     user_a = _registered(manager, provider, OwnerType.USER)
     tenant_b = _registered(manager, provider, OwnerType.TENANT)
-    result = manager.eligible_accounts(
-        "real_text", policy=CredentialPolicy.PREFER_USER
-    )
+    result = manager.eligible_accounts("real_text", policy=CredentialPolicy.PREFER_USER)
     assert set(a.id for a in result) == {user_a.id, tenant_b.id}
     assert all(a.owner_type in {OwnerType.USER, OwnerType.TENANT} for a in result)
 
@@ -426,9 +408,7 @@ def test_prefer_user_admits_platform_pool_too() -> None:
     provider = _provider("real_text")
     manager, _, _ = _manager(provider)
     platform = _registered(manager, provider, OwnerType.PLATFORM)
-    assert manager.eligible_accounts(
-        "real_text", policy=CredentialPolicy.PREFER_USER
-    ) == [platform]
+    assert manager.eligible_accounts("real_text", policy=CredentialPolicy.PREFER_USER) == [platform]
 
 
 def test_lru_selection_never_used_first_then_oldest() -> None:
@@ -470,10 +450,7 @@ def test_select_account_returns_first_ordered_candidate() -> None:
     manager, _, _ = _manager(provider)
     _registered(manager, provider)
     _registered(manager, provider)
-    assert (
-        manager.select_account("real_text")
-        == manager.eligible_accounts("real_text")[0]
-    )
+    assert manager.select_account("real_text") == manager.eligible_accounts("real_text")[0]
 
 
 # --- 30 §10.4 lease flow ---------------------------------------------------------------

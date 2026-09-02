@@ -63,9 +63,7 @@ class RoleGovernance:
         """Answer 41 §15's control question without writing anything."""
         if role.scope in SYSTEM_SCOPES:
             if not is_admin:
-                return RoleAdmissionDecision(
-                    admitted=False, reason="system_role_requires_admin"
-                )
+                return RoleAdmissionDecision(admitted=False, reason="system_role_requires_admin")
         elif role.scope not in CUSTOM_SCOPES:  # pragma: no cover — closed enum
             return RoleAdmissionDecision(admitted=False, reason="scope_ungoverned")
         return RoleAdmissionDecision(

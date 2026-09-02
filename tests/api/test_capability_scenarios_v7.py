@@ -70,25 +70,17 @@ async def _get(app: FastAPI, path: str) -> httpx.Response:
         return await client.get(path)
 
 
-async def _post(
-    app: FastAPI, path: str, body: dict[str, object] | None = None
-) -> httpx.Response:
+async def _post(app: FastAPI, path: str, body: dict[str, object] | None = None) -> httpx.Response:
     async with _client(app) as client:
         return await client.post(path, json=body)
 
 
 def _grant(world: World, limit: float = 100.0) -> None:
-    world.usage.configure_tenant(
-        world.principal.tenant_id, plan="test", task_units_limit=limit
-    )
+    world.usage.configure_tenant(world.principal.tenant_id, plan="test", task_units_limit=limit)
 
 
-async def _save(
-    app: FastAPI, name: str = "smoke", ask: str = "say hello"
-) -> str:
-    response = await _post(
-        app, "/v1/admin/scenarios", {"name": name, "ask": ask}
-    )
+async def _save(app: FastAPI, name: str = "smoke", ask: str = "say hello") -> str:
+    response = await _post(app, "/v1/admin/scenarios", {"name": name, "ask": ask})
     assert response.status_code == 201, response.text
     scenario_id = response.json()["scenario_id"]
     assert isinstance(scenario_id, str)
@@ -116,9 +108,7 @@ class TestScenarioModule:
             router=world.router,
             execution_service=ExecutionService(
                 adapters={world.provider.id: world.adapter},
-                credential_refs={
-                    world.provider.id: f"secret-ref://{world.provider.id}"
-                },
+                credential_refs={world.provider.id: f"secret-ref://{world.provider.id}"},
                 bindings=world.bindings,
                 max_retries_per_candidate=0,
                 usage=world.usage,
@@ -236,17 +226,13 @@ class TestScenarioRoutes:
         world = World()  # no budget configured
         app = world.app()
         scenario_id = run(_save(app))
-        body = run(
-            _post(app, f"/v1/admin/scenarios/{scenario_id}/replay")
-        ).json()
+        body = run(_post(app, f"/v1/admin/scenarios/{scenario_id}/replay")).json()
         assert body["replayed"] is False
         assert "entitlement" in body["error"]
 
     def test_empty_regression_pack_honestly_fails(self) -> None:
         world = World()
-        body = run(
-            _post(world.app(), "/v1/admin/scenarios/regression-pack")
-        ).json()
+        body = run(_post(world.app(), "/v1/admin/scenarios/regression-pack")).json()
         assert body == {
             "scenario_count": 0,
             "regression_pass": False,
@@ -280,9 +266,7 @@ class TestScenarioRoutes:
         foreign_app = World().app()
         real_id = run(_save(foreign_app))  # exists in ANOTHER service
         for scenario_id in (str(uuid4()), real_id, "not-a-uuid"):
-            response = run(
-                _post(app, f"/v1/admin/scenarios/{scenario_id}/replay")
-            )
+            response = run(_post(app, f"/v1/admin/scenarios/{scenario_id}/replay"))
             assert response.status_code == 404, scenario_id
             body = response.json()
             assert set(body.keys()) == {"error"}
@@ -293,11 +277,7 @@ class TestScenarioRoutes:
         app = world.app()
         responses = [
             run(_get(app, "/v1/admin/scenarios")),
-            run(
-                _post(
-                    app, "/v1/admin/scenarios", {"name": "x", "ask": "y"}
-                )
-            ),
+            run(_post(app, "/v1/admin/scenarios", {"name": "x", "ask": "y"})),
             run(_post(app, f"/v1/admin/scenarios/{uuid4()}/replay")),
             run(_post(app, "/v1/admin/scenarios/regression-pack")),
         ]
@@ -309,29 +289,15 @@ class TestScenarioRoutes:
         world = World()
         app = world.app(with_admin=False)
         assert run(_get(app, "/v1/admin/scenarios")).status_code == 404
-        assert (
-            run(
-                _post(app, "/v1/admin/scenarios", {"name": "x", "ask": "y"})
-            ).status_code
-            == 404
-        )
-        assert (
-            run(
-                _post(app, f"/v1/admin/scenarios/{uuid4()}/replay")
-            ).status_code
-            == 404
-        )
-        assert (
-            run(_post(app, "/v1/admin/scenarios/regression-pack")).status_code
-            == 404
-        )
+        assert run(_post(app, "/v1/admin/scenarios", {"name": "x", "ask": "y"})).status_code == 404
+        assert run(_post(app, f"/v1/admin/scenarios/{uuid4()}/replay")).status_code == 404
+        assert run(_post(app, "/v1/admin/scenarios/regression-pack")).status_code == 404
+
 
 # --- agent tools -------------------------------------------------------------------
 
 
-def _agent_surface(
-    world: World, scenarios: ScenarioService | None
-) -> AgentToolSurface:
+def _agent_surface(world: World, scenarios: ScenarioService | None) -> AgentToolSurface:
     service = ExecutionService(
         adapters={world.provider.id: world.adapter},
         credential_refs={world.provider.id: f"secret-ref://{world.provider.id}"},
@@ -394,9 +360,7 @@ class TestAgentScenarioTools:
         assert record.result is not None
         assert record.result["checks"] == ALL_CHECKS  # default = full set
         route_rows = run(_get(app, "/v1/admin/scenarios")).json()["scenarios"]
-        assert [r["scenario_id"] for r in route_rows] == [
-            record.result["scenario_id"]
-        ]
+        assert [r["scenario_id"] for r in route_rows] == [record.result["scenario_id"]]
 
     def test_agent_save_refusals_are_honest_content(self) -> None:
         world = World()
@@ -411,9 +375,7 @@ class TestAgentScenarioTools:
             ({"name": "x", "ask": "y", "checks": ["nope"]}, "closed"),
         ]
         for args, needle in cases:
-            record = run(
-                dispatcher.dispatch(world.principal, "save_scenario", args)
-            )
+            record = run(dispatcher.dispatch(world.principal, "save_scenario", args))
             assert record.ok, record.refusal  # honest error CONTENT
             assert record.result is not None
             error = record.result["error"]
@@ -429,17 +391,13 @@ class TestAgentScenarioTools:
         dispatcher = ToolDispatcher(registry, audit=world.audit)
         scenario_id = run(_save(app))
         record = run(
-            dispatcher.dispatch(
-                world.principal, "replay_scenario", {"scenario_id": scenario_id}
-            )
+            dispatcher.dispatch(world.principal, "replay_scenario", {"scenario_id": scenario_id})
         )
         assert record.ok, record.refusal
         assert record.result is not None
         assert record.result["replayed"] is True
         assert record.result["passed"] is True
-        pack = run(
-            dispatcher.dispatch(world.principal, "run_regression_pack", {})
-        )
+        pack = run(dispatcher.dispatch(world.principal, "run_regression_pack", {}))
         assert pack.ok, pack.refusal
         assert pack.result is not None
         assert pack.result["scenario_count"] == 1

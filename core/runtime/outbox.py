@@ -42,9 +42,7 @@ class OutboxRecord:
 class OutboxPort(Protocol):
     """Staging table for messages written inside the state transaction."""
 
-    async def append(
-        self, stream: str, payload: Mapping[str, str], idempotency_key: str
-    ) -> str:
+    async def append(self, stream: str, payload: Mapping[str, str], idempotency_key: str) -> str:
         """Stage a message; returns the outbox record id."""
         ...
 
@@ -70,9 +68,7 @@ class InMemoryOutbox:
         self._pending: dict[str, OutboxRecord] = {}
         self._dispatched: list[OutboxRecord] = []
 
-    async def append(
-        self, stream: str, payload: Mapping[str, str], idempotency_key: str
-    ) -> str:
+    async def append(self, stream: str, payload: Mapping[str, str], idempotency_key: str) -> str:
         record_id = f"outbox-{next(self._seq)}"
         self._pending[record_id] = OutboxRecord(
             record_id=record_id,
@@ -108,9 +104,7 @@ class OutboxRelay:
         """Publish up to ``max_records`` pending records; returns the count."""
         relayed = 0
         for record in await self._outbox.pending(max_records):
-            await self._queue.publish(
-                record.stream, record.payload, record.idempotency_key
-            )
+            await self._queue.publish(record.stream, record.payload, record.idempotency_key)
             await self._outbox.mark_dispatched(record.record_id)
             relayed += 1
         return relayed

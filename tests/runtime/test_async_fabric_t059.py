@@ -216,7 +216,11 @@ def test_worker_crash_leaves_pending_and_peer_recovers() -> None:
         clock.now += 60.0  # pending grows stale
         handler = _Handler()
         survivor = Worker(
-            queue, idem, stream=STREAM, group=GROUP, consumer="survivor",
+            queue,
+            idem,
+            stream=STREAM,
+            group=GROUP,
+            consumer="survivor",
             handler=handler,
         )
         report = await survivor.recover_once(idle_ms=30_000, max_messages=10)
@@ -238,7 +242,11 @@ def test_stale_worker_delivery_is_reclaimed_and_completed() -> None:
         await queue.consume(STREAM, GROUP, "slow-worker")
         handler = _Handler()
         peer = Worker(
-            queue, idem, stream=STREAM, group=GROUP, consumer="peer",
+            queue,
+            idem,
+            stream=STREAM,
+            group=GROUP,
+            consumer="peer",
             handler=handler,
         )
         # Not yet stale: takeover refused by the idle threshold.
@@ -262,7 +270,11 @@ def test_transient_failure_retries_via_stale_claim_then_succeeds() -> None:
         idem = InMemoryIdempotencyStore()
         handler = _Handler()
         worker = Worker(
-            queue, idem, stream=STREAM, group=GROUP, consumer="w1",
+            queue,
+            idem,
+            stream=STREAM,
+            group=GROUP,
+            consumer="w1",
             handler=handler,
         )
         message_id = await queue.publish(STREAM, {"k": "1"}, "idem-1")
@@ -307,8 +319,13 @@ def test_retry_exhaustion_dead_letters() -> None:
         handler = _Handler()
         handler.always_transient = True
         worker = Worker(
-            queue, idem, stream=STREAM, group=GROUP, consumer="w1",
-            handler=handler, max_deliveries=2,
+            queue,
+            idem,
+            stream=STREAM,
+            group=GROUP,
+            consumer="w1",
+            handler=handler,
+            max_deliveries=2,
         )
         message_id = await queue.publish(STREAM, {"k": "1"}, "idem-1")
         first = await worker.run_once()  # delivery 1 → transient, left pending
@@ -330,8 +347,13 @@ def test_worker_rejects_nonpositive_max_deliveries() -> None:
 
     with pytest.raises(ValueError):
         Worker(
-            queue, InMemoryIdempotencyStore(), stream=STREAM, group=GROUP,
-            consumer="w1", handler=noop, max_deliveries=0,
+            queue,
+            InMemoryIdempotencyStore(),
+            stream=STREAM,
+            group=GROUP,
+            consumer="w1",
+            handler=noop,
+            max_deliveries=0,
         )
 
 
@@ -346,9 +368,7 @@ def test_queue_flood_refused_at_depth_limit() -> None:
         admitted = 0
         refused = None
         for _ in range(10):
-            decision = await controller.admit(
-                stream=STREAM, tenant_id="t1", max_queue_depth=3
-            )
+            decision = await controller.admit(stream=STREAM, tenant_id="t1", max_queue_depth=3)
             if decision.admitted:
                 admitted += 1
             else:
@@ -366,18 +386,12 @@ def test_settled_work_reopens_queue_capacity() -> None:
         controller = AdmissionController(InMemoryRateLimiter(_Clock()), gauge)
         for _ in range(2):
             assert (
-                await controller.admit(
-                    stream=STREAM, tenant_id="t1", max_queue_depth=2
-                )
+                await controller.admit(stream=STREAM, tenant_id="t1", max_queue_depth=2)
             ).admitted
-        blocked = await controller.admit(
-            stream=STREAM, tenant_id="t1", max_queue_depth=2
-        )
+        blocked = await controller.admit(stream=STREAM, tenant_id="t1", max_queue_depth=2)
         assert not blocked.admitted
         gauge.settled(STREAM)  # one job finished
-        reopened = await controller.admit(
-            stream=STREAM, tenant_id="t1", max_queue_depth=2
-        )
+        reopened = await controller.admit(stream=STREAM, tenant_id="t1", max_queue_depth=2)
         assert reopened.admitted
 
     run(scenario())
@@ -466,7 +480,11 @@ def test_end_to_end_admit_stage_relay_work_settle() -> None:
         idem = InMemoryIdempotencyStore()
         handler = _Handler()
         worker = Worker(
-            queue, idem, stream=STREAM, group=GROUP, consumer="w1",
+            queue,
+            idem,
+            stream=STREAM,
+            group=GROUP,
+            consumer="w1",
             handler=handler,
         )
         decision = await controller.admit(

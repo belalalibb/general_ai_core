@@ -41,9 +41,7 @@ def test_valid_tool_call_parses() -> None:
 
 
 def test_tool_call_reasoning_optional() -> None:
-    proposal = parse_agent_proposal(
-        {"action": "tool_call", "tool": "t", "arguments": {}}
-    )
+    proposal = parse_agent_proposal({"action": "tool_call", "tool": "t", "arguments": {}})
     assert isinstance(proposal, ToolCallProposal)
     assert proposal.reasoning is None
 
@@ -128,9 +126,7 @@ def test_non_object_rejected() -> None:
 
 def test_reasoning_must_be_string_when_present() -> None:
     with pytest.raises(InvalidAgentProposal, match="reasoning must be a string"):
-        parse_agent_proposal(
-            {"action": "final", "output": {}, "reasoning": {"chain": []}}
-        )
+        parse_agent_proposal({"action": "final", "output": {}, "reasoning": {"chain": []}})
 
 
 def test_error_names_the_rule_and_carries_reason() -> None:

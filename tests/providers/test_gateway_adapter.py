@@ -283,9 +283,7 @@ class TestSecurityHeaders:
         run(adapter.generate(_generate_request()))
         (request,) = recorder.requests
         assert request.headers[HEADER_GATEWAY_SECRET] == GATEWAY_SECRET
-        assert request.headers[HEADER_GATEWAY_SECRET_VERSION] == str(
-            GATEWAY_SECRET_VERSION
-        )
+        assert request.headers[HEADER_GATEWAY_SECRET_VERSION] == str(GATEWAY_SECRET_VERSION)
         assert request.headers[HEADER_ROUTE_TOKEN] == ROUTE_TOKEN
 
     def test_discovery_and_health_carry_headers_too(self) -> None:
@@ -304,6 +302,7 @@ class TestSecurityHeaders:
 
     def test_route_token_never_in_url(self) -> None:
         """OPEN-3: the token appears in the header and NOWHERE in the URL."""
+
         def _responder(request: httpx.Request) -> httpx.Response:
             if request.url.path == "/v1/models":
                 return httpx.Response(200, json={"models": []})
@@ -373,9 +372,7 @@ class TestAuthRetry:
         assert recorder.requests[1].headers[HEADER_GATEWAY_SECRET] == rotated.value
 
     def test_auth_expired_retries_exactly_once_then_reports(self) -> None:
-        adapter, recorder, _ = _adapter(
-            lambda request: httpx.Response(401, json=_STALE_401)
-        )
+        adapter, recorder, _ = _adapter(lambda request: httpx.Response(401, json=_STALE_401))
         result = run(adapter.generate(_generate_request()))
         assert len(recorder.requests) == 2  # never a third attempt
         assert result.succeeded is False
@@ -384,9 +381,7 @@ class TestAuthRetry:
         assert result.error.retryable is True
 
     def test_wrong_secret_is_terminal_no_retry(self) -> None:
-        adapter, recorder, _ = _adapter(
-            lambda request: httpx.Response(401, json=_WRONG_401)
-        )
+        adapter, recorder, _ = _adapter(lambda request: httpx.Response(401, json=_WRONG_401))
         result = run(adapter.generate(_generate_request()))
         assert len(recorder.requests) == 1  # invalid_credential: no retry
         assert result.succeeded is False
@@ -403,9 +398,7 @@ class TestAuthRetry:
 class TestUnsupportedOperations:
     def test_undeclared_operation_rejected_without_network(self) -> None:
         adapter, recorder, _ = _adapter(_success_body)
-        result = run(
-            adapter.generate(_generate_request(ProviderOperation.GENERATE_IMAGE))
-        )
+        result = run(adapter.generate(_generate_request(ProviderOperation.GENERATE_IMAGE)))
         assert recorder.requests == []  # no call crossed
         assert result.succeeded is False
         assert result.error is not None
@@ -419,9 +412,7 @@ class TestUnsupportedOperations:
             ProviderOperation.DOWNLOAD_ASSET,
         ],
     )
-    def test_open2_excluded_operations_rejected(
-        self, operation: ProviderOperation
-    ) -> None:
+    def test_open2_excluded_operations_rejected(self, operation: ProviderOperation) -> None:
         adapter, recorder, _ = _adapter(_success_body)
         result = run(adapter.generate(_generate_request(operation)))
         assert recorder.requests == []
@@ -447,9 +438,7 @@ class TestUnsupportedOperations:
 
 class TestAllTwelveCategories:
     @pytest.mark.parametrize("category", list(ProviderErrorCategory))
-    def test_wire_execution_failure_maps_one_to_one(
-        self, category: ProviderErrorCategory
-    ) -> None:
+    def test_wire_execution_failure_maps_one_to_one(self, category: ProviderErrorCategory) -> None:
         """HTTP 200 + succeeded=false envelope: every category passes verbatim."""
         adapter, _, _ = _adapter(
             _wire_failure(
@@ -461,9 +450,7 @@ class TestAllTwelveCategories:
                     ProviderErrorCategory.TIMEOUT,
                     ProviderErrorCategory.RETRYABLE_SERVER_ERROR,
                 ),
-                retry_after_ms=(
-                    1500 if category is ProviderErrorCategory.RATE_LIMITED else None
-                ),
+                retry_after_ms=(1500 if category is ProviderErrorCategory.RATE_LIMITED else None),
                 provider_code="upstream_evidence",
             )
         )
@@ -551,9 +538,7 @@ class TestAllTwelveCategories:
         assert result.error.provider_code == "gw_fault"
 
     def test_malformed_200_body_is_non_retryable_never_a_crash(self) -> None:
-        adapter, _, _ = _adapter(
-            lambda request: httpx.Response(200, content=b"not json at all")
-        )
+        adapter, _, _ = _adapter(lambda request: httpx.Response(200, content=b"not json at all"))
         result = run(adapter.generate(_generate_request()))
         assert result.succeeded is False
         assert result.error is not None
@@ -561,9 +546,7 @@ class TestAllTwelveCategories:
         assert result.error.provider_code == "malformed_gateway_response"
 
     def test_unknown_wire_category_treated_as_malformed(self) -> None:
-        adapter, _, _ = _adapter(
-            _wire_failure("totally_new_category", retryable=False)
-        )
+        adapter, _, _ = _adapter(_wire_failure("totally_new_category", retryable=False))
         result = run(adapter.generate(_generate_request()))
         assert result.error is not None
         assert result.error.category is ProviderErrorCategory.NON_RETRYABLE_ERROR
@@ -627,13 +610,9 @@ class TestPortSurface:
             ("UNKNOWN", ProviderHealthState.UNAVAILABLE),  # unknown never healthy
         ],
     )
-    def test_health_status_mapping(
-        self, wire_status: str, expected: ProviderHealthState
-    ) -> None:
+    def test_health_status_mapping(self, wire_status: str, expected: ProviderHealthState) -> None:
         adapter, _, _ = _adapter(
-            lambda request: httpx.Response(
-                200, json={"status": wire_status, "checked_at": None}
-            )
+            lambda request: httpx.Response(200, json={"status": wire_status, "checked_at": None})
         )
         health = run(adapter.health_check(HealthScope.PROVIDER))
         assert health.state is expected
@@ -648,9 +627,7 @@ class TestPortSurface:
         assert health.state is ProviderHealthState.UNAVAILABLE
 
     def test_platform_credential_mode_sends_no_value(self) -> None:
-        adapter, recorder, _ = _adapter(
-            _success_body, credential_mode=CREDENTIAL_MODE_PLATFORM
-        )
+        adapter, recorder, _ = _adapter(_success_body, credential_mode=CREDENTIAL_MODE_PLATFORM)
         run(adapter.generate(_generate_request()))
         (request,) = recorder.requests
         credential = json.loads(request.content)["credential"]
@@ -706,9 +683,16 @@ class TestNoLeak:
         responders = [
             lambda request: httpx.Response(401, json=_WRONG_401),
             lambda request: httpx.Response(401, json=_STALE_401),
-            lambda request: httpx.Response(404, json={"error": {
-                "category": "provider_unavailable", "retryable": False,
-                "message": "unknown route"}}),
+            lambda request: httpx.Response(
+                404,
+                json={
+                    "error": {
+                        "category": "provider_unavailable",
+                        "retryable": False,
+                        "message": "unknown route",
+                    }
+                },
+            ),
             lambda request: httpx.Response(200, content=b"garbage"),
             _wire_failure("rate_limited", retryable=True, retry_after_ms=100),
         ]
@@ -735,9 +719,7 @@ class TestNoLeak:
         assert "[SCRUBBED]" in repr(secret)
 
     def test_health_and_discovery_never_leak(self) -> None:
-        adapter, _, _ = _adapter(
-            lambda request: httpx.Response(200, json={"status": "OK"})
-        )
+        adapter, _, _ = _adapter(lambda request: httpx.Response(200, json={"status": "OK"}))
         health = run(adapter.health_check(HealthScope.PROVIDER))
         text = health.model_dump_json()
         for sentinel in self._SENTINELS:
@@ -745,9 +727,13 @@ class TestNoLeak:
 
     def test_error_messages_never_echo_raw_bodies(self) -> None:
         """A hostile 500 body with sentinel-like content is never echoed."""
-        hostile = {"error": {"category": "retryable_server_error",
-                             "retryable": True,
-                             "message": "leak " + INTERNAL_SLUG}}
+        hostile = {
+            "error": {
+                "category": "retryable_server_error",
+                "retryable": True,
+                "message": "leak " + INTERNAL_SLUG,
+            }
+        }
 
         adapter, _, _ = _adapter(lambda request: httpx.Response(500, json=hostile))
         result = run(adapter.generate(_generate_request()))

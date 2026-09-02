@@ -65,9 +65,7 @@ class _Recorder:
         return self._responder(request)
 
 
-def _adapter(
-    responder: Any, *, health_ref: str | None = CRED_REF
-) -> tuple[GroqAdapter, _Recorder]:
+def _adapter(responder: Any, *, health_ref: str | None = CRED_REF) -> tuple[GroqAdapter, _Recorder]:
     recorder = _Recorder(responder)
     adapter = GroqAdapter(
         MANIFEST,
@@ -96,8 +94,7 @@ def _ok_chat(request: httpx.Request) -> httpx.Response:
         200,
         json={
             "choices": [
-                {"message": {"role": "assistant", "content": "hi there"},
-                 "finish_reason": "stop"}
+                {"message": {"role": "assistant", "content": "hi there"}, "finish_reason": "stop"}
             ],
             "usage": {"prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13},
             "model": "allam-2-7b",
@@ -187,9 +184,7 @@ class TestGenerateContract:
         assert response.request_id == request.request_id
         assert response.output["content"] == "hi there"
         assert response.output["finish_reason"] == "stop"
-        assert response.usage == {
-            "prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13
-        }
+        assert response.usage == {"prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13}
         assert response.error is None
         assert response.latency_ms is not None and response.latency_ms >= 0
         # request body shape: model + user message from ask, stream pinned off
@@ -336,10 +331,12 @@ class TestErrorNormalization:
         adapter, _ = _adapter(
             lambda req: httpx.Response(
                 400,
-                json={"error": {
-                    "code": "invalid_request_error",
-                    "message": "SECRET-ECHO: user asked about gsk_something",
-                }},
+                json={
+                    "error": {
+                        "code": "invalid_request_error",
+                        "message": "SECRET-ECHO: user asked about gsk_something",
+                    }
+                },
             )
         )
         response = run(adapter.generate(_generate_request()))
@@ -417,11 +414,13 @@ class TestHealthAndDiscovery:
         adapter, _ = _adapter(
             lambda req: httpx.Response(
                 200,
-                json={"data": [
-                    {"id": "allam-2-7b", "context_window": 4096},
-                    {"id": "openai/gpt-oss-20b", "context_window": 131072},
-                    {"not_an_id": True},  # malformed entry skipped, not fatal
-                ]},
+                json={
+                    "data": [
+                        {"id": "allam-2-7b", "context_window": 4096},
+                        {"id": "openai/gpt-oss-20b", "context_window": 131072},
+                        {"not_an_id": True},  # malformed entry skipped, not fatal
+                    ]
+                },
             )
         )
         models = run(adapter.discover_models())

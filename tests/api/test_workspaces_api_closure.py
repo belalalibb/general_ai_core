@@ -50,11 +50,8 @@ def make_app(
     bindings = BindingRegistry()
     return create_app(
         router=SimpleScoringRouter(providers, models, bindings),
-        execution_service=ExecutionService(
-            adapters={}, credential_refs={}, bindings=bindings
-        ),
-        principal=principal
-        or Principal(tenant_id=uuid4(), user_id=uuid4()),
+        execution_service=ExecutionService(adapters={}, credential_refs={}, bindings=bindings),
+        principal=principal or Principal(tenant_id=uuid4(), user_id=uuid4()),
         workspaces=workspaces,
         projects=projects,
     )
@@ -81,9 +78,7 @@ class TestWorkspaceLifecycle:
 
     def test_get_roundtrip(self) -> None:
         app = make_app()
-        created = run(
-            _request(app, "POST", "/v1/workspaces", {"name": "Ops"})
-        ).json()
+        created = run(_request(app, "POST", "/v1/workspaces", {"name": "Ops"})).json()
         r = run(_request(app, "GET", f"/v1/workspaces/{created['workspace_id']}"))
         assert r.status_code == 200
         assert r.json() == created
@@ -91,9 +86,7 @@ class TestWorkspaceLifecycle:
     def test_list_is_name_ordered(self) -> None:
         app = make_app()
         for name in ("zeta", "alpha", "mid"):
-            assert (
-                run(_request(app, "POST", "/v1/workspaces", {"name": name}))
-            ).status_code == 201
+            assert (run(_request(app, "POST", "/v1/workspaces", {"name": name}))).status_code == 201
         r = run(_request(app, "GET", "/v1/workspaces"))
         assert r.status_code == 200
         names = [w["name"] for w in r.json()["workspaces"]]
@@ -101,9 +94,7 @@ class TestWorkspaceLifecycle:
 
     def test_delete_returns_204_then_404(self) -> None:
         app = make_app()
-        wid = run(
-            _request(app, "POST", "/v1/workspaces", {"name": "gone"})
-        ).json()["workspace_id"]
+        wid = run(_request(app, "POST", "/v1/workspaces", {"name": "gone"})).json()["workspace_id"]
         assert run(_request(app, "DELETE", f"/v1/workspaces/{wid}")).status_code == 204
         after = run(_request(app, "GET", f"/v1/workspaces/{wid}"))
         assert after.status_code == 404
@@ -143,11 +134,7 @@ class TestWorkspaceLifecycle:
 class TestProjectLifecycle:
     def test_create_standalone_project(self) -> None:
         app = make_app()
-        r = run(
-            _request(
-                app, "POST", "/v1/projects", {"name": "P1", "metadata": {"k": "v"}}
-            )
-        )
+        r = run(_request(app, "POST", "/v1/projects", {"name": "P1", "metadata": {"k": "v"}}))
         assert r.status_code == 201
         body = r.json()
         assert set(body.keys()) == {"project_id", "workspace_id", "name", "metadata"}
@@ -156,12 +143,8 @@ class TestProjectLifecycle:
 
     def test_create_project_linked_to_workspace(self) -> None:
         app = make_app()
-        wid = run(
-            _request(app, "POST", "/v1/workspaces", {"name": "W"})
-        ).json()["workspace_id"]
-        r = run(
-            _request(app, "POST", "/v1/projects", {"name": "P", "workspace_id": wid})
-        )
+        wid = run(_request(app, "POST", "/v1/workspaces", {"name": "W"})).json()["workspace_id"]
+        r = run(_request(app, "POST", "/v1/projects", {"name": "P", "workspace_id": wid}))
         assert r.status_code == 201
         assert r.json()["workspace_id"] == wid
 
@@ -181,9 +164,7 @@ class TestProjectLifecycle:
 
     def test_list_filter_by_workspace(self) -> None:
         app = make_app()
-        wid = run(
-            _request(app, "POST", "/v1/workspaces", {"name": "W"})
-        ).json()["workspace_id"]
+        wid = run(_request(app, "POST", "/v1/workspaces", {"name": "W"})).json()["workspace_id"]
         run(_request(app, "POST", "/v1/projects", {"name": "in", "workspace_id": wid}))
         run(_request(app, "POST", "/v1/projects", {"name": "out"}))
         r = run(_request(app, "GET", f"/v1/projects?workspace_id={wid}"))
@@ -193,9 +174,7 @@ class TestProjectLifecycle:
 
     def test_delete_project_then_404(self) -> None:
         app = make_app()
-        pid = run(
-            _request(app, "POST", "/v1/projects", {"name": "P"})
-        ).json()["project_id"]
+        pid = run(_request(app, "POST", "/v1/projects", {"name": "P"})).json()["project_id"]
         assert run(_request(app, "DELETE", f"/v1/projects/{pid}")).status_code == 204
         assert run(_request(app, "GET", f"/v1/projects/{pid}")).status_code == 404
 
@@ -205,9 +184,7 @@ class TestRestrictSemantics:
         # Migration 0002 FK ondelete=RESTRICT surfaced honestly — never
         # a silent cascade.
         app = make_app()
-        wid = run(
-            _request(app, "POST", "/v1/workspaces", {"name": "W"})
-        ).json()["workspace_id"]
+        wid = run(_request(app, "POST", "/v1/workspaces", {"name": "W"})).json()["workspace_id"]
         run(_request(app, "POST", "/v1/projects", {"name": "P", "workspace_id": wid}))
         r = run(_request(app, "DELETE", f"/v1/workspaces/{wid}"))
         assert r.status_code == 409
@@ -217,12 +194,10 @@ class TestRestrictSemantics:
 
     def test_delete_succeeds_after_projects_removed(self) -> None:
         app = make_app()
-        wid = run(
-            _request(app, "POST", "/v1/workspaces", {"name": "W"})
-        ).json()["workspace_id"]
-        pid = run(
-            _request(app, "POST", "/v1/projects", {"name": "P", "workspace_id": wid})
-        ).json()["project_id"]
+        wid = run(_request(app, "POST", "/v1/workspaces", {"name": "W"})).json()["workspace_id"]
+        pid = run(_request(app, "POST", "/v1/projects", {"name": "P", "workspace_id": wid})).json()[
+            "project_id"
+        ]
         run(_request(app, "DELETE", f"/v1/projects/{pid}"))
         assert run(_request(app, "DELETE", f"/v1/workspaces/{wid}")).status_code == 204
 
@@ -248,24 +223,18 @@ class TestTenantIsolation:
 
     def test_foreign_workspace_get_is_same_404_as_absent(self) -> None:
         a, b = self._two_tenants()
-        wid = run(
-            _request(a, "POST", "/v1/workspaces", {"name": "secret"})
-        ).json()["workspace_id"]
+        wid = run(_request(a, "POST", "/v1/workspaces", {"name": "secret"})).json()["workspace_id"]
         foreign = run(_request(b, "GET", f"/v1/workspaces/{wid}"))
         absent = run(_request(b, "GET", f"/v1/workspaces/{uuid4()}"))
         assert foreign.status_code == absent.status_code == 404
         # Identical error shape — no enumeration oracle (20 §6).
         assert (
-            foreign.json()["error"]["code"]
-            == absent.json()["error"]["code"]
-            == "validation_error"
+            foreign.json()["error"]["code"] == absent.json()["error"]["code"] == "validation_error"
         )
 
     def test_foreign_delete_is_404_and_row_survives(self) -> None:
         a, b = self._two_tenants()
-        wid = run(
-            _request(a, "POST", "/v1/workspaces", {"name": "keep"})
-        ).json()["workspace_id"]
+        wid = run(_request(a, "POST", "/v1/workspaces", {"name": "keep"})).json()["workspace_id"]
         assert run(_request(b, "DELETE", f"/v1/workspaces/{wid}")).status_code == 404
         assert run(_request(a, "GET", f"/v1/workspaces/{wid}")).status_code == 200
 
@@ -278,12 +247,8 @@ class TestTenantIsolation:
 
     def test_cannot_link_project_to_foreign_workspace(self) -> None:
         a, b = self._two_tenants()
-        wid = run(
-            _request(a, "POST", "/v1/workspaces", {"name": "W"})
-        ).json()["workspace_id"]
-        r = run(
-            _request(b, "POST", "/v1/projects", {"name": "P", "workspace_id": wid})
-        )
+        wid = run(_request(a, "POST", "/v1/workspaces", {"name": "W"})).json()["workspace_id"]
+        r = run(_request(b, "POST", "/v1/projects", {"name": "P", "workspace_id": wid}))
         assert r.status_code == 404  # same as absent — no oracle
 
 
@@ -312,9 +277,7 @@ class TestAuthPosture:
         bindings = BindingRegistry()
         anon_app = create_app(
             router=SimpleScoringRouter(providers, models, bindings),
-            execution_service=ExecutionService(
-                adapters={}, credential_refs={}, bindings=bindings
-            ),
+            execution_service=ExecutionService(adapters={}, credential_refs={}, bindings=bindings),
             auth=AuthSurface(
                 identity=InMemoryIdentityService(
                     hasher=_Hasher(), email_sender=_Sink(), default_plan_id=uuid4()

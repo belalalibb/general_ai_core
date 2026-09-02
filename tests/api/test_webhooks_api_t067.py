@@ -45,9 +45,7 @@ def make_app(
     bindings = BindingRegistry()
     return create_app(
         router=SimpleScoringRouter(providers, models, bindings),
-        execution_service=ExecutionService(
-            adapters={}, credential_refs={}, bindings=bindings
-        ),
+        execution_service=ExecutionService(adapters={}, credential_refs={}, bindings=bindings),
         principal=Principal(tenant_id=uuid4(), user_id=uuid4()),
         webhooks=webhooks,
         webhook_subscriptions=subscriptions,
@@ -149,9 +147,7 @@ class TestWebhookRegistration:
         transport = httpx.ASGITransport(app=app)
 
         async def probe() -> tuple[int, int, int, int]:
-            async with httpx.AsyncClient(
-                transport=transport, base_url="http://test"
-            ) as c:
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
                 listed = await c.get("/v1/webhooks")
                 deleted = await c.delete(f"/v1/webhooks/{uuid4()}")
                 put = await c.put(f"/v1/webhooks/{uuid4()}", json={})
@@ -173,9 +169,7 @@ class TestWebhookRegistration:
         off_transport = httpx.ASGITransport(app=off)
 
         async def probe_off() -> tuple[int, int, int]:
-            async with httpx.AsyncClient(
-                transport=off_transport, base_url="http://test"
-            ) as c:
+            async with httpx.AsyncClient(transport=off_transport, base_url="http://test") as c:
                 listed = await c.get("/v1/webhooks")
                 created = await c.post("/v1/webhooks", json={"url": "https://x"})
                 deleted = await c.delete(f"/v1/webhooks/{uuid4()}")

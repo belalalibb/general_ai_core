@@ -64,9 +64,7 @@ from infrastructure.db.repositories.sourcechange import (
 
 TENANT = uuid4()
 ACTOR = uuid4()
-BASE = SourceSnapshot.from_files(
-    {"app/main.py": b"print('v1')\n", "README.md": b"# demo\n"}
-)
+BASE = SourceSnapshot.from_files({"app/main.py": b"print('v1')\n", "README.md": b"# demo\n"})
 PATCH = SourcePatch(
     operations=(
         PatchOperation(
@@ -99,54 +97,36 @@ class FakeSourceChangeRepository:
     Postgres binding writes — reads reconstruct through the SAME decoders
     (``_row_to_proposal``), so hash re-derivation is exercised for real."""
 
-    snapshot_rows: dict[tuple[UUID, str], dict[str, str]] = field(
-        default_factory=dict
-    )
-    proposal_rows: dict[tuple[UUID, UUID], dict[str, Any]] = field(
-        default_factory=dict
-    )
+    snapshot_rows: dict[tuple[UUID, str], dict[str, str]] = field(default_factory=dict)
+    proposal_rows: dict[tuple[UUID, UUID], dict[str, Any]] = field(default_factory=dict)
 
-    async def save_snapshot(
-        self, tenant_id: UUID, snapshot: SourceSnapshot
-    ) -> None:
+    async def save_snapshot(self, tenant_id: UUID, snapshot: SourceSnapshot) -> None:
         key = (tenant_id, snapshot.snapshot_id)
         if key not in self.snapshot_rows:  # ON CONFLICT DO NOTHING
             self.snapshot_rows[key] = _encode_files(snapshot.files)
 
-    async def get_snapshot(
-        self, tenant_id: UUID, snapshot_id: str
-    ) -> SourceSnapshot:
+    async def get_snapshot(self, tenant_id: UUID, snapshot_id: str) -> SourceSnapshot:
         row = self.snapshot_rows.get((tenant_id, snapshot_id))
         if row is None:
             raise UnknownSnapshot(snapshot_id)
         return SourceSnapshot(
             snapshot_id=snapshot_id,
-            files=MappingProxyType(
-                {p: base64.b64decode(c) for p, c in row.items()}
-            ),
+            files=MappingProxyType({p: base64.b64decode(c) for p, c in row.items()}),
         )
 
     async def save_proposal(self, proposal: ChangeProposal) -> None:
         values = _proposal_values(proposal)  # UPSERT latest record
         self.proposal_rows[(proposal.tenant_id, proposal.proposal_id)] = values
 
-    async def get_proposal(
-        self, tenant_id: UUID, proposal_id: UUID
-    ) -> ChangeProposal:
+    async def get_proposal(self, tenant_id: UUID, proposal_id: UUID) -> ChangeProposal:
         row = self.proposal_rows.get((tenant_id, proposal_id))
         if row is None:
             raise ProposalNotFound()
         return _row_to_proposal(SimpleNamespace(**row))
 
-    async def list_proposals(
-        self, tenant_id: UUID
-    ) -> tuple[ChangeProposal, ...]:
+    async def list_proposals(self, tenant_id: UUID) -> tuple[ChangeProposal, ...]:
         rows = sorted(
-            (
-                row
-                for (owner, _), row in self.proposal_rows.items()
-                if owner == tenant_id
-            ),
+            (row for (owner, _), row in self.proposal_rows.items() if owner == tenant_id),
             key=lambda row: (row["created_at"], str(row["proposal_id"])),
         )
         return tuple(_row_to_proposal(SimpleNamespace(**row)) for row in rows)
@@ -155,27 +135,19 @@ class FakeSourceChangeRepository:
 class ExplodingRepository:
     """Every call fails — proves durable-write failures surface loudly."""
 
-    async def save_snapshot(
-        self, tenant_id: UUID, snapshot: SourceSnapshot
-    ) -> None:
+    async def save_snapshot(self, tenant_id: UUID, snapshot: SourceSnapshot) -> None:
         raise ConnectionError("database unreachable")
 
-    async def get_snapshot(
-        self, tenant_id: UUID, snapshot_id: str
-    ) -> SourceSnapshot:
+    async def get_snapshot(self, tenant_id: UUID, snapshot_id: str) -> SourceSnapshot:
         raise ConnectionError("database unreachable")
 
     async def save_proposal(self, proposal: ChangeProposal) -> None:
         raise ConnectionError("database unreachable")
 
-    async def get_proposal(
-        self, tenant_id: UUID, proposal_id: UUID
-    ) -> ChangeProposal:
+    async def get_proposal(self, tenant_id: UUID, proposal_id: UUID) -> ChangeProposal:
         raise ConnectionError("database unreachable")
 
-    async def list_proposals(
-        self, tenant_id: UUID
-    ) -> tuple[ChangeProposal, ...]:
+    async def list_proposals(self, tenant_id: UUID) -> tuple[ChangeProposal, ...]:
         raise ConnectionError("database unreachable")
 
 
@@ -194,16 +166,12 @@ def repository() -> FakeSourceChangeRepository:
 
 
 @pytest.fixture()
-def snapshots(
-    repository: FakeSourceChangeRepository, bridge: AsyncBridge
-) -> SnapshotStorePort:
+def snapshots(repository: FakeSourceChangeRepository, bridge: AsyncBridge) -> SnapshotStorePort:
     return DurableSnapshotStore(repository=repository, bridge=bridge)
 
 
 @pytest.fixture()
-def proposals(
-    repository: FakeSourceChangeRepository, bridge: AsyncBridge
-) -> ProposalStorePort:
+def proposals(repository: FakeSourceChangeRepository, bridge: AsyncBridge) -> ProposalStorePort:
     return DurableProposalStore(repository=repository, bridge=bridge)
 
 
@@ -211,9 +179,7 @@ def proposals(
 
 
 class TestDurableSnapshotStore:
-    def test_round_trip_and_unknown(
-        self, snapshots: SnapshotStorePort
-    ) -> None:
+    def test_round_trip_and_unknown(self, snapshots: SnapshotStorePort) -> None:
         snapshots.save_snapshot(TENANT, BASE)
         restored = snapshots.get_snapshot(TENANT, BASE.snapshot_id)
         assert restored.snapshot_id == BASE.snapshot_id
@@ -232,9 +198,7 @@ class TestDurableSnapshotStore:
             snapshots.save_snapshot(TENANT, forged)
         assert repository.snapshot_rows == {}  # refusal BEFORE any row
 
-    def test_tenant_scoped_foreign_is_unknown(
-        self, snapshots: SnapshotStorePort
-    ) -> None:
+    def test_tenant_scoped_foreign_is_unknown(self, snapshots: SnapshotStorePort) -> None:
         snapshots.save_snapshot(TENANT, BASE)
         with pytest.raises(UnknownSnapshot):
             snapshots.get_snapshot(uuid4(), BASE.snapshot_id)
@@ -261,12 +225,8 @@ class TestDurableSnapshotStore:
         snapshots.save_snapshot(TENANT, BASE)  # ON CONFLICT DO NOTHING
         assert len(repository.snapshot_rows) == 1
 
-    def test_durable_write_failure_propagates_loudly(
-        self, bridge: AsyncBridge
-    ) -> None:
-        store = DurableSnapshotStore(
-            repository=ExplodingRepository(), bridge=bridge
-        )
+    def test_durable_write_failure_propagates_loudly(self, bridge: AsyncBridge) -> None:
+        store = DurableSnapshotStore(repository=ExplodingRepository(), bridge=bridge)
         with pytest.raises(ConnectionError, match="database unreachable"):
             store.save_snapshot(TENANT, BASE)
 
@@ -275,9 +235,7 @@ class TestDurableSnapshotStore:
 
 
 class TestDurableProposalStore:
-    def test_absent_and_foreign_answer_identically(
-        self, proposals: ProposalStorePort
-    ) -> None:
+    def test_absent_and_foreign_answer_identically(self, proposals: ProposalStorePort) -> None:
         proposal = _proposal()
         proposals.save_proposal(proposal)
         with pytest.raises(ProposalNotFound) as absent:
@@ -286,29 +244,20 @@ class TestDurableProposalStore:
             proposals.get_proposal(uuid4(), proposal.proposal_id)
         assert str(absent.value) == str(foreign.value)
 
-    def test_keeps_latest_record_and_lists_by_tenant(
-        self, proposals: ProposalStorePort
-    ) -> None:
+    def test_keeps_latest_record_and_lists_by_tenant(self, proposals: ProposalStorePort) -> None:
         proposal = _proposal()
         proposals.save_proposal(proposal)
         proposals.save_proposal(proposal.with_state(ProposalState.VERIFIED))
-        assert (
-            proposals.get_proposal(TENANT, proposal.proposal_id).state
-            is ProposalState.VERIFIED
-        )
+        assert proposals.get_proposal(TENANT, proposal.proposal_id).state is ProposalState.VERIFIED
         other_tenant = uuid4()
         foreign = _proposal(tenant_id=other_tenant, rationale="other tenant")
         proposals.save_proposal(foreign)
-        assert [
-            p.proposal_id for p in proposals.list_proposals(TENANT)
-        ] == [proposal.proposal_id]
-        assert [
-            p.proposal_id for p in proposals.list_proposals(other_tenant)
-        ] == [foreign.proposal_id]
+        assert [p.proposal_id for p in proposals.list_proposals(TENANT)] == [proposal.proposal_id]
+        assert [p.proposal_id for p in proposals.list_proposals(other_tenant)] == [
+            foreign.proposal_id
+        ]
 
-    def test_list_orders_by_created_at_then_id_string(
-        self, proposals: ProposalStorePort
-    ) -> None:
+    def test_list_orders_by_created_at_then_id_string(self, proposals: ProposalStorePort) -> None:
         """The in-memory sort key ``(created_at, str(proposal_id))``,
         byte-identical through the durable binding."""
         first = _proposal(rationale="first")
@@ -330,9 +279,7 @@ class TestDurableProposalStore:
             (first, second, tied_a, tied_b),
             key=lambda item: (item.created_at, str(item.proposal_id)),
         )
-        assert [p.proposal_id for p in listed] == [
-            p.proposal_id for p in expected
-        ]
+        assert [p.proposal_id for p in listed] == [p.proposal_id for p in expected]
 
     def test_full_fidelity_round_trip_through_row_encoding(
         self, proposals: ProposalStorePort
@@ -371,9 +318,7 @@ class TestDurableProposalStore:
         proposal = _proposal()
         proposals.save_proposal(proposal)
         row = repository.proposal_rows[(TENANT, proposal.proposal_id)]
-        row["patch"]["operations"][0]["content"] = base64.b64encode(
-            b"print('backdoor')\n"
-        ).decode()
+        row["patch"]["operations"][0]["content"] = base64.b64encode(b"print('backdoor')\n").decode()
         with pytest.raises(ApprovalHashMismatch):
             proposals.get_proposal(TENANT, proposal.proposal_id)
 
@@ -385,14 +330,10 @@ class TestRestartSurvivalHermetic:
     def test_new_store_instances_serve_persisted_state(
         self, repository: FakeSourceChangeRepository, bridge: AsyncBridge
     ) -> None:
-        """"Restart" = fresh store objects over the same repository: the
+        """ "Restart" = fresh store objects over the same repository: the
         durable rows are the only carried state, and they suffice."""
-        before_snap = DurableSnapshotStore(
-            repository=repository, bridge=bridge
-        )
-        before_prop = DurableProposalStore(
-            repository=repository, bridge=bridge
-        )
+        before_snap = DurableSnapshotStore(repository=repository, bridge=bridge)
+        before_prop = DurableProposalStore(repository=repository, bridge=bridge)
         proposal = _proposal().with_state(ProposalState.VERIFIED)
         before_snap.save_snapshot(TENANT, BASE)
         before_prop.save_proposal(proposal)
@@ -404,9 +345,7 @@ class TestRestartSurvivalHermetic:
         assert dict(restored_snapshot.files) == dict(BASE.files)
         restored = after_prop.get_proposal(TENANT, proposal.proposal_id)
         assert restored == proposal
-        assert [p.proposal_id for p in after_prop.list_proposals(TENANT)] == [
-            proposal.proposal_id
-        ]
+        assert [p.proposal_id for p in after_prop.list_proposals(TENANT)] == [proposal.proposal_id]
 
 
 # --- live Postgres round-trip (env-gated, 41 §49) ---------------------------------
@@ -451,9 +390,7 @@ class TestLiveSourceChangeDurability:
                     await conn.run_sync(metadata.create_all)
 
             bridge.run(prepare())
-            prop_store, snap_store = build_durable_sourcechange_stores(
-                bindings, bridge
-            )
+            prop_store, snap_store = build_durable_sourcechange_stores(bindings, bridge)
             try:
                 snap_store.save_snapshot(tenant_id, BASE)
                 prop_store.save_proposal(proposal)
@@ -471,20 +408,16 @@ class TestLiveSourceChangeDurability:
 
             # --- process 2: fresh engine + stores (the restart) ---
             bindings2 = build_database_bindings(settings)
-            prop2, snap2 = build_durable_sourcechange_stores(
-                bindings2, bridge
-            )
+            prop2, snap2 = build_durable_sourcechange_stores(bindings2, bridge)
             try:
-                restored_snapshot = snap2.get_snapshot(
-                    tenant_id, BASE.snapshot_id
-                )
+                restored_snapshot = snap2.get_snapshot(tenant_id, BASE.snapshot_id)
                 assert restored_snapshot.verify_integrity()
                 assert dict(restored_snapshot.files) == dict(BASE.files)
                 restored = prop2.get_proposal(tenant_id, proposal.proposal_id)
                 assert restored == proposal  # every field, hash re-derived
-                assert [
-                    p.proposal_id for p in prop2.list_proposals(tenant_id)
-                ] == [proposal.proposal_id]
+                assert [p.proposal_id for p in prop2.list_proposals(tenant_id)] == [
+                    proposal.proposal_id
+                ]
                 # foreign tenant sees nothing (20 §6)
                 with pytest.raises(ProposalNotFound):
                     prop2.get_proposal(uuid4(), proposal.proposal_id)
@@ -495,17 +428,11 @@ class TestLiveSourceChangeDurability:
                 async def cleanup() -> None:
                     async with bindings2.engine.begin() as conn:
                         await conn.execute(
-                            text(
-                                "DELETE FROM source_change_proposals"
-                                " WHERE tenant_id = :tid"
-                            ),
+                            text("DELETE FROM source_change_proposals WHERE tenant_id = :tid"),
                             {"tid": tenant_id},
                         )
                         await conn.execute(
-                            text(
-                                "DELETE FROM source_snapshots"
-                                " WHERE tenant_id = :tid"
-                            ),
+                            text("DELETE FROM source_snapshots WHERE tenant_id = :tid"),
                             {"tid": tenant_id},
                         )
                     await bindings2.engine.dispose()

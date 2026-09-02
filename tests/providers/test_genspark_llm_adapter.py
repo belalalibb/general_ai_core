@@ -97,8 +97,7 @@ def _ok_chat(request: httpx.Request) -> httpx.Response:
         200,
         json={
             "choices": [
-                {"message": {"role": "assistant", "content": "hi there"},
-                 "finish_reason": "stop"}
+                {"message": {"role": "assistant", "content": "hi there"}, "finish_reason": "stop"}
             ],
             "usage": {"prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13},
             "model": "gpt-5-nano",
@@ -203,9 +202,7 @@ class TestGenerateContract:
         assert response.request_id == request.request_id
         assert response.output["content"] == "hi there"
         assert response.output["finish_reason"] == "stop"
-        assert response.usage == {
-            "prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13
-        }
+        assert response.usage == {"prompt_tokens": 10, "completion_tokens": 3, "total_tokens": 13}
         assert response.error is None
         assert response.latency_ms is not None and response.latency_ms >= 0
         sent = json.loads(recorder.requests[0].content)
@@ -357,10 +354,12 @@ class TestEmbeddingsContract:
         adapter, _ = _adapter(
             lambda req: httpx.Response(
                 400,
-                json={"detail": (
-                    "Model 'zzz' is not allowed. Allowed embedding models: "
-                    "text-embedding-3-large, text-embedding-3-small"
-                )},
+                json={
+                    "detail": (
+                        "Model 'zzz' is not allowed. Allowed embedding models: "
+                        "text-embedding-3-large, text-embedding-3-small"
+                    )
+                },
             )
         )
         response = run(adapter.generate(_embeddings_request()))
@@ -377,9 +376,7 @@ class TestEmbeddingsContract:
 
     def test_empty_vector_in_response_normalizes(self) -> None:
         adapter, _ = _adapter(
-            lambda req: httpx.Response(
-                200, json={"data": [{"index": 0, "embedding": []}]}
-            )
+            lambda req: httpx.Response(200, json={"data": [{"index": 0, "embedding": []}]})
         )
         response = run(adapter.generate(_embeddings_request()))
         assert response.succeeded is False
@@ -439,10 +436,12 @@ class TestErrorNormalization:
         adapter, _ = _adapter(
             lambda req: httpx.Response(
                 400,
-                json={"detail": (
-                    "Model 'not-a-real-model' is not allowed. "
-                    "Allowed models: gpt-5, gpt-5.1, claude-sonnet-4-5"
-                )},
+                json={
+                    "detail": (
+                        "Model 'not-a-real-model' is not allowed. "
+                        "Allowed models: gpt-5, gpt-5.1, claude-sonnet-4-5"
+                    )
+                },
             )
         )
         response = run(adapter.generate(_generate_request()))
@@ -461,12 +460,14 @@ class TestErrorNormalization:
                 json={
                     "status": -2,
                     "message": "Request parameter validation failed",
-                    "errors": [{
-                        "type": "list_type",
-                        "loc": ["body", "messages"],
-                        "msg": "Input should be a valid list",
-                        "input": "SECRET-ECHO-of-user-content",
-                    }],
+                    "errors": [
+                        {
+                            "type": "list_type",
+                            "loc": ["body", "messages"],
+                            "msg": "Input should be a valid list",
+                            "input": "SECRET-ECHO-of-user-content",
+                        }
+                    ],
                     "data": {},
                 },
             )
@@ -599,11 +600,13 @@ class TestHealthAndDiscovery:
         adapter, _ = _adapter(
             lambda req: httpx.Response(
                 200,
-                json={"data": [
-                    {"id": "gpt-5-nano"},
-                    {"id": "claude-sonnet-4-5"},
-                    {"not_an_id": True},  # malformed entry skipped, not fatal
-                ]},
+                json={
+                    "data": [
+                        {"id": "gpt-5-nano"},
+                        {"id": "claude-sonnet-4-5"},
+                        {"not_an_id": True},  # malformed entry skipped, not fatal
+                    ]
+                },
             )
         )
         models = run(adapter.discover_models())

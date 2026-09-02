@@ -189,9 +189,7 @@ class World:
         self.providers = ProviderRegistry()
         self.models = ModelRegistry()
         self.usage = InMemoryUsageAccounting()
-        self.router = SimpleScoringRouter(
-            self.providers, self.models, BindingRegistry()
-        )
+        self.router = SimpleScoringRouter(self.providers, self.models, BindingRegistry())
         self.audit = InMemoryAuditLog()
         self.catalog = SkillSourceCatalog() if with_catalog else None
         self.admin = AdminConfigService(
@@ -215,9 +213,7 @@ class World:
     def publish(self, payload: JsonObject):
         change = self.draft(payload)
         validated = self.admin.validate(TENANT, change.id)
-        assert validated.state is ConfigLifecycleState.VALIDATED, (
-            validated.validation_result
-        )
+        assert validated.state is ConfigLifecycleState.VALIDATED, validated.validation_result
         self.admin.preview(TENANT, change.id)
         return self.admin.publish(TENANT, change.id)
 
@@ -240,10 +236,7 @@ class TestAdminAction:
     def test_empty_urls_rejected(self) -> None:
         world = World()
         change = world.draft({"urls": []})
-        assert (
-            world.admin.validate(TENANT, change.id).state
-            is ConfigLifecycleState.REJECTED
-        )
+        assert world.admin.validate(TENANT, change.id).state is ConfigLifecycleState.REJECTED
 
     def test_http_url_rejected_before_any_mutation(self) -> None:
         world = World()
@@ -256,10 +249,7 @@ class TestAdminAction:
     def test_disabled_not_in_urls_rejected(self) -> None:
         world = World()
         change = world.draft({"urls": [NEW_GIT], "disabled": [NEW_WEB]})
-        assert (
-            world.admin.validate(TENANT, change.id).state
-            is ConfigLifecycleState.REJECTED
-        )
+        assert world.admin.validate(TENANT, change.id).state is ConfigLifecycleState.REJECTED
 
     def test_rollback_restores_previous_entries_verbatim(self) -> None:
         world = World()
@@ -275,9 +265,7 @@ class TestAdminAction:
         world = World()
         published = world.publish({"urls": [NEW_GIT]})
         events = world.audit.read(TENANT)
-        assert any(
-            e.event_type is AuditEventType.ADMIN_CONFIG_PUBLISHED for e in events
-        )
+        assert any(e.event_type is AuditEventType.ADMIN_CONFIG_PUBLISHED for e in events)
         assert published.action is AdminAction.SET_SKILL_SOURCES
 
 

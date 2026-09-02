@@ -46,9 +46,7 @@ ACTOR = uuid4()
 BASE = SourceSnapshot.from_files({"src/app.py": b"print('v1')\n"})
 PATCH = SourcePatch(
     operations=(
-        PatchOperation(
-            kind=PatchOpKind.MODIFY_FILE, path="src/app.py", content=b"print('v2')\n"
-        ),
+        PatchOperation(kind=PatchOpKind.MODIFY_FILE, path="src/app.py", content=b"print('v2')\n"),
     )
 )
 
@@ -109,9 +107,7 @@ def test_failed_verification_can_never_be_approved_exhaustive() -> None:
             failed.with_state(target)
     with pytest.raises(InvalidTransition):
         failed.with_approval(
-            ApprovalRecord(
-                approver_id=uuid4(), approved_patch_hash=failed.patch_hash
-            )
+            ApprovalRecord(approver_id=uuid4(), approved_patch_hash=failed.patch_hash)
         )
 
 
@@ -161,9 +157,7 @@ def test_happy_path_draft_to_rolled_back() -> None:
 def test_approval_with_wrong_hash_is_refused_and_names_both() -> None:
     verified = _proposal().with_state(ProposalState.VERIFIED)
     with pytest.raises(ApprovalHashMismatch) as excinfo:
-        verified.with_approval(
-            ApprovalRecord(approver_id=uuid4(), approved_patch_hash="0" * 64)
-        )
+        verified.with_approval(ApprovalRecord(approver_id=uuid4(), approved_patch_hash="0" * 64))
     assert verified.patch_hash in str(excinfo.value)
     assert "0" * 64 in str(excinfo.value)
     assert verified.state is ProposalState.VERIFIED  # nothing changed
@@ -245,10 +239,7 @@ def test_proposal_store_keeps_latest_record_and_lists_by_tenant() -> None:
     store.save_proposal(proposal)
     verified = proposal.with_state(ProposalState.VERIFIED)
     store.save_proposal(verified)
-    assert (
-        store.get_proposal(TENANT, proposal.proposal_id).state
-        is ProposalState.VERIFIED
-    )
+    assert store.get_proposal(TENANT, proposal.proposal_id).state is ProposalState.VERIFIED
     other_tenant = uuid4()
     foreign = ChangeProposal(
         tenant_id=other_tenant,
@@ -258,9 +249,5 @@ def test_proposal_store_keeps_latest_record_and_lists_by_tenant() -> None:
         rationale="other tenant",
     )
     store.save_proposal(foreign)
-    assert [p.proposal_id for p in store.list_proposals(TENANT)] == [
-        proposal.proposal_id
-    ]
-    assert [p.proposal_id for p in store.list_proposals(other_tenant)] == [
-        foreign.proposal_id
-    ]
+    assert [p.proposal_id for p in store.list_proposals(TENANT)] == [proposal.proposal_id]
+    assert [p.proposal_id for p in store.list_proposals(other_tenant)] == [foreign.proposal_id]

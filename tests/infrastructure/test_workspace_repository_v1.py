@@ -114,9 +114,7 @@ class TestHermetic:
         assert project.metadata == {"stack": "static", "iteration": 3}
 
     def test_row_to_project_unscoped_workspace_is_none(self) -> None:
-        row = _Row(
-            id=uuid4(), tenant_id=TENANT, workspace_id=None, name="p", metadata={}
-        )
+        row = _Row(id=uuid4(), tenant_id=TENANT, workspace_id=None, name="p", metadata={})
         assert _row_to_project(row).workspace_id is None
 
     def test_errors_are_repository_errors_with_anti_enumeration_shape(self) -> None:
@@ -162,17 +160,11 @@ class TestHermetic:
         assert "ON CONFLICT (id) DO UPDATE" in compiled
 
     def test_workspace_repository_surface_pin(self) -> None:
-        public = {
-            name
-            for name in dir(PostgresWorkspaceRepository)
-            if not name.startswith("_")
-        }
+        public = {name for name in dir(PostgresWorkspaceRepository) if not name.startswith("_")}
         assert public == {"put", "get", "list", "delete"}
 
     def test_project_repository_surface_pin(self) -> None:
-        public = {
-            name for name in dir(PostgresProjectRepository) if not name.startswith("_")
-        }
+        public = {name for name in dir(PostgresProjectRepository) if not name.startswith("_")}
         assert public == {"put", "get", "list", "delete"}
 
     def test_constructors_do_no_io(self) -> None:
@@ -210,10 +202,7 @@ async def repos(
     factory = create_session_factory(engine)
     async with engine.begin() as conn:
         await conn.execute(
-            text(
-                "INSERT INTO plans (id, name) VALUES (:id, :name)"
-                " ON CONFLICT (id) DO NOTHING"
-            ),
+            text("INSERT INTO plans (id, name) VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"),
             {"id": SEED_PLAN_ID, "name": f"seed-{SEED_PLAN_ID}"},
         )
         for tenant_id in (TENANT, OTHER_TENANT):

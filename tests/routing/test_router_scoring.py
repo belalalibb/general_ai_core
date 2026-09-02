@@ -150,7 +150,10 @@ class _World:
 
     def router(self, **kwargs: object) -> SimpleScoringRouter:
         return SimpleScoringRouter(
-            self.providers, self.models, self.bindings, **kwargs  # type: ignore[arg-type]
+            self.providers,
+            self.models,
+            self.bindings,
+            **kwargs,  # type: ignore[arg-type]
         )
 
 
@@ -167,9 +170,7 @@ def _basic_world() -> tuple[_World, Provider, Model, Model]:
     strong = world.add_model(
         _model("model-strong", quality=0.9, reliability=0.9, cost=0.9, speed=0.9)
     )
-    weak = world.add_model(
-        _model("model-weak", quality=0.1, reliability=0.1, cost=0.1, speed=0.1)
-    )
+    weak = world.add_model(_model("model-weak", quality=0.1, reliability=0.1, cost=0.1, speed=0.1))
     world.bind(provider, strong)
     world.bind(provider, weak)
     return world, provider, strong, weak
@@ -225,12 +226,8 @@ def test_auto_tier_hint_boosts_matching_tier() -> None:
 def test_tier_policy_is_a_hard_filter() -> None:
     world = _World()
     provider = world.add_provider("prov_a")
-    fast = world.add_model(
-        _model("model-fast", tier=ModelTier.FAST, quality=0.1, reliability=0.1)
-    )
-    maxm = world.add_model(
-        _model("model-max", tier=ModelTier.MAX, quality=0.9, reliability=0.9)
-    )
+    fast = world.add_model(_model("model-fast", tier=ModelTier.FAST, quality=0.1, reliability=0.1))
+    maxm = world.add_model(_model("model-max", tier=ModelTier.MAX, quality=0.9, reliability=0.9))
     world.bind(provider, fast)
     world.bind(provider, maxm)
     policy = TierModelPolicy(type="tier", tier="fast")
@@ -266,8 +263,7 @@ def test_explicit_unknown_model_fails_clearly() -> None:
     with pytest.raises(NoEligibleCandidates) as exc:
         world.router().route(_request(model_policy=policy))
     assert any(
-        e.model_key == "ghost-model" and "not registered" in e.reason
-        for e in exc.value.excluded
+        e.model_key == "ghost-model" and "not registered" in e.reason for e in exc.value.excluded
     )
 
 
@@ -278,9 +274,7 @@ def test_explicit_provider_id_narrows_bindings() -> None:
     model = world.add_model(_model("model-x"))
     world.bind(prov_a, model)
     world.bind(prov_b, model)
-    policy = ExplicitModelPolicy(
-        type="explicit_model", model_id="model-x", provider_id="prov_b"
-    )
+    policy = ExplicitModelPolicy(type="explicit_model", model_id="model-x", provider_id="prov_b")
     decision = world.router().route(_request(model_policy=policy))
     assert decision.selected.provider_id == prov_b.id
     assert all(c.provider_id == prov_b.id for c in decision.ranked)
@@ -295,9 +289,7 @@ def test_explicit_model_unavailable_with_fallback_disabled_fails_clearly() -> No
     provider = world.add_provider("prov_a")
     model = world.add_model(_model("model-x"))
     world.bind(provider, model, BindingAvailability.UNAVAILABLE)
-    policy = ExplicitModelPolicy(
-        type="explicit_model", model_id="model-x", allow_fallback=False
-    )
+    policy = ExplicitModelPolicy(type="explicit_model", model_id="model-x", allow_fallback=False)
     with pytest.raises(NoEligibleCandidates) as exc:
         world.router().route(_request(model_policy=policy))
     assert any("binding unavailable" in e.reason for e in exc.value.excluded)
@@ -421,9 +413,7 @@ def test_explicit_model_default_fallback_same_model_different_provider() -> None
     world.bind(prov_a, model)
     world.bind(prov_b, model)
     world.bind(prov_a, other)
-    policy = ExplicitModelPolicy(
-        type="explicit_model", model_id="model-x", allow_fallback=True
-    )
+    policy = ExplicitModelPolicy(type="explicit_model", model_id="model-x", allow_fallback=True)
     decision = world.router().route(_request(model_policy=policy))
     assert decision.fallback_policy is FallbackScope.SAME_MODEL_DIFFERENT_PROVIDER
     assert len(decision.fallback_candidates) == 1
@@ -558,9 +548,7 @@ def test_custom_weights_change_ranking_and_are_recorded() -> None:
 def test_score_matches_weighted_component_sum() -> None:
     world = _World()
     provider = world.add_provider("prov_a")
-    model = world.add_model(
-        _model("model-x", quality=0.8, reliability=0.6, cost=0.4, speed=0.2)
-    )
+    model = world.add_model(_model("model-x", quality=0.8, reliability=0.6, cost=0.4, speed=0.2))
     world.bind(provider, model)
     decision = world.router().route(_request())
     expected = 0.35 * 0.8 + 0.20 * 0.6 + 0.15 * 0.4 + 0.15 * 0.2 + 0.10 * 1.0 + 0.05 * 0.0

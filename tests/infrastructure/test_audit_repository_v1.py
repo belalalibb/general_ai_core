@@ -88,9 +88,7 @@ class TestHermetic:
                 "actor_id": event.actor_id,
                 "occurred_at": event.occurred_at,
                 "details": event.details,
-                "admin_change": event.admin_change.model_dump()
-                if event.admin_change
-                else None,
+                "admin_change": event.admin_change.model_dump() if event.admin_change else None,
             }
         )
         assert _row_to_event(row) == event
@@ -114,9 +112,7 @@ class TestHermetic:
     async def test_admin_event_without_record_refused_before_io(self) -> None:
         repo = PostgresAuditLogRepository(_exploding_factory)
         with pytest.raises(InvalidAuditEvent, match="requires an AdminChangeRecord"):
-            await repo.append(
-                make_event(event_type=AuditEventType.ADMIN_CONFIG_PUBLISHED)
-            )
+            await repo.append(make_event(event_type=AuditEventType.ADMIN_CONFIG_PUBLISHED))
 
     @pytest.mark.asyncio
     async def test_non_admin_event_with_record_refused_before_io(self) -> None:
@@ -127,11 +123,7 @@ class TestHermetic:
     def test_surface_is_append_only(self) -> None:
         # Port contract: append + tenant-scoped reads ONLY. No mutation
         # method may exist (tamper resistance by construction).
-        public = {
-            name
-            for name in dir(PostgresAuditLogRepository)
-            if not name.startswith("_")
-        }
+        public = {name for name in dir(PostgresAuditLogRepository) if not name.startswith("_")}
         assert public == {"append", "read", "count"}
 
 
@@ -153,10 +145,7 @@ async def engine() -> Any:
 async def repo(engine: AsyncEngine) -> PostgresAuditLogRepository:
     async with engine.begin() as conn:
         await conn.execute(
-            text(
-                "INSERT INTO plans (id, name) VALUES (:id, :name)"
-                " ON CONFLICT (id) DO NOTHING"
-            ),
+            text("INSERT INTO plans (id, name) VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"),
             {"id": PLAN_ID, "name": f"plan-{PLAN_ID}"},
         )
         for tenant_id in (TENANT, OTHER_TENANT):
@@ -194,12 +183,8 @@ class TestLiveAudit:
         assert await repo.count(TENANT) == 3
 
     @pytest.mark.asyncio
-    async def test_filter_and_newest_n_limit(
-        self, repo: PostgresAuditLogRepository
-    ) -> None:
-        events = [
-            make_event(occurred_at=NOW + timedelta(minutes=i)) for i in range(4)
-        ]
+    async def test_filter_and_newest_n_limit(self, repo: PostgresAuditLogRepository) -> None:
+        events = [make_event(occurred_at=NOW + timedelta(minutes=i)) for i in range(4)]
         logout = make_event(
             event_type=AuditEventType.LOGOUT,
             occurred_at=NOW + timedelta(minutes=10),
@@ -213,9 +198,7 @@ class TestLiveAudit:
         assert [e.id for e in tail] == [events[3].id, logout.id]
 
     @pytest.mark.asyncio
-    async def test_tenant_isolation_no_cross_read(
-        self, repo: PostgresAuditLogRepository
-    ) -> None:
+    async def test_tenant_isolation_no_cross_read(self, repo: PostgresAuditLogRepository) -> None:
         mine = make_event()
         foreign = make_event(tenant_id=OTHER_TENANT)
         await repo.append(mine)

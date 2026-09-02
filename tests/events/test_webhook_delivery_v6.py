@@ -107,9 +107,7 @@ class TestSsrfValidator:
             ("http://example.com:99999/x", "invalid host/port"),
         ],
     )
-    def test_refuses_ssrf_shapes_with_named_reason(
-        self, url: str, reason_fragment: str
-    ) -> None:
+    def test_refuses_ssrf_shapes_with_named_reason(self, url: str, reason_fragment: str) -> None:
         with pytest.raises(WebhookUrlRefused) as exc:
             validate_webhook_url(url)
         assert reason_fragment in exc.value.reason
@@ -143,9 +141,7 @@ class TestStaging:
             assert record.payload["event"] == "execution.succeeded"
             assert record.payload["execution_id"] == "exec-1"
             assert record.payload["tenant_id"] == str(TENANT)
-            assert record.idempotency_key == (
-                f"webhook:{matching.id}:execution.succeeded:exec-1"
-            )
+            assert record.idempotency_key == (f"webhook:{matching.id}:execution.succeeded:exec-1")
 
         asyncio.run(run())
 

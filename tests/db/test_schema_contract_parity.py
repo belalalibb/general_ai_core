@@ -239,8 +239,7 @@ class TestContractSchemaParity:
         # through the tenant-scoped parent (same posture as messages).
         assert "tenant_id" not in execution_nodes.columns
         fk_targets = {
-            fk.column.table.name
-            for fk in execution_nodes.columns["execution_id"].foreign_keys
+            fk.column.table.name for fk in execution_nodes.columns["execution_id"].foreign_keys
         }
         assert fk_targets == {"executions"}
         indexed = {col.name for ix in execution_nodes.indexes for col in ix.columns}

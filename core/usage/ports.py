@@ -36,9 +36,7 @@ from core.contracts.usage import UsageLedger, UsageSummary
 class UsageAccountingPort(Protocol):
     """Task-unit reservation/settlement seam (03 §7; 10 §8; 21 §5)."""
 
-    def reserve(
-        self, tenant_id: UUID, execution_id: UUID, units: float
-    ) -> UsageLedger:
+    def reserve(self, tenant_id: UUID, execution_id: UUID, units: float) -> UsageLedger:
         """Hold ``units`` for ``execution_id`` against the tenant budget.
 
         Raises ``EntitlementNotConfigured`` (deny-by-default) or

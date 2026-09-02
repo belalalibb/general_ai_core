@@ -25,9 +25,7 @@ class InMemoryObjectStorage:
     def __init__(self) -> None:
         self._objects: dict[tuple[UUID, str], tuple[StoredObject, bytes]] = {}
 
-    def put(
-        self, tenant_id: UUID, key: str, data: bytes, content_type: str
-    ) -> StoredObject:
+    def put(self, tenant_id: UUID, key: str, data: bytes, content_type: str) -> StoredObject:
         if not key:
             raise ValueError("object key must be non-empty")
         meta = StoredObject(

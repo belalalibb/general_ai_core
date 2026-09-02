@@ -371,9 +371,7 @@ class MultiModelExecutor:
                 )
 
         succeeded = [b for b in branches if b.succeeded]
-        failed_executed = [
-            b for b in branches if b.report is not None and not b.succeeded
-        ]
+        failed_executed = [b for b in branches if b.report is not None and not b.succeeded]
         if not succeeded:
             # Nothing to compare — final_report is the last failed branch.
             assert failed_executed  # eligible was non-empty
@@ -478,9 +476,7 @@ class MultiModelExecutor:
         for branch in succeeded:
             branch_report = branch.report
             assert branch_report is not None
-            candidates.append(
-                {"model_id": branch.model_id, "output": branch_report.final_output}
-            )
+            candidates.append({"model_id": branch.model_id, "output": branch_report.final_output})
         judge_payload[JUDGE_CANDIDATES_KEY] = candidates
         return await self._execution.execute_single(
             tenant_id=tenant_id,

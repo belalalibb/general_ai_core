@@ -251,18 +251,14 @@ class TestHttpSurface:
                 # ExecutionReport is a dataclass; Execution a Pydantic model.
                 terminal = dataclasses.replace(
                     terminal,
-                    execution=terminal.execution.model_copy(
-                        update={"id": execution_id}
-                    ),
+                    execution=terminal.execution.model_copy(update={"id": execution_id}),
                 )
                 return terminal
             return original_get(tenant_id, eid)
 
         world.store.get = progressing_get  # type: ignore[method-assign]
         app = _sse_app(world)
-        status, _, events = run(
-            _stream(app, f"/v1/executions/{execution_id}/events")
-        )
+        status, _, events = run(_stream(app, f"/v1/executions/{execution_id}/events"))
         assert status == 200
         types = [event["type"] for event in events]
         assert types[0] == "execution_started"
@@ -274,9 +270,7 @@ class TestHttpSurface:
         queued = _report(world, status=ExecutionStatus.QUEUED)
         world.store.put(queued)
         app = _sse_app(world, timeout=0.02)  # poll 0.01 — expires fast
-        status, _, events = run(
-            _stream(app, f"/v1/executions/{queued.execution.id}/events")
-        )
+        status, _, events = run(_stream(app, f"/v1/executions/{queued.execution.id}/events"))
         assert status == 200
         assert events[-1]["type"] == "error"
         assert events[-1]["error"]["reason"] == "stream_timeout"
@@ -284,9 +278,7 @@ class TestHttpSurface:
     def test_unknown_id_is_plain_404_never_a_stream(self) -> None:
         world = World()
         app = _sse_app(world)
-        status, content_type, _ = run(
-            _stream(app, f"/v1/executions/{uuid4()}/events")
-        )
+        status, content_type, _ = run(_stream(app, f"/v1/executions/{uuid4()}/events"))
         assert status == 404
         assert content_type.startswith("application/json")
 
@@ -299,9 +291,7 @@ class TestHttpSurface:
         stranger.store = owner.store  # shared store, foreign principal
         owner.store.put(report)
         app = _sse_app(stranger)
-        status, _, _ = run(
-            _stream(app, f"/v1/executions/{report.execution.id}/events")
-        )
+        status, _, _ = run(_stream(app, f"/v1/executions/{report.execution.id}/events"))
         assert status == 404  # byte-identical to absent (20 §6)
 
     def test_malformed_id_is_422(self) -> None:
@@ -318,9 +308,7 @@ class TestHttpSurface:
             world = World()
             app = _sse_app(world)
             transport = httpx.ASGITransport(app=app)
-            async with httpx.AsyncClient(
-                transport=transport, base_url="http://t"
-            ) as client:
+            async with httpx.AsyncClient(transport=transport, base_url="http://t") as client:
                 return await client.post(
                     "/v1/execute",
                     json={"ask": "hi", "execution_policy": {"stream": True}},

@@ -163,9 +163,7 @@ class FakeAdapter:
         raise NotImplementedError
 
     async def validate_credential(self, credential_ref: str) -> CredentialHealth:
-        return CredentialHealth(
-            credential_ref=credential_ref, status=CredentialStatus.ACTIVE
-        )
+        return CredentialHealth(credential_ref=credential_ref, status=CredentialStatus.ACTIVE)
 
     async def discover_models(
         self, account_id: UUID | None = None
@@ -175,9 +173,7 @@ class FakeAdapter:
     async def get_capabilities(self) -> ProviderCapabilities:  # pragma: no cover
         return ProviderCapabilities()
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         self.requests.append(request)
         step: object = self.script.pop(0) if self.script else {"content": "answer"}
         if isinstance(step, ProviderError):
@@ -280,9 +276,7 @@ def _mapping_body(ask: str = "plan then build") -> dict[str, Any]:
 
 class TestNodeMappingExecution:
     def test_two_nodes_execute_in_order_with_their_own_models(self) -> None:
-        world = World(
-            script=[{"content": "the plan"}, {"content": "the build"}]
-        )
+        world = World(script=[{"content": "the plan"}, {"content": "the build"}])
         response = run(_post(world.app(), _mapping_body()))
         assert response.status_code == 200
         body = response.json()
@@ -425,9 +419,7 @@ class TestAutoSkillResolution:
         )
         assert response.status_code == 200
         sent = world.adapter.requests[0].payload
-        assert sent["skills"] == [
-            {"id": "code_review", "name": "code_review", "version": "1.0.0"}
-        ]
+        assert sent["skills"] == [{"id": "code_review", "name": "code_review", "version": "1.0.0"}]
 
     def test_explicit_selection_wins_over_auto(self) -> None:
         world = World()
@@ -447,16 +439,12 @@ class TestAutoSkillResolution:
         assert response.status_code == 200
         sent = world.adapter.requests[0].payload
         # EXACTLY the explicit selection — the resolver never overrode it.
-        assert sent["skills"] == [
-            {"id": "doc_writer", "name": "doc_writer", "version": "1.0.0"}
-        ]
+        assert sent["skills"] == [{"id": "doc_writer", "name": "doc_writer", "version": "1.0.0"}]
 
     def test_role_incompatible_skill_is_not_auto_selected(self) -> None:
         world = World()
         world.roles.register(make_role())
-        world.skills.register(
-            make_skill(manifest_id="legal_only", compatible_roles=["lawyer"])
-        )
+        world.skills.register(make_skill(manifest_id="legal_only", compatible_roles=["lawyer"]))
         response = run(
             _post(
                 world.app(),
@@ -472,9 +460,7 @@ class TestAutoSkillResolution:
     def test_non_selectable_skill_is_never_an_auto_candidate(self) -> None:
         world = World()
         world.roles.register(make_role())
-        world.skills.register(
-            make_skill(manifest_id="pending", status=SkillStatus.REVIEWED)
-        )
+        world.skills.register(make_skill(manifest_id="pending", status=SkillStatus.REVIEWED))
         response = run(
             _post(
                 world.app(),
@@ -493,9 +479,7 @@ class TestAutoSkillResolution:
         # permission objects ride to the provider.
         world = World()
         world.roles.register(make_role())
-        world.skills.register(
-            make_skill(manifest_id="tooly", required_tools=["web_search"])
-        )
+        world.skills.register(make_skill(manifest_id="tooly", required_tools=["web_search"]))
         response = run(
             _post(
                 world.app(),
@@ -507,9 +491,7 @@ class TestAutoSkillResolution:
         )
         assert response.status_code == 200
         sent = world.adapter.requests[0].payload
-        assert sent["skills"] == [
-            {"id": "tooly", "name": "tooly", "version": "1.0.0"}
-        ]
+        assert sent["skills"] == [{"id": "tooly", "name": "tooly", "version": "1.0.0"}]
         assert "web_search" not in str(sent["skills"])
         assert "tools" not in sent
 

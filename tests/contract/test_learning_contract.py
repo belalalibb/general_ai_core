@@ -16,9 +16,7 @@ from core.contracts.learning import (
     SanitizationState,
 )
 
-MODULE_PATH = (
-    Path(__file__).resolve().parents[2] / "core/contracts/learning.py"
-)
+MODULE_PATH = Path(__file__).resolve().parents[2] / "core/contracts/learning.py"
 
 
 class TestClosedSets:
@@ -41,9 +39,7 @@ class TestClosedSets:
     def test_verification_level_is_reused_not_duplicated(self) -> None:
         # 03 §7 lists the identical RAW..GOLD set for LearningSample and
         # Evaluation — one source of truth (core.contracts.evaluation).
-        assert LearningSample.model_fields["verification_level"].annotation is (
-            VerificationLevel
-        )
+        assert LearningSample.model_fields["verification_level"].annotation is (VerificationLevel)
         source = MODULE_PATH.read_text(encoding="utf-8")
         assert "class VerificationLevel" not in source
 
@@ -89,9 +85,7 @@ class TestDenyByDefault:
         # 03 §7: tenant_id uuid|null — both attributed and unattributed
         # samples are expressible.
         tenant = uuid4()
-        attributed = LearningSample(
-            id=uuid4(), source_execution_id=uuid4(), tenant_id=tenant
-        )
+        attributed = LearningSample(id=uuid4(), source_execution_id=uuid4(), tenant_id=tenant)
         assert attributed.tenant_id == tenant
 
     def test_gold_eligible_sanitized_sample_expressible(self) -> None:

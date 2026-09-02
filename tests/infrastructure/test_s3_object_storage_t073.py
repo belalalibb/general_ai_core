@@ -42,9 +42,7 @@ class _Paginator:
         self._objects = objects
 
     def paginate(self, *, Bucket: str, Prefix: str) -> list[dict[str, Any]]:
-        contents = [
-            {"Key": key} for key in sorted(self._objects) if key.startswith(Prefix)
-        ]
+        contents = [{"Key": key} for key in sorted(self._objects) if key.startswith(Prefix)]
         # Two pages exercise the pagination loop.
         middle = len(contents) // 2
         return [{"Contents": contents[:middle]}, {"Contents": contents[middle:]}]
@@ -57,9 +55,7 @@ class StubS3Client:
         self.objects: dict[str, tuple[bytes, str, datetime]] = {}
         self.buckets_seen: set[str] = set()
 
-    def put_object(
-        self, *, Bucket: str, Key: str, Body: bytes, ContentType: str
-    ) -> dict[str, Any]:
+    def put_object(self, *, Bucket: str, Key: str, Body: bytes, ContentType: str) -> dict[str, Any]:
         self.buckets_seen.add(Bucket)
         self.objects[Key] = (Body, ContentType, datetime.now(UTC))
         return {}
@@ -117,9 +113,7 @@ class TestPortConformance:
         assert stored.size_bytes == 5
         assert stored.content_type == "text/plain"
 
-    def test_head_returns_metadata_without_payload(
-        self, storage: S3ObjectStorage
-    ) -> None:
+    def test_head_returns_metadata_without_payload(self, storage: S3ObjectStorage) -> None:
         storage.put(TENANT_A, "k", b"abc", "application/octet-stream")
         meta = storage.head(TENANT_A, "k")
         assert meta.size_bytes == 3
@@ -179,24 +173,18 @@ class TestTenantIsolation:
             f"{TENANT_B}/shared-name",
         }
 
-    def test_same_key_is_independent_per_tenant(
-        self, storage: S3ObjectStorage
-    ) -> None:
+    def test_same_key_is_independent_per_tenant(self, storage: S3ObjectStorage) -> None:
         storage.put(TENANT_A, "k", b"tenant-a", "t")
         storage.put(TENANT_B, "k", b"tenant-b", "t")
         assert storage.get(TENANT_A, "k") == b"tenant-a"
         assert storage.get(TENANT_B, "k") == b"tenant-b"
 
-    def test_foreign_tenant_read_raises_not_found(
-        self, storage: S3ObjectStorage
-    ) -> None:
+    def test_foreign_tenant_read_raises_not_found(self, storage: S3ObjectStorage) -> None:
         storage.put(TENANT_A, "k", b"secret", "t")
         with pytest.raises(ObjectNotFound):
             storage.get(TENANT_B, "k")
 
-    def test_foreign_probe_indistinguishable_from_absent(
-        self, storage: S3ObjectStorage
-    ) -> None:
+    def test_foreign_probe_indistinguishable_from_absent(self, storage: S3ObjectStorage) -> None:
         storage.put(TENANT_A, "k", b"secret", "t")
         with pytest.raises(ObjectNotFound) as foreign:
             storage.get(TENANT_B, "k")
@@ -204,9 +192,7 @@ class TestTenantIsolation:
             storage.get(TENANT_B, "never-existed")
         assert type(foreign.value) is type(absent.value)
 
-    def test_foreign_delete_cannot_remove_data(
-        self, storage: S3ObjectStorage
-    ) -> None:
+    def test_foreign_delete_cannot_remove_data(self, storage: S3ObjectStorage) -> None:
         storage.put(TENANT_A, "k", b"keep", "t")
         with pytest.raises(ObjectNotFound):
             storage.delete(TENANT_B, "k")
@@ -226,9 +212,7 @@ class TestErrorFidelity:
         # The adapter must not swallow real faults into ObjectNotFound.
         class Failing(StubS3Client):
             def get_object(self, *, Bucket: str, Key: str) -> dict[str, Any]:
-                raise ClientError(
-                    {"Error": {"Code": "AccessDenied", "Message": "no"}}, "GetObject"
-                )
+                raise ClientError({"Error": {"Code": "AccessDenied", "Message": "no"}}, "GetObject")
 
         storage = S3ObjectStorage(Failing(), "b")  # type: ignore[arg-type]
         with pytest.raises(ClientError):

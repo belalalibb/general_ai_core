@@ -65,9 +65,7 @@ async def _post(app: FastAPI, path: str) -> httpx.Response:
 
 
 def _grant(world: World, limit: float = 100.0) -> None:
-    world.usage.configure_tenant(
-        world.principal.tenant_id, plan="test", task_units_limit=limit
-    )
+    world.usage.configure_tenant(world.principal.tenant_id, plan="test", task_units_limit=limit)
 
 
 # --- module closure ----------------------------------------------------------------
@@ -97,9 +95,7 @@ class TestExerciseRoutes:
         world = World()
         response = run(_get(world.app(), "/v1/admin/capabilities/exercisable"))
         assert response.status_code == 200
-        assert response.json() == {
-            "exercisable": ["execute.sync", "skills.listing"]
-        }
+        assert response.json() == {"exercisable": ["execute.sync", "skills.listing"]}
 
     def test_fuller_composition_grows_the_exercisable_set(self) -> None:
         from apps.api import create_app
@@ -136,9 +132,7 @@ class TestExerciseRoutes:
         world = World()
         _grant(world)
         app = world.app()
-        response = run(
-            _post(app, "/v1/admin/capabilities/execute.sync/exercise")
-        )
+        response = run(_post(app, "/v1/admin/capabilities/execute.sync/exercise"))
         assert response.status_code == 200
         body = response.json()
         assert body["capability_id"] == "execute.sync"
@@ -176,9 +170,7 @@ class TestExerciseRoutes:
             principal=world.principal,
             admin=world.surface(),
         )
-        response = run(
-            _post(app, "/v1/admin/capabilities/execute.sync/exercise")
-        )
+        response = run(_post(app, "/v1/admin/capabilities/execute.sync/exercise"))
         evidence = response.json()["result"]["evidence"]
         from uuid import UUID
 
@@ -191,9 +183,7 @@ class TestExerciseRoutes:
 
     def test_no_entitlement_is_honest_not_fabricated(self) -> None:
         world = World()  # no budget configured
-        response = run(
-            _post(world.app(), "/v1/admin/capabilities/execute.sync/exercise")
-        )
+        response = run(_post(world.app(), "/v1/admin/capabilities/execute.sync/exercise"))
         assert response.status_code == 200
         result = response.json()["result"]
         assert result["exercised"] is False
@@ -201,9 +191,7 @@ class TestExerciseRoutes:
 
     def test_skills_probe_exercises_the_registry(self) -> None:
         world = World()
-        response = run(
-            _post(world.app(), "/v1/admin/capabilities/skills.listing/exercise")
-        )
+        response = run(_post(world.app(), "/v1/admin/capabilities/skills.listing/exercise"))
         assert response.status_code == 200
         result = response.json()["result"]
         assert result["exercised"] is True
@@ -213,9 +201,7 @@ class TestExerciseRoutes:
         world = World()
         for probe_id in ("nope", "execute.async", "auth.sessions"):
             # Unknown AND unregistered ids answer identically (20 §6).
-            response = run(
-                _post(world.app(), f"/v1/admin/capabilities/{probe_id}/exercise")
-            )
+            response = run(_post(world.app(), f"/v1/admin/capabilities/{probe_id}/exercise"))
             assert response.status_code == 404, probe_id
             body = response.json()
             assert set(body.keys()) == {"error"}
@@ -235,20 +221,13 @@ class TestExerciseRoutes:
         world = World()
         app = world.app(with_admin=False)
         assert run(_get(app, "/v1/admin/capabilities/exercisable")).status_code == 404
-        assert (
-            run(
-                _post(app, "/v1/admin/capabilities/execute.sync/exercise")
-            ).status_code
-            == 404
-        )
+        assert run(_post(app, "/v1/admin/capabilities/execute.sync/exercise")).status_code == 404
 
 
 # --- agent tools -------------------------------------------------------------------
 
 
-def _agent_surface(
-    world: World, exercise: ExerciseSurface | None
-) -> AgentToolSurface:
+def _agent_surface(world: World, exercise: ExerciseSurface | None) -> AgentToolSurface:
     service = ExecutionService(
         adapters={world.provider.id: world.adapter},
         credential_refs={world.provider.id: f"secret-ref://{world.provider.id}"},
@@ -340,9 +319,7 @@ class TestAgentExerciseTools:
         dispatcher = ToolDispatcher(registry, audit=world.audit)
         non_admin = dataclasses.replace(world.principal, is_admin=False)
         record = run(
-            dispatcher.dispatch(
-                non_admin, "exercise_capability", {"capability_id": "execute.sync"}
-            )
+            dispatcher.dispatch(non_admin, "exercise_capability", {"capability_id": "execute.sync"})
         )
         assert not record.ok
         assert record.refusal == "admin access required"

@@ -49,21 +49,15 @@ TENANT = uuid4()
 ACTOR = uuid4()
 APPROVER = uuid4()
 
-BASE = SourceSnapshot.from_files(
-    {"src/app.py": b"print('v1')\n", "README.md": b"# demo\n"}
-)
+BASE = SourceSnapshot.from_files({"src/app.py": b"print('v1')\n", "README.md": b"# demo\n"})
 GOOD_PATCH = SourcePatch(
     operations=(
-        PatchOperation(
-            kind=PatchOpKind.MODIFY_FILE, path="src/app.py", content=b"print('v2')\n"
-        ),
+        PatchOperation(kind=PatchOpKind.MODIFY_FILE, path="src/app.py", content=b"print('v2')\n"),
     )
 )
 BREAKING_PATCH = SourcePatch(
     operations=(
-        PatchOperation(
-            kind=PatchOpKind.MODIFY_FILE, path="src/app.py", content=b"def broken(:\n"
-        ),
+        PatchOperation(kind=PatchOpKind.MODIFY_FILE, path="src/app.py", content=b"def broken(:\n"),
     )
 )
 SUITE = VerificationSuite(name="default", checks=SOURCE_VERIFICATION_CHECKS)

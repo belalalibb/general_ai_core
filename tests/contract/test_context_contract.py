@@ -88,9 +88,7 @@ def test_block_confidence_optional_and_bounded() -> None:
 
 def test_unknown_block_type_rejected() -> None:
     with pytest.raises(ValidationError):
-        ContextBlock.model_validate(
-            {"type": "skill", "content": "x", "source": "skill:1"}
-        )
+        ContextBlock.model_validate({"type": "skill", "content": "x", "source": "skill:1"})
 
 
 def test_unknown_exclusion_reason_rejected() -> None:
@@ -121,9 +119,7 @@ def test_request_rejects_empty_ask_and_zero_budget() -> None:
     with pytest.raises(ValidationError):
         ContextComposeRequest(tenant_id=uuid4(), user_id=uuid4(), ask="")
     with pytest.raises(ValidationError):
-        ContextComposeRequest(
-            tenant_id=uuid4(), user_id=uuid4(), ask="hi", context_budget=0
-        )
+        ContextComposeRequest(tenant_id=uuid4(), user_id=uuid4(), ask="hi", context_budget=0)
 
 
 def test_request_rejects_unknown_fields() -> None:

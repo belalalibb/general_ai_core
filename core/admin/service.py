@@ -282,9 +282,7 @@ class AdminConfigService:
         """
         change = self._require(tenant_id, change_id, ConfigLifecycleState.VALIDATED)
         if change.impact_preview is None:
-            raise InvalidLifecycleTransition(
-                "publish requires a previewed change (21 §3 order)"
-            )
+            raise InvalidLifecycleTransition("publish requires a previewed change (21 §3 order)")
         self._snapshots[change.id] = self._capture_snapshot(change)
         self._apply(change)
 
@@ -363,9 +361,7 @@ class AdminConfigService:
     ) -> ConfigChange:
         change = self.get(tenant_id, change_id)
         if change.state is not state:
-            raise InvalidLifecycleTransition(
-                f"expected {state.value}, found {change.state.value}"
-            )
+            raise InvalidLifecycleTransition(f"expected {state.value}, found {change.state.value}")
         return change
 
     def _replace(self, change: ConfigChange, **updates: object) -> ConfigChange:
@@ -567,10 +563,7 @@ class AdminConfigService:
             if not isinstance(availability, str) or availability not in {
                 a.value for a in BindingAvailability
             }:
-                return (
-                    "binding 'availability' is not a BindingAvailability: "
-                    f"{availability}"
-                )
+                return f"binding 'availability' is not a BindingAvailability: {availability}"
         return None
 
     @staticmethod
@@ -676,9 +669,7 @@ class AdminConfigService:
         action = change.action
         if action in (AdminAction.ENABLE_MODEL, AdminAction.DISABLE_MODEL):
             status = (
-                ModelStatus.ACTIVE
-                if action is AdminAction.ENABLE_MODEL
-                else ModelStatus.DISABLED
+                ModelStatus.ACTIVE if action is AdminAction.ENABLE_MODEL else ModelStatus.DISABLED
             )
             self._set_model_status(str(change.payload["model_key"]), status)
             return
@@ -688,9 +679,7 @@ class AdminConfigService:
                 if action is AdminAction.ENABLE_PROVIDER
                 else ProviderStatus.DISABLED
             )
-            self._set_provider_status(
-                str(change.payload["provider_key"]), provider_status
-            )
+            self._set_provider_status(str(change.payload["provider_key"]), provider_status)
             return
         if action is AdminAction.SET_PLAN:
             payload = change.payload
@@ -708,17 +697,13 @@ class AdminConfigService:
             return
         if action in (AdminAction.ENABLE_SKILL, AdminAction.DISABLE_SKILL):
             skill_status = (
-                SkillStatus.ACTIVE
-                if action is AdminAction.ENABLE_SKILL
-                else SkillStatus.DISABLED
+                SkillStatus.ACTIVE if action is AdminAction.ENABLE_SKILL else SkillStatus.DISABLED
             )
             self._set_skill_status(UUID(str(change.payload["skill_id"])), skill_status)
             return
         if action in (AdminAction.ENABLE_TOOL, AdminAction.DISABLE_TOOL):
             tool_status = (
-                ToolStatus.ACTIVE
-                if action is AdminAction.ENABLE_TOOL
-                else ToolStatus.DISABLED
+                ToolStatus.ACTIVE if action is AdminAction.ENABLE_TOOL else ToolStatus.DISABLED
             )
             self._set_tool_status(UUID(str(change.payload["tool_id"])), tool_status)
             return
@@ -787,9 +772,7 @@ class AdminConfigService:
         if action in (AdminAction.ENABLE_PROVIDER, AdminAction.DISABLE_PROVIDER):
             provider_status = snapshot["provider_status"]
             assert isinstance(provider_status, ProviderStatus)
-            self._set_provider_status(
-                str(change.payload["provider_key"]), provider_status
-            )
+            self._set_provider_status(str(change.payload["provider_key"]), provider_status)
             return
         if action is AdminAction.SET_PLAN:
             summary = snapshot["plan_summary"]

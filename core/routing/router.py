@@ -197,9 +197,7 @@ class SimpleScoringRouter:
             if exclusion is not None:
                 excluded.append(ExclusionRecord(model_key=model.model_key, reason=exclusion))
                 continue
-            candidates.extend(
-                self._provider_candidates(model, policy, providers_by_id, excluded)
-            )
+            candidates.extend(self._provider_candidates(model, policy, providers_by_id, excluded))
         return candidates
 
     def _candidate_models(
@@ -389,9 +387,7 @@ class SimpleScoringRouter:
         )
 
     @staticmethod
-    def _policy_preference(
-        model: Model, policy: ModelPolicy, reasons: list[str]
-    ) -> float:
+    def _policy_preference(model: Model, policy: ModelPolicy, reasons: list[str]) -> float:
         """Preference component: explicit choice / tier-hint alignment (11 §13)."""
         if isinstance(policy, ExplicitModelPolicy):
             reasons.append("explicit model selection honored")
@@ -436,11 +432,7 @@ class SimpleScoringRouter:
                 msg = "fallback_scope=admin_defined_chain but no chain is configured"
                 raise FallbackNotConfigured(msg)
             order = {key: i for i, key in enumerate(self._admin_fallback_chain)}
-            chain = [
-                c
-                for c in rest
-                if self._models.get_by_id(c.model_id).model_key in order
-            ]
+            chain = [c for c in rest if self._models.get_by_id(c.model_id).model_key in order]
             return sorted(
                 chain,
                 key=lambda c: order[self._models.get_by_id(c.model_id).model_key],
@@ -450,9 +442,7 @@ class SimpleScoringRouter:
             return [c for c in rest if c.model_id == selected.model_id]
         if scope is FallbackScope.SAME_TIER:
             selected_tier = self._models.get_by_id(ranked[0].model_id).tier
-            return [
-                c for c in rest if self._models.get_by_id(c.model_id).tier is selected_tier
-            ]
+            return [c for c in rest if self._models.get_by_id(c.model_id).tier is selected_tier]
         if scope is FallbackScope.LOWER_COST_SAME_CAPABILITY:
             # cost_score is a normalized "cheapness" score: higher = cheaper.
             selected_cost = self._models.get_by_id(ranked[0].model_id).cost_score or 0.0

@@ -52,9 +52,7 @@ class InvalidTransition(SourceChangeError):
     def __init__(self, current: str, requested: str) -> None:
         self.current = current
         self.requested = requested
-        super().__init__(
-            f"invalid proposal transition: {current} -> {requested}"
-        )
+        super().__init__(f"invalid proposal transition: {current} -> {requested}")
 
 
 class ApprovalHashMismatch(SourceChangeError):
@@ -70,8 +68,7 @@ class ApprovalHashMismatch(SourceChangeError):
         self.expected = expected
         self.cited = cited
         super().__init__(
-            "approval hash mismatch: proposal carries "
-            f"{expected} but the approval cites {cited}"
+            f"approval hash mismatch: proposal carries {expected} but the approval cites {cited}"
         )
 
 
@@ -100,6 +97,4 @@ class SnapshotIntegrityError(SourceChangeError):
 
     def __init__(self, snapshot_id: str) -> None:
         self.snapshot_id = snapshot_id
-        super().__init__(
-            f"snapshot {snapshot_id!r} failed integrity verification"
-        )
+        super().__init__(f"snapshot {snapshot_id!r} failed integrity verification")

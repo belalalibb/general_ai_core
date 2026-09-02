@@ -77,9 +77,7 @@ class FakeJudge:
         self.broken = broken
         self.calls: list[tuple[UUID, UUID]] = []
 
-    async def judge(
-        self, tenant_id: UUID, execution_id: UUID, output: JsonObject
-    ) -> GraderResult:
+    async def judge(self, tenant_id: UUID, execution_id: UUID, output: JsonObject) -> GraderResult:
         self.calls.append((tenant_id, execution_id))
         if self.broken:
             raise JudgeFailure("scripted judge breakage")
@@ -118,9 +116,7 @@ class FakeAdapter:
     async def get_capabilities(self) -> ProviderCapabilities:  # pragma: no cover
         return ProviderCapabilities()
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         self.requests.append(request)
         if isinstance(self.step, Exception):
             raise self.step
@@ -317,16 +313,10 @@ class TestGraderTypeBoundary:
             key=lambda t: t.value,
         ),
     )
-    def test_inactive_grader_types_are_denied_loudly(
-        self, inactive: GraderType
-    ) -> None:
+    def test_inactive_grader_types_are_denied_loudly(self, inactive: GraderType) -> None:
         service, store = _service(judge=FakeJudge())
         with pytest.raises(InactiveGraderType):
-            run(
-                service.evaluate(
-                    TENANT, EXECUTION, GOOD_OUTPUT, grader_types=[inactive]
-                )
-            )
+            run(service.evaluate(TENANT, EXECUTION, GOOD_OUTPUT, grader_types=[inactive]))
         # Denial means NOTHING ran and NOTHING was recorded.
         assert store.list_for_execution(TENANT, EXECUTION) == ()
 

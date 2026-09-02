@@ -36,12 +36,8 @@ from core.sourcechange import (
     VerificationSuite,
 )
 
-GOOD = SourceSnapshot.from_files(
-    {"src/app.py": b"print('ok')\n", "README.md": b"# demo\n"}
-)
-BROKEN = SourceSnapshot.from_files(
-    {"src/app.py": b"def broken(:\n", "README.md": b"# demo\n"}
-)
+GOOD = SourceSnapshot.from_files({"src/app.py": b"print('ok')\n", "README.md": b"# demo\n"})
+BROKEN = SourceSnapshot.from_files({"src/app.py": b"def broken(:\n", "README.md": b"# demo\n"})
 DEFAULT_SUITE = VerificationSuite(name="default", checks=SOURCE_VERIFICATION_CHECKS)
 
 
@@ -155,9 +151,7 @@ class _FlakySandbox:
         return VerificationReport(
             snapshot_id=snapshot.snapshot_id,
             suite_name=suite.name,
-            results=(
-                CheckResult(name="flaky", passed=self._runs % 2 == 1, detail=""),
-            ),
+            results=(CheckResult(name="flaky", passed=self._runs % 2 == 1, detail=""),),
         )
 
 
@@ -214,7 +208,4 @@ def test_differential_is_reproducible_end_to_end() -> None:
     assert first.verdict is second.verdict
     assert first.regressions == second.regressions
     assert first.base_report.canonical_json() == second.base_report.canonical_json()
-    assert (
-        first.patched_report.canonical_json()
-        == second.patched_report.canonical_json()
-    )
+    assert first.patched_report.canonical_json() == second.patched_report.canonical_json()

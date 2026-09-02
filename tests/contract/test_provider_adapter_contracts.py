@@ -54,9 +54,7 @@ def test_credential_health_rejects_secret_material_fields() -> None:
 
 def test_credential_health_rejects_unknown_status() -> None:
     with pytest.raises(ValidationError):
-        CredentialHealth.model_validate(
-            {"credential_ref": "cred_ref", "status": "sort_of_ok"}
-        )
+        CredentialHealth.model_validate({"credential_ref": "cred_ref", "status": "sort_of_ok"})
 
 
 # --- DiscoveredModel (30 §8.1; NOT a binding) --------------------------------------
@@ -75,9 +73,7 @@ def test_discovered_model_rejects_registry_binding_fields() -> None:
     # Binding creation is a Core decision (03 §4): a provider cannot declare
     # binding/registry identifiers through discovery.
     with pytest.raises(ValidationError):
-        DiscoveredModel.model_validate(
-            {"provider_model_name": "x", "binding_id": str(uuid4())}
-        )
+        DiscoveredModel.model_validate({"provider_model_name": "x", "binding_id": str(uuid4())})
 
 
 # --- ProviderGenerateRequest (30 §8.1) ---------------------------------------------
@@ -105,9 +101,7 @@ def test_generate_request_roundtrip_with_defaults() -> None:
 
 def test_generate_request_operation_must_be_a_documented_operation() -> None:
     with pytest.raises(ValidationError):
-        ProviderGenerateRequest.model_validate(
-            _request_payload(operation="do_anything")
-        )
+        ProviderGenerateRequest.model_validate(_request_payload(operation="do_anything"))
 
 
 def test_generate_request_timeout_must_be_positive() -> None:

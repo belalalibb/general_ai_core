@@ -100,16 +100,12 @@ class World:
         )
 
     def draft(self, action: AdminAction, payload: JsonObject):
-        return self.admin.draft(
-            tenant_id=TENANT, actor_id=ACTOR, action=action, payload=payload
-        )
+        return self.admin.draft(tenant_id=TENANT, actor_id=ACTOR, action=action, payload=payload)
 
     def publish(self, action: AdminAction, payload: JsonObject):
         change = self.draft(action, payload)
         validated = self.admin.validate(TENANT, change.id)
-        assert validated.state is ConfigLifecycleState.VALIDATED, (
-            validated.validation_result
-        )
+        assert validated.state is ConfigLifecycleState.VALIDATED, validated.validation_result
         self.admin.preview(TENANT, change.id)
         return self.admin.publish(TENANT, change.id)
 
@@ -169,9 +165,7 @@ class TestRegisterProvider:
 
     def test_missing_manifest_rejected(self) -> None:
         world = World()
-        change = world.draft(
-            AdminAction.REGISTER_PROVIDER, {"provider": _provider_payload("x")}
-        )
+        change = world.draft(AdminAction.REGISTER_PROVIDER, {"provider": _provider_payload("x")})
         rejected = world.admin.validate(TENANT, change.id)
         assert rejected.state is ConfigLifecycleState.REJECTED
         assert "manifest" in (rejected.validation_result or "")
@@ -221,14 +215,10 @@ class TestRegisterModel:
             AdminAction.REGISTER_MODEL,
             {
                 "model": _model_payload("acme-chat-1"),
-                "bindings": [
-                    {"provider_key": "acme", "provider_model_name": "chat-1"}
-                ],
+                "bindings": [{"provider_key": "acme", "provider_model_name": "chat-1"}],
             },
         )
-        decision = world.router.route(
-            RoutingRequest(operation=ProviderOperation.GENERATE_TEXT)
-        )
+        decision = world.router.route(RoutingRequest(operation=ProviderOperation.GENERATE_TEXT))
         model = world.models.get("acme-chat-1")
         assert decision.selected.model_id == model.id
 

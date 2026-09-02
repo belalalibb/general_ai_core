@@ -32,9 +32,7 @@ class TestPortContract:
         ref = manager.store(TENANT_A, FAKE_SECRET)
         assert manager.resolve(TENANT_A, ref) == FAKE_SECRET
 
-    def test_ref_is_opaque_and_recognizable(
-        self, manager: InMemorySecretManager
-    ) -> None:
+    def test_ref_is_opaque_and_recognizable(self, manager: InMemorySecretManager) -> None:
         """The ref never embeds the value and carries the credref_ marker."""
         ref = manager.store(TENANT_A, FAKE_SECRET)
         assert ref.startswith("credref_")
@@ -50,9 +48,7 @@ class TestPortContract:
         with pytest.raises(ValueError):
             manager.store(TENANT_A, "")
 
-    def test_unknown_ref_raises_not_found(
-        self, manager: InMemorySecretManager
-    ) -> None:
+    def test_unknown_ref_raises_not_found(self, manager: InMemorySecretManager) -> None:
         with pytest.raises(SecretNotFound):
             manager.resolve(TENANT_A, "credref_never-minted")
 
@@ -64,9 +60,7 @@ class TestPortContract:
 
 
 class TestRevocation:
-    def test_revoked_ref_no_longer_resolves(
-        self, manager: InMemorySecretManager
-    ) -> None:
+    def test_revoked_ref_no_longer_resolves(self, manager: InMemorySecretManager) -> None:
         ref = manager.store(TENANT_A, FAKE_SECRET)
         manager.revoke(TENANT_A, ref)
         with pytest.raises(SecretNotFound):
@@ -92,16 +86,12 @@ class TestRevocation:
 class TestNoLeak:
     """20 §5: no secrets in logs — nothing printable may carry the value."""
 
-    def test_manager_repr_never_contains_secret(
-        self, manager: InMemorySecretManager
-    ) -> None:
+    def test_manager_repr_never_contains_secret(self, manager: InMemorySecretManager) -> None:
         manager.store(TENANT_A, FAKE_SECRET)
         assert FAKE_SECRET not in repr(manager)
         assert FAKE_SECRET not in str(manager)
 
-    def test_not_found_error_never_contains_secret(
-        self, manager: InMemorySecretManager
-    ) -> None:
+    def test_not_found_error_never_contains_secret(self, manager: InMemorySecretManager) -> None:
         ref = manager.store(TENANT_A, FAKE_SECRET)
         manager.revoke(TENANT_A, ref)
         with pytest.raises(SecretNotFound) as exc_info:
@@ -113,16 +103,12 @@ class TestNoLeak:
 class TestTenantIsolation:
     """20 §6: a ref minted for tenant A never resolves for tenant B."""
 
-    def test_foreign_tenant_cannot_resolve(
-        self, manager: InMemorySecretManager
-    ) -> None:
+    def test_foreign_tenant_cannot_resolve(self, manager: InMemorySecretManager) -> None:
         ref = manager.store(TENANT_A, FAKE_SECRET)
         with pytest.raises(SecretNotFound):
             manager.resolve(TENANT_B, ref)
 
-    def test_foreign_tenant_cannot_revoke(
-        self, manager: InMemorySecretManager
-    ) -> None:
+    def test_foreign_tenant_cannot_revoke(self, manager: InMemorySecretManager) -> None:
         ref = manager.store(TENANT_A, FAKE_SECRET)
         with pytest.raises(SecretNotFound):
             manager.revoke(TENANT_B, ref)

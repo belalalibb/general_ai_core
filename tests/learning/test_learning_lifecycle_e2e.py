@@ -84,9 +84,7 @@ def world() -> dict[str, Any]:
         # composition: minimum_level=RAW keeps the gate real (all 8
         # conditions still checked) while the evaluation pipeline's level
         # assignment stays authoritative for the recorded level.
-        eligibility_gate=TrainingEligibilityGate(
-            minimum_level=VerificationLevel.RAW
-        ),
+        eligibility_gate=TrainingEligibilityGate(minimum_level=VerificationLevel.RAW),
     )
     return {
         "service": service,
@@ -96,9 +94,7 @@ def world() -> dict[str, Any]:
 
 
 class TestFullLifecycle:
-    def test_execution_to_gold_to_retrieval_to_isolated_test(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_execution_to_gold_to_retrieval_to_isolated_test(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         execution_id = uuid4()
 
@@ -134,13 +130,9 @@ class TestFullLifecycle:
         assert sample.dataset_id is not None  # entered Dataset (03 §8)
 
         # 5) PROMOTION — the EXISTING 22 §11 gate → GOLD + knowledge write.
-        item = service.promote_to_gold(
-            TENANT, sample.id, ALL_PROMOTABLE, actor_id=ADMIN
-        )
+        item = service.promote_to_gold(TENANT, sample.id, ALL_PROMOTABLE, actor_id=ADMIN)
         assert item.source == GOLD_KNOWLEDGE_SOURCE
-        assert service.get(TENANT, sample.id).verification_level is (
-            VerificationLevel.GOLD
-        )
+        assert service.get(TENANT, sample.id).verification_level is (VerificationLevel.GOLD)
 
         # 6) AUDIT — the 20 §9 event that previously had NO emitter.
         events = [
@@ -158,9 +150,7 @@ class TestFullLifecycle:
         # 8) ISOLATED TEST PATH — answers ONLY from GOLD knowledge.
         answer = service.ask_learned(TENANT, "deploy.rollback_procedure")
         assert answer["found"] is True
-        assert answer["answer"] == {
-            "answer": "drain, flip alias, verify, then destroy"
-        }
+        assert answer["answer"] == {"answer": "drain, flip alias, verify, then destroy"}
         assert answer["evidence"]["source"] == GOLD_KNOWLEDGE_SOURCE
 
         # ... and an unlearned key is an explicit not-found, never invented.
@@ -180,9 +170,7 @@ class TestFullLifecycle:
 
 
 class TestExternalIngestion:
-    def test_external_data_enters_same_pipeline_never_trusted(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_external_data_enters_same_pipeline_never_trusted(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         sample = service.capture_external(
             TENANT,
@@ -192,9 +180,7 @@ class TestExternalIngestion:
         # NOT trusted on entry — identical deny-by-default posture.
         assert sample.eligibility is LearningEligibility.PENDING
         assert sample.verification_level is VerificationLevel.RAW
-        assert service.sample_report(TENANT, sample.id)["source_kind"] == (
-            "external"
-        )
+        assert service.sample_report(TENANT, sample.id)["source_kind"] == ("external")
         # It cannot skip the gates: promotion before eligibility refuses.
         with pytest.raises(LearningError):
             service.promote_to_gold(TENANT, sample.id, ALL_PROMOTABLE)
@@ -206,9 +192,7 @@ class TestExternalIngestion:
 
 
 class TestGateRefusals:
-    def test_unsanitized_sample_refused_with_named_condition(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_unsanitized_sample_refused_with_named_condition(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         sample = service.capture_from_execution(
             TENANT, uuid4(), knowledge_key="k", knowledge_value={"v": 1}
@@ -217,13 +201,9 @@ class TestGateRefusals:
             service.admit_to_training(TENANT, sample.id, ALL_ELIGIBLE)
         assert "sanitized" in str(exc.value)
         # Verdict persisted: the sample is now explicitly INELIGIBLE.
-        assert service.get(TENANT, sample.id).eligibility is (
-            LearningEligibility.INELIGIBLE
-        )
+        assert service.get(TENANT, sample.id).eligibility is (LearningEligibility.INELIGIBLE)
 
-    def test_promotion_gate_names_every_failed_condition(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_promotion_gate_names_every_failed_condition(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         sample = service.capture_from_execution(
             TENANT, uuid4(), knowledge_key="k2", knowledge_value={"v": 2}
@@ -232,7 +212,9 @@ class TestGateRefusals:
         service.admit_to_training(TENANT, sample.id, ALL_ELIGIBLE)
         with pytest.raises(PromotionDenied) as exc:
             service.promote_to_gold(
-                TENANT, sample.id, PromotionSignals()  # all deny-by-default
+                TENANT,
+                sample.id,
+                PromotionSignals(),  # all deny-by-default
             )
         message = str(exc.value)
         assert "offline_eval_pass" in message
@@ -247,9 +229,7 @@ class TestGateRefusals:
 
 
 class TestTenantIsolation:
-    def test_foreign_tenant_sample_is_not_found(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_foreign_tenant_sample_is_not_found(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         sample = service.capture_from_execution(
             TENANT, uuid4(), knowledge_key="secret.k", knowledge_value={"v": 3}
@@ -263,9 +243,7 @@ class TestTenantIsolation:
             service.admit_to_training(OTHER_TENANT, sample.id, ALL_ELIGIBLE)
         assert service.list_samples(OTHER_TENANT) == ()
 
-    def test_gold_knowledge_is_tenant_scoped(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_gold_knowledge_is_tenant_scoped(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         sample = service.capture_from_execution(
             TENANT, uuid4(), knowledge_key="ops.playbook", knowledge_value={"v": 4}
@@ -275,6 +253,4 @@ class TestTenantIsolation:
         service.promote_to_gold(TENANT, sample.id, ALL_PROMOTABLE)
         # The other tenant cannot see or query the learned knowledge.
         assert service.learned_keys(OTHER_TENANT) == ()
-        assert service.ask_learned(OTHER_TENANT, "ops.playbook")["found"] is (
-            False
-        )
+        assert service.ask_learned(OTHER_TENANT, "ops.playbook")["found"] is (False)

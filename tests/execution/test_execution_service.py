@@ -105,9 +105,7 @@ class FakeAdapter:
         raise NotImplementedError
 
     async def validate_credential(self, credential_ref: str) -> CredentialHealth:
-        return CredentialHealth(
-            credential_ref=credential_ref, status=CredentialStatus.ACTIVE
-        )
+        return CredentialHealth(credential_ref=credential_ref, status=CredentialStatus.ACTIVE)
 
     async def discover_models(
         self, account_id: UUID | None = None
@@ -117,9 +115,7 @@ class FakeAdapter:
     async def get_capabilities(self) -> ProviderCapabilities:  # pragma: no cover
         return ProviderCapabilities()
 
-    async def generate(
-        self, request: ProviderGenerateRequest
-    ) -> ProviderGenerateResponse:
+    async def generate(self, request: ProviderGenerateRequest) -> ProviderGenerateResponse:
         self.requests.append(request)
         step: object = self.script.pop(0) if self.script else {"ok": True}
         if isinstance(step, Exception):
@@ -208,9 +204,7 @@ class World:
         target = model if model is not None else self.model
         return CandidateScore(model_id=target.id, provider_id=provider_id, score=score)
 
-    def decision(
-        self, selected: CandidateScore, *fallbacks: CandidateScore
-    ) -> RoutingDecision:
+    def decision(self, selected: CandidateScore, *fallbacks: CandidateScore) -> RoutingDecision:
         return RoutingDecision(
             selected=selected,
             ranked=[selected, *fallbacks],
@@ -385,9 +379,7 @@ def test_retry_after_ms_is_honored_via_sleeper() -> None:
     world = World()
     provider_id, _ = world.add_provider(
         [
-            _error(
-                ProviderErrorCategory.RATE_LIMITED, retryable=True, retry_after_ms=1500
-            ),
+            _error(ProviderErrorCategory.RATE_LIMITED, retryable=True, retry_after_ms=1500),
             {"text": "ok"},
         ]
     )
@@ -417,9 +409,7 @@ def test_provider_failover_traverses_fallback_in_router_order() -> None:
     p1, a1 = world.add_provider([_error(ProviderErrorCategory.PROVIDER_UNAVAILABLE)])
     p2, a2 = world.add_provider([_error(ProviderErrorCategory.MODEL_UNAVAILABLE)])
     p3, a3 = world.add_provider([{"text": "third"}])
-    decision = world.decision(
-        world.candidate(p1), world.candidate(p2), world.candidate(p3)
-    )
+    decision = world.decision(world.candidate(p1), world.candidate(p2), world.candidate(p3))
     report = _single(world, decision)
     assert report.execution.status is ExecutionStatus.SUCCEEDED
     assert report.final_output == {"text": "third"}

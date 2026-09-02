@@ -313,9 +313,7 @@ class ProviderOnboardingService:
             for key in registered_keys:
                 model = self._models.get(key)
                 self._persistence.persist_model(model)
-                self._persistence.persist_binding(
-                    self._bindings.get(provider.id, model.id)
-                )
+                self._persistence.persist_binding(self._bindings.get(provider.id, model.id))
             steps.append("step-durable-persistence")
 
         # --- step 14: PREPARE the admin enable draft (never publish it) --------
@@ -365,10 +363,6 @@ class ProviderOnboardingService:
                     f"model '{dm.provider_model_name}' declares unknown "
                     f"modalities {unknown} (30 §4.3: never guessed)",
                 )
-            modalities = (
-                [Modality(m) for m in dm.modalities]
-                if dm.modalities
-                else [Modality.TEXT]
-            )
+            modalities = [Modality(m) for m in dm.modalities] if dm.modalities else [Modality.TEXT]
             normalized.append((dm, modalities))
         return normalized

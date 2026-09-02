@@ -65,9 +65,7 @@ class AuthoritativeApplierPort(Protocol):
     that its absence is a checkable, testable fact rather than a comment.
     """
 
-    def apply_to_authoritative_source(
-        self, tenant_id: UUID, snapshot_id: str
-    ) -> None: ...
+    def apply_to_authoritative_source(self, tenant_id: UUID, snapshot_id: str) -> None: ...
 
 
 class SourceChangeWorkflow:
@@ -105,9 +103,7 @@ class SourceChangeWorkflow:
 
     # --- audit (criterion 11; closed event set preserved) ----------------------------
 
-    def _record(
-        self, proposal: ChangeProposal, act: str, detail: dict[str, object]
-    ) -> None:
+    def _record(self, proposal: ChangeProposal, act: str, detail: dict[str, object]) -> None:
         if self._audit is None:
             return
         self._audit.append(
@@ -128,9 +124,7 @@ class SourceChangeWorkflow:
 
     # --- workshop material ------------------------------------------------------------
 
-    def register_base_snapshot(
-        self, tenant_id: UUID, snapshot: SourceSnapshot
-    ) -> SourceSnapshot:
+    def register_base_snapshot(self, tenant_id: UUID, snapshot: SourceSnapshot) -> SourceSnapshot:
         """Store a base snapshot proposals can anchor to (workshop intake).
 
         Recorded design decision (R129 plan): the admin router holds ONE
@@ -225,9 +219,7 @@ class SourceChangeWorkflow:
         proposal = self._proposals.get_proposal(tenant_id, proposal_id)
         updated = proposal.with_state(ProposalState.REJECTED)
         self._proposals.save_proposal(updated)
-        self._record(
-            updated, "reject", {"approver_id": str(approver_id), "reason": reason}
-        )
+        self._record(updated, "reject", {"approver_id": str(approver_id), "reason": reason})
         return updated
 
     def apply(self, tenant_id: UUID, proposal_id: UUID) -> ChangeProposal:
@@ -271,9 +263,7 @@ class SourceChangeWorkflow:
         updated = proposal.with_state(ProposalState.ROLLED_BACK)
         if proposal.applied_snapshot_id is None or proposal.inverse_patch is None:
             raise UnknownSnapshot("<no applied snapshot recorded>")
-        applied_snapshot = self._snapshots.get_snapshot(
-            tenant_id, proposal.applied_snapshot_id
-        )
+        applied_snapshot = self._snapshots.get_snapshot(tenant_id, proposal.applied_snapshot_id)
         restored = apply_patch(applied_snapshot, proposal.inverse_patch)
         restored_matches_base = restored.snapshot_id == proposal.base_snapshot_id
         self._snapshots.save_snapshot(tenant_id, restored)

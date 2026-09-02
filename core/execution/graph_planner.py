@@ -68,9 +68,7 @@ class GraphPlanner:
             ],
         )
 
-    def plan_pipeline(
-        self, graph_id: str, stages: Sequence[GraphNodeSpec]
-    ) -> ExecutionGraphSpec:
+    def plan_pipeline(self, graph_id: str, stages: Sequence[GraphNodeSpec]) -> ExecutionGraphSpec:
         """Linear chain with success edges (11 §10 / 12 §24.1)."""
         if len(stages) < 2:
             msg = "a pipeline needs at least 2 stages (12 §24.1)"

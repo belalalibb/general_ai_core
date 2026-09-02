@@ -375,11 +375,7 @@ class AgentLoop:
         }
         if self._deadline_ms is not None:
             summary["deadline_ms"] = self._deadline_ms
-        status = (
-            ExecutionStatus.SUCCEEDED
-            if stop_reason == STOP_FINAL
-            else ExecutionStatus.FAILED
-        )
+        status = ExecutionStatus.SUCCEEDED if stop_reason == STOP_FINAL else ExecutionStatus.FAILED
         execution = Execution(
             id=execution_id,
             tenant_id=tenant_id,
@@ -456,11 +452,7 @@ class AgentLoop:
                 execution_id=execution_id,
                 node_key=f"verify-{index}",
                 type=ExecutionNodeType.VALIDATOR,
-                status=(
-                    ExecutionNodeStatus.SUCCEEDED
-                    if passed
-                    else ExecutionNodeStatus.FAILED
-                ),
+                status=(ExecutionNodeStatus.SUCCEEDED if passed else ExecutionNodeStatus.FAILED),
                 input_ref=dict(output),
                 output_ref=verdict,
                 retry_count=0,
@@ -514,9 +506,7 @@ class AgentLoop:
                 "status": "refused",
                 "error": error,
             }
-            state.steps.append(
-                AgentStep(index=index, proposal_raw=raw, observation=observation)
-            )
+            state.steps.append(AgentStep(index=index, proposal_raw=raw, observation=observation))
             return observation
         if binding is None:
             # Unknown NAME is a model mistake, observed as data — the model
@@ -536,9 +526,7 @@ class AgentLoop:
                 "status": "refused",
                 "error": error,
             }
-            state.steps.append(
-                AgentStep(index=index, proposal_raw=raw, observation=observation)
-            )
+            state.steps.append(AgentStep(index=index, proposal_raw=raw, observation=observation))
             return observation
 
         record = await self._tools.execute(
@@ -590,17 +578,9 @@ class AgentLoop:
             execution_id,
             index,
             proposal,
-            status=(
-                ExecutionNodeStatus.SUCCEEDED
-                if succeeded
-                else ExecutionNodeStatus.FAILED
-            ),
+            status=(ExecutionNodeStatus.SUCCEEDED if succeeded else ExecutionNodeStatus.FAILED),
             output=record.result,
-            error=(
-                None
-                if succeeded
-                else {"reason": record.error, "detail": record.error_detail}
-            ),
+            error=(None if succeeded else {"reason": record.error, "detail": record.error_detail}),
         )
         state.steps.append(
             AgentStep(

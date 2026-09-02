@@ -51,9 +51,7 @@ class ObjectStoragePort(Protocol):
     ``ObjectNotFound`` indistinguishably.
     """
 
-    def put(
-        self, tenant_id: UUID, key: str, data: bytes, content_type: str
-    ) -> StoredObject:
+    def put(self, tenant_id: UUID, key: str, data: bytes, content_type: str) -> StoredObject:
         """Store ``data`` at ``key`` within ``tenant_id``; overwrite allowed."""
         ...
 

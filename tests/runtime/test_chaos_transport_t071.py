@@ -76,9 +76,7 @@ class FlakyQueue:
             self.fail_next.discard(op)
             raise ConnectionError(f"injected transport fault: {op}")
 
-    async def publish(
-        self, stream: str, payload: Mapping[str, str], idempotency_key: str
-    ) -> str:
+    async def publish(self, stream: str, payload: Mapping[str, str], idempotency_key: str) -> str:
         self._maybe_fail("publish")
         return await self.inner.publish(stream, payload, idempotency_key)
 
@@ -101,9 +99,7 @@ class FlakyQueue:
         max_messages: int = 1,
     ) -> tuple[QueueMessage, ...]:
         self._maybe_fail("claim_stale")
-        return await self.inner.claim_stale(
-            stream, group, consumer, idle_ms, max_messages
-        )
+        return await self.inner.claim_stale(stream, group, consumer, idle_ms, max_messages)
 
     async def dead_letter(self, stream: str, group: str, message_id: str) -> None:
         self._maybe_fail("dead_letter")
@@ -122,9 +118,7 @@ class FlakyOutbox:
             self.fail_next.discard(op)
             raise ConnectionError(f"injected transport fault: {op}")
 
-    async def append(
-        self, stream: str, payload: Mapping[str, str], idempotency_key: str
-    ) -> str:
+    async def append(self, stream: str, payload: Mapping[str, str], idempotency_key: str) -> str:
         return await self.inner.append(stream, payload, idempotency_key)
 
     async def pending(self, max_records: int = 1) -> tuple[object, ...]:

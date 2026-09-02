@@ -103,13 +103,15 @@ class TestCrossReplicaStatelessness:
         replica_a = make_replica(world, idempotency_index=shared_index)
         replica_b = make_replica(world, idempotency_index=shared_index)
 
-        first = run(_post(replica_a, "/v1/execute", {"ask": "hi"},
-                          {"Idempotency-Key": "shared-k1"}))
+        first = run(
+            _post(replica_a, "/v1/execute", {"ask": "hi"}, {"Idempotency-Key": "shared-k1"})
+        )
         assert first.status_code == 200
         calls_after_first = len(world.adapter.requests)
 
-        replay = run(_post(replica_b, "/v1/execute", {"ask": "hi"},
-                           {"Idempotency-Key": "shared-k1"}))
+        replay = run(
+            _post(replica_b, "/v1/execute", {"ask": "hi"}, {"Idempotency-Key": "shared-k1"})
+        )
         assert replay.status_code == 200
         assert replay.json()["execution_id"] == first.json()["execution_id"]
         assert len(world.adapter.requests) == calls_after_first  # no re-run
@@ -130,27 +132,19 @@ class TestCrossReplicaStatelessness:
         world = World()
         replica_a = make_replica(world)  # no shared index
         replica_b = make_replica(world)
-        first = run(_post(replica_a, "/v1/execute", {"ask": "hi"},
-                          {"Idempotency-Key": "local-k"}))
-        second = run(_post(replica_b, "/v1/execute", {"ask": "hi"},
-                           {"Idempotency-Key": "local-k"}))
+        first = run(_post(replica_a, "/v1/execute", {"ask": "hi"}, {"Idempotency-Key": "local-k"}))
+        second = run(_post(replica_b, "/v1/execute", {"ask": "hi"}, {"Idempotency-Key": "local-k"}))
         # B never saw A's key: a NEW execution, not a replay.
         assert first.json()["execution_id"] != second.json()["execution_id"]
 
     def test_webhook_subscriptions_land_in_shared_mapping(self) -> None:
         world = World()
         shared_subs: dict[UUID, list[WebhookSubscription]] = {}
-        replica_a = make_replica(
-            world, webhooks=True, webhook_subscriptions=shared_subs
-        )
-        response = run(_post(replica_a, "/v1/webhooks",
-                             {"url": "https://example.test/hook"}))
+        replica_a = make_replica(world, webhooks=True, webhook_subscriptions=shared_subs)
+        response = run(_post(replica_a, "/v1/webhooks", {"url": "https://example.test/hook"}))
         assert response.status_code == 201
         assert len(shared_subs[world.principal.tenant_id]) == 1
-        assert (
-            str(shared_subs[world.principal.tenant_id][0].url)
-            == "https://example.test/hook"
-        )
+        assert str(shared_subs[world.principal.tenant_id][0].url) == "https://example.test/hook"
 
     def test_fresh_replica_needs_only_the_injected_seams(self) -> None:
         """Completeness: a replica created AFTER the traffic, given only
@@ -159,13 +153,13 @@ class TestCrossReplicaStatelessness:
         world = World()
         shared_index: dict[tuple[UUID, str], UUID] = {}
         replica_a = make_replica(world, idempotency_index=shared_index)
-        first = run(_post(replica_a, "/v1/execute", {"ask": "hi"},
-                          {"Idempotency-Key": "late-k"}))
+        first = run(_post(replica_a, "/v1/execute", {"ask": "hi"}, {"Idempotency-Key": "late-k"}))
         execution_id = first.json()["execution_id"]
 
         late_replica = make_replica(world, idempotency_index=shared_index)
-        replay = run(_post(late_replica, "/v1/execute", {"ask": "hi"},
-                           {"Idempotency-Key": "late-k"}))
+        replay = run(
+            _post(late_replica, "/v1/execute", {"ask": "hi"}, {"Idempotency-Key": "late-k"})
+        )
         assert replay.json()["execution_id"] == execution_id
         status = run(_get(late_replica, f"/v1/executions/{execution_id}"))
         assert status.status_code == 200
@@ -178,10 +172,8 @@ class TestCrossReplicaStatelessness:
         shared_index: dict[tuple[UUID, str], UUID] = {}
         replica_a = make_replica(world_a, idempotency_index=shared_index)
         replica_b = make_replica(world_b, idempotency_index=shared_index)
-        first = run(_post(replica_a, "/v1/execute", {"ask": "hi"},
-                          {"Idempotency-Key": "same-key"}))
-        other = run(_post(replica_b, "/v1/execute", {"ask": "hi"},
-                          {"Idempotency-Key": "same-key"}))
+        first = run(_post(replica_a, "/v1/execute", {"ask": "hi"}, {"Idempotency-Key": "same-key"}))
+        other = run(_post(replica_b, "/v1/execute", {"ask": "hi"}, {"Idempotency-Key": "same-key"}))
         # Same literal key, different tenants: never a cross-tenant replay.
         assert first.json()["execution_id"] != other.json()["execution_id"]
         assert len(shared_index) == 2
@@ -191,8 +183,7 @@ def test_webhook_default_still_process_local() -> None:
     """Without injection, subscriptions stay app-local (posture unchanged)."""
     world = World()
     replica = make_replica(world, webhooks=True)
-    response = run(_post(replica, "/v1/webhooks",
-                         {"url": "https://example.test/hook"}))
+    response = run(_post(replica, "/v1/webhooks", {"url": "https://example.test/hook"}))
     assert response.status_code == 201
 
 

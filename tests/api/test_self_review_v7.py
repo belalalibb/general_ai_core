@@ -64,9 +64,7 @@ async def _get(app: FastAPI, path: str) -> httpx.Response:
         return await client.get(path)
 
 
-async def _post(
-    app: FastAPI, path: str, body: dict[str, object] | None = None
-) -> httpx.Response:
+async def _post(app: FastAPI, path: str, body: dict[str, object] | None = None) -> httpx.Response:
     async with _client(app) as client:
         return await client.post(path, json=body)
 
@@ -95,9 +93,7 @@ class TestServiceModule:
     def test_propose_without_lifecycle_seam_fails_loudly(self) -> None:
         service = SelfReviewService()
         try:
-            service.propose_change(
-                uuid4(), uuid4(), AdminAction.DISABLE_MODEL, {"model_key": "x"}
-            )
+            service.propose_change(uuid4(), uuid4(), AdminAction.DISABLE_MODEL, {"model_key": "x"})
             raise AssertionError("expected RuntimeError")
         except RuntimeError as exc:
             assert "lifecycle seam" in str(exc)
@@ -114,10 +110,7 @@ class TestSelfReviewRoute:
         # Capabilities: the composed catalog rows, each with evidence.
         capabilities = body["capabilities"]
         assert capabilities["available"] is True
-        assert all(
-            set(row.keys()) == {"id", "state", "evidence"}
-            for row in capabilities["rows"]
-        )
+        assert all(set(row.keys()) == {"id", "state", "evidence"} for row in capabilities["rows"])
         assert sum(capabilities["by_state"].values()) == len(capabilities["rows"])
         # Lifecycle: honest zero, evidence not truncated.
         lifecycle = body["config_lifecycle"]
@@ -131,9 +124,7 @@ class TestSelfReviewRoute:
         # Review state: never reviewed, full report pointed at.
         review_state = body["review_state"]
         assert review_state["reviewed"] is False
-        assert review_state["full_report"] == (
-            "GET /v1/admin/learning/changes-since-review"
-        )
+        assert review_state["full_report"] == ("GET /v1/admin/learning/changes-since-review")
         assert body["posture"]["auto_apply"] == "never"
 
     def test_review_reflects_real_activity(self) -> None:
@@ -168,18 +159,14 @@ class TestProposeRoute:
         assert "routing pool" in body["evidence"]["impact_preview"]
         # Never auto-apply: the human route is NAMED, with the change id.
         assert body["apply"]["auto_apply"] == "never"
-        assert body["apply"]["human_route"] == (
-            f"POST /v1/admin/changes/{change['id']}/publish"
-        )
+        assert body["apply"]["human_route"] == (f"POST /v1/admin/changes/{change['id']}/publish")
 
     def test_proposal_never_applies_anything(self) -> None:
         world = World()
         app = world.app()
         body = run(_post(app, PROPOSE, DISABLE_MODEL)).json()
         # (1) The change never reached PUBLISHED.
-        stored = world.admin.get(
-            world.principal.tenant_id, UUID(body["change"]["id"])
-        )
+        stored = world.admin.get(world.principal.tenant_id, UUID(body["change"]["id"]))
         assert stored.state is ConfigLifecycleState.VALIDATED
         # (2) The live registry is UNTOUCHED — the model is still active.
         assert world.models.get("model-a").status is ModelStatus.ACTIVE
@@ -191,9 +178,7 @@ class TestProposeRoute:
         assert published == ()
         # (4) A HUMAN can still publish the proposal through the existing
         # route — the proposal fed the real lifecycle, not a copy.
-        publish = run(
-            _post(app, f"/v1/admin/changes/{body['change']['id']}/publish")
-        )
+        publish = run(_post(app, f"/v1/admin/changes/{body['change']['id']}/publish"))
         assert publish.status_code == 200
         assert publish.json()["state"] == "published"
 
@@ -218,9 +203,7 @@ class TestProposeRoute:
     def test_inactive_area_is_the_requests_fault_422(self) -> None:
         world = World()
         app = world.app()
-        response = run(
-            _post(app, PROPOSE, {"action": "enable_tool", "payload": {}})
-        )
+        response = run(_post(app, PROPOSE, {"action": "enable_tool", "payload": {}}))
         assert response.status_code == 422
         assert response.json()["error"]["code"] == "validation_error"
 
@@ -244,9 +227,7 @@ class TestProposeRoute:
 # --- agent tools -------------------------------------------------------------------
 
 
-def _agent_surface(
-    world: World, service: SelfReviewService | None
-) -> AgentToolSurface:
+def _agent_surface(world: World, service: SelfReviewService | None) -> AgentToolSurface:
     execution_service = ExecutionService(
         adapters={world.provider.id: world.adapter},
         credential_refs={world.provider.id: f"secret-ref://{world.provider.id}"},
@@ -299,9 +280,7 @@ class TestAgentTools:
         app = world.app()
         registry = build_registry(_agent_surface(world, app.state.self_review_service))
         dispatcher = ToolDispatcher(registry, audit=world.audit)
-        record = run(
-            dispatcher.dispatch(world.principal, "propose_change", dict(DISABLE_MODEL))
-        )
+        record = run(dispatcher.dispatch(world.principal, "propose_change", dict(DISABLE_MODEL)))
         assert record.ok, record.refusal
         assert record.result is not None
         assert record.result["outcome"] == "ready_for_review"
@@ -319,11 +298,7 @@ class TestAgentTools:
         registry = build_registry(_agent_surface(world, service))
         dispatcher = ToolDispatcher(registry, audit=world.audit)
         # Unknown action.
-        record = run(
-            dispatcher.dispatch(
-                world.principal, "propose_change", {"action": "explode"}
-            )
-        )
+        record = run(dispatcher.dispatch(world.principal, "propose_change", {"action": "explode"}))
         assert record.ok
         assert record.result is not None
         error = record.result["error"]

@@ -208,10 +208,7 @@ async def repo(engine: AsyncEngine) -> PostgresExecutionRepository:
     factory = create_session_factory(engine)
     async with engine.begin() as conn:
         await conn.execute(
-            text(
-                "INSERT INTO plans (id, name) VALUES (:id, :name)"
-                " ON CONFLICT (id) DO NOTHING"
-            ),
+            text("INSERT INTO plans (id, name) VALUES (:id, :name) ON CONFLICT (id) DO NOTHING"),
             {"id": PLAN_ID, "name": f"plan-{PLAN_ID}"},
         )
         for tenant_id in (TENANT, OTHER_TENANT):
@@ -340,9 +337,7 @@ class TestLivePostgresRoundTrip:
         by_user = await repo.list(TENANT, initiated_by=user)
         assert len(by_user) == 2
 
-        after = await repo.list(
-            TENANT, created_after=NOW - timedelta(hours=1, minutes=30)
-        )
+        after = await repo.list(TENANT, created_after=NOW - timedelta(hours=1, minutes=30))
         assert [r.id for r in after] == [newer.id]
 
         limited = await repo.list(TENANT, limit=1)

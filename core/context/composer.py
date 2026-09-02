@@ -66,9 +66,7 @@ from core.roles.registry import RoleRegistry
 # role-scoped blocks compose last among memory, never win conflicts.
 _ROLE_SCOPE_RANK = len(SCOPE_PRIORITY)
 
-_SCOPE_RANK: dict[MemoryScope, int] = {
-    scope: index for index, scope in enumerate(SCOPE_PRIORITY)
-}
+_SCOPE_RANK: dict[MemoryScope, int] = {scope: index for index, scope in enumerate(SCOPE_PRIORITY)}
 _SCOPE_RANK[MemoryScope.ROLE] = _ROLE_SCOPE_RANK
 
 
@@ -100,9 +98,7 @@ class ContextComposer:
         min_confidence: float = 0.5,
     ) -> None:
         if not 0.0 <= min_confidence <= 1.0:
-            raise ValueError(
-                f"min_confidence must be within [0.0, 1.0], got {min_confidence}"
-            )
+            raise ValueError(f"min_confidence must be within [0.0, 1.0], got {min_confidence}")
         self._memory = memory_store
         self._conversations = conversation_store
         self._roles = role_registry
@@ -121,9 +117,7 @@ class ContextComposer:
                 content=role.objective,
                 source=f"role:{role.id}",
             )
-        ask_block = ContextBlock(
-            type=ContextBlockType.ASK, content=request.ask, source="request"
-        )
+        ask_block = ContextBlock(type=ContextBlockType.ASK, content=request.ask, source="request")
 
         mandatory_cost = len(ask_block.content) + (
             len(role_block.content) if role_block is not None else 0
@@ -135,9 +129,7 @@ class ContextComposer:
         # --- memory: retrieve, gate, resolve conflicts, then fit budget ----
         eligible = self._gate_memory(request, excluded)
         winners = self._resolve_scope_conflicts(eligible, excluded)
-        memory_blocks, remaining = self._fit_memory_budget(
-            winners, remaining, excluded
-        )
+        memory_blocks, remaining = self._fit_memory_budget(winners, remaining, excluded)
 
         # --- history: newest contiguous tail that fits ---------------------
         history_blocks = self._compose_history(request, remaining)
@@ -166,20 +158,13 @@ class ContextComposer:
         items = self._memory.query(request.tenant_id, user_id=request.user_id)
         eligible: list[MemoryItem] = []
         # Deterministic gate order regardless of store recency ordering.
-        for item in sorted(
-            items, key=lambda m: (_SCOPE_RANK[m.scope], m.key, str(m.id))
-        ):
+        for item in sorted(items, key=lambda m: (_SCOPE_RANK[m.scope], m.key, str(m.id))):
             if not self._is_relevant(item, request):
                 excluded.append(
-                    ExcludedMemory(
-                        reason=ContextExclusionReason.IRRELEVANT, memory_id=item.id
-                    )
+                    ExcludedMemory(reason=ContextExclusionReason.IRRELEVANT, memory_id=item.id)
                 )
                 continue
-            if (
-                item.sensitivity is MemorySensitivity.HIGH
-                and not request.allow_high_sensitivity
-            ):
+            if item.sensitivity is MemorySensitivity.HIGH and not request.allow_high_sensitivity:
                 excluded.append(
                     ExcludedMemory(
                         reason=ContextExclusionReason.HIGH_SENSITIVITY,
@@ -243,9 +228,7 @@ class ContextComposer:
             )
             winners.append(contenders[0])
             excluded.extend(
-                ExcludedMemory(
-                    reason=ContextExclusionReason.SCOPE_CONFLICT, memory_id=loser.id
-                )
+                ExcludedMemory(reason=ContextExclusionReason.SCOPE_CONFLICT, memory_id=loser.id)
                 for loser in contenders[1:]
             )
         winners.sort(key=lambda m: (_SCOPE_RANK[m.scope], m.key, str(m.id)))
@@ -265,9 +248,7 @@ class ContextComposer:
             content = _render_memory(item)
             if len(content) > remaining:
                 excluded.append(
-                    ExcludedMemory(
-                        reason=ContextExclusionReason.OVER_BUDGET, memory_id=item.id
-                    )
+                    ExcludedMemory(reason=ContextExclusionReason.OVER_BUDGET, memory_id=item.id)
                 )
                 continue
             remaining -= len(content)
