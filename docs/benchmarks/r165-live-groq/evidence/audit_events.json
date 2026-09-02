@@ -1,0 +1,358 @@
+[
+  {
+    "event_type": "login",
+    "occurred_at": "2026-09-02T17:54:52.448454Z",
+    "details": {}
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T17:54:52.747480Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "issue",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 14,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T17:55:15.418428Z",
+    "details": {
+      "call_id": "b5455f22-8f65-4ed7-8f63-f6f79833053c",
+      "tool_id": "22de7596-6cf7-4bf5-b12d-755b54ae2b6e",
+      "permission": "workspace.read",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T17:56:23.381251Z",
+    "details": {
+      "call_id": "184f8695-04c4-4a31-9165-fbd0acfb03d8",
+      "tool_id": "d137e9ec-ce56-47df-a0de-14239c2a4324",
+      "permission": "workspace.read",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T17:57:09.223445Z",
+    "details": {
+      "call_id": "1214602e-43aa-4548-afe5-75817d14b416",
+      "tool_id": "22de7596-6cf7-4bf5-b12d-755b54ae2b6e",
+      "permission": "workspace.read",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T17:58:02.286007Z",
+    "details": {
+      "call_id": "8ce78119-f553-4e56-bdc3-d83c85758f87",
+      "tool_id": "22de7596-6cf7-4bf5-b12d-755b54ae2b6e",
+      "permission": "workspace.read",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T17:58:51.711160Z",
+    "details": {
+      "call_id": "8aeab918-b10c-47ea-83d0-30aba6864cc5",
+      "tool_id": "22de7596-6cf7-4bf5-b12d-755b54ae2b6e",
+      "permission": "workspace.read",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:00:14.261913Z",
+    "details": {
+      "call_id": "c0a7406b-e767-43fe-8d01-d21a57738b6c",
+      "tool_id": "d137e9ec-ce56-47df-a0de-14239c2a4324",
+      "permission": "workspace.read",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T18:00:15.821113Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "consume",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 13,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false,
+      "engineering_act": "fs.write",
+      "op": "write",
+      "path": "ledger/money.py"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:00:15.822013Z",
+    "details": {
+      "call_id": "ce379b67-c666-45d2-8f94-8be1e2948217",
+      "tool_id": "45b2acf7-1b04-46d0-bcad-2487aadae846",
+      "permission": "workspace.write",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T18:00:37.434578Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "consume",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 12,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false,
+      "engineering_act": "fs.write",
+      "op": "write",
+      "path": "tests/test_money.py"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:00:37.435664Z",
+    "details": {
+      "call_id": "5aaefd1f-f6b9-4314-ba28-1fe7749c3a63",
+      "tool_id": "45b2acf7-1b04-46d0-bcad-2487aadae846",
+      "permission": "workspace.write",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T18:01:25.322478Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "consume",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 11,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false,
+      "engineering_act": "fs.write",
+      "op": "write",
+      "path": "ledger/money.py"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:01:25.323377Z",
+    "details": {
+      "call_id": "0b6c7229-4000-4992-801c-29b7cae03819",
+      "tool_id": "45b2acf7-1b04-46d0-bcad-2487aadae846",
+      "permission": "workspace.write",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T18:02:15.013162Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "consume",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 10,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false,
+      "engineering_act": "fs.write",
+      "op": "write",
+      "path": "ledger/report.py"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:02:15.013991Z",
+    "details": {
+      "call_id": "c0f78dec-3625-4215-bc92-8b98885123c1",
+      "tool_id": "45b2acf7-1b04-46d0-bcad-2487aadae846",
+      "permission": "workspace.write",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T18:02:23.508529Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "consume",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 9,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false,
+      "engineering_act": "fs.write",
+      "op": "write",
+      "path": "tests/test_report.py"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:02:23.509726Z",
+    "details": {
+      "call_id": "275bd05b-d4f1-4bcd-a2c0-6172fdaa0b3f",
+      "tool_id": "45b2acf7-1b04-46d0-bcad-2487aadae846",
+      "permission": "workspace.write",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T18:03:09.549953Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "consume",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 8,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false,
+      "engineering_act": "cmd.run",
+      "argv": [
+        "python3",
+        "-m",
+        "pytest",
+        "-q"
+      ]
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:03:10.063792Z",
+    "details": {
+      "call_id": "881ef288-1bf5-4e34-a0ce-12206462f19a",
+      "tool_id": "8932d270-4bf5-459b-865b-da9945c3d5e1",
+      "permission": "workspace.exec",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T18:03:59.976211Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "consume",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 7,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false,
+      "engineering_act": "git.commit",
+      "op": "commit"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:04:00.002770Z",
+    "details": {
+      "call_id": "6b82fa73-79b4-4d48-87ce-38ced4108a2e",
+      "tool_id": "b0ee2e5b-50fb-4778-a97c-8e0390d34e1a",
+      "permission": "git.write",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  },
+  {
+    "event_type": "approval_decision",
+    "occurred_at": "2026-09-02T18:04:28.260701Z",
+    "details": {
+      "surface": "engineering_authorization",
+      "act": "consume",
+      "authorization_id": "b463c6aa-7e60-4c94-b84f-8faecd1d83dc",
+      "workspace": "/tmp/r165/ws",
+      "acts": [
+        "cmd.run",
+        "fs.write",
+        "git.commit",
+        "git.push"
+      ],
+      "uses_remaining": 6,
+      "expires_at": "2026-09-02T18:54:52.747282+00:00",
+      "revoked": false,
+      "engineering_act": "git.push",
+      "branch": "main"
+    }
+  },
+  {
+    "event_type": "tool_call",
+    "occurred_at": "2026-09-02T18:04:28.305353Z",
+    "details": {
+      "call_id": "34b4c858-5ddd-463a-8cde-90c298e08c70",
+      "tool_id": "b295d836-b88e-4594-953f-aa2d17b52673",
+      "permission": "git.write",
+      "status": "succeeded",
+      "gate_decision": "ALLOW"
+    }
+  }
+]

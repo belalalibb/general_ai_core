@@ -1,0 +1,85 @@
+commit 181ebb14143a4af7c03c61536a7a97870fe14728
+Author: platform-agent <platform-agent@localhost>
+Date:   Wed Sep 2 18:03:59 2026 +0000
+
+    fix(money): parse single fractional digit; feat(report): format_totals
+
+diff --git a/ledger/money.py b/ledger/money.py
+index e7a7f53..082ba36 100644
+--- a/ledger/money.py
++++ b/ledger/money.py
+@@ -32,5 +32,5 @@ def parse_money(text: str) -> Money:
+     negative = amount.startswith("-")
+     amount = amount.lstrip("-")
+     whole, _, frac = amount.partition(".")
+-    cents = int(whole) * 100 + int(frac or 0)
++    cents = int(whole) * 100 + int((frac or "0").ljust(2, "0")[:2])
+     return Money(-cents if negative else cents, currency.upper())
+diff --git a/ledger/report.py b/ledger/report.py
+index 3e3f08d..3a2fd4e 100644
+--- a/ledger/report.py
++++ b/ledger/report.py
+@@ -3,6 +3,7 @@
+ from __future__ import annotations
+ 
+ from ledger.accounts import Ledger
++from ledger.money import Money
+ 
+ 
+ def balances_report(ledger: Ledger) -> str:
+@@ -17,3 +18,12 @@ def totals_by_currency(ledger: Ledger) -> dict[str, int]:
+     for account in ledger.accounts():
+         totals[account.currency] = totals.get(account.currency, 0) + account.balance().cents
+     return totals
++
++
++def format_totals(ledger: Ledger) -> str:
++    """Return one line per currency 'CUR: <amount>' sorted by currency code."""
++    totals = totals_by_currency(ledger)
++    lines = []
++    for cur in sorted(totals):
++        lines.append(f"{cur}: {Money(totals[cur], cur)}")
++    return "\n".join(lines)
+diff --git a/tests/test_money.py b/tests/test_money.py
+index e28798b..8490a5e 100644
+--- a/tests/test_money.py
++++ b/tests/test_money.py
+@@ -13,3 +13,10 @@ def test_str_formats_cents():
+ def test_parse_roundtrip():
+     assert parse_money("12.34 usd") == Money(1234, "USD")
+     assert parse_money("-0.05 EUR") == Money(-5, "EUR")
++
++
++def test_parse_single_fractional_digit():
++    assert parse_money("12.5 USD") == Money(1250, "USD")
++    assert parse_money("-1.5 USD") == Money(-150, "USD")
++    assert parse_money("0.5 EUR") == Money(50, "EUR")
++    assert parse_money("100 USD") == Money(10000, "USD")
+diff --git a/tests/test_report.py b/tests/test_report.py
+new file mode 100644
+index 0000000..2155a02
+--- /dev/null
++++ b/tests/test_report.py
+@@ -0,0 +1,22 @@
++from ledger.report import format_totals
++from ledger.accounts import Ledger
++
++
++def _fill(currency: str, cents: int) -> Ledger:
++    lg = Ledger()
++    acc = lg.open("a", currency)
++    from ledger.money import Money
++    acc.post(Money(cents, currency))
++    return lg
++
++
++def test_format_totals_sorted():
++    lg = Ledger()
++    from ledger.money import Money
++    lg.open("usd", "USD").post(Money(1050, "USD"))
++    lg.open("eur", "EUR").post(Money(-5, "EUR"))
++    assert format_totals(lg) == "EUR: -0.05 EUR\nUSD: 10.50 USD"
++
++
++def test_format_totals_empty():
++    assert format_totals(Ledger()) == ""

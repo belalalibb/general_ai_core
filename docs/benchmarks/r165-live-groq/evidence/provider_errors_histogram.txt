@@ -1,0 +1,4 @@
+     15 groq_http_error status=400 type=invalid_request_error code=None param=response_format failed_generation=False
+      1 groq_http_error status=400 type=invalid_request_error code=json_validate_failed param=None failed_generation=True
+      1 groq_http_error status=400 type=invalid_request_error code=tool_use_failed param=None failed_generation=True
+     62 groq_http_error status=429 type=tokens code=rate_limit_exceeded param=None failed_generation=False
