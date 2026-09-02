@@ -333,6 +333,43 @@ class TestErrorNormalization:
         assert response.error is not None
         assert response.error.category is ProviderErrorCategory.CONTENT_REJECTED
 
+    def test_tool_use_failed_without_tools_returns_the_generation_as_text(self) -> None:
+        """R165 (live): gpt-oss answered a tool-DESCRIBING prompt with a native
+        function call although no tools were declared; Groq 400s but hands
+        back the model's text in ``failed_generation``. We asked for text —
+        that IS the text. It flows back as content for the caller's own
+        validator (the agent refuses it as an invalid proposal, P4)."""
+        native = '{"name": "ws_list", "arguments": {"path": ""}}'
+        adapter, _ = _adapter(
+            lambda req: httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "code": "tool_use_failed",
+                        "type": "invalid_request_error",
+                        "message": "Tool choice is none, but model called a tool",
+                        "failed_generation": native,
+                    }
+                },
+            )
+        )
+        response = run(adapter.generate(_generate_request()))
+        assert response.succeeded is True
+        assert response.error is None
+        assert response.output == {"content": native, "finish_reason": "tool_use_failed"}
+
+    def test_tool_use_failed_without_generation_stays_an_error(self) -> None:
+        adapter, _ = _adapter(
+            lambda req: httpx.Response(
+                400, json={"error": {"code": "tool_use_failed", "message": "x"}}
+            )
+        )
+        response = run(adapter.generate(_generate_request()))
+        assert response.succeeded is False
+        assert response.error is not None
+        assert response.error.category is ProviderErrorCategory.BAD_REQUEST
+        assert response.error.provider_code == "tool_use_failed"
+
     def test_network_failure_maps_to_provider_unavailable(self) -> None:
         def explode(request: httpx.Request) -> httpx.Response:
             raise httpx.ConnectError("connection refused", request=request)
