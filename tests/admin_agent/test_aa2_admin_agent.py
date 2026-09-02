@@ -903,20 +903,43 @@ class TestUIHonestyChecklist:
         code = _js_code()
         assert "claim refused: no evidence citation" in code
 
-    def test_write_paths_are_exactly_the_sanctioned_four_posts(self) -> None:
-        """AA-3: the ONLY POSTs are login, converse, lifecycle act, ack."""
+    SANCTIONED_POSTS = {
+        # AA-3 four
+        "/v1/auth/login",
+        "/v1/agent/converse",
+        "/v1/admin/changes/{x}/{x}",
+        "/v1/admin/notifications/{x}/ack",
+        # R160 eight (Learning / Skills acquisition / Provider onboarding)
+        "/v1/admin/learning/samples",
+        "/v1/admin/learning/samples/{x}/{x}",
+        "/v1/admin/learning/ask",
+        "/v1/admin/learning/capability-retest",
+        "/v1/admin/learning/mark-reviewed",
+        "/v1/admin/skills/import",
+        "/v1/admin/skills/imports/{x}/{x}",
+        "/v1/admin/providers/onboard",
+    }
+
+    def test_write_paths_are_exactly_the_sanctioned_posts(self) -> None:
+        """AA-3 + R160: the ONLY POSTs are the enumerated sanctioned set —
+        each an explicit admin act over a real route; no other verb exists."""
         code = _js_code()
-        posts = re.findall(r"method:\s*\"POST\"", code)
-        assert len(posts) == 4
+        calls = re.findall(r"api\(\s*[`\"](/v1/[^`\"]+)[`\"]\s*,\s*\{\s*method:\s*\"POST\"", code)
+        shapes = {re.sub(r"\$\{[^}]*\}", "{x}", c) for c in calls}
+        assert shapes == self.SANCTIONED_POSTS, sorted(shapes ^ self.SANCTIONED_POSTS)
+        assert len(re.findall(r"method:\s*\"POST\"", code)) == len(calls)
         for banned in ("DELETE", "PUT", "PATCH"):
             assert f'"{banned}"' not in code
 
     def test_ledger_null_is_explicit(self) -> None:
         assert "no ledger (accounting unbound)" in _js_code()
 
-    def test_learning_not_operational(self) -> None:
+    def test_learning_makes_no_learned_state_claim(self) -> None:
+        """R160: the placeholder "NOT OPERATIONAL" is gone; the System card
+        defers to the Learning surface's REAL read instead of asserting."""
         html = (UI_DIR / "index.html").read_text(encoding="utf-8")
-        assert "NOT OPERATIONAL" in html
+        assert "NOT OPERATIONAL" not in html
+        assert "GET /v1/admin/learning/learned" in html
 
     def test_ui_static_mount_serves(self) -> None:
         """attach_admin_console(ui=True) serves the shell under /admin."""
