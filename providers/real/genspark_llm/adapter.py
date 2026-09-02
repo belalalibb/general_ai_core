@@ -70,6 +70,11 @@ _GENERATION_PARAM_WHITELIST = frozenset(
 #: Default completion budget when the caller does not set one.
 _DEFAULT_MAX_COMPLETION_TOKENS = 1024
 
+#: S2 pool bounds (mirror the gateway adapter): bounded connections per
+#: adapter instance — no unbounded socket growth under fan-out.
+_POOL_MAX_CONNECTIONS = 32
+_POOL_MAX_KEEPALIVE = 8
+
 
 class GensparkLLMCredentialCheckInconclusive(RuntimeError):
     """Credential validation could not reach a definite answer.
@@ -109,6 +114,22 @@ class GensparkLLMAdapter:
         self._transport = transport
         self._timeout = default_timeout_seconds
         self._clock = clock
+        # S2: ONE long-lived pooled client per adapter instance (connection
+        # reuse across calls) — the same posture as the gateway adapter.
+        # Created lazily on first use; ``aclose`` releases it.
+        self._pooled_client: httpx.AsyncClient | None = None
+        self._pool_limits = httpx.Limits(
+            max_connections=_POOL_MAX_CONNECTIONS,
+            max_keepalive_connections=_POOL_MAX_KEEPALIVE,
+        )
+
+    # -- lifecycle (S2) ---------------------------------------------------------------
+
+    async def aclose(self) -> None:
+        """Release the pooled HTTP client (idempotent; safe to call twice)."""
+        client, self._pooled_client = self._pooled_client, None
+        if client is not None:
+            await client.aclose()
 
     # -- declarative surface ---------------------------------------------------------
 
@@ -120,12 +141,22 @@ class GensparkLLMAdapter:
 
     # -- HTTP plumbing (transport injectable; secret used at the last moment) --------
 
-    def _client(self, timeout_seconds: float) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            base_url=self._base_url,
-            transport=self._transport,
-            timeout=timeout_seconds,
-        )
+    def _client(self) -> httpx.AsyncClient:
+        """The pooled client, (re)created lazily if absent or closed (S2).
+
+        Per-request timeouts ride the request call (``timeout=``), so one
+        pooled client serves every operation's own deadline.
+        """
+        client = self._pooled_client
+        if client is None or client.is_closed:
+            client = httpx.AsyncClient(
+                base_url=self._base_url,
+                transport=self._transport,
+                timeout=self._timeout,
+                limits=self._pool_limits,
+            )
+            self._pooled_client = client
+        return client
 
     @staticmethod
     def _auth_headers(api_key: str) -> dict[str, str]:
@@ -143,8 +174,9 @@ class GensparkLLMAdapter:
         """
         api_key = self._resolve(credential_ref)
         try:
-            async with self._client(self._timeout) as client:
-                response = await client.get("/models", headers=self._auth_headers(api_key))
+            response = await self._client().get(
+                "/models", headers=self._auth_headers(api_key), timeout=self._timeout
+            )
         except httpx.HTTPError as exc:
             raise GensparkLLMCredentialCheckInconclusive(
                 "credential check could not reach the provider"
@@ -179,8 +211,9 @@ class GensparkLLMAdapter:
             return []
         api_key = self._resolve(self._health_ref)
         try:
-            async with self._client(self._timeout) as client:
-                response = await client.get("/models", headers=self._auth_headers(api_key))
+            response = await self._client().get(
+                "/models", headers=self._auth_headers(api_key), timeout=self._timeout
+            )
         except httpx.HTTPError:
             return []
         if response.status_code != 200:
@@ -239,12 +272,12 @@ class GensparkLLMAdapter:
         api_key = self._resolve(request.credential_ref)  # last-moment resolve (20 §5)
         started = time.monotonic()
         try:
-            async with self._client(timeout_s) as client:
-                response = await client.post(
-                    path,
-                    headers=self._auth_headers(api_key),
-                    json=body,
-                )
+            response = await self._client().post(
+                path,
+                headers=self._auth_headers(api_key),
+                json=body,
+                timeout=timeout_s,
+            )
         except Exception as exc:  # noqa: BLE001 — boundary: everything normalizes
             return self._failed(request, self.normalize_error(exc))
         latency_ms = int((time.monotonic() - started) * 1000)
@@ -305,8 +338,9 @@ class GensparkLLMAdapter:
             )
         api_key = self._resolve(self._health_ref)
         try:
-            async with self._client(self._timeout) as client:
-                response = await client.get("/models", headers=self._auth_headers(api_key))
+            response = await self._client().get(
+                "/models", headers=self._auth_headers(api_key), timeout=self._timeout
+            )
         except httpx.HTTPError:
             return ProviderHealth(
                 provider_id=self._manifest.id,

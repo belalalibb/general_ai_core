@@ -28,6 +28,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from starlette.routing import Mount
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CHECK_REPO = REPO_ROOT / "engineering" / "verification" / "check_repo.sh"
 
@@ -60,7 +62,7 @@ def _profile_facts() -> dict[str, object]:
     static_mounts = sorted(
         route.path
         for route in profile.app.routes
-        if route.__class__.__name__ == "Mount"  # StaticFiles mounts (/app, /admin)
+        if isinstance(route, Mount)  # StaticFiles mounts (/app, /admin)
     )
     return {
         "durable": profile.durable,

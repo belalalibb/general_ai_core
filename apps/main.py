@@ -111,6 +111,9 @@ def create_runtime_app(profile: RuntimeProfile | None = None) -> FastAPI:
             for task in (worker_task, relay_task):
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
+            # S2: release pooled provider HTTP clients BEFORE the DB pool —
+            # workers are stopped, so no in-flight provider call remains.
+            await runtime.release_adapters()
             # Owner disposes (recorded posture) — and loop affinity holds
             # at shutdown too: the pool's connections live on the BRIDGE
             # loop, so dispose must run THERE (crossing via run_async),

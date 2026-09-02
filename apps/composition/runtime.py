@@ -433,6 +433,25 @@ class RuntimeProfile:
     provider_keys: tuple[str, ...] = field(default_factory=tuple)
     # R160: the SHARED agent composition (surface + authority chain).
     agent: ComposedAgent | None = None
+    # S2: the bound provider adapters (the SAME instances ExecutionService
+    # calls). Retained so the lifespan can release pooled HTTP clients at
+    # shutdown (owner disposes) — see ``release_adapters``.
+    adapters: Mapping[UUID, ProviderAdapterPort] = field(default_factory=dict)
+
+    async def release_adapters(self) -> int:
+        """Close every adapter that owns a pooled client (S2 shutdown).
+
+        ``aclose`` is NOT part of ``ProviderAdapterPort`` (adapters without
+        long-lived resources need none); adapters that expose it are closed
+        idempotently. Returns the number of adapters released.
+        """
+        released = 0
+        for adapter in self.adapters.values():
+            closer = getattr(adapter, "aclose", None)
+            if callable(closer):
+                await closer()
+                released += 1
+        return released
 
 
 def ensure_default_plan(bindings: DatabaseBindings, bridge: AsyncBridge) -> UUID:
@@ -965,4 +984,5 @@ def build_runtime_profile(
         demo_principal=demo_principal,
         provider_keys=tuple(provider_keys),
         agent=composed_agent,
+        adapters=adapters,
     )
