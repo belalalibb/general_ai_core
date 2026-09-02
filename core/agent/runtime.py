@@ -82,7 +82,13 @@ class ReasoningFailed(Exception):
 
     Raised INSIDE the propose callable so the shared loop records it as
     ``propose_failed`` (closed stop reason) — never a silent empty step.
+    ``execution_id`` names the stored (failed) reasoning execution when one
+    was recorded, so consumers can still trace it.
     """
+
+    def __init__(self, message: str, *, execution_id: UUID | None = None) -> None:
+        self.execution_id = execution_id
+        super().__init__(message)
 
 
 ResultCheck = Callable[[JsonObject], str | None]
@@ -428,29 +434,37 @@ class AgentRuntime:
 
     # -- internals -----------------------------------------------------------------
 
-    async def _reason(
+    async def reason(
         self,
         *,
         tenant_id: UUID,
         user_id: UUID,
         prompt: str,
-        model_policy: ModelPolicy | None,
-        step: int | None,
-        label: JsonObject | None,
-    ) -> tuple[JsonObject, UUID | None]:
-        """The model call — through the platform's OWN route + execute path."""
+        model_policy: ModelPolicy | None = None,
+        label: JsonObject | None = None,
+        label_key: str = AGENT_RUNTIME_LABEL_KEY,
+    ) -> tuple[str, UUID]:
+        """ONE model call through the platform's OWN route + execute path.
+
+        The shared reasoning seam every agent consumer uses (the runtime's
+        own loop, the Admin agent's round protocol): routing → execute_single
+        → stored report, labeled under ``label_key`` in the payload metadata
+        so traces name the consumer. Returns the raw text output + the
+        execution id; raises :class:`ReasoningFailed` (routing / budget /
+        failed execution) — never a silent None.
+        """
         try:
             decision = self._router.route(
                 RoutingRequest(operation=ProviderOperation.GENERATE_TEXT, model_policy=model_policy)
             )
         except (RoutingError, UnsupportedPolicyType) as exc:
             raise ReasoningFailed(f"routing: {type(exc).__name__}: {exc}") from exc
-        metadata: JsonObject = {"kind": "reasoning", "step": step}
+        metadata: JsonObject = {"kind": "reasoning"}
         if label:
             metadata.update(label)
         payload: JsonObject = {
             "ask": prompt,
-            "context": {"metadata": {AGENT_RUNTIME_LABEL_KEY: metadata}},
+            "context": {"metadata": {label_key: metadata}},
         }
         request_hash = hashlib.sha256(
             json.dumps(payload, sort_keys=True).encode("utf-8")
@@ -470,13 +484,36 @@ class AgentRuntime:
             self._store_report(result)
         output = result.final_output
         if output is None:
-            raise ReasoningFailed("reasoning execution did not succeed")
+            raise ReasoningFailed(
+                "reasoning execution did not succeed", execution_id=result.execution.id
+            )
         content = output.get("content")
-        if isinstance(content, dict):
-            return content, result.execution.id
         if not isinstance(content, str):
-            content = json.dumps(output)
-        return _parse_json_object(content), result.execution.id
+            content = json.dumps(content if isinstance(content, dict) else output)
+        return content, result.execution.id
+
+    async def _reason(
+        self,
+        *,
+        tenant_id: UUID,
+        user_id: UUID,
+        prompt: str,
+        model_policy: ModelPolicy | None,
+        step: int | None,
+        label: JsonObject | None,
+    ) -> tuple[JsonObject, UUID | None]:
+        """The loop's propose body: ``reason`` + JSON-object extraction."""
+        merged: JsonObject = {"step": step}
+        if label:
+            merged.update(label)
+        text, execution_id = await self.reason(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            prompt=prompt,
+            model_policy=model_policy,
+            label=merged,
+        )
+        return _parse_json_object(text), execution_id
 
 
 def _parse_json_object(text: str) -> JsonObject:
