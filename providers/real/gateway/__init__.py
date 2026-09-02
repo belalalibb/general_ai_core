@@ -78,9 +78,7 @@ def build_gateway_manifest(
     - Identity: ``id=provider_key`` (platform-chosen), ``name=display_name``
       (the ONLY name that crosses the boundary). No slug appears anywhere.
     """
-    declared_excluded = sorted(
-        {op.value for op in operations} & EXCLUDED_OPERATIONS_V1
-    )
+    declared_excluded = sorted({op.value for op in operations} & EXCLUDED_OPERATIONS_V1)
     if declared_excluded:
         msg = (
             f"operations {declared_excluded} are excluded from gateway v1 "
@@ -108,9 +106,7 @@ def build_gateway_manifest(
         ),
         rate_limits=ManifestRateLimits(strategy="provider_defined"),
         health=ManifestHealth(checks=["gateway_v1_health_endpoint"]),
-        errors=ManifestErrors(
-            mapping="providers/real/gateway/adapter.py:_normalize_http_response"
-        ),
+        errors=ManifestErrors(mapping="providers/real/gateway/adapter.py:_normalize_http_response"),
         notes=[
             "Remote gateway-backed provider (ADR-0008 data plane; G2 adapter).",
             "Gateway secret / route token / BYOK keys enter via injected "

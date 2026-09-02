@@ -27,6 +27,7 @@ live binding uses the default transport. The gates never touch the network.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -61,6 +62,8 @@ _GENERATION_PARAM_WHITELIST = frozenset(
 
 #: Default completion budget when the caller does not set one.
 _DEFAULT_MAX_COMPLETION_TOKENS = 1024
+
+_LOG = logging.getLogger("providers.groq")
 
 #: S2 pool bounds (mirror the gateway adapter): bounded connections per
 #: adapter instance — no unbounded socket growth under fan-out.
@@ -221,8 +224,7 @@ class GroqAdapter:
                     provider_model_name=model_id,
                     modalities=["text"],
                     limits_metadata={
-                        k: item[k] for k in ("context_window", "max_completion_tokens")
-                        if k in item
+                        k: item[k] for k in ("context_window", "max_completion_tokens") if k in item
                     },
                 )
             )
@@ -245,9 +247,7 @@ class GroqAdapter:
                 ),
             )
         body = _chat_completion_body(request)
-        timeout_s = (
-            request.timeout_ms / 1000.0 if request.timeout_ms is not None else self._timeout
-        )
+        timeout_s = request.timeout_ms / 1000.0 if request.timeout_ms is not None else self._timeout
         api_key = self._resolve(request.credential_ref)  # last-moment resolve (20 §5)
         started = time.monotonic()
         try:
@@ -520,7 +520,21 @@ def _retry_after_ms(response: httpx.Response) -> int | None:
 def _safe_error_code(response: httpx.Response) -> str | None:
     """Extract only the short machine error code — never the raw message."""
     try:
-        code = response.json().get("error", {}).get("code")
+        error = response.json().get("error", {})
     except ValueError:
         return None
+    code = error.get("code") if isinstance(error, dict) else None
+    # R165: the operator log (NOT the tenant-facing ProviderError) carries
+    # the provider's error TYPE + code + which field it named, so a live
+    # ``bad_request`` is diagnosable. The raw ``message`` may echo prompt
+    # content and never leaves the process boundary.
+    if isinstance(error, dict):
+        _LOG.warning(
+            "groq_http_error status=%s type=%s code=%s param=%s failed_generation=%s",
+            response.status_code,
+            error.get("type"),
+            code,
+            error.get("param"),
+            "failed_generation" in error,
+        )
     return code if isinstance(code, str) and code else None

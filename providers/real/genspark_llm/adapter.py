@@ -266,9 +266,7 @@ class GensparkLLMAdapter:
         else:
             path = "/chat/completions"
             body = _chat_completion_body(request)
-        timeout_s = (
-            request.timeout_ms / 1000.0 if request.timeout_ms is not None else self._timeout
-        )
+        timeout_s = request.timeout_ms / 1000.0 if request.timeout_ms is not None else self._timeout
         api_key = self._resolve(request.credential_ref)  # last-moment resolve (20 §5)
         started = time.monotonic()
         try:
@@ -524,11 +522,7 @@ def _embeddings_body(request: ProviderGenerateRequest) -> dict[str, Any] | None:
     raw = request.payload.get("input")
     if isinstance(raw, str) and raw:
         input_value: str | list[str] = raw
-    elif (
-        isinstance(raw, list)
-        and raw
-        and all(isinstance(item, str) and item for item in raw)
-    ):
+    elif isinstance(raw, list) and raw and all(isinstance(item, str) and item for item in raw):
         input_value = raw
     else:
         return None
@@ -628,8 +622,4 @@ def _is_model_not_allowed(response: httpx.Response) -> bool:
     if not isinstance(parsed, dict):
         return False
     detail = parsed.get("detail")
-    return (
-        isinstance(detail, str)
-        and detail.startswith("Model ")
-        and "is not allowed" in detail
-    )
+    return isinstance(detail, str) and detail.startswith("Model ") and "is not allowed" in detail
