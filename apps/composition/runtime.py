@@ -598,6 +598,32 @@ def _source_reader(root: str) -> SourceReader | None:
     return SourceReader(root=path)
 
 
+#: Bounded same-candidate retry budget for retryable provider errors
+#: (rate_limited / retryable_server_error), Retry-After honored between
+#: attempts. R165 live: Groq's free tier is 8k tokens/minute and a real
+#: multi-step agent brief runs 2-4k tokens per proposal, so ONE retry after
+#: a 9 s Retry-After met the cap again and the run died mid-task. The run's
+#: deadline still bounds the total wait — no infinite retry (40 §4.6).
+ENV_PROVIDER_RETRIES = "PROVIDER_MAX_RETRIES"
+DEFAULT_PROVIDER_RETRIES = 1
+MAX_PROVIDER_RETRIES = 8
+
+
+def _provider_retries(env: Mapping[str, str]) -> int:
+    raw = (env.get(ENV_PROVIDER_RETRIES) or "").strip()
+    if not raw:
+        return DEFAULT_PROVIDER_RETRIES
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        msg = f"{ENV_PROVIDER_RETRIES} must be an integer 0-{MAX_PROVIDER_RETRIES}, got {raw!r}"
+        raise ValueError(msg) from exc
+    if not 0 <= value <= MAX_PROVIDER_RETRIES:
+        msg = f"{ENV_PROVIDER_RETRIES} must be 0-{MAX_PROVIDER_RETRIES}, got {value}"
+        raise ValueError(msg)
+    return value
+
+
 def _bind_echo_provider(
     providers: ProviderRegistry,
     models: ModelRegistry,
@@ -668,6 +694,7 @@ def build_runtime_profile(
         credential_refs=credential_refs,
         bindings=binding_registry,
         usage=usage,
+        max_retries_per_candidate=_provider_retries(env_dict),
     )
 
     # --- durable branch (DATABASE_URL) ---------------------------------------
