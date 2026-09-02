@@ -31,6 +31,7 @@ from core.agent import AgentRuntime, AgentToolSpec
 from core.audit.ports import AuditLogPort
 from core.contracts.base import JsonObject
 from core.contracts.tools import Tool
+from core.engineering import EngineeringBundle, engineering_tool_specs
 from core.execution.service import ExecutionService
 from core.identity.devices import DeviceRegistry
 from core.routing.router import SimpleScoringRouter
@@ -161,8 +162,13 @@ def build_agent(
     audit: AuditLogPort,
     usage: UsageAccountingPort,
     repo_reader: SourceReader | None,
+    engineering: EngineeringBundle | None = None,
 ) -> ComposedAgent:
-    """Compose the shared agent authority chain + runtime + catalog."""
+    """Compose the shared agent authority chain + runtime + catalog.
+
+    ``engineering`` (ADR-0012) adds the 17 workspace/command/git tools to the
+    SAME registry and catalog; absent ⇒ absent tools (P2).
+    """
     tool_registry = ToolRegistry()
     firewall = CapabilityFirewall()
     devices = DeviceRegistry()
@@ -179,6 +185,9 @@ def build_agent(
     catalog: dict[str, AgentToolSpec] = {}
     if repo_reader is not None:
         for spec in source_tool_specs(repo_reader, tool_registry):
+            catalog[spec.name] = spec
+    if engineering is not None:
+        for spec in engineering_tool_specs(engineering, tool_registry):
             catalog[spec.name] = spec
     return ComposedAgent(
         surface=AgentSurface(runtime=runtime, catalog=catalog),

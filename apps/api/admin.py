@@ -76,6 +76,11 @@ from apps.api.context_lab import (
     ContextLabService,
     ConversationNotAdmitted,
 )
+from apps.api.engineering_admin import (
+    EngineeringAdminSurface,
+    GrantRequest,
+    IssueAuthorizationRequest,
+)
 from apps.api.errors import error_response
 from apps.api.exercise import ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
@@ -299,6 +304,7 @@ def create_admin_router(
     self_review: SelfReviewService | None = None,
     source_changes: SourceChangeWorkflow | None = None,
     memory: MemoryStorePort | None = None,
+    engineering: EngineeringAdminSurface | None = None,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -1413,5 +1419,63 @@ def create_admin_router(
             # only — it cannot claim fleet/deployment truths.
             snapshot["scope"] = "process"
             return _json(snapshot)
+
+    # --- /v1/admin/engineering/* (ADR-0012 §4): Admin AUTHORIZES, never runs -
+    # Mounted ONLY when composition configured AGENT_WORKSPACE_ROOT (P2).
+    if engineering is not None:
+        eng = engineering
+
+        @router.get("/engineering/status")
+        async def engineering_status(request: Request) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(eng.status(admitted.tenant_id))
+
+        @router.get("/engineering/authorizations")
+        async def list_engineering_authorizations(request: Request) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json({"authorizations": eng.status(admitted.tenant_id)["authorizations"]})
+
+        @router.post("/engineering/authorizations")
+        async def issue_engineering_authorization(
+            request: Request, body: IssueAuthorizationRequest
+        ) -> Response:
+            """Issue a bounded, consumable ticket (acts × uses × ttl)."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            ticket = eng.issue(admitted.tenant_id, admitted.user_id, body)
+            return _json(ticket.model_dump(mode="json"), status=201)
+
+        @router.post("/engineering/authorizations/{authorization_id}/revoke")
+        async def revoke_engineering_authorization(
+            request: Request, authorization_id: str
+        ) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            parsed = _parse_uuid(authorization_id, "authorization_id")
+            if isinstance(parsed, JSONResponse):
+                return parsed
+            return _json(eng.revoke(admitted.tenant_id, admitted.user_id, parsed))
+
+        @router.post("/engineering/grants")
+        async def grant_engineering_permissions(request: Request, body: GrantRequest) -> Response:
+            """Grant engineering WRITE permissions to a tenant (firewall policy)."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            try:
+                return _json(eng.grant(body))
+            except ValueError as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "permissions"},
+                    http_status=422,
+                )
 
     return router
