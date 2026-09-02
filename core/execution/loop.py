@@ -93,6 +93,14 @@ STOP_REPEATED_FAILURE = "repeated_failure"
 #: its action or strategy — evidence-driven reassessment, enforced by code.
 DEFAULT_MAX_REPEATED_FAILURES = 2
 
+#: Protocol-repair bound (R165): a proposal the validator refuses (non-JSON,
+#: unknown action, smuggled authority keys…) is an OBSERVATION naming the
+#: violation — the model gets to correct itself within its step budget, as
+#: it already can for a refused tool call. This many CONSECUTIVE invalid
+#: proposals stop the run with ``invalid_proposal``. 1 = the pre-R165
+#: single-shot stop.
+DEFAULT_MAX_INVALID_PROPOSALS = 2
+
 
 @dataclass(frozen=True)
 class AgentStep:
@@ -145,6 +153,9 @@ class _RunState:
     tool_ok: int = 0
     tool_failed: int = 0
     repeated_refused: int = 0
+    #: Consecutive validator refusals (reset by any valid proposal).
+    invalid_streak: int = 0
+    invalid_total: int = 0
 
 
 class AgentLoop:
@@ -162,12 +173,16 @@ class AgentLoop:
         max_repeated_failures: int = DEFAULT_MAX_REPEATED_FAILURES,
         deadline_ms: int | None = None,
         clock: Callable[[], float] = time.monotonic,
+        max_invalid_proposals: int = DEFAULT_MAX_INVALID_PROPOSALS,
     ) -> None:
         if max_steps < 1:
             msg = "max_steps must be >= 1"
             raise ValueError(msg)
         if max_repeated_failures < 1:
             msg = "max_repeated_failures must be >= 1"
+            raise ValueError(msg)
+        if max_invalid_proposals < 1:
+            msg = "max_invalid_proposals must be >= 1"
             raise ValueError(msg)
         if deadline_ms is not None and deadline_ms < 1:
             msg = "deadline_ms must be >= 1 when set"
@@ -179,6 +194,7 @@ class AgentLoop:
         self._verify = verify
         self._id_factory = id_factory
         self._max_repeated_failures = max_repeated_failures
+        self._max_invalid_proposals = max_invalid_proposals
         # Wall-clock bound for the WHOLE run (S4): checked before every
         # proposal; a run past its deadline stops with a closed reason
         # instead of spending another model call. None = step-bound only.
@@ -261,6 +277,8 @@ class AgentLoop:
             try:
                 proposal = parse_agent_proposal(raw)
             except InvalidAgentProposal as exc:
+                state.invalid_streak += 1
+                state.invalid_total += 1
                 self._planner_node(
                     state,
                     execution_id,
@@ -269,20 +287,32 @@ class AgentLoop:
                     status=ExecutionNodeStatus.FAILED,
                     error={"reason": STOP_INVALID_PROPOSAL, "detail": exc.reason},
                 )
+                refusal: JsonObject = {
+                    "step": index,
+                    "error": STOP_INVALID_PROPOSAL,
+                    "detail": exc.reason,
+                }
                 state.steps.append(
                     AgentStep(
                         index=index,
                         proposal_raw=raw if isinstance(raw, dict) else None,
-                        observation={
-                            "step": index,
-                            "error": STOP_INVALID_PROPOSAL,
-                            "detail": exc.reason,
-                        },
+                        observation=refusal,
                     )
                 )
-                stop_reason = STOP_INVALID_PROPOSAL
-                break
+                if (
+                    state.invalid_streak >= self._max_invalid_proposals
+                    or index == self._max_steps
+                ):
+                    stop_reason = STOP_INVALID_PROPOSAL
+                    break
+                # R165: the violation is DATA the model can correct — it
+                # rides the next payload's observations like a refused call.
+                state.observations.append(
+                    {**refusal, "status": "refused", "nothing_happened": True}
+                )
+                continue
 
+            state.invalid_streak = 0
             self._planner_node(
                 state,
                 execution_id,
@@ -370,6 +400,7 @@ class AgentLoop:
             "tool_calls_ok": state.tool_ok,
             "tool_calls_failed": state.tool_failed,
             "repeated_failure_refusals": state.repeated_refused,
+            "invalid_proposals": state.invalid_total,
             "evidence_items": len(state.evidence),
             "elapsed_ms": elapsed_total_ms,
         }
