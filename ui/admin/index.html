@@ -94,11 +94,20 @@
         <button class="rail-item" data-surface="catalog">
           <span class="rail-glyph">⬡</span> Models &amp; Providers
         </button>
+        <button class="rail-item" data-surface="onboarding">
+          <span class="rail-glyph">⊕</span> Provider onboarding
+        </button>
       </div>
       <div class="rail-group">
         <div class="rail-head">Intelligence</div>
         <button class="rail-item" data-surface="intelligence">
           <span class="rail-glyph">✦</span> Capabilities &amp; Scenarios
+        </button>
+        <button class="rail-item" data-surface="learning">
+          <span class="rail-glyph">◇</span> Learning
+        </button>
+        <button class="rail-item" data-surface="skills">
+          <span class="rail-glyph">⌬</span> Skills acquisition
         </button>
       </div>
       <div class="rail-group">
@@ -274,6 +283,123 @@
         <h3>Webhooks</h3>
         <table class="data-table" id="webhooks-table">
           <thead><tr><th>Subscription</th><th>URL host</th><th>Events</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Surface: Learning (R160) — the 22 §8 lifecycle over REAL routes:
+           capture → evaluate → sanitize → admit → promote → learned → ask, plus
+           the measurable capability re-test. Every row is a server record;
+           every verdict is an explicit human act (no defaults, no auto-pass). -->
+      <section id="surface-learning" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Learning</h2>
+          <button id="learning-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <div id="learning-unavailable" class="muted small" hidden></div>
+        <div class="cards">
+          <div class="card">
+            <h3>Learned knowledge <span class="muted small">(GOLD keys — GET /learning/learned)</span></h3>
+            <div id="learned-keys" class="mono small"></div>
+            <form id="learning-ask-form" class="inline-form">
+              <input type="text" id="learning-ask-key" placeholder="knowledge key" required>
+              <button type="submit" class="btn-ghost small">Ask learned</button>
+            </form>
+            <pre id="learning-ask-result" class="mono small"></pre>
+          </div>
+          <div class="card">
+            <h3>Capture sample <span class="muted small">(POST /learning/samples)</span></h3>
+            <form id="learning-capture-form" class="stack-form">
+              <input type="text" id="capture-key" placeholder="knowledge_key" required>
+              <textarea id="capture-value" rows="2" placeholder='knowledge_value JSON object, e.g. {"answer": 42}' required></textarea>
+              <input type="text" id="capture-execution" placeholder="source_execution_id (optional; must be this tenant's)">
+              <button type="submit" class="btn-primary small">Capture (enters PENDING)</button>
+            </form>
+          </div>
+          <div class="card">
+            <h3>Capability re-test <span class="muted small">(POST /learning/capability-retest)</span></h3>
+            <form id="learning-retest-form" class="stack-form">
+              <textarea id="retest-probes" rows="2" placeholder="one knowledge key per line" required></textarea>
+              <label class="small"><input type="checkbox" id="retest-use-baseline"> compare against the last snapshot taken here (delta)</label>
+              <button type="submit" class="btn-ghost small">Measure</button>
+            </form>
+            <pre id="retest-result" class="mono small"></pre>
+          </div>
+        </div>
+        <h3>Samples <span class="muted small">(lifecycle steps are explicit verdicts — nothing auto-passes)</span></h3>
+        <table class="data-table" id="samples-table">
+          <thead><tr><th>Sample</th><th>Source execution</th><th>Eligibility</th><th>Sanitization</th><th>Verification</th><th>Act</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3>Changes since last review</h3>
+        <div id="learning-since-review" class="panel mono small"></div>
+        <button id="learning-mark-reviewed" class="btn-ghost small" type="button">Mark reviewed (explicit admin act)</button>
+      </section>
+
+      <!-- Surface: Skills acquisition (R160) — 14 §3 import → scan → validate →
+           review → approve → activate over the SAME SkillRegistry /v1/skills
+           reads. Reviewer is the session principal (never typed). -->
+      <section id="surface-skills" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Skills acquisition</h2>
+          <button id="skills-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <div id="skills-unavailable" class="muted small" hidden></div>
+        <div class="cards">
+          <div class="card">
+            <h3>Import external skill <span class="muted small">(POST /v1/admin/skills/import)</span></h3>
+            <div class="muted small">Allowed sources (server allow-list): <span id="skills-allowed-sources" class="mono"></span></div>
+            <form id="skill-import-form" class="stack-form">
+              <input type="text" id="skill-source-url" placeholder="source_url (must start with an allowed source)" required>
+              <input type="text" id="skill-source-version" placeholder="source_version (commit / tag)" required>
+              <textarea id="skill-manifest" rows="5" placeholder='manifest JSON (SkillManifest: id, name, version, type, source:"imported", status:"imported", requires_tools…)' required></textarea>
+              <textarea id="skill-content" rows="3" placeholder="skill content (verbatim text)" required></textarea>
+              <input type="text" id="skill-checksum" placeholder="expected_checksum (optional sha256)">
+              <button type="submit" class="btn-primary small">Import (enters IMPORTED — not selectable)</button>
+            </form>
+          </div>
+        </div>
+        <h3>Pending imports <span class="muted small">(holding area — activation moves the skill into the registry and out of this list)</span></h3>
+        <table class="data-table" id="imports-table">
+          <thead><tr><th>Skill</th><th>Version</th><th>Type</th><th>Status</th><th>Source</th><th>Reviewed by</th><th>Next step</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <h3>Selectable skills <span class="muted small">(GET /v1/skills — what /v1/execute may name)</span></h3>
+        <table class="data-table small" id="selectable-skills-table">
+          <thead><tr><th>Id</th><th>Name</th><th>Version</th><th>Requires tools</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Surface: Provider onboarding (R160) — canonical-gateway providers
+           only; refs, never keys; discover=true fills ONLY empty fields from
+           the gateway's /v1/describe. The result is a DRAFT payload — enabling
+           remains the R2 lifecycle's explicit publish. -->
+      <section id="surface-onboarding" class="surface" hidden>
+        <div class="surface-head">
+          <h2>Provider onboarding</h2>
+          <button id="onboarding-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <div id="onboarding-unavailable" class="muted small" hidden></div>
+        <div class="cards">
+          <div class="card">
+            <h3>Onboard gateway provider <span class="muted small">(POST /v1/admin/providers/onboard)</span></h3>
+            <form id="onboard-form" class="stack-form">
+              <input type="text" id="onboard-key" placeholder="provider_key" required>
+              <input type="text" id="onboard-name" placeholder="display_name" required>
+              <input type="text" id="onboard-credential-ref" placeholder="credential_ref (opaque secret reference — never a key)" required>
+              <input type="text" id="onboard-route-token-ref" placeholder="route_token_ref (opaque reference)" required>
+              <input type="text" id="onboard-operations" placeholder="operations, comma-separated (may be empty ONLY with discover)">
+              <input type="text" id="onboard-models" placeholder="static_models, comma-separated (optional)">
+              <label class="small"><input type="checkbox" id="onboard-discover"> discover — read the gateway's /v1/describe and fill only the fields left empty</label>
+              <button type="submit" class="btn-primary small">Onboard (produces a DRAFT enable payload)</button>
+            </form>
+            <pre id="onboard-result" class="mono small"></pre>
+          </div>
+        </div>
+        <h3>Registered providers <span class="muted small">(GET /v1/admin/providers)</span></h3>
+        <table class="data-table" id="onboarding-providers-table">
+          <thead><tr><th>Key</th><th>Name</th><th>Status</th></tr></thead>
           <tbody></tbody>
         </table>
       </section>

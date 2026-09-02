@@ -555,3 +555,10 @@ input:focus, textarea:focus, select:focus {
   .agent-panel { width: 100%; top: 49px; }
   .brand-sub { display: none; }
 }
+
+/* R160 surfaces: compact forms inside cards + per-row action clusters. */
+.stack-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.inline-form { display: flex; gap: 6px; margin-top: 8px; }
+.inline-form input { flex: 1; }
+td.actions { display: flex; flex-wrap: wrap; gap: 4px; }
+pre.small { font-size: 0.78rem; white-space: pre-wrap; word-break: break-word; max-height: 240px; overflow: auto; }

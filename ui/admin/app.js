@@ -56,6 +56,13 @@ const STATUS_CLASSES = {
   scanned: "info",
   reviewed: "info",
   approved: "ok",
+  /* LearningEligibility / SanitizationState (R160 Learning surface) */
+  pending: "info",
+  eligible: "ok",
+  ineligible: "err",
+  passed: "ok",
+  /* VerificationLevel */
+  raw: "neutral",
   /* healthz literal */
   alive: "ok",
   /* agent ToolClass values */
@@ -214,6 +221,9 @@ function loadSurface(name) {
     changes: loadChanges,
     source: loadSource,
     system: loadSystem,
+    learning: loadLearning,
+    skills: loadSkills,
+    onboarding: loadOnboarding,
   };
   loaders[name]();
 }
@@ -228,6 +238,9 @@ document.getElementById("source-refresh").addEventListener("click", loadSource);
 document.getElementById("notif-refresh").addEventListener("click", loadNotifications);
 document.getElementById("usage-refresh").addEventListener("click", loadUsage);
 document.getElementById("system-refresh").addEventListener("click", loadSystem);
+document.getElementById("learning-refresh").addEventListener("click", loadLearning);
+document.getElementById("skills-refresh").addEventListener("click", loadSkills);
+document.getElementById("onboarding-refresh").addEventListener("click", loadOnboarding);
 
 /* Agent companion panel toggle (layout state only — no data effect). */
 document.getElementById("agent-toggle").addEventListener("click", () => {
@@ -939,3 +952,294 @@ async function loadSystem() {
   const infoEl = document.getElementById("system-info");
   infoEl.textContent = info.ok ? JSON.stringify(info.body, null, 2) : "system info unavailable";
 }
+
+
+/* --- Learning surface (R160) ---------------------------------------------------
+   The 22 §8 lifecycle over the REAL admin routes. Absent routes (no lifecycle
+   seam composed) render as an honest note. Every verdict is an explicit click
+   with the SAME closed request shapes the API validates — no defaults here. */
+
+function td(text, cls) {
+  const cell = document.createElement("td");
+  if (cls) cell.className = cls;
+  cell.textContent = text === undefined || text === null || text === "" ? "\u2014" : String(text);
+  return cell;
+}
+
+function actionButton(label, onClick) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn-ghost small";
+  btn.textContent = label;
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+function parseJsonObject(text, what) {
+  try {
+    const value = JSON.parse(text);
+    if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("not an object");
+    return value;
+  } catch (err) {
+    toast(`${what}: invalid JSON object (${err.message})`, "err");
+    return null;
+  }
+}
+
+async function learningStep(sampleId, step, body) {
+  const result = await api(`/v1/admin/learning/samples/${encodeURIComponent(sampleId)}/${step}`, { method: "POST", body });
+  if (result.ok) toast(`${step}: ${sampleId.slice(0, 8)}… → ${JSON.stringify(result.body).slice(0, 80)}`, "ok");
+  else toast(`${step} refused (${result.status}): ${result.body && result.body.message ? result.body.message : ""}`, "err");
+  loadLearning();
+}
+
+function sampleActions(sample) {
+  const cell = document.createElement("td");
+  cell.className = "actions";
+  const id = sample.id;
+  cell.append(
+    actionButton("Evaluate", () => {
+      const text = window.prompt("Evaluate: the observed OUTPUT (JSON object) to grade against the source execution", "{}");
+      if (text === null) return;
+      const output = parseJsonObject(text, "output");
+      if (output) learningStep(id, "evaluate", { output });
+    }),
+    actionButton("Sanitize ✓", () => learningStep(id, "sanitize", { passed: true })),
+    actionButton("Sanitize ✗", () => learningStep(id, "sanitize", { passed: false })),
+    actionButton("Admit", () => {
+      // Three explicit attestations — the API's closed shape; unchecked = false.
+      const privacy = window.confirm("Attest: privacy policy allows training on this sample?");
+      const tenant = window.confirm("Attest: tenant/user policy allows it?");
+      const sensitive = window.confirm("Attest: sensitive data has been handled?");
+      learningStep(id, "admit", {
+        privacy_policy_allows: privacy,
+        tenant_user_policy_allows: tenant,
+        sensitive_data_handled: sensitive,
+      });
+    }),
+    actionButton("Promote", () => {
+      const offline = window.confirm("Attest: offline evaluation PASSED?");
+      const regression = window.confirm("Attest: regression PASSED?");
+      const security = window.confirm("Attest: security evaluation PASSED?");
+      learningStep(id, "promote", {
+        offline_eval_pass: offline,
+        regression_pass: regression,
+        security_eval_pass: security,
+      });
+    }),
+  );
+  return cell;
+}
+
+async function loadLearning() {
+  const unavailable = document.getElementById("learning-unavailable");
+  const [samples, learned, since] = await Promise.all([
+    api("/v1/admin/learning/samples"),
+    api("/v1/admin/learning/learned"),
+    api("/v1/admin/learning/changes-since-review"),
+  ]);
+  const tbody = document.querySelector("#samples-table tbody");
+  tbody.textContent = "";
+  if (samples.status === 404) {
+    unavailable.hidden = false;
+    unavailable.textContent = "Learning lifecycle not composed in this profile (routes absent).";
+    return;
+  }
+  unavailable.hidden = true;
+  if (!samples.ok) { renderError(document.getElementById("global-error"), samples.body); return; }
+  for (const s of samples.body.samples || []) {
+    const tr = document.createElement("tr");
+    tr.append(td(s.id, "mono"), td(s.source_execution_id, "mono"));
+    for (const value of [s.eligibility, s.sanitization_state, s.verification_level]) {
+      const cell = document.createElement("td"); cell.appendChild(statusBadge(value)); tr.appendChild(cell);
+    }
+    tr.appendChild(sampleActions(s));
+    tbody.appendChild(tr);
+  }
+  const keys = document.getElementById("learned-keys");
+  keys.textContent = learned.ok ? ((learned.body.keys || []).join(", ") || "(nothing learned yet)") : `unavailable (${learned.status})`;
+  const sinceEl = document.getElementById("learning-since-review");
+  sinceEl.textContent = since.ok ? JSON.stringify(since.body, null, 2) : `unavailable (${since.status})`;
+}
+
+document.getElementById("learning-capture-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const value = parseJsonObject(document.getElementById("capture-value").value, "knowledge_value");
+  if (!value) return;
+  const body = {
+    knowledge_key: document.getElementById("capture-key").value.trim(),
+    knowledge_value: value,
+  };
+  const execution = document.getElementById("capture-execution").value.trim();
+  if (execution) body.source_execution_id = execution;
+  const result = await api("/v1/admin/learning/samples", { method: "POST", body });
+  if (result.ok) { toast("sample captured (PENDING)", "ok"); event.target.reset(); }
+  else toast(`capture refused (${result.status}): ${result.body && result.body.message ? result.body.message : ""}`, "err");
+  loadLearning();
+});
+
+document.getElementById("learning-ask-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const key = document.getElementById("learning-ask-key").value.trim();
+  const result = await api("/v1/admin/learning/ask", { method: "POST", body: { key } });
+  document.getElementById("learning-ask-result").textContent =
+    `${result.status} ${JSON.stringify(result.body, null, 2)}`;
+});
+
+let lastRetestSnapshot = null;
+document.getElementById("learning-retest-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const probes = document.getElementById("retest-probes").value.split("\n").map((l) => l.trim()).filter(Boolean);
+  const body = { probes };
+  if (document.getElementById("retest-use-baseline").checked && lastRetestSnapshot) body.baseline = lastRetestSnapshot;
+  const result = await api("/v1/admin/learning/capability-retest", { method: "POST", body });
+  const out = document.getElementById("retest-result");
+  if (!result.ok) { out.textContent = `${result.status} ${JSON.stringify(result.body, null, 2)}`; return; }
+  lastRetestSnapshot = result.body.snapshot;
+  const snap = result.body.snapshot;
+  let text = `score ${snap.score} — found ${snap.found.length}/${snap.probes.length} · missing: ${snap.missing.join(", ") || "none"}`;
+  if (result.body.delta) {
+    const d = result.body.delta;
+    text += `\ndelta vs baseline: gained ${JSON.stringify(d.gained)} · lost ${JSON.stringify(d.lost)} · still missing ${JSON.stringify(d.still_missing)}`;
+  }
+  out.textContent = text;
+});
+
+document.getElementById("learning-mark-reviewed").addEventListener("click", async () => {
+  const result = await api("/v1/admin/learning/mark-reviewed", { method: "POST", body: {} });
+  toast(result.ok ? "learning review marker recorded" : `refused (${result.status})`, result.ok ? "ok" : "err");
+  loadLearning();
+});
+
+/* --- Skills acquisition surface (R160) -----------------------------------------
+   14 §3 over /v1/admin/skills/*: the holding area (pending imports) and the
+   registry view (/v1/skills) are BOTH read from the server — activation is
+   visible as the row leaving one table and appearing in the other. */
+
+const SKILL_NEXT_STEP = {
+  imported: "scan",
+  scanned: "validate",
+  validated: "review",
+  reviewed: "approve",
+  approved: "activate",
+};
+
+async function skillStep(skillId, step) {
+  const body = step === "scan" ? { findings: [] } : undefined;
+  const result = await api(`/v1/admin/skills/imports/${encodeURIComponent(skillId)}/${step}`, { method: "POST", body });
+  if (result.ok) toast(`${step} → ${result.body.status} (source ${result.body.source})`, "ok");
+  else toast(`${step} refused (${result.status}): ${result.body && result.body.message ? result.body.message : ""}`, "err");
+  loadSkills();
+}
+
+async function loadSkills() {
+  const unavailable = document.getElementById("skills-unavailable");
+  const [imports, selectable] = await Promise.all([
+    api("/v1/admin/skills/imports"),
+    api("/v1/skills"),
+  ]);
+  const tbody = document.querySelector("#imports-table tbody");
+  tbody.textContent = "";
+  if (imports.status === 404) {
+    unavailable.hidden = false;
+    unavailable.textContent = "Skill acquisition pipeline not composed in this profile (routes absent).";
+  } else if (!imports.ok) {
+    unavailable.hidden = true;
+    renderError(document.getElementById("global-error"), imports.body);
+  } else {
+    unavailable.hidden = true;
+    document.getElementById("skills-allowed-sources").textContent = (imports.body.allowed_sources || []).join("  |  ");
+    for (const s of imports.body.imports || []) {
+      const tr = document.createElement("tr");
+      const name = td(s.name); name.title = s.skill_id;
+      tr.append(name, td(s.version, "mono"), td(s.type, "mono"));
+      const status = document.createElement("td"); status.appendChild(statusBadge(s.status)); tr.appendChild(status);
+      tr.append(
+        td(s.provenance ? s.provenance.source_url : s.source, "mono small"),
+        td(s.provenance ? s.provenance.reviewed_by : null, "mono small"),
+      );
+      const act = document.createElement("td"); act.className = "actions";
+      const next = SKILL_NEXT_STEP[s.status];
+      if (next) act.appendChild(actionButton(next, () => skillStep(s.skill_id, next)));
+      else act.textContent = "\u2014";
+      tr.appendChild(act);
+      tbody.appendChild(tr);
+    }
+  }
+  const selBody = document.querySelector("#selectable-skills-table tbody");
+  selBody.textContent = "";
+  if (selectable.ok) {
+    for (const s of selectable.body.skills || []) {
+      const tr = document.createElement("tr");
+      tr.append(td(s.id, "mono"), td(s.name), td(s.version, "mono"), td((s.requires_tools || []).join(", "), "mono small"));
+      selBody.appendChild(tr);
+    }
+  }
+}
+
+document.getElementById("skill-import-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const manifest = parseJsonObject(document.getElementById("skill-manifest").value, "manifest");
+  if (!manifest) return;
+  const body = {
+    manifest,
+    content: document.getElementById("skill-content").value,
+    source_url: document.getElementById("skill-source-url").value.trim(),
+    source_version: document.getElementById("skill-source-version").value.trim(),
+  };
+  const checksum = document.getElementById("skill-checksum").value.trim();
+  if (checksum) body.expected_checksum = checksum;
+  const result = await api("/v1/admin/skills/import", { method: "POST", body });
+  if (result.ok) { toast(`imported ${result.body.name} (status ${result.body.status} — not selectable yet)`, "ok"); event.target.reset(); }
+  else toast(`import refused (${result.status}): ${result.body && result.body.message ? result.body.message : ""}`, "err");
+  loadSkills();
+});
+
+/* --- Provider onboarding surface (R160) -----------------------------------------
+   Refs only (credential_ref / route_token_ref) — a raw key never enters this
+   form. The response is a DRAFT enable payload; enabling stays the R2
+   lifecycle's explicit publish (Changes & Audit). */
+
+async function loadOnboarding() {
+  const providers = await api("/v1/admin/providers");
+  const tbody = document.querySelector("#onboarding-providers-table tbody");
+  tbody.textContent = "";
+  if (!providers.ok) { renderError(document.getElementById("global-error"), providers.body); return; }
+  for (const p of providers.body.providers || []) {
+    const tr = document.createElement("tr");
+    tr.append(td(p.provider_key, "mono"), td(p.display_name));
+    const status = document.createElement("td"); status.appendChild(statusBadge(p.status)); tr.appendChild(status);
+    tbody.appendChild(tr);
+  }
+}
+
+function csv(id) {
+  return document.getElementById(id).value.split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+document.getElementById("onboard-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const body = {
+    provider_key: document.getElementById("onboard-key").value.trim(),
+    display_name: document.getElementById("onboard-name").value.trim(),
+    credential_ref: document.getElementById("onboard-credential-ref").value.trim(),
+    route_token_ref: document.getElementById("onboard-route-token-ref").value.trim(),
+    operations: csv("onboard-operations"),
+    static_models: csv("onboard-models"),
+    discover: document.getElementById("onboard-discover").checked,
+  };
+  const result = await api("/v1/admin/providers/onboard", { method: "POST", body });
+  const out = document.getElementById("onboard-result");
+  const unavailable = document.getElementById("onboarding-unavailable");
+  if (result.status === 404) {
+    unavailable.hidden = false;
+    unavailable.textContent = "Provider onboarding not composed in this profile (route absent).";
+  }
+  out.textContent = `${result.status} ${JSON.stringify(result.body, null, 2)}`;
+  if (result.ok) {
+    toast(`onboarded ${result.body.provider_key} — steps: ${(result.body.steps_passed || []).join(", ")}; unverified: ${(result.body.unverified || []).join(", ") || "none"}`, "ok");
+    loadOnboarding();
+  } else {
+    toast(`onboarding refused (${result.status})`, "err");
+  }
+});
