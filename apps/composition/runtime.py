@@ -895,6 +895,7 @@ def build_runtime_profile(
         projects=project_store,
         source_snapshots=snapshots,
         agent=composed_agent.surface,
+        engineering_admin=engineering_admin,
     )
 
     # --- admin console (P-D follow-up): the EXISTING attach_admin_console
@@ -933,7 +934,6 @@ def build_runtime_profile(
             # SourceReader itself). Absent/invalid ⇒ absent tools (P2).
             repo_reader=repo_reader,
         ),
-        engineering_admin=engineering_admin,
         auth=auth,
         # Gap 1c: the onboarding route exists ONLY when the gateway binding
         # is configured (canonical-gateway providers only — DECISION 2;
