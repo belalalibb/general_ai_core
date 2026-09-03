@@ -437,10 +437,12 @@ class SimpleScoringRouter:
             return FallbackScope.NONE
         if scope is not None:
             return scope
-        if allow is True and isinstance(policy, ExplicitModelPolicy):
-            # 11 §8 explicit-model default: same_model_different_provider first.
-            return FallbackScope.SAME_MODEL_DIFFERENT_PROVIDER
-        return scope
+        # Default when the caller is silent (11 §8, 40 §4.6): the narrowest
+        # useful scope. A silent caller previously got NO fallback route under
+        # AUTO/TIER policies, so a persistent provider outage with a healthy
+        # backup provider for the same model failed the run (baseline row 7).
+        # Fallback stays opt-out via allow_fallback=False or fallback_scope=none.
+        return FallbackScope.SAME_MODEL_DIFFERENT_PROVIDER
 
     def _fallback_candidates(
         self,

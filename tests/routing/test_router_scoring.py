@@ -447,6 +447,40 @@ def test_explicit_model_same_provider_scope_never_widens_to_other_models() -> No
     assert decision.fallback_candidates == []  # only one provider binds model-weak
 
 
+def test_silent_caller_default_scope_is_same_model_different_provider() -> None:
+    """QEVION Change 2 (baseline row 7): a caller that says nothing about
+    fallback gets the narrowest useful route — the same model on another
+    provider — under AUTO and TIER policies, not an empty route. Opt-out is
+    still explicit (allow_fallback=False / fallback_scope=none)."""
+    world = _World()
+    prov_a = world.add_provider("prov_a")
+    prov_b = world.add_provider("prov_b")
+    model = world.add_model(_model("model-x"))
+    other = world.add_model(_model("model-y"))
+    world.bind(prov_a, model)
+    world.bind(prov_b, model)
+    world.bind(prov_a, other)
+    for policy in (
+        AutoModelPolicy(type="auto"),
+        TierModelPolicy(type="tier", tier="medium"),
+    ):
+        decision = world.router().route(_request(model_policy=policy))
+        assert decision.fallback_policy is FallbackScope.SAME_MODEL_DIFFERENT_PROVIDER
+        assert len(decision.fallback_candidates) == 1
+        fb = decision.fallback_candidates[0]
+        assert fb.model_id == decision.selected.model_id
+        assert fb.provider_id != decision.selected.provider_id
+    explicit = world.router().route(
+        _request(model_policy=ExplicitModelPolicy(type="explicit_model", model_id="model-x"))
+    )
+    assert explicit.fallback_policy is FallbackScope.SAME_MODEL_DIFFERENT_PROVIDER
+    assert len(explicit.fallback_candidates) == 1
+    none_scope = world.router().route(
+        _request(model_policy=AutoModelPolicy(type="auto", fallback_scope=FallbackScope.NONE))
+    )
+    assert none_scope.fallback_candidates == []
+
+
 def test_fallback_disabled_yields_no_candidates_and_scope_none() -> None:
     world, *_ = _basic_world()
     policy = AutoModelPolicy(type="auto", allow_fallback=False)

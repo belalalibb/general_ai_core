@@ -30,7 +30,6 @@ from core.contracts.domain import (  # noqa: E402
     ProviderStatus,
 )
 from core.contracts.provider import ProviderError, ProviderErrorCategory  # noqa: E402
-from core.execution.loop import STOP_FINAL  # noqa: E402
 from core.security.firewall import TenantPolicy  # noqa: E402
 from tests.agent.world import (  # noqa: E402
     ENTITLEMENT,

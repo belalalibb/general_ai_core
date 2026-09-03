@@ -182,6 +182,14 @@ same_model_different_provider first
 same_tier only if policy allows
 ```
 
+Silent caller default (any policy type, no `allow_fallback`/`fallback_scope` given):
+
+```text
+same_model_different_provider
+```
+
+Opt-out is explicit: `allow_fallback: false` or `fallback_scope: none` → empty route.
+
 ---
 
 ## 9. Router Model Bootstrap
