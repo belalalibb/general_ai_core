@@ -412,15 +412,51 @@ def test_invalid_proposal_on_last_step_stops() -> None:
 
 
 def test_propose_fault_contained_as_data() -> None:
+    """Two CONSECUTIVE seam faults stop the run (default bound); each is data."""
     world = AgentWorld()
-    loop, _ = world.loop([RuntimeError("model service down")])
+    loop, _ = world.loop([RuntimeError("model service down"), RuntimeError("still down")])
     report = world.run(loop)
     assert report.succeeded is False
     assert report.stop_reason == STOP_PROPOSE_FAILED
     assert report.nodes[-1].error == {
         "reason": STOP_PROPOSE_FAILED,
-        "detail": "RuntimeError: model service down",
+        "detail": "RuntimeError: still down",
     }
+    assert report.summary["propose_faults"] == 2
+
+
+def test_single_propose_fault_is_recovered_within_budget() -> None:
+    """QEVION: one seam fault mid-run is an observation, not the end of the run."""
+    world = AgentWorld()
+    loop, proposer = world.loop(
+        [
+            {"action": "tool_call", "tool": "github.read", "arguments": {"path": "a"}},
+            RuntimeError("provider blip"),
+            {"action": "final", "output": {"answer": "done", "evidence": [1]}},
+        ]
+    )
+    report = world.run(loop)
+    assert report.succeeded and report.stop_reason == STOP_FINAL
+    # The fault rode the next payload as a refused observation with nothing_happened.
+    fault_obs = [
+        o for o in proposer.payloads[2]["observations"] if o.get("error") == STOP_PROPOSE_FAILED
+    ]
+    assert fault_obs and fault_obs[0]["nothing_happened"] is True
+    # Bound: 3 proposals for 3 steps — a fault never adds a model call beyond max_steps.
+    assert len(proposer.payloads) == 3 and report.summary["propose_faults"] == 1
+
+
+def test_single_shot_propose_failure_bound_restores_old_behaviour() -> None:
+    world = AgentWorld()
+    loop = AgentLoop(
+        propose=ScriptedProposer([RuntimeError("down")]),
+        tools=world.executor,
+        bindings={"github.read": world.binding},
+        max_steps=5,
+        max_propose_failures=1,
+    )
+    report = world.run(loop)
+    assert report.stop_reason == STOP_PROPOSE_FAILED and len(report.steps) == 1
 
 
 def test_handler_failure_observed_and_run_continues() -> None:

@@ -253,7 +253,8 @@ class TestBounds:
             provider_code="tool_use_failed",
             safe_message="provider rejected the request",
         )
-        world = AgentWorld([rejected])
+        # Two consecutive faults exhaust the default recovery bound.
+        world = AgentWorld([rejected, rejected])
         outcome = world.run(TASK)
         assert outcome.report.stop_reason == STOP_PROPOSE_FAILED
         failed_planner = [n for n in outcome.report.nodes if n.error is not None][-1]

@@ -101,6 +101,17 @@ DEFAULT_MAX_REPEATED_FAILURES = 2
 #: single-shot stop.
 DEFAULT_MAX_INVALID_PROPOSALS = 2
 
+#: Recovery bound at the propose seam (QEVION round, measured baseline rows
+#: 5-7): a seam FAULT (provider error, budget refusal, transport failure) on
+#: one step used to end the whole run as ``propose_failed`` even when every
+#: tool act so far had succeeded. A fault is now an OBSERVATION naming the
+#: failure and the next step proposes again — bounded exactly like invalid
+#: proposals: this many CONSECUTIVE faults stop the run. Each re-propose
+#: consumes a step of the SAME ``max_steps`` budget, so total model calls
+#: per run never exceed ``max_steps`` (no retry amplification). 1 = the
+#: pre-round single-shot stop.
+DEFAULT_MAX_PROPOSE_FAILURES = 2
+
 
 @dataclass(frozen=True)
 class AgentStep:
@@ -156,6 +167,9 @@ class _RunState:
     #: Consecutive validator refusals (reset by any valid proposal).
     invalid_streak: int = 0
     invalid_total: int = 0
+    #: Consecutive propose-seam faults (reset by any successful proposal).
+    propose_fault_streak: int = 0
+    propose_faults_total: int = 0
 
 
 class AgentLoop:
@@ -174,6 +188,7 @@ class AgentLoop:
         deadline_ms: int | None = None,
         clock: Callable[[], float] = time.monotonic,
         max_invalid_proposals: int = DEFAULT_MAX_INVALID_PROPOSALS,
+        max_propose_failures: int = DEFAULT_MAX_PROPOSE_FAILURES,
     ) -> None:
         if max_steps < 1:
             msg = "max_steps must be >= 1"
@@ -183,6 +198,9 @@ class AgentLoop:
             raise ValueError(msg)
         if max_invalid_proposals < 1:
             msg = "max_invalid_proposals must be >= 1"
+            raise ValueError(msg)
+        if max_propose_failures < 1:
+            msg = "max_propose_failures must be >= 1"
             raise ValueError(msg)
         if deadline_ms is not None and deadline_ms < 1:
             msg = "deadline_ms must be >= 1 when set"
@@ -195,6 +213,7 @@ class AgentLoop:
         self._id_factory = id_factory
         self._max_repeated_failures = max_repeated_failures
         self._max_invalid_proposals = max_invalid_proposals
+        self._max_propose_failures = max_propose_failures
         # Wall-clock bound for the WHOLE run (S4): checked before every
         # proposal; a run past its deadline stops with a closed reason
         # instead of spending another model call. None = step-bound only.
@@ -253,25 +272,32 @@ class AgentLoop:
             try:
                 raw = await self._propose(payload)
             except Exception as exc:  # noqa: BLE001 — seam fault becomes data
+                state.propose_fault_streak += 1
+                state.propose_faults_total += 1
+                detail = f"{type(exc).__name__}: {exc}"
                 self._planner_node(
                     state,
                     execution_id,
                     payload,
                     status=ExecutionNodeStatus.FAILED,
-                    error={
-                        "reason": STOP_PROPOSE_FAILED,
-                        "detail": f"{type(exc).__name__}: {exc}",
-                    },
+                    error={"reason": STOP_PROPOSE_FAILED, "detail": detail},
                 )
-                state.steps.append(
-                    AgentStep(
-                        index=index,
-                        proposal_raw=None,
-                        observation={"step": index, "error": STOP_PROPOSE_FAILED},
-                    )
-                )
-                stop_reason = STOP_PROPOSE_FAILED
-                break
+                fault: JsonObject = {
+                    "step": index,
+                    "error": STOP_PROPOSE_FAILED,
+                    "detail": detail,
+                }
+                state.steps.append(AgentStep(index=index, proposal_raw=None, observation=fault))
+                if (
+                    state.propose_fault_streak >= self._max_propose_failures
+                    or index == self._max_steps
+                ):
+                    stop_reason = STOP_PROPOSE_FAILED
+                    break
+                # RECOVER: the fault is DATA; the next step proposes again with
+                # the fault visible (same posture as a refused tool call).
+                state.observations.append({**fault, "status": "refused", "nothing_happened": True})
+                continue
 
             # --- validate: the R095 attach-at-surface validator ---------------
             try:
@@ -310,6 +336,7 @@ class AgentLoop:
                 continue
 
             state.invalid_streak = 0
+            state.propose_fault_streak = 0
             self._planner_node(
                 state,
                 execution_id,
@@ -398,6 +425,7 @@ class AgentLoop:
             "tool_calls_failed": state.tool_failed,
             "repeated_failure_refusals": state.repeated_refused,
             "invalid_proposals": state.invalid_total,
+            "propose_faults": state.propose_faults_total,
             "evidence_items": len(state.evidence),
             "elapsed_ms": elapsed_total_ms,
         }

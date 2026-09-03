@@ -384,6 +384,9 @@ class AdminAgentService:
             # signals "stop" by emitting an out-of-vocabulary action; a repair
             # retry would re-enter the round with nothing new — single-shot.
             max_invalid_proposals=1,
+            # Same reasoning for a reasoning FAULT: the admin turn reports
+            # ``reasoning_failed`` honestly instead of re-asking the model.
+            max_propose_failures=1,
         )
 
     @staticmethod
