@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """R167-A §4B/§4D/§9 — routing matrix + failure-shape classification, test-only injection.
 
 Every case runs the REAL ``SimpleScoringRouter`` and the REAL ``ExecutionService`` against
@@ -56,6 +57,7 @@ from core.contracts.routing import RoutingDecision, RoutingRequest
 from core.execution import ExecutionReport, ExecutionService
 from core.execution.errors import CredentialNotConfigured
 from core.providers import BindingRegistry, ModelRegistry, ProviderRegistry
+from core.providers.errors import DuplicateRegistration
 from core.routing import NoEligibleCandidates, SimpleScoringRouter
 from core.usage.memory import InMemoryUsageAccounting
 from providers.real.groq import MANIFEST as GROQ_MANIFEST
@@ -269,7 +271,9 @@ def _attempts(report: ExecutionReport, world: World) -> list[Attempt]:
 def _row(case: str, world: World, report: ExecutionReport, note: str) -> None:
     refs = sorted({r.credential_ref for a in world.adapters.values() for r in a.requests})
     accounts = sorted({str(r.account_id) for a in world.adapters.values() for r in a.requests})
-    ledger = None if report.usage is None else (report.usage.status.value, report.usage.units_settled)
+    ledger = (
+        None if report.usage is None else (report.usage.status.value, report.usage.units_settled)
+    )
     print(
         f"MATRIX|{case}|status={report.execution.status.value}|attempts={_attempts(report, world)}"
         f"|credential_refs_used={refs}|account_ids={accounts}|ledger={ledger}|{note}"
@@ -302,7 +306,9 @@ def case_a_restricted_then_b() -> None:
     w = World()
     m = _model(M)
     w.provider(
-        "A", m, script=[err(ProviderErrorCategory.INVALID_CREDENTIAL, code="organization_restricted")]
+        "A",
+        m,
+        script=[err(ProviderErrorCategory.INVALID_CREDENTIAL, code="organization_restricted")],
     )
     w.provider("B", m)
     r = w.execute(w.route(explicit(M, FallbackScope.SAME_MODEL_DIFFERENT_PROVIDER)))
@@ -329,13 +335,20 @@ def case_a_retryable() -> None:
         ("A", 2, False, "retryable_server_error"),
         ("B", 1, True, None),
     ]
-    _row("A_retryable_429_5xx", w, r, "retries=1 on A honoured then failover; timeout is the same path")
+    _row(
+        "A_retryable_429_5xx",
+        w,
+        r,
+        "retries=1 on A honoured then failover; timeout is the same path",
+    )
 
 
 def case_a_credential_fault_single_provider() -> None:
     w = World()
     m = _model(M)
-    w.provider("A", m, script=[err(ProviderErrorCategory.INVALID_CREDENTIAL, code="invalid_api_key")])
+    w.provider(
+        "A", m, script=[err(ProviderErrorCategory.INVALID_CREDENTIAL, code="invalid_api_key")]
+    )
     r = w.execute(w.route(explicit(M, FallbackScope.MAX_ESCALATION)))
     assert r.execution.status.value == "failed"
     assert _attempts(r, w) == [("A", 1, False, "invalid_credential")]
@@ -350,7 +363,9 @@ def case_a_credential_fault_single_provider() -> None:
 def case_a_malformed() -> None:
     w = World()
     m = _model(M)
-    w.provider("A", m, script=[err(ProviderErrorCategory.BAD_REQUEST, code="invalid_request_error")])
+    w.provider(
+        "A", m, script=[err(ProviderErrorCategory.BAD_REQUEST, code="invalid_request_error")]
+    )
     w.provider("B", m)
     r = w.execute(w.route(explicit(M, FallbackScope.SAME_MODEL_DIFFERENT_PROVIDER)))
     assert r.execution.status.value == "failed"
@@ -436,7 +451,7 @@ def case_two_credentials_same_provider() -> None:
     first = w.credential_refs[p.id]
     w.credential_refs[p.id] = "secret-ref://A-second"
     assert w.credential_refs[p.id] != first  # overwritten, not pooled
-    with pytest.raises(Exception):
+    with pytest.raises(DuplicateRegistration):
         w.providers.register(p, _manifest("A"))  # duplicate key refused
     print(
         "MATRIX|two_credentials_same_provider|NOT SUPPORTED BY CURRENT CONTRACT"
@@ -459,7 +474,9 @@ def case_no_route() -> None:
     w.provider("A", _model("only"))
     with pytest.raises(NoEligibleCandidates):
         w.route(explicit("nonexistent"))
-    print("MATRIX|model_not_bound_anywhere|NoEligibleCandidates at routing time; zero provider calls")
+    print(
+        "MATRIX|model_not_bound_anywhere|NoEligibleCandidates at routing time; zero provider calls"
+    )
 
 
 CASES = [
@@ -523,7 +540,9 @@ def test_shape_groq_org_restricted_is_invalid_credential() -> None:
     assert r.error.category is ProviderErrorCategory.INVALID_CREDENTIAL
     assert r.error.retryable is False
     assert r.error.provider_code == "organization_restricted"
-    print(f"MAP|groq_400_organization_restricted|{r.error.category.value}|retryable={r.error.retryable}")
+    print(
+        f"MAP|groq_400_organization_restricted|{r.error.category.value}|retryable={r.error.retryable}"
+    )
 
 
 def test_shape_401_detail_only_is_invalid_credential() -> None:
@@ -531,7 +550,9 @@ def test_shape_401_detail_only_is_invalid_credential() -> None:
     r = _groq_replay(status, body)
     assert r.error is not None
     assert r.error.category is ProviderErrorCategory.INVALID_CREDENTIAL
-    print(f"MAP|401_detail_invalid_or_expired_token|{r.error.category.value}|retryable={r.error.retryable}")
+    print(
+        f"MAP|401_detail_invalid_or_expired_token|{r.error.category.value}|retryable={r.error.retryable}"
+    )
 
 
 def test_shape_unknown_model_400_detail_only_lands_as_bad_request() -> None:
@@ -541,7 +562,9 @@ def test_shape_unknown_model_400_detail_only_lands_as_bad_request() -> None:
     status, body = _shape("genspark_llm_unknown_model.json")
     r = _groq_replay(status, body)
     assert r.error is not None
-    print(f"MAP|400_detail_model_not_allowed|{r.error.category.value}|retryable={r.error.retryable}")
+    print(
+        f"MAP|400_detail_model_not_allowed|{r.error.category.value}|retryable={r.error.retryable}"
+    )
     assert r.error.category is ProviderErrorCategory.BAD_REQUEST
 
 
@@ -558,7 +581,11 @@ def test_shape_200_plan_refusal_is_booked_as_success() -> None:
 
 
 def test_injection_is_unreachable_from_production() -> None:
-    pattern = re.compile(r"tests\.certification|ScriptedAdapter|FakeAdapter|MockTransport")
+    # Import/usage forms only — docstrings that MENTION httpx.MockTransport as the
+    # documented test seam are not reachability (the adapters accept any transport).
+    pattern = re.compile(
+        r"^\s*(from|import)\s+tests\b|ScriptedAdapter|FakeAdapter|MockTransport\(", re.M
+    )
     hits = [
         str(p.relative_to(REPO))
         for d in ("apps", "core", "providers")
