@@ -1,0 +1,13 @@
+{
+ "_meta": {
+  "captured": "2026-09-03",
+  "source": "direct HTTPS probe, bearer redacted",
+  "credential_logical_id": "GSK_API_KEY",
+  "endpoint": "POST {OPENAI_BASE_URL}/chat/completions model=no-such-model-qevion",
+  "http_status": 400,
+  "tag": "[CAPTURED]"
+ },
+ "body": {
+  "detail": "Model 'no-such-model-qevion' is not allowed. See GET /v1/models for the available models."
+ }
+}

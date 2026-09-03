@@ -1,0 +1,11 @@
+{
+ "_meta": {
+  "captured": "2026-09-03 (R167-QEVION Phase 6, evidence/tasks/15_developer_transcript.log section 9)",
+  "source": "direct HTTPS probe GET https://api.groq.com/openai/v1/models, bearer redacted",
+  "credential_logical_id": "GROQ_API_KEY",
+  "http_status": 400,
+  "tag": "[CAPTURED]",
+  "note": "Groq returns HTTP 400 (not 401/403) for a restricted organisation. Before ae295f6 the adapter classified this as bad_request (request-indicting: no retry, no failover). Now INVALID_CREDENTIAL via _ACCOUNT_INDICTING_CODES."
+ },
+ "body": {"error":{"message":"Organization has been restricted. Please reach out to support if you believe this was in error.","type":"invalid_request_error","code":"organization_restricted"}}
+}

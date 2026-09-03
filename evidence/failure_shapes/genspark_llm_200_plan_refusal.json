@@ -1,0 +1,36 @@
+{
+ "_meta": {
+  "captured": "2026-09-03",
+  "source": "direct HTTPS probe from sandbox, urllib, bearer redacted",
+  "credential_logical_id": "GSK_API_KEY",
+  "endpoint": "POST {OPENAI_BASE_URL}/chat/completions",
+  "http_status": 200,
+  "response_headers_subset": {
+   "Date": "Thu, 03 Sep 2026 11:30:17 GMT",
+   "Content-Type": "application/json"
+  },
+  "tag": "[CAPTURED]",
+  "note": "HTTP 200 but no inference: assistant content is a plan refusal. Platform adapter genspark_llm would treat this as a SUCCESSFUL completion."
+ },
+ "body": {
+  "id": "chatcmpl-ce64434f-95ba-44d7-b7c9-e1d774415667",
+  "object": "chat.completion",
+  "created": 1788435017,
+  "model": "gpt-5-nano",
+  "choices": [
+   {
+    "index": 0,
+    "message": {
+     "role": "assistant",
+     "content": "Free-plan credits can't be used with the Genspark API / LLM proxy. Please visit https://www.genspark.ai/pricing to subscribe or purchase credits to use this endpoint."
+    },
+    "finish_reason": "stop"
+   }
+  ],
+  "usage": {
+   "prompt_tokens": 0,
+   "completion_tokens": 0,
+   "total_tokens": 0
+  }
+ }
+}
