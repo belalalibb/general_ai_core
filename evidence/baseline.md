@@ -32,6 +32,8 @@ Every claim is tagged per §12. Untagged = invalid.
 
 Scripted model over the REAL router/execution/gate chain (`tests/agent/world.py`). Numbers measure the runtime, not a provider.
 
+> **R167-A §7.5 annotation (2026-09-03):** every number in this file and in `baseline_before.json` / `baseline_after.json` was produced with **fixtures/mocks** — a scripted model from `tests/agent/world.py` — and therefore measures **coordination logic only** (routing, loop, tool gate, verification). It contains no live-provider reliability data. The 8/11 → 11/11 delta is a fixture-harness delta, not a production reliability delta. Live model-dependent categories remain unverified (see `evidence/degraded_before.md`, `evidence/live_closure.md`).
+
 | # | task | expected | stop_reason | outcome | note |
 |---|---|---|---|---|---|
 | 1 | simple | success | final | PASS | verified |

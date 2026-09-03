@@ -37,7 +37,8 @@ from typing import Any
 BASE = os.environ.get("BASE", "http://localhost:8000")
 TOKEN = Path(os.environ.get("TOKEN_FILE", "/tmp/ui/token")).read_text().strip()
 WS = Path(os.environ.get("WS", "/tmp/ui/ws"))
-OUT = Path(__file__).resolve().parent
+OUT = Path(os.environ.get("OUT", str(Path(__file__).resolve().parent)))
+OUT.mkdir(parents=True, exist_ok=True)
 REDACT = {"authorization", "token", "password"}
 
 

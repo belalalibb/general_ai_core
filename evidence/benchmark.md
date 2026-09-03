@@ -28,7 +28,7 @@ Selected for the benchmark (3): **coding**, **ops console**, **artifact/data**. 
 | Trace / record | ExecutionRecord with nodes, evidence ids, reasoning ids in `cost_snapshot` [OBSERVED core/agent/runtime.py agent_execution_report] | checkpoints per super-step [SOURCED persistence page] | "built-in tracing … LLM generations, tool calls, handoffs, guardrails" [SOURCED https://github.com/openai/openai-agents-python/blob/main/docs/tracing.md 2026-09-03] | request logs [UNVERIFIED-RECALL] |
 | Capability catalog with honest states | 16 closed ids × {available, inert, unavailable} + exercise endpoint [OBSERVED apps/api/capabilities.py:L58-92] | none | none | `/model/info` [UNVERIFIED-RECALL] |
 
-Honest reading: the frameworks above are libraries; Qevion is a hosted control plane. The only seam where a competitor's documented capability is clearly ahead is **run persistence/resume** (LangGraph, Agents SDK). Everything else this round is at parity-or-better *by construction claim*; only Qevion's column is measured.
+Honest reading: the frameworks above are libraries; Qevion is a hosted control plane. The only seam where a competitor's documented capability is clearly ahead is **run persistence/resume** (LangGraph, Agents SDK). For every other seam **no head-to-head was executed**: only Qevion's column is measured, the competitor columns are documentation readings. No domain in this table is LEADING or HIGHLY COMPETITIVE; the honest label for each is **UNRANKED — competitor not executed** (R167-A §7.3 downgrade, 2026-09-03; the earlier wording "parity-or-better by construction claim" is withdrawn).
 
 ## Phase 3 — gap matrix
 
