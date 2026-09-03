@@ -59,6 +59,10 @@ GROQ_BASE_URL = "https://api.groq.com/openai/v1"
 #: Groq 400 codes that indict the sampled GENERATION, not the request.
 _GENERATION_FAILURE_CODES = frozenset({"json_validate_failed", "tool_use_failed"})
 
+#: Groq error codes that indict the ACCOUNT/credential although they ride an
+#: HTTP 400 — observed live: ``organization_restricted``.
+_ACCOUNT_INDICTING_CODES = frozenset({"organization_restricted"})
+
 _GENERATION_PARAM_WHITELIST = frozenset(
     {"temperature", "top_p", "max_tokens", "max_completion_tokens", "seed", "stop"}
 )
@@ -402,7 +406,12 @@ class GroqAdapter:
                 provider_code=code or "response_format_unsupported",
                 safe_message="model does not support the requested response format",
             )
-        if status in (401, 403):
+        if status in (401, 403) or code in _ACCOUNT_INDICTING_CODES:
+            # QEVION live (2026-09-03): Groq answers HTTP 400
+            # ``organization_restricted`` when the ACCOUNT behind the key is
+            # blocked. The request is fine; the credential/account is what is
+            # indicted — route-indicting (fail over to another provider),
+            # never ``bad_request`` (which forbids failover).
             return ProviderError(
                 category=ProviderErrorCategory.INVALID_CREDENTIAL,
                 retryable=False,

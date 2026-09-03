@@ -323,6 +323,29 @@ class TestErrorNormalization:
         assert response.error.retryable is True
         assert response.error.retry_after_ms == 2000
 
+    def test_organization_restricted_400_indicts_the_account_not_the_request(self) -> None:
+        """QEVION live 2026-09-03: a blocked Groq organization answers HTTP 400
+        ``organization_restricted``. Classified as ``bad_request`` it would
+        forbid failover; the request is fine, the credential/account is not."""
+        adapter, _ = _adapter(
+            lambda req: httpx.Response(
+                400,
+                json={
+                    "error": {
+                        "code": "organization_restricted",
+                        "type": "invalid_request_error",
+                        "message": "Organization has been restricted.",
+                    }
+                },
+            )
+        )
+        response = run(adapter.generate(_generate_request()))
+        assert response.succeeded is False
+        assert response.error is not None
+        assert response.error.category is ProviderErrorCategory.INVALID_CREDENTIAL
+        assert response.error.retryable is False
+        assert response.error.provider_code == "organization_restricted"
+
     def test_content_policy_400_maps_to_content_rejected(self) -> None:
         adapter, _ = _adapter(
             lambda req: httpx.Response(
