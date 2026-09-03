@@ -876,6 +876,7 @@ def build_runtime_profile(
             remote=engineering.remote,
             commands=engineering.commands,
             grant_writes=grant_engineering_writes,
+            audit=audit,
         )
         if engineering is not None
         else None

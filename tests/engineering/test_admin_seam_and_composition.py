@@ -61,6 +61,7 @@ def _admin_surface(world: World, tmp_path: Path) -> EngineeringAdminSurface:
         remote=composed.remote,
         commands=composed.commands,
         grant_writes=grant_engineering_writes,
+        audit=world.audit,
     )
 
 

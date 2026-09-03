@@ -17,6 +17,8 @@ from uuid import UUID
 
 from pydantic import Field
 
+from core.audit.ports import AuditLogPort
+from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.contracts.engineering import EngineeringAct, EngineeringAuthorization
 from core.engineering.errors import AuthorizationRefused
@@ -50,6 +52,9 @@ class EngineeringAdminSurface:
     commands: tuple[str, ...]
     #: Composition-owned write-grant decision (deny-by-default vocabulary).
     grant_writes: Callable[[CapabilityFirewall, UUID, frozenset[str]], frozenset[str]]
+    #: R167-A D-09: a grant mutates ANOTHER tenant's policy — must-audit (20 §9
+    #: ``security_policy_changed``). None ⇒ composition did not bind audit.
+    audit: AuditLogPort | None = None
 
     def status(self, tenant_id: UUID) -> JsonObject:
         policy = self.firewall.policy_for(tenant_id)
@@ -86,10 +91,32 @@ class EngineeringAdminSurface:
             return {"revoked": False, "reason": exc.reason}
         return _ticket(revoked)
 
-    def grant(self, body: GrantRequest) -> JsonObject:
-        granted = self.grant_writes(
-            self.firewall, body.tenant_id, frozenset(str(p) for p in body.permissions)
-        )
+    def grant(
+        self,
+        body: GrantRequest,
+        *,
+        actor_id: UUID | None = None,
+        actor_tenant_id: UUID | None = None,
+    ) -> JsonObject:
+        permissions = frozenset(str(p) for p in body.permissions)
+        granted = self.grant_writes(self.firewall, body.tenant_id, permissions)
+        if self.audit is not None:
+            # Row lands under the TARGET tenant (whose policy changed); the
+            # acting admin's identity rides actor_id + actor_tenant_id.
+            self.audit.append(
+                AuditEvent(
+                    tenant_id=body.tenant_id,
+                    event_type=AuditEventType.SECURITY_POLICY_CHANGED,
+                    actor_id=actor_id,
+                    details={
+                        "surface": "engineering_grant",
+                        "actor_tenant_id": str(actor_tenant_id) if actor_tenant_id else None,
+                        "permissions": sorted(permissions),
+                        "granted_permissions": sorted(granted),
+                        "outcome": "granted",
+                    },
+                )
+            )
         return {"tenant_id": str(body.tenant_id), "granted_permissions": sorted(granted)}
 
 

@@ -1469,7 +1469,9 @@ def create_admin_router(
             if isinstance(admitted, JSONResponse):
                 return admitted
             try:
-                return _json(eng.grant(body))
+                return _json(
+                    eng.grant(body, actor_id=admitted.user_id, actor_tenant_id=admitted.tenant_id)
+                )
             except ValueError as exc:
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,

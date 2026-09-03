@@ -1,0 +1,7 @@
+E       AssertionError: assert 0 == (0 + 1)
+E        +  where 0 = count(UUID('28c9c56f-d949-457d-8ac0-04001349c42e'))
+E        +    where count = InMemoryAuditLog(events=0).count
+E        +      where InMemoryAuditLog(events=0) = <tests.api.test_admin_api.World object at 0x7f9afea6dbe0>.audit
+FAILED tests/certification/test_r167a_admin_grant_audit.py::test_grant_to_foreign_tenant_is_audited_with_actor_target_and_outcome
+1 failed, 1 passed in 1.82s
+exit=1
