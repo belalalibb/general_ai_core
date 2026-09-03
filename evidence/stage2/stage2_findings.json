@@ -1,0 +1,402 @@
+[
+  {
+    "probe": "P0-1 by-id",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops GET /v1/executions/a7faaf05-6a17-47a8-b415-19c73534d027 -> 404",
+    "expected": "403/404 (foreign tenant indistinguishable from absent)"
+  },
+  {
+    "probe": "P0-1 events",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops GET /v1/executions/a7faaf05-6a17-47a8-b415-19c73534d027/events -> 404",
+    "expected": "403/404 (foreign tenant indistinguishable from absent)"
+  },
+  {
+    "probe": "P0-1 trace",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops GET /v1/agent/executions/a7faaf05-6a17-47a8-b415-19c73534d027/trace -> 404",
+    "expected": "403/404 (foreign tenant indistinguishable from absent)"
+  },
+  {
+    "probe": "P0-1 diagnosis",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops GET /v1/agent/executions/a7faaf05-6a17-47a8-b415-19c73534d027/diagnosis -> 404",
+    "expected": "403/404 (foreign tenant indistinguishable from absent)"
+  },
+  {
+    "probe": "P0-1 list",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops GET /v1/executions contains dev id: False",
+    "expected": "not listed"
+  },
+  {
+    "probe": "P0-1b workspace read",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev GET /v1/workspaces/492ae7f9-0e0a-4fc3-9b30-51162cb0e886 -> 404",
+    "expected": "403/404"
+  },
+  {
+    "probe": "P0-1b workspace delete",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev DELETE /v1/workspaces/492ae7f9-0e0a-4fc3-9b30-51162cb0e886 -> 404",
+    "expected": "403/404"
+  },
+  {
+    "probe": "P0-1b workspace survives",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops GET /v1/workspaces/492ae7f9-0e0a-4fc3-9b30-51162cb0e886 after foreign delete -> 200",
+    "expected": "200 (object intact)"
+  },
+  {
+    "probe": "P0-1b project read",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev GET /v1/projects/dc4e3945-9252-42d7-b99d-b4d35b3ebab4 -> 404",
+    "expected": "403/404"
+  },
+  {
+    "probe": "P0-1b project delete",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev DELETE /v1/projects/dc4e3945-9252-42d7-b99d-b4d35b3ebab4 -> 404",
+    "expected": "403/404"
+  },
+  {
+    "probe": "P0-1b project survives",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops GET /v1/projects/dc4e3945-9252-42d7-b99d-b4d35b3ebab4 after foreign delete -> 200",
+    "expected": "200 (object intact)"
+  },
+  {
+    "probe": "P0-1b workspace list",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev workspace list contains ops ws: False",
+    "expected": "not listed"
+  },
+  {
+    "probe": "P0-1b project list",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev project list contains ops project: False",
+    "expected": "not listed"
+  },
+  {
+    "probe": "P0-1b project into foreign workspace",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev POST /v1/projects workspace_id=<ops> -> 404 {\"error\": {\"code\": \"validation_error\", \"message\": \"Unknown workspace id.\", \"retryable\": false, \"details\": {\"workspace_id",
+    "expected": "denied"
+  },
+  {
+    "probe": "P0-1b webhook delete",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev DELETE /v1/webhooks/62e73ebe-8b2e-474f-9fc2-73ef5ad84ec2 -> 404",
+    "expected": "403/404"
+  },
+  {
+    "probe": "P0-1b webhook list",
+    "area": "tenant isolation",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev webhook list contains ops subscription: False",
+    "expected": "not listed"
+  },
+  {
+    "probe": "P0-2 project_id",
+    "area": "authz composition",
+    "verdict": "DEFECT",
+    "severity": "S1",
+    "observed": "dev execute with ops project_id -> 200 {\"execution_id\": \"d7b0fa1b-89d9-4b9c-bdda-d6678c481291\", \"status\": \"succeeded\", \"result\": {\"type\": \"message\", \"content\": \"Free-plan credits can't be used with t",
+    "expected": "denied (403/404/422), never executed under foreign project"
+  },
+  {
+    "probe": "P0-2 conversation_id",
+    "area": "authz composition",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops reuse of dev conversation_id -> 200; PINEAPPLE in body: False",
+    "expected": "no cross-tenant history reuse"
+  },
+  {
+    "probe": "P0-2 unknown tools",
+    "area": "authz composition",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 422",
+    "expected": "named denial/validation, no execution"
+  },
+  {
+    "probe": "P0-4 admin views",
+    "area": "credential containment",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "GSK_API_KEY value present in admin responses: False",
+    "expected": "never present"
+  },
+  {
+    "probe": "P0-4 error surfaces",
+    "area": "credential containment",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "GSK_API_KEY value present in failure/trace/diagnosis/events: False",
+    "expected": "never present"
+  },
+  {
+    "probe": "P0-4 server log",
+    "area": "credential containment",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "GSK_API_KEY value present in server.log: False (log bytes=4427)",
+    "expected": "never present"
+  },
+  {
+    "probe": "P0-5 failed-run billing",
+    "area": "atomicity",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "status 503; units delta on failed execution = 0.0",
+    "expected": "0 units for a run that never succeeded"
+  },
+  {
+    "probe": "P1-1 same id",
+    "area": "idempotency",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ids d125ed39-7c87-4cc7-bade-7760d4851761 / d125ed39-7c87-4cc7-bade-7760d4851761",
+    "expected": "identical execution id on replay"
+  },
+  {
+    "probe": "P1-1 single charge",
+    "area": "idempotency",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "units delta across two calls = 1.0",
+    "expected": "<= 1 billable unit"
+  },
+  {
+    "probe": "P1-1 key scoped per tenant",
+    "area": "idempotency",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops with same key -> id ce9637de-3ee6-4c12-9069-697ac1e607a9 (dev id d125ed39-7c87-4cc7-bade-7760d4851761)",
+    "expected": "distinct execution; key is tenant-scoped"
+  },
+  {
+    "probe": "P1-3 attribution",
+    "area": "quota/cost",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "ops units 2.0->2.0; dev units 4.0->5.0",
+    "expected": "only the executing tenant is charged"
+  },
+  {
+    "probe": "P1-4 no 5xx",
+    "area": "pressure",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "status codes [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200]",
+    "expected": "no unhandled 5xx (502/503 = honest provider failure)"
+  },
+  {
+    "probe": "P1-4 distinct ids",
+    "area": "pressure",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "12 ids, 12 distinct",
+    "expected": "each request its own execution"
+  },
+  {
+    "probe": "P1-4 ledger",
+    "area": "pressure",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "units delta 12.0 vs successful 12",
+    "expected": "charged <= successes"
+  },
+  {
+    "probe": "P2-1 anon read",
+    "area": "auth lifecycle",
+    "verdict": "DEFECT",
+    "severity": "S2",
+    "observed": "anon GET /v1/usage -> 200",
+    "expected": "401"
+  },
+  {
+    "probe": "P2-1 anon execute",
+    "area": "auth lifecycle",
+    "verdict": "DEFECT",
+    "severity": "S2",
+    "observed": "anon POST /v1/execute -> 200 {\"execution_id\": \"04e782e4-9f47-41df-a698-a2e1fd002da0\", \"status\": \"succeeded\", \"result\": {\"type\": \"message\", \"content\":",
+    "expected": "401 (no work, no state for anonymous callers)"
+  },
+  {
+    "probe": "P2-1 malformed",
+    "area": "auth lifecycle",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "malformed bearer -> 401",
+    "expected": "401"
+  },
+  {
+    "probe": "P2-1 logout revokes",
+    "area": "auth lifecycle",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "session after logout -> 401",
+    "expected": "401"
+  },
+  {
+    "probe": "P2-2 empty ask",
+    "area": "input robustness",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 422",
+    "expected": "4xx validation (or honest 200/502/503), never 500"
+  },
+  {
+    "probe": "P2-2 ask wrong type",
+    "area": "input robustness",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 422",
+    "expected": "4xx validation (or honest 200/502/503), never 500"
+  },
+  {
+    "probe": "P2-2 huge ask",
+    "area": "input robustness",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 422",
+    "expected": "4xx validation (or honest 200/502/503), never 500"
+  },
+  {
+    "probe": "P2-2 unknown policy type",
+    "area": "input robustness",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 422",
+    "expected": "4xx validation (or honest 200/502/503), never 500"
+  },
+  {
+    "probe": "P2-2 bad uuid project",
+    "area": "input robustness",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 200",
+    "expected": "4xx validation (or honest 200/502/503), never 500"
+  },
+  {
+    "probe": "P2-2 nul bytes",
+    "area": "input robustness",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 200",
+    "expected": "4xx validation (or honest 200/502/503), never 500"
+  },
+  {
+    "probe": "P2-2 malformed json",
+    "area": "input robustness",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 422",
+    "expected": "400/422"
+  },
+  {
+    "probe": "\u00a710 capability visibility server-side",
+    "area": "two-app fit",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev GET /v1/admin/capabilities -> 403",
+    "expected": "403 (server enforces; not a client hide)"
+  },
+  {
+    "probe": "\u00a710 denial via other path",
+    "area": "two-app fit",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "-> 422",
+    "expected": "named denial; no admin data through agent path"
+  },
+  {
+    "probe": "\u00a710 audit identity",
+    "area": "two-app fit",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "1 rows visible to ops; every row carries actor_id+tenant_id: True; types=['login']",
+    "expected": "audit rows name the acting identity"
+  },
+  {
+    "probe": "\u00a710 audit coverage",
+    "area": "two-app fit",
+    "verdict": "DEFECT",
+    "severity": "S3",
+    "observed": "event types after ~40 executions, denials and admin reads: ['login']",
+    "expected": "denials (permission_denied / cross_tenant_access_denied) and tenant activity leave audit rows"
+  },
+  {
+    "probe": "\u00a717 non-admin denied before validation",
+    "area": "admin control-plane",
+    "verdict": "DEFECT",
+    "severity": "S3",
+    "observed": "16/64 admin POST routes return 422 (body validation) to a NON-ADMIN before the admin gate: ['/v1/admin/changes', '/v1/admin/changes/propose', '/v1/admin/learning/samples', '/v1/admin/learning/samples/{sample_id}/evaluate', '/v1/admin/learning/samples/{sample_id}/sanitize', '/v1/admin/learning/capability-retest', '/v1/admin/learning/ask', '/v1/admin/scenarios', '/v1/admin/context-lab/validate', '/v1/admin/source-changes/snapshots', '/v1/admin/source-changes', '/v1/admin/source-changes/{proposal_id}/approve', '/v1/admin/source-changes/{proposal_id}/reject', '/v1/admin/engineering/authorizations', '/v1/admin/engineering/grants', '/v1/admin/skills/import']",
+    "expected": "403 first on every /v1/admin route regardless of body"
+  },
+  {
+    "probe": "\u00a717 non-admin never admitted",
+    "area": "admin control-plane",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "non-403/422 statuses for dev on admin routes: []",
+    "expected": "no 2xx/404/500 for non-admin"
+  },
+  {
+    "probe": "\u00a717 valid-body mutation by non-admin",
+    "area": "admin control-plane",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "dev POST engineering/grants (valid body) -> 403",
+    "expected": "403"
+  },
+  {
+    "probe": "\u00a717 anon admin",
+    "area": "admin control-plane",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "anon GET /v1/admin/system -> 403",
+    "expected": "401/403"
+  },
+  {
+    "probe": "\u00a717 mutation audited",
+    "area": "admin control-plane",
+    "verdict": "HELD",
+    "severity": "-",
+    "observed": "grant status 422; audit total 1->1",
+    "expected": "a successful admin mutation lands in audit with actor/app/target/outcome"
+  }
+]
