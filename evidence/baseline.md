@@ -50,5 +50,22 @@ Summary [MEASURED]: **pass 8 / fail 3**; verified completions 6/6 (0 unverified 
 
 Weakest measured link: **RECOVER at the reasoning seam** (rows 5–7). Second: **partial-success resumability** (row 10). Verification is already stronger than it looks (row 9 + `verify_result`).
 
-## Not executed this round (honest)
-- Phase 2 domain discovery + competitor benchmark, Phase 3 gap matrix, Phase 4 selection, Phase 5 implementation, Phase 6 §11 logs, §15 transcript — session budget exhausted at the checkpoint below. Nothing was fabricated to fill them.
+## Measured after Changes 1–2 — `python3 evidence/baseline_tasks.py` → `evidence/baseline_after.json`
+
+Same harness, same rows, HEAD `cf37e69`. [MEASURED before → after]
+
+| # | task | before | after | stop_reason before → after | model_calls | prompt_chars |
+|---|---|---|---|---|---|---|
+| 5 | provider transient mid-run | FAIL | **PASS** | propose_failed → final | 2 → 3 | 2037 → 3329 |
+| 6 | provider hard 400 mid-run, backup exists | FAIL | **PASS** | propose_failed → final | 2 → 3 | 2037 → 3318 |
+| 7 | persistent outage, backup exists | FAIL | **PASS** | propose_failed → final (backup provider used via same_model_different_provider) | 2 → 2 | 2037 → 2037 |
+| 1–4, 8–11 | unchanged | PASS | PASS | identical | identical | identical |
+
+Summary: **pass 8/11 → 11/11**; verified completions 6 → 9 (still 0 unverified successes); model calls 28 → 30 (+2 = exactly one re-proposal per recovered fault in rows 5–6; row 7 recovers on the failover route with **no** extra model call); prompt chars 34 139 → 36 712 (+7.5%, all in rows 5–6).
+
+Cost of the change [MEASURED]: no amplification on healthy rows (rows 1–4, 8–11 byte-identical). Bound: `DEFAULT_MAX_PROPOSE_FAILURES=2` consecutive faults, each fault consumes one `max_steps` slot [OBSERVED code:core/execution/loop.py]. Two consecutive faults still end the run as `propose_failed` [VERIFIED tests/agent/test_runtime.py::test_provider_failure_is_propose_failed_naming_category_and_code].
+
+Row 10 (`resumable_primitive_exists=False`) intentionally unchanged — see Phase 4 rejected list in `evidence/benchmark.md`.
+
+## Not executed
+- Pending sections are tracked in `evidence/benchmark.md` and `evidence/tasks/`. Nothing was fabricated to fill them.
