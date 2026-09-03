@@ -1,0 +1,13 @@
+# 07_tool_failure_recovery — live transcript 2026-09-03T09:30:04Z
+# base=http://localhost:8000
+
+> POST /v1/execute   (auth=bearer)
+> {"ask": "First read the file does_not_exist.txt with ws_read. It will fail. Then read calc.py instead and report its first line. Do not stop at the first error.", "execution_policy": {"strategy": "agent"}, "tools": {"allowed": ["ws_read"]}}
+< HTTP 502  96 ms
+< {"error": {"code": "execution_failed", "message": "Execution failed: agent stopped (propose_failed).", "retryable": false, "details": {"execution_id": "60b5427a-7e4f-427e-8f61-5a5ae0bbfddd", "agent": {"stop_reason": "propose_failed", "node": "plan-2", "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+> GET /v1/agent/executions/60b5427a-7e4f-427e-8f61-5a5ae0bbfddd/trace   (auth=bearer)
+< HTTP 200  4 ms
+< {"execution_id": "60b5427a-7e4f-427e-8f61-5a5ae0bbfddd", "status": "failed", "strategy": "agent", "created_at": "2026-09-03T09:30:04.871905Z", "completed_at": "2026-09-03T09:30:04.962528Z", "stages": [{"node_key": "plan-1", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}, {"node_key": "plan-2", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}], "as_recorded": true}
+
+VERDICT: FAIL — status=failed failed_stages=['plan-1', 'plan-2'] acts=[]

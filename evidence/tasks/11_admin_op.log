@@ -1,0 +1,25 @@
+# 11_admin_op — live transcript 2026-09-03T09:30:05Z
+# base=http://localhost:8000
+
+> GET /v1/admin/capabilities   (auth=bearer)
+< HTTP 200  4 ms
+< {"scope": "process", "capabilities": [{"id": "admin.control_plane", "state": "available", "evidence": "admin seam -> /v1/admin/* (T-IMPL-032)"}, {"id": "auth.sessions", "state": "available", "evidence": "auth seam -> /v1/auth/* (AA-1 IDN-1)"}, {"id": "context.composition", "state": "available", "evidence": "composer seam; core/context (13 §5)"}, {"id": "conversations.persistence", "state": "available", "evidence": "conversations seam; core/memory/ports.py"}, {"id": "execute.async", "state": "available", "evidence": "outbox seam -> 202 path (V2); core/runtime/outbox.py"}, {"id": "execute.sync", "state": "available", "evidence": "POST /v1/execute (always mounted)"}, {"id": "execute.token_streaming", "state": "unavailable", "evidence": "no streaming provider adapters exist (R115/V6-2 record)"}, {"id": "executions.progress_sse", "state": "available", "evidence": "sse seam -> GET /v1/executions/{id}/events (V6-2)"}, {"id": "health.liveness", "state": "available", "evidence": "healthz seam -> GET /healthz (SYS-1)"}, {"id": "learning.lifecycle", "state": "available", "evidence": "learning lifecycle seam -> /v1/admin/learning/* (R158; core/learning/lifecycle.py)"}, {"id": "models.listing", "state": "available", "evidence": "models+bindings seams -> GET /v1/models (10 §6)"}, {"id": "rate_limits.execute", "state": "inert", "evidence": "rate_limits seam + configured limit (T-IMPL-070)"}, {"id": "skills.listing", "state": "available", "evidence": "GET /v1/skills over the skill registry"}, {"id": "usage.reporting", "state": "available", "evidence": "usage seam -> GET /v1/usage (10 §8)"}, {"id": "webhooks.delivery_staging", "state": "available", "evidence": "webhooks+outbox seams -> execution.queued staging (V6-3)"}, {"id": "webhooks.registration", "state": "available", "evidence": "webhooks seam -> POST /v1/webhooks (41 §21)"}]}
+
+> GET /v1/admin/capabilities/exercisable   (auth=bearer)
+< HTTP 200  3 ms
+< {"exercisable": ["execute.sync", "models.listing", "skills.listing", "usage.reporting"]}
+
+> POST /v1/admin/capabilities/execute.sync/exercise   (auth=bearer)
+> {}
+< HTTP 200  50 ms
+< {"capability_id": "execute.sync", "result": {"exercised": true, "evidence": {"kind": "execution", "execution_id": "85722b23-bc20-4914-ad9c-4dd8e96657ad", "status": "failed"}}}
+
+> GET /v1/admin/system   (auth=bearer)
+< HTTP 200  4 ms
+< {"profile": "in-memory", "identity_mode": "hybrid", "provider_keys": ["groq"], "admin_emails_configured": 1, "scope": "process"}
+
+> GET /v1/admin/audit?limit=3   (auth=bearer)
+< HTTP 200  5 ms
+< {"events": [{"id": "0bd66220-583c-405e-8a6f-a9e8075f956b", "tenant_id": "44a86fc0-ac3e-450d-938e-9dbfe799b87e", "event_type": "login", "actor_id": "9406a03d-e92c-46a3-9c7b-dddb8472b706", "occurred_at": "2026-09-03T09:29:43.478230Z", "details": {}}], "total_recorded": 1}
+
+VERDICT: PASS — capabilities=200 exercisable=200 exercise(execute.sync)=200 exercised=None system=200 audit=200

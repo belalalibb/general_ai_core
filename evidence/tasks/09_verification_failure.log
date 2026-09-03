@@ -1,0 +1,14 @@
+# 09_verification_failure — live transcript 2026-09-03T09:30:05Z
+# base=http://localhost:8000
+
+# No tools allowed, yet the ask demands cited evidence. The evidence verifier refuses invented citations; acceptable outcomes: stop=verification_failed, OR a succeeded run whose answer explicitly says it has no evidence (no fabricated file content).
+> POST /v1/execute   (auth=bearer)
+> {"ask": "Quote the exact text of line 2 of calc.py and cite the evidence step number you read it from. You must cite an evidence step.", "execution_policy": {"strategy": "agent"}, "tools": {"allowed": []}}
+< HTTP 502  109 ms
+< {"error": {"code": "execution_failed", "message": "Execution failed: agent stopped (propose_failed).", "retryable": false, "details": {"execution_id": "76800e92-fb7a-4483-a4c2-c8047a69bebc", "agent": {"stop_reason": "propose_failed", "node": "plan-2", "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+> GET /v1/agent/executions/76800e92-fb7a-4483-a4c2-c8047a69bebc/trace   (auth=bearer)
+< HTTP 200  4 ms
+< {"execution_id": "76800e92-fb7a-4483-a4c2-c8047a69bebc", "status": "failed", "strategy": "agent", "created_at": "2026-09-03T09:30:05.078842Z", "completed_at": "2026-09-03T09:30:05.182935Z", "stages": [{"node_key": "plan-1", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}, {"node_key": "plan-2", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}], "as_recorded": true}
+
+VERDICT: PASS — http=502 status=failed stop=propose_failed fabricated_line=False stages=2

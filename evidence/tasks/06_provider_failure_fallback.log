@@ -1,0 +1,14 @@
+# 06_provider_failure_fallback — live transcript 2026-09-03T09:30:04Z
+# base=http://localhost:8000
+
+# Induce a REAL provider failure: explicit model allam-2-7b on Groq rejects constrained decoding (400 param=response_format → unsupported_capability, route-indicting). With fallback_scope=max_escalation the run must complete on another model; the trace must show the failed attempt AND the successful one.
+> POST /v1/execute   (auth=bearer)
+> {"ask": "Reply with the single word FALLBACK.", "execution_policy": {"strategy": "agent"}, "tools": {"allowed": []}, "model_policy": {"type": "explicit_model", "model_id": "allam-2-7b", "allow_fallback": true, "fallback_scope": "max_escalation"}}
+< HTTP 502  785 ms
+< {"error": {"code": "execution_failed", "message": "Execution failed: agent stopped (propose_failed).", "retryable": false, "details": {"execution_id": "ffcd9e1a-ece4-41b3-a5de-2a264276a4bb", "agent": {"stop_reason": "propose_failed", "node": "plan-2", "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+> GET /v1/agent/executions/ffcd9e1a-ece4-41b3-a5de-2a264276a4bb/trace   (auth=bearer)
+< HTTP 200  5 ms
+< {"execution_id": "ffcd9e1a-ece4-41b3-a5de-2a264276a4bb", "status": "failed", "strategy": "agent", "created_at": "2026-09-03T09:30:04.079295Z", "completed_at": "2026-09-03T09:30:04.859477Z", "stages": [{"node_key": "plan-1", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}, {"node_key": "plan-2", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}], "as_recorded": true}
+
+VERDICT: FAIL — status=failed attempts_by_candidate={}

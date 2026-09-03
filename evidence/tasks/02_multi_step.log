@@ -1,0 +1,13 @@
+# 02_multi_step — live transcript 2026-09-03T09:30:03Z
+# base=http://localhost:8000
+
+> POST /v1/execute   (auth=bearer)
+> {"ask": "Read calc.py and then read test_calc.py in the workspace. Then answer in one sentence: what does test_add expect and why does calc.add fail it? Cite the evidence steps you read.", "execution_policy": {"strategy": "agent"}, "tools": {"allowed": ["ws_read", "ws_list"]}}
+< HTTP 502  94 ms
+< {"error": {"code": "execution_failed", "message": "Execution failed: agent stopped (propose_failed).", "retryable": false, "details": {"execution_id": "40a1f710-44da-43a1-b380-540de340e29e", "agent": {"stop_reason": "propose_failed", "node": "plan-2", "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+> GET /v1/agent/executions/40a1f710-44da-43a1-b380-540de340e29e/trace   (auth=bearer)
+< HTTP 200  73 ms
+< {"execution_id": "40a1f710-44da-43a1-b380-540de340e29e", "status": "failed", "strategy": "agent", "created_at": "2026-09-03T09:30:03.649028Z", "completed_at": "2026-09-03T09:30:03.737149Z", "stages": [{"node_key": "plan-1", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}, {"node_key": "plan-2", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}], "as_recorded": true}
+
+VERDICT: FAIL — status=failed acts=[] stages=2

@@ -1,0 +1,14 @@
+# 10_partial_success — live transcript 2026-09-03T09:30:05Z
+# base=http://localhost:8000
+
+# Budget max_steps=2 for a ≥4-step task. Expected: NOT reported as success; stop=max_steps_exceeded; completed steps preserved in the trace/record.
+> POST /v1/execute   (auth=bearer)
+> {"ask": "Read calc.py, then read test_calc.py, then list the workspace root, then answer with the number of files. Do every step; do not skip.", "execution_policy": {"strategy": "agent", "max_steps": 2}, "tools": {"allowed": ["ws_read", "ws_list"]}}
+< HTTP 502  95 ms
+< {"error": {"code": "execution_failed", "message": "Execution failed: agent stopped (propose_failed).", "retryable": false, "details": {"execution_id": "d3d1e257-7c37-4f55-a5e3-8a5fc72d38e9", "agent": {"stop_reason": "propose_failed", "node": "plan-2", "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+> GET /v1/agent/executions/d3d1e257-7c37-4f55-a5e3-8a5fc72d38e9/trace   (auth=bearer)
+< HTTP 200  4 ms
+< {"execution_id": "d3d1e257-7c37-4f55-a5e3-8a5fc72d38e9", "status": "failed", "strategy": "agent", "created_at": "2026-09-03T09:30:05.194038Z", "completed_at": "2026-09-03T09:30:05.284504Z", "stages": [{"node_key": "plan-1", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}, {"node_key": "plan-2", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}], "as_recorded": true}
+
+VERDICT: FAIL — http=502 status=failed stop=propose_failed preserved_succeeded_stages=[]

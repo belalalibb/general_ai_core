@@ -1,0 +1,90 @@
+# §15 developer transcript — REAL HTTP against python3 -m apps.main (Groq-bound), 2026-09-03T09:30:48Z
+# every field below exists in the backend response; nothing is invented. Bearer redacted.
+
+## 1 auth (register/verify/login already done via /tmp/ui/identity.sh; token in hand)
+>>> GET /v1/auth/session
+<<< HTTP 200 0.004033s
+{"user_id":"9406a03d-e92c-46a3-9c7b-dddb8472b706","tenant_id":"44a86fc0-ac3e-450d-938e-9dbfe799b87e","email":"ops@example.com","is_admin":true}
+
+## 2 tenant / system
+>>> GET /v1/admin/system
+<<< HTTP 200 0.003940s
+{"profile":"in-memory","identity_mode":"hybrid","provider_keys":["groq"],"admin_emails_configured":1,"scope":"process"}
+
+## 3 discover capabilities (L1 catalog) and tools
+>>> GET /v1/admin/capabilities
+<<< HTTP 200 0.003338s
+{"scope":"process","capabilities":[{"id":"admin.control_plane","state":"available","evidence":"admin seam -> /v1/admin/* (T-IMPL-032)"},{"id":"auth.sessions","state":"available","evidence":"auth seam -> /v1/auth/* (AA-1 IDN-1)"},{"id":"context.composition","state":"available","evidence":"composer seam; core/context (13 §5)"},{"id":"conversations.persistence","state":"available","evidence":"conversations seam; core/memory/ports.py"},{"id":"execute.async","state":"available","evidence":"outbox seam -> 202 path (V2); core/runtime/outbox.py"},{"id":"execute.sync","state":"available","evidence":"POST /v1/execute (always mounted)"},{"id":"execute.token_streaming","state":"unavailable","evidence":"no streaming provider adapters exist (R115/V6-2 record)"},{"id":"executions.progress_sse","state":"available","evidence":"sse seam -> GET /v1/executions/{id}/events (V6-2)"},{"id":"health.liveness","state":"available","evidence":"healthz seam -> GET /healthz (SYS-1)"},{"id":"learning.lifecycle","state":"available","evidence":"learning lifecycle seam -> /v1/admin/learning/* (R158; core/learning/lifecycle.py)"},{"id":"models.listing","state":"available","evidence":"models+bindings seams -> GET /v1/models (10 §6)"},{"id":"rate_limits.execute","state":"inert","evidence":"rate_limits seam + configured limit (T-IMPL-070)"},{"id":"skills.listing","state":"available","evidence":"GET /v1/skills ove
+
+>>> GET /v1/admin/capabilities/exercisable
+<<< HTTP 200 0.003478s
+{"exercisable":["execute.sync","models.listing","skills.listing","usage.reporting"]}
+
+>>> GET /v1/agent-tools
+<<< HTTP 200 0.003287s
+{"strategy":"agent","max_steps":8,"tools":[{"name":"git_branches","description":"List local branches.","arguments":{},"permission":"git.read","risk_level":"low"},{"name":"git_checkout","description":"Checkout (optionally create) a branch (requires authorization).","arguments":{"branch":"string","create":"boolean (optional)","authorization_id":"string (UUID of an Admin-issued authorization, exactly as given in the task; NEVER invent or guess one — omit the key when none was given and the platform will answer with the refusal)"},"permission":"git.write","risk_level":"medium"},{"name":"git_commit","description":"Stage and commit (requires authorization).","arguments":{"message":"string","add_all":"boolean (default true)","authorization_id":"string (UUID of an Admin-issued authorization, exactly as given in the task; NEVER invent or guess one — omit the key when none was given and the platform will answer with the refusal)"},"permission":"git.write","risk_level":"medium"},{"name":"git_compare","description":"Diff between two refs (base...head).","arguments":{"base":"string","head":"string"},"permission":"git.read","risk_level":"low"},{"name":"git_diff","description":"Diff of the working tree (or against a ref / staged).","arguments":{"ref":"string (optional)","staged":"boolean (optional)"},"permission":"git.read","risk_level":"low"},{"name":"git_log","description":"Recent commi
+
+## 4 workspace (engineering status: root, allowed commands, grants, tickets)
+>>> GET /v1/admin/engineering/status
+<<< HTTP 200 0.004087s
+{"configured":true,"workspace_root":"/tmp/ui/ws","remote":"origin","commands":["python3","pytest"],"read_permissions":["git.read","workspace.read"],"write_permissions":["git.write","workspace.exec","workspace.write"],"tenant_granted":["git.read","source.read","workspace.read"],"acts":["fs.write","cmd.run","git.commit","git.push","git.merge"],"authorizations":[]}
+
+## 5 inspect models/providers the router can see
+>>> GET /v1/models
+<<< HTTP 200 0.003562s
+{"models":[{"id":"2a344d2d-d663-406f-91dd-0f00e118fe20","name":"allam-2-7b","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"},{"id":"19bae70e-9bbf-4a82-84da-d021c301f3db","name":"openai/gpt-oss-120b","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"},{"id":"6fdca48f-5c09-47b6-bd33-e9ff85d98e46","name":"openai/gpt-oss-20b","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"},{"id":"be421ec8-bc95-4904-8d18-edb34b0d57b8","name":"qwen/qwen3.6-27b","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"},{"id":"aaa2c0af-7d85-4dcd-b364-4ba41335e6cb","name":"qwen/qwen3.8-27b","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]}
+
+>>> GET /v1/admin/providers
+<<< HTTP 200 0.003894s
+{"providers":[{"id":"cd1f444f-5969-45c8-8b74-472022e7358a","provider_key":"groq","display_name":"Groq","status":"active","auth_types":["api_key"],"supports_account_pool":false,"is_template":false,"is_routable":true}]}
+
+## 6 read/act/observe — agent run (model-dependent)
+>>> POST /v1/execute
+>>> body: {"ask":"Read calc.py and say which line is wrong.","execution_policy":{"strategy":"agent"},"tools":{"allowed":["ws_read"]}}
+<<< HTTP 502 0.116477s
+{"error":{"code":"execution_failed","message":"Execution failed: agent stopped (propose_failed).","retryable":false,"details":{"execution_id":"989e24f9-e7dd-4f80-a8f8-e20223256a74","agent":{"stop_reason":"propose_failed","node":"plan-2","error":{"reason":"propose_failed","detail":"ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+## 7 observe the record, trace and diagnosis of that run (L2/L3 drill-down)
+>>> GET /v1/executions/989e24f9-e7dd-4f80-a8f8-e20223256a74
+<<< HTTP 200 0.003682s
+{"execution_id":"989e24f9-e7dd-4f80-a8f8-e20223256a74","status":"failed","progress":{"current_stage":"plan-2","percent":100},"error":{"code":"execution_failed","message":"Execution failed: agent stopped (propose_failed).","retryable":false,"details":{"execution_id":"989e24f9-e7dd-4f80-a8f8-e20223256a74","agent":{"stop_reason":"propose_failed","node":"plan-2","error":{"reason":"propose_failed","detail":"ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+>>> GET /v1/agent/executions/989e24f9-e7dd-4f80-a8f8-e20223256a74/trace
+<<< HTTP 200 0.004017s
+{"execution_id":"989e24f9-e7dd-4f80-a8f8-e20223256a74","status":"failed","strategy":"agent","created_at":"2026-09-03T09:30:48.358052Z","completed_at":"2026-09-03T09:30:48.469657Z","stages":[{"node_key":"plan-1","status":"failed","attempts":[],"error":{"reason":"propose_failed","detail":"ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}},{"node_key":"plan-2","status":"failed","attempts":[],"error":{"reason":"propose_failed","detail":"ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}],"as_recorded":true}
+
+>>> GET /v1/agent/executions/989e24f9-e7dd-4f80-a8f8-e20223256a74/diagnosis
+<<< HTTP 200 0.004814s
+{"execution_id":"989e24f9-e7dd-4f80-a8f8-e20223256a74","tier":"undetermined","claims":[{"text":"execution did not succeed but no provider error was recorded","evidence":[{"kind":"execution","ref":"989e24f9-e7dd-4f80-a8f8-e20223256a74"}]}],"missing_evidence":["no failed AttemptRecord with a recorded ProviderError"]}
+
+## 8 verify via audit
+>>> GET /v1/admin/audit?limit=3
+<<< HTTP 200 0.004128s
+{"events":[{"id":"0bd66220-583c-405e-8a6f-a9e8075f956b","tenant_id":"44a86fc0-ac3e-450d-938e-9dbfe799b87e","event_type":"login","actor_id":"9406a03d-e92c-46a3-9c7b-dddb8472b706","occurred_at":"2026-09-03T09:29:43.478230Z","details":{}}],"total_recorded":1}
+
+## 9 induced failure — this IS the live failure: the provider account behind the key is restricted. Direct probe of the provider for attribution (bearer redacted):
+>>> GET https://api.groq.com/openai/v1/models
+{"error":{"message":"Organization has been restricted. Please reach out to support if you believe this was in error.","type":"invalid_request_error","code":"organization_restricted"}}
+
+
+## 10 continue — re-issue with explicit other model + widest fallback: only ONE provider is bound, so the run must fail honestly and fast, never hang
+>>> POST /v1/execute
+>>> body: {"ask":"Say OK.","model_policy":{"type":"explicit_model","model_id":"openai/gpt-oss-20b","allow_fallback":true,"fallback_scope":"max_escalation"}}
+<<< HTTP 502 0.246241s
+{"error":{"code":"execution_failed","message":"provider rejected the credential","retryable":false,"details":{"execution_id":"80381bf4-6128-45bd-b0df-5761bfb5786d","provider_error_category":"invalid_credential"}}}
+
+## 11 exercise a capability (L3 action) — admin op that needs no model; exercisable list from step 3 names which ids accept this
+>>> GET /v1/admin/capabilities/exercisable
+<<< HTTP 200 0.004100s
+{"exercisable":["execute.sync","models.listing","skills.listing","usage.reporting"]}
+
+# (auth.sessions is NOT in the exercisable list — the server answered 404 to it earlier; that 404 is correct behaviour and is kept out of the flow. Using an id the server itself declared exercisable:)
+>>> POST /v1/admin/capabilities/models.listing/exercise
+>>> body: {}
+<<< HTTP 200 0.003684s
+{"capability_id":"models.listing","result":{"exercised":true,"evidence":{"kind":"system","active_model_count":5,"source":"ModelRegistry.active_models"}}}
+
+>>> GET /v1/executions?limit=3
+<<< HTTP 200 0.004926s
+{"executions":[{"execution_id":"80381bf4-6128-45bd-b0df-5761bfb5786d","status":"failed","initiated_by":"9406a03d-e92c-46a3-9c7b-dddb8472b706","created_at":"2026-09-03T09:31:14.564191+00:00","progress":{"current_stage":"single","percent":100}},{"execution_id":"3d41f8b0-8b56-469d-9807-6bb09aee4a64","status":"failed","initiated_by":"9406a03d-e92c-46a3-9c7b-dddb8472b706","created_at":"2026-09-03T09:30:48.810565+00:00","progress":{"current_stage":"single","percent":100}},{"execution_id":"8562235a-dd36-436c-bd56-c583247514ba","status":"failed","initiated_by":"9406a03d-e92c-46a3-9c7b-dddb8472b706","created_at":"2026-09-03T09:30:48.427579+00:00","progress":{"current_stage":"single","percent":100}}]}
+

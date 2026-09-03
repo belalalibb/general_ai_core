@@ -42,3 +42,6 @@ __pycache__/
 .venv/
 .aa_backups/
 *.egg-info/
+
+# QEVION evidence transcripts are tracked (contract: evidence/tasks/*.log)
+!evidence/tasks/*.log

@@ -1,0 +1,14 @@
+# 04_artifact — live transcript 2026-09-03T09:30:03Z
+# base=http://localhost:8000
+
+> POST /v1/execute   (auth=bearer)
+> {"ask": "Create NOTES.md in the workspace root containing a 3-line summary of calc.py (read it first). Then read NOTES.md back to confirm and finish.", "execution_policy": {"strategy": "agent"}, "tools": {"allowed": ["ws_read", "ws_write", "ws_list"]}}
+< HTTP 502  91 ms
+< {"error": {"code": "execution_failed", "message": "Execution failed: agent stopped (propose_failed).", "retryable": false, "details": {"execution_id": "be75a6ee-d71d-4b05-9dee-48440a008e77", "agent": {"stop_reason": "propose_failed", "node": "plan-2", "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+> GET /v1/agent/executions/be75a6ee-d71d-4b05-9dee-48440a008e77/trace   (auth=bearer)
+< HTTP 200  4 ms
+< {"execution_id": "be75a6ee-d71d-4b05-9dee-48440a008e77", "status": "failed", "strategy": "agent", "created_at": "2026-09-03T09:30:03.915754Z", "completed_at": "2026-09-03T09:30:04.001534Z", "stages": [{"node_key": "plan-1", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}, {"node_key": "plan-2", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}], "as_recorded": true}
+
+# filesystem check: /tmp/ui/ws/NOTES.md exists=False
+VERDICT: FAIL — status=failed artifact_on_disk=False acts=[]

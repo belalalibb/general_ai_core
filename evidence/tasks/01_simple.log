@@ -1,0 +1,9 @@
+# 01_simple — live transcript 2026-09-03T09:30:03Z
+# base=http://localhost:8000
+
+> POST /v1/execute   (auth=bearer)
+> {"ask": "Reply with exactly the word PONG and nothing else.", "execution_policy": {"strategy": "agent"}, "tools": {"allowed": []}}
+< HTTP 502  130 ms
+< {"error": {"code": "execution_failed", "message": "Execution failed: agent stopped (propose_failed).", "retryable": false, "details": {"execution_id": "0cc14e24-d402-4c96-9b2d-30573bc3bd91", "agent": {"stop_reason": "propose_failed", "node": "plan-2", "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+VERDICT: FAIL — http=502 status=failed content=''

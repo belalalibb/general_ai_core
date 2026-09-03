@@ -1,0 +1,13 @@
+# 03_multi_tool — live transcript 2026-09-03T09:30:03Z
+# base=http://localhost:8000
+
+> POST /v1/execute   (auth=bearer)
+> {"ask": "In the workspace: run `pytest -q` using ws_run, then read calc.py using ws_read. Report the pytest exit code and quote the buggy line. Do not edit anything.", "execution_policy": {"strategy": "agent"}, "tools": {"allowed": ["ws_read", "ws_run", "ws_list"]}}
+< HTTP 502  92 ms
+< {"error": {"code": "execution_failed", "message": "Execution failed: agent stopped (propose_failed).", "retryable": false, "details": {"execution_id": "12149eb9-f1b1-4174-9fad-a81176eaed3d", "agent": {"stop_reason": "propose_failed", "node": "plan-2", "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}}}}
+
+> GET /v1/agent/executions/12149eb9-f1b1-4174-9fad-a81176eaed3d/trace   (auth=bearer)
+< HTTP 200  4 ms
+< {"execution_id": "12149eb9-f1b1-4174-9fad-a81176eaed3d", "status": "failed", "strategy": "agent", "created_at": "2026-09-03T09:30:03.816353Z", "completed_at": "2026-09-03T09:30:03.903747Z", "stages": [{"node_key": "plan-1", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}, {"node_key": "plan-2", "status": "failed", "attempts": [], "error": {"reason": "propose_failed", "detail": "ReasoningFailed: reasoning execution did not succeed (invalid_credential/organization_restricted)"}}], "as_recorded": true}
+
+VERDICT: FAIL — status=failed distinct_tools=[]

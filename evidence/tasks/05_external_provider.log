@@ -1,0 +1,17 @@
+# 05_external_provider — live transcript 2026-09-03T09:30:04Z
+# base=http://localhost:8000
+
+> GET /v1/admin/system   (auth=bearer)
+< HTTP 200  6 ms
+< {"profile": "in-memory", "identity_mode": "hybrid", "provider_keys": ["groq"], "admin_emails_configured": 1, "scope": "process"}
+
+> POST /v1/execute   (auth=bearer)
+> {"ask": "Say OK.", "model_policy": {"type": "explicit_model", "model_id": "openai/gpt-oss-20b"}}
+< HTTP 502  52 ms
+< {"error": {"code": "execution_failed", "message": "provider rejected the credential", "retryable": false, "details": {"execution_id": "e530d954-67b0-4b8e-9606-a6e2441f572c", "provider_error_category": "invalid_credential"}}}
+
+> GET /v1/executions/e530d954-67b0-4b8e-9606-a6e2441f572c   (auth=bearer)
+< HTTP 200  5 ms
+< {"execution_id": "e530d954-67b0-4b8e-9606-a6e2441f572c", "status": "failed", "progress": {"current_stage": "single", "percent": 100}, "error": {"code": "execution_failed", "message": "provider rejected the credential", "retryable": false, "details": {"execution_id": "e530d954-67b0-4b8e-9606-a6e2441f572c", "provider_error_category": "invalid_credential"}}}
+
+VERDICT: FAIL — providers=None status=failed record=ok

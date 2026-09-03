@@ -1,0 +1,13 @@
+# 13_capability_registration — live transcript 2026-09-03T09:30:05Z
+# base=http://localhost:8000
+
+# Registration proof — option (b): the catalog is a CLOSED id set decided by the composition root (apps/api/capabilities.py); there is no runtime registration API by design. Proof that the Admin surface is DERIVED, not hardcoded: the server returns the full closed set with a state per row and an `evidence` seam pointer per row; the exercisable list is the subset with a registered exercise handler.
+> GET /v1/admin/capabilities   (auth=bearer)
+< HTTP 200  3 ms
+< {"scope": "process", "capabilities": [{"id": "admin.control_plane", "state": "available", "evidence": "admin seam -> /v1/admin/* (T-IMPL-032)"}, {"id": "auth.sessions", "state": "available", "evidence": "auth seam -> /v1/auth/* (AA-1 IDN-1)"}, {"id": "context.composition", "state": "available", "evidence": "composer seam; core/context (13 §5)"}, {"id": "conversations.persistence", "state": "available", "evidence": "conversations seam; core/memory/ports.py"}, {"id": "execute.async", "state": "available", "evidence": "outbox seam -> 202 path (V2); core/runtime/outbox.py"}, {"id": "execute.sync", "state": "available", "evidence": "POST /v1/execute (always mounted)"}, {"id": "execute.token_streaming", "state": "unavailable", "evidence": "no streaming provider adapters exist (R115/V6-2 record)"}, {"id": "executions.progress_sse", "state": "available", "evidence": "sse seam -> GET /v1/executions/{id}/events (V6-2)"}, {"id": "health.liveness", "state": "available", "evidence": "healthz seam -> GET /healthz (SYS-1)"}, {"id": "learning.lifecycle", "state": "available", "evidence": "learning lifecycle seam -> /v1/admin/learning/* (R158; core/learning/lifecycle.py)"}, {"id": "models.listing", "state": "available", "evidence": "models+bindings seams -> GET /v1/models (10 §6)"}, {"id": "rate_limits.execute", "state": "inert", "evidence": "rate_limits seam + configured limit (T-IMPL-070)"}, {"id": "skills.listing", "state": "available", "evidence": "GET /v1/skills over the skill registry"}, {"id": "usage.reporting", "state": "available", "evidence": "usage seam -> GET /v1/usage (10 §8)"}, {"id": "webhooks.delivery_staging", "state": "available", "evidence": "webhooks+outbox seams -> execution.queued staging (V6-3)"}, {"id": "webhooks.registration", "state": "available", "evidence": "webhooks seam -> POST /v1/webhooks (41 §21)"}]}
+
+> GET /v1/admin/capabilities/exercisable   (auth=bearer)
+< HTTP 200  3 ms
+< {"exercisable": ["execute.sync", "models.listing", "skills.listing", "usage.reporting"]}
+
+VERDICT: PASS — rows=16 states=['available', 'inert', 'unavailable'] all_rows_have_evidence=True exercisable=200
