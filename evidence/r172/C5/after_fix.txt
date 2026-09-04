@@ -1,0 +1,30 @@
+# C5 after_fix — 2026-09-04T20:16:31Z
+# pre-fix failure: see fail_first.txt (ModuleNotFoundError core.contracts.checkpoint @ 73766ab)
+
+$ python -m pytest tests/agent_dev/test_checkpoint_r172.py -q -p no:cacheprovider -o addopts=""
+................                                                         [100%]
+16 passed in 0.48s
+
+$ python -m pytest tests/agent_dev tests/tools tests/verification -q -p no:cacheprovider -o addopts=""
+374 passed, 1 xfailed, 1 warning in 4.19s
+
+$ python -m pytest tests/admin_agent -q -p no:cacheprovider -o addopts=""
+130 passed in 7.17s
+
+$ ruff check core/ apps/agent_dev tests/agent_dev tests/tools && ruff format --check core/ apps/agent_dev tests/agent_dev tests/tools
+All checks passed!
+176 files already formatted
+
+$ mypy core/contracts/checkpoint.py core/tools/checkpoint.py apps/agent_dev/surface.py
+Success: no issues found in 3 source files
+
+$ ls -la ui/admin/index.html ui/admin/app.js ui/admin/styles.css (unchanged sizes)
+79351 ui/admin/app.js
+32385 ui/admin/index.html
+16392 ui/admin/styles.css
+28395 ui/app/app.js
+11686 ui/app/index.html
+19604 ui/app/styles.css
+
+$ git diff --stat 67824d0..HEAD -- ui apps/admin_agent core/tools/gate.py
+(empty => untouched)

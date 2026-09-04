@@ -24,8 +24,8 @@ from core.contracts.security import ActorKind, FirewallDecisionInput
 from core.contracts.tools import ApprovalRequirement, Tool, ToolLocation, ToolStatus
 from core.identity.devices import DeviceRegistry
 from core.security.firewall import CapabilityFirewall, TenantPolicy
-from core.tools.denied_paths import DENIED_PATH_PATTERNS
 from core.tools.checkpoint import CheckpointManager, checkpointed_write_handler
+from core.tools.denied_paths import DENIED_PATH_PATTERNS
 from core.tools.executor import ToolCallRecord, ToolExecutor
 from core.tools.gate import ToolCallGate
 from core.tools.registry import ToolRegistry

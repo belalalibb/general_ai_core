@@ -1200,3 +1200,45 @@ no temp files on success. Pre-existing reader/writer/denylist suites (122+1) and
 
 ### Ref
 `evidence/r172/C4/`; budget `round_r172` 4/8 (one commit, two files; manifest guard enforces one log row per item).
+
+## IMPL-022 — Dev-surface writes get a pre-apply checkpoint with typed restore (R172 C5)
+
+### Decision
+`core/tools/checkpoint.py` adds `CheckpointStore` (content-addressed blobs `objects/<sha256>` +
+`checkpoints.json` index, built on `atomic_json`: directory 0o700, files 0o600, temp+fsync+`os.replace`,
+refuses a location inside the protected working tree) and `CheckpointManager` (`begin` → snapshot the
+pre-apply bytes, missing file ⇒ `pre_sha256 = None`; `seal(post_sha256)`; `mark_partial`; `restore`).
+`checkpointed_write_handler(writer, manager)` wraps `SourceWriter` for the dev surface and
+`build_dev_surface(checkpoints=...)` selects it; `DevAgentSurface.checkpoints` exposes the manager.
+Restore semantics: current hash `== pre` ⇒ `noop`; `== post` (and state not `partial`) ⇒ `reverted`
+(deletes the file when `pre` is `None`); anything else ⇒ `checkpoint_conflict`, file untouched. A blob
+that is missing or fails hash verification ⇒ `object_store_corrupt` (reason names the "object store"),
+file untouched. Contracts live in `core/contracts/checkpoint.py` (INV-1).
+
+### Why
+1. Discovery D5: the dev surface applied `source.write` with no undo — a wrong OVERWRITE/DELETE was
+   only recoverable if the tree happened to be under git and clean.
+2. Fail closed on the snapshot side: the write is NOT attempted when the snapshot or index write fails
+   (typed `io_error` data). The only `begin` failure that falls through is `path_refused`, and the
+   manager uses the WRITER's denylist (`denied_patterns=writer.denied_patterns`) so admission cannot
+   diverge — the writer then emits its own `path_denied` refusal and no snapshot/blob/`checkpoint_id`
+   exists.
+3. A writer refusal after the snapshot (e.g. `precondition_mismatch`) leaves exactly one `partial`
+   checkpoint whose restore is a `noop` — the file was never touched, and the record proves it.
+4. `checkpoints=None` keeps the plain `source_write_handler`; the result key set is byte-identical to
+   R169 (`test_dev_surface.py` untouched and green).
+5. The manager is NOT wired into `apps/composition/runtime.py` — deciding where the store directory
+   lives per deployment is an owner decision (recorded in §9 open items); the seam is the parameter.
+
+### Guards
+`tests/agent_dev/test_checkpoint_r172.py` (16): store permissions + inside-tree refusal; begin refuses
+`.env` / `../outside`; create→seal→restore deletes; overwrite→restore reverts; drift ⇒ conflict, file
+untouched; precondition_mismatch ⇒ one partial, restore noop; path_denied ⇒ no checkpoint; absent
+manager ⇒ exact key set; tampered blob ⇒ `object_store_corrupt`; malformed index ⇒ `list()==[]`,
+`checkpoint_unknown`; corrupt record skipped ⇒ `partial`; simulated restart (new store+manager over the
+same directory) restores. Suites `tests/agent_dev tests/tools tests/verification` 374 passed 1 xfailed;
+`tests/admin_agent` 130. ruff + mypy clean. Fail-first: `ModuleNotFoundError core.contracts.checkpoint`
+at `73766ab`.
+
+### Ref
+`evidence/r172/C5/`; budget `round_r172` 5/8 (one row, one production file `apps/agent_dev/surface.py`).

@@ -97,9 +97,7 @@ def write(surface: DevAgentSurface, **args: object) -> dict[str, Any]:
 def test_overwrite_snapshots_pre_and_seals_post(tmp_path: Path, repo: Path) -> None:
     manager = make_manager(tmp_path, repo)
     surface = make_surface(repo, manager)
-    out = write(
-        surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD)
-    )
+    out = write(surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD))
     assert out["ok"] is True
     cp = manager.get(UUID(out["checkpoint_id"]))
     assert cp is not None
@@ -114,9 +112,7 @@ def test_overwrite_snapshots_pre_and_seals_post(tmp_path: Path, repo: Path) -> N
 def test_restore_reverts_when_current_equals_post(tmp_path: Path, repo: Path) -> None:
     manager = make_manager(tmp_path, repo)
     surface = make_surface(repo, manager)
-    out = write(
-        surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD)
-    )
+    out = write(surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD))
     res = manager.restore(UUID(out["checkpoint_id"]))
     assert res["ok"] is True
     assert res["outcome"] == "reverted"
@@ -127,9 +123,7 @@ def test_restore_reverts_when_current_equals_post(tmp_path: Path, repo: Path) ->
 def test_restore_noop_when_current_equals_pre(tmp_path: Path, repo: Path) -> None:
     manager = make_manager(tmp_path, repo)
     surface = make_surface(repo, manager)
-    out = write(
-        surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD)
-    )
+    out = write(surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD))
     (repo / "pkg" / "mod.py").write_text(OLD, encoding="utf-8")  # someone already undid it
     res = manager.restore(UUID(out["checkpoint_id"]))
     assert res["ok"] is True and res["outcome"] == "noop"
@@ -139,9 +133,7 @@ def test_restore_noop_when_current_equals_pre(tmp_path: Path, repo: Path) -> Non
 def test_restore_conflict_when_drifted_leaves_file_untouched(tmp_path: Path, repo: Path) -> None:
     manager = make_manager(tmp_path, repo)
     surface = make_surface(repo, manager)
-    out = write(
-        surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD)
-    )
+    out = write(surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD))
     (repo / "pkg" / "mod.py").write_text("x = 3\n", encoding="utf-8")  # third-party edit
     res = manager.restore(UUID(out["checkpoint_id"]))
     assert res["ok"] is False
@@ -204,9 +196,7 @@ def test_partial_with_drift_is_conflict(tmp_path: Path, repo: Path) -> None:
 def test_simulated_restart_restores_from_disk(tmp_path: Path, repo: Path) -> None:
     manager = make_manager(tmp_path, repo)
     surface = make_surface(repo, manager)
-    out = write(
-        surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD)
-    )
+    out = write(surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD))
     del manager, surface  # "process exit"
 
     reborn = make_manager(tmp_path, repo)
@@ -235,9 +225,7 @@ def test_store_modes_and_location_guard(tmp_path: Path, repo: Path) -> None:
 def test_corrupt_object_store_is_typed_refusal(tmp_path: Path, repo: Path) -> None:
     manager = make_manager(tmp_path, repo)
     surface = make_surface(repo, manager)
-    out = write(
-        surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD)
-    )
+    out = write(surface, op="overwrite", path="pkg/mod.py", content=NEW, expected_sha256=sha(OLD))
     blob = tmp_path / "state" / "checkpoints" / "objects" / sha(OLD)
     assert blob.is_file()
     blob.write_text("tampered", encoding="utf-8")

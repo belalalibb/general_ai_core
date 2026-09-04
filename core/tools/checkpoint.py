@@ -249,9 +249,7 @@ class CheckpointManager:
             )
         rel_posix = candidate.relative_to(self.root).as_posix()
         if is_denied(rel_posix, denied_patterns):
-            raise CheckpointRefused(
-                CheckpointRefusalCode.PATH_REFUSED, "path matches the denylist"
-            )
+            raise CheckpointRefused(CheckpointRefusalCode.PATH_REFUSED, "path matches the denylist")
         return candidate, rel_posix
 
     # -- lifecycle -------------------------------------------------------------
@@ -432,9 +430,7 @@ def checkpointed_write_handler(
             }
         cp: Checkpoint | None
         try:
-            cp = manager.begin(
-                request.path, op=request.op, denied_patterns=writer.denied_patterns
-            )
+            cp = manager.begin(request.path, op=request.op, denied_patterns=writer.denied_patterns)
         except CheckpointRefused as refused:
             if refused.code is CheckpointRefusalCode.PATH_REFUSED:
                 cp = None
