@@ -1014,3 +1014,37 @@ disjointness of dev/admin names, closed admin registry, unchanged
 
 ### Ref
 `docs/r169/CAPABILITY_MAP.md`; `evidence/r169/A3/`; budget `round_r169` 2/6.
+
+## IMPL-016 — R169 A5: GitHub connectivity as typed tool calls behind a RepoBinding
+
+### Decision
+Model repository access as a typed `RepoBinding` (`core/contracts/repo_binding.py`:
+tenant, https remote, branch, local root, `allowed_modes`, opaque `credential_ref`)
+and expose `git.fetch/status/commit/publish` only as tools on the dev surface
+(`apps/agent_dev/git_tools.py::GitToolset`) executed through the existing
+`ToolExecutor`. The network side is a `GitTransportPort` protocol; no live
+implementation is shipped in R169.
+
+### Why
+1. INV-3: the binding never carries a token. `SecretManagerPort.resolve` is called
+   inside the handler at the last moment; the token reaches only the transport and
+   is asserted absent from `ToolCallRecord`, audit and trace.
+2. Per-binding jail: `jail_path` normalises lexically and refuses
+   `PATH_OUTSIDE_BINDING`, so a path valid under binding X is refused under
+   binding Y even for the same tenant.
+3. INV-2: every failure is `GitRefusal(code=GitRefusalCode.*)`; a protected-branch
+   push becomes `REMOTE_REJECTED_PROTECTED_BRANCH` with `suggested_mode=pull_request`
+   instead of an exception.
+4. Audit set is closed (13 `AuditEventType`s, guarded). The publish mode is recorded
+   by enriching the executor's single `TOOL_CALL` event via `ModeRecordingAudit`
+   (contextvar), keeping one event per attempt.
+5. INV-7: `apps/admin_agent` is untouched; `git.*` permissions are granted only via
+   `dev_tenant_policy(git=True)` on the separately composed dev surface.
+
+### Guards
+`tests/agent_dev/test_git_tools.py` (38, fake transport) and
+`tests/agent_dev/test_contracts_r169.py` (15).
+
+### Ref
+`docs/r169/CAPABILITY_MAP.md` L67–85; `evidence/r169/A5/`; budget `round_r169` 4/6
+(796b0dd git_tools.py, 833a6ce surface.py).

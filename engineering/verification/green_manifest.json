@@ -254,7 +254,7 @@
         "apps/",
         "ui/"
       ],
-      "changes_used": 2,
+      "changes_used": 4,
       "items": [
         "A2",
         "A3",
@@ -273,6 +273,18 @@
           "file": "apps/agent_dev/surface.py",
           "loc": "+236/-0",
           "summary": "NEW dev-agent composition root (separate from admin agent, INV-7): ToolRegistry(source.read NONE, source.write BEFORE_ACTION) + ToolCallGate + ToolExecutor; source_read_handler (SourceReadRefused->read_refused data, validation_error data); dev_tenant_policy(write opt-in); admin registry/permission classes untouched"
+        },
+        {
+          "item": "A5",
+          "file": "apps/agent_dev/git_tools.py",
+          "loc": "+559/-0",
+          "summary": "typed RepoBinding registry, per-binding path jail, GitToolset (git.fetch/status/commit/publish via ToolExecutor), token via SecretManagerPort.resolve only, PublishMode enforcement, protected-branch typed refusal + PR suggestion, mode-recording audit wrapper + trace"
+        },
+        {
+          "item": "A5",
+          "file": "apps/agent_dev/surface.py",
+          "loc": "+32/-13",
+          "summary": "wire GitToolset (git.* tools, mode-recording audit, git policy flag)"
         }
       ],
       "note": "R169 §3: one coherent edit to a file under core/ apps/ ui/ = one change; tests, contracts (INV-1), docs, evidence are budget-free"

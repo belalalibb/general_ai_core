@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+______________ ERROR collecting tests/agent_dev/test_git_tools.py ______________
+ImportError while importing test module '/home/user/webapp/tests/agent_dev/test_git_tools.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent_dev/test_git_tools.py:20: in <module>
+    from apps.agent_dev.git_tools import (
+E   ModuleNotFoundError: No module named 'apps.agent_dev.git_tools'
+=========================== short test summary info ============================
+ERROR tests/agent_dev/test_git_tools.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+EXIT=2
