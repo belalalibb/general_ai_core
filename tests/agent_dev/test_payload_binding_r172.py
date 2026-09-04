@@ -310,9 +310,7 @@ def test_non_write_class_is_unaffected_when_binding_enabled(tmp_path: Path) -> N
 def test_unapproved_write_still_falls_through_to_gate(tmp_path: Path) -> None:
     world = make_world(tmp_path, payload_binding=True)
     args = write_args("core/new.py", "y\n")
-    rec = run(
-        world.surface.call(PERM_SOURCE_WRITE, args, approved_payload_hash=payload_hash(args))
-    )
+    rec = run(world.surface.call(PERM_SOURCE_WRITE, args, approved_payload_hash=payload_hash(args)))
     assert rec.status == "refused"
     assert rec.gate_decision.reason == "tool_approval_required:before_action"
     assert rec.error == ErrorCode.TOOL_APPROVAL_REQUIRED.value
@@ -350,7 +348,10 @@ def test_git_commit_and_publish_are_bound(tmp_path: Path) -> None:
     assert world.transport.tokens_seen == []
     rec = run(
         world.surface.call(
-            PERM_GIT_PUBLISH, pub, approval_state="approved", approved_payload_hash=payload_hash(pub)
+            PERM_GIT_PUBLISH,
+            pub,
+            approval_state="approved",
+            approved_payload_hash=payload_hash(pub),
         )
     )
     assert rec.status == "succeeded"

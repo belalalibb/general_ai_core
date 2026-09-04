@@ -301,7 +301,7 @@
         "core/",
         "apps/"
       ],
-      "changes_used": 5,
+      "changes_used": 6,
       "items": [
         "C1",
         "C2",
@@ -342,6 +342,12 @@
           "file": "apps/agent_dev/surface.py",
           "loc": "+14/-1 (+ NEW core/contracts/checkpoint.py 98 lines, NEW core/tools/checkpoint.py 466 lines)",
           "summary": "build_dev_surface(checkpoints: CheckpointManager | None = None) + DevAgentSurface.checkpoints; when supplied, source.write handler is checkpointed_write_handler(writer, checkpoints): begin() snapshots pre-apply bytes into a content-addressed store OUTSIDE the tree (0o700/0o600, atomic, fail-closed), missing file => pre_sha256 None; success seals with post sha256 and adds checkpoint_id; writer refusal after snapshot => partial; PATH_REFUSED from begin falls through to the writer's own typed refusal (no snapshot, no checkpoint_id); other begin failure => CheckpointRefusal data, write NOT attempted. restore(): cur==pre noop / cur==post revert (delete when pre None) / else checkpoint_conflict; tampered blob => object_store_corrupt ('object store' in reason), file untouched; malformed index => list() [] + checkpoint_unknown; corrupt record skipped => partial. checkpoints=None => plain handler, result keys byte-identical to R169. NOT wired into production composition (owner decision)."
+        },
+        {
+          "item": "C6",
+          "file": "apps/agent_dev/surface.py",
+          "loc": "+142/-4 (+ NEW core/contracts/approval_binding.py 50 lines, NEW core/tools/payload_binding.py 94 lines)",
+          "summary": "Opt-in approval<->payload binding for write-class dev-surface calls (source.write, git.commit, git.publish): canonical JSON sha256 vs approved hash checked above the gate; typed ApprovalBindingRefusal + one TOOL_CALL audit event; gate NOT modified (pinned); NOT enabled in production composition (owner decision)."
         }
       ],
       "note": "R172 backend closure: one coherent edit to a file under core/ apps/ = one change; tests, contracts (INV-1), docs, evidence, .gitignore are budget-free. ui/** and apps/admin_agent/** are frozen (INV-7)."

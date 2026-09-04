@@ -1242,3 +1242,46 @@ at `73766ab`.
 
 ### Ref
 `evidence/r172/C5/`; budget `round_r172` 5/8 (one row, one production file `apps/agent_dev/surface.py`).
+
+## IMPL-023 — Approval ↔ payload binding for write-class dev-surface calls, opt-in (R172 C6)
+
+### Decision
+- NEW `core/tools/payload_binding.py`: canonical JSON form (sorted keys, `(",", ":")` separators,
+  UTF-8, `allow_nan=False`, floats and non-JSON types refused via `NonCanonicalPayload`),
+  `payload_hash` (sha256 hex), `check_payload_binding` (canonicalise → missing hash → constant-time
+  compare).
+- NEW `core/contracts/approval_binding.py`: `ApprovalBindingRefusalCode`
+  (`approval_hash_required`, `approval_payload_mismatch`, `payload_not_canonicalisable`) and
+  `ApprovalBindingRefusal` (typed data, never an exception).
+- `apps/agent_dev/surface.py`: `payload_binding: bool = False` flag; `call(...,
+  approved_payload_hash=None)`; when the flag is on and the permission is in
+  `PAYLOAD_BOUND_PERMISSIONS` = {`source.write`, `git.commit`, `git.publish`} and
+  `approval_state == "approved"`, the check runs BEFORE the gate/executor; refusal is an
+  executor-shaped `ToolCallRecord(status="refused", error=TOOL_APPROVAL_REQUIRED,
+  error_detail=<refusal JSON>)` plus one `TOOL_CALL` audit event. `ErrorCode` not widened.
+
+### Owner decision — boundary
+- `core/tools/gate.py` is NOT modified; the gate remains non-binding (string approval state only),
+  pinned by `test_gate_admit_has_no_payload_parameter_pin`.
+- Binding is opt-in, default off, and NOT enabled in the production composition. The
+  approval-issuing side (UI/admin) is frozen under INV-7 this round and does not yet carry the
+  payload hash; enabling binding without it would refuse every approved write. Tracked as an open
+  item in `docs/r172/BACKEND_STATE_OF_TRUTH.md`.
+
+### Why
+- HARVEST row 6: an approval issued for payload A must not admit payload B (swap attack).
+- Enforcing in the surface layer keeps the gate contract and its 23 approved call sites untouched.
+- Floats are refused rather than canonicalised (no cross-language stable float form).
+- Read-class calls are never bound; unapproved writes still fall through to the gate unchanged.
+- Default `False` keeps every existing test and caller green (INV-6).
+
+### Guards
+- 17 tests in `tests/agent_dev/test_payload_binding_r172.py` (canonical form ×4, verdicts, gate
+  pin, default non-binding, scope, missing hash, mismatch, correct hash, key order, float,
+  non-write unaffected, unapproved fall-through, git.commit/publish bound, detail is data).
+- Slice `tests/agent_dev tests/tools tests/verification` 391 passed / 1 xfailed; `tests/admin_agent`
+  130 passed; ruff / mypy --strict / import-linter (13 kept) clean.
+- Fail-first captured at cc04872 (ImportError `PAYLOAD_BOUND_PERMISSIONS`).
+
+### Ref
+- `evidence/r172/C6/{fail_first.txt,after_fix.txt,notes.md}`; budget row 6/8 in `green_manifest.json`.

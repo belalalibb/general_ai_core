@@ -1,0 +1,28 @@
+# C6 after-fix — captured at b3ca2f7+wt (regenerated after reset #14 wiped the first capture)
+
+$ python -m pytest tests/agent_dev/test_payload_binding_r172.py -q -p no:cacheprovider -o addopts=""
+17 passed in 0.61s
+
+$ python -m pytest tests/agent_dev tests/tools tests/verification -q -p no:cacheprovider -o addopts=""
+391 passed, 1 xfailed, 1 warning in 5.42s
+
+$ python -m pytest tests/admin_agent -q -p no:cacheprovider -o addopts=""
+130 passed in 7.16s
+
+$ ruff format --check core apps tests
+439 files already formatted
+# note: `ruff format --check .` reports 34 pre-existing unformatted files under
+# gateway-service/, infrastructure/, engineering/proposals/, scripts/ and docs/*.md code
+# fences — none touched by R172; the verifier gate runs `ruff check .` only (check_repo.sh:96).
+
+$ python -m ruff check .
+All checks passed!
+
+$ mypy --strict core/tools/payload_binding.py core/contracts/approval_binding.py apps/agent_dev/surface.py
+Success: no issues found in 3 source files
+
+$ lint-imports
+Contracts: 13 kept, 0 broken.
+
+$ git diff --stat cc04872 -- core/tools/gate.py
+(empty — gate untouched)
