@@ -25,6 +25,7 @@ from core.contracts.tools import ApprovalRequirement, Tool, ToolLocation, ToolSt
 from core.identity.devices import DeviceRegistry
 from core.security.firewall import CapabilityFirewall, TenantPolicy
 from core.tools.denied_paths import DENIED_PATH_PATTERNS
+from core.tools.checkpoint import CheckpointManager, checkpointed_write_handler
 from core.tools.executor import ToolCallRecord, ToolExecutor
 from core.tools.gate import ToolCallGate
 from core.tools.registry import ToolRegistry
@@ -156,6 +157,7 @@ class DevAgentSurface:
     writer: SourceWriter
     tool_ids: dict[str, UUID]
     git: GitToolset | None = None
+    checkpoints: CheckpointManager | None = None
 
     def request(
         self,
@@ -209,6 +211,7 @@ def build_dev_surface(
     reader: SourceReader | None = None,
     writer: SourceWriter | None = None,
     git: GitToolset | None = None,
+    checkpoints: CheckpointManager | None = None,
 ) -> DevAgentSurface:
     """Compose the dev-agent surface over ``root`` using the core tool fabric.
 
@@ -216,6 +219,11 @@ def build_dev_surface(
     the registry and the audit port is wrapped so the publish ``mode`` lands in
     the executor's single ``TOOL_CALL`` event (A6). Absent ``git`` the surface
     is exactly the A3 surface.
+
+    R172 C5: when a ``CheckpointManager`` is supplied the ``source.write``
+    handler snapshots the pre-apply content and seals/marks-partial after the
+    write (result gains ``checkpoint_id`` on success). Absent ``checkpoints``
+    the plain handler is used and the result shape is unchanged.
     """
     # R172 C1: the composed surface uses the hardened denylist; bare primitives
     # keep their defaults (callers may still inject their own reader/writer).
@@ -229,7 +237,11 @@ def build_dev_surface(
     registry.register(write_tool)
     handlers: dict[UUID, Callable[[JsonObject], Awaitable[JsonObject]]] = {
         read_tool.id: source_read_handler(reader),
-        write_tool.id: source_write_handler(writer),
+        write_tool.id: (
+            checkpointed_write_handler(writer, checkpoints)
+            if checkpoints is not None
+            else source_write_handler(writer)
+        ),
     }
     tool_ids = {read_tool.name: read_tool.id, write_tool.name: write_tool.id}
     if git is not None:
@@ -257,4 +269,5 @@ def build_dev_surface(
         writer=writer,
         tool_ids=tool_ids,
         git=git,
+        checkpoints=checkpoints,
     )
