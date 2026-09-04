@@ -1,0 +1,2 @@
+BEFORE (57ca12bc, hermetic): PASS 2769/0/0/64; D-11 tests 4 failed (zero PERMISSION_DENIED / CROSS_TENANT_ACCESS_DENIED rows); budget round_b=3/5
+AFTER (02e8a6e1 + docs): D-11 4 passed; tests/api+tests/composition+tests/verification 625 passed / 4 skipped; budget round_b=4/5 (apps/api/app.py +37/-0); full hermetic verifier: evidence/r168/D-11/check_repo_after.txt

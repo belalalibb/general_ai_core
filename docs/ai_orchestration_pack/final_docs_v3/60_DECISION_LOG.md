@@ -862,3 +862,43 @@ audit rows; pool-less pass-through; NoEligibleAccount; no secret in audit).
 ### Ref
 `evidence/r168/D-03-04/`; `evidence/credential_binding_boundary.md` (R168
 re-evaluation); budget round B 3/5.
+
+## IMPL-011. Denials are audited in the actor's tenant (R168 D-11)
+
+### Question
+`PERMISSION_DENIED` and `CROSS_TENANT_ACCESS_DENIED` are must-audit events
+(20 §9) with zero emitters: after 30+ denials the admin audit read showed only
+`login`. Which denials, written where, readable by whom — without turning the
+audit row into an enumeration oracle (20 §6)?
+
+### Decision (R168, 2026-09-04)
+1. ONE emitter in `apps/api/app.py` (`_audit_denied`) over the SAME
+   `admin.audit` log the admin surface reads. Absent admin seam ⇒ no-op
+   (nothing to write into; no new seam invented).
+2. `PERMISSION_DENIED` is written when the admission middleware refuses a
+   NON-ADMIN session on `/v1/admin/*` (details: `method`, `path`,
+   `reason=admin_required`). Anonymous 401s are NOT audited: there is no
+   principal, hence no tenant to attribute to (recorded; R169 may add a
+   system-tenant sink).
+3. `CROSS_TENANT_ACCESS_DENIED` is written when `project_id` on
+   `/v1/execute` does not resolve in the caller's tenant. Foreign, unknown and
+   malformed references are recorded IDENTICALLY (`resource=project`,
+   `reference` as given) because the gate cannot tell them apart by design
+   (absent == foreign, D-08) — the row must not know more than the response.
+4. Rows are written in the ACTOR's tenant with `actor_id`; nothing is written
+   in any other tenant (the target is unknowable; an owner-side row would be
+   an oracle). The tenant's admin reads them on `GET /v1/admin/audit`.
+5. HTTP bodies are byte-identical to pre-fix (asserted). Details never carry a
+   request body, a credential, or a target-tenant fact.
+6. A PLATFORM-wide read across tenants is NOT added: `AuditLogPort` forbids
+   cross-tenant reads by design (20 §6) and the codebase has no platform-admin
+   identity distinct from `is_admin`. OUT OF SCOPE (R168): design —
+   scheduled for R169 (needs a contract decision, not a patch).
+
+### Guards
+`tests/composition/test_d11_denials_are_audited.py` (4 tests over the
+composed runtime: 403 + row; foreign 404 + row, owner tenant empty;
+unknown/malformed recorded; admin reads over HTTP).
+
+### Ref
+`evidence/r168/D-11/`; budget round B 4/5 (`apps/api/app.py` +37/−0).
