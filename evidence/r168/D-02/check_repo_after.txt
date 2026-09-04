@@ -1,0 +1,36 @@
+GATE STATE: c25f586f (D-02 fix + docs); run hermetic (GSK_API_KEY/GENSPARK_TOKEN/GSK_TOKEN unset)
+PASS: exists: engineering/adr/ADR-TEMPLATE.md
+PASS: exists: engineering/adr/README.md
+PASS: exists: engineering/gates/GATE-TEMPLATE.md
+PASS: exists: engineering/decisions/README.md
+PASS: exists: engineering/verification/README.md
+PASS: exists: engineering/verification/green_manifest.json
+PASS: exists: docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/00_INDEX.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTOCOL.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md
+PASS: no legacy state files (D10/D11)
+PASS: v3 pack complete: 20 documents
+PASS: state field present: STATE_REVISION
+PASS: state field present: RESUME_TOKEN
+PASS: state field present: CURRENT_TASK
+PASS: state field present: NEXT_TASK
+PASS: state field present: PHASE_2_STATUS
+pytest slice api: passed=462 failed=0 errors=0 skipped=0
+pytest slice contract-providers: passed=633 failed=0 errors=0 skipped=15
+pytest slice execution-composition-infra: passed=380 failed=0 errors=0 skipped=49
+pytest slice admin-security-evaluation: passed=417 failed=0 errors=0 skipped=0
+pytest slice rest: passed=885 failed=0 errors=0 skipped=0
+pytest coverage: slices ran = 5; passed=2777 failed=0 errors=0 skipped=64
+PASS: pytest: passed=2777 (>= 2773) failed=0 errors=0 skipped=64 (<= 64)
+PASS: mypy --strict (scope: pyproject.toml [tool.mypy].packages): clean
+PASS: ruff: clean
+PASS: import-linter: architecture boundaries kept (40 §6.2)
+PASS: secret scan clean (declared exceptions: 5/5)
+PASS: no .env tracked
+PASS: change budget within ceilings: round_a=4/5; round_b=4/5
+NOT EVALUATED: live-suite: browser automation against the real server and real UI — missing dependency
+NOT EVALUATED: real two-account provider round-trip (D-03 Class-A failover against live providers) — credential unavailable
+SUMMARY: not_evaluated=2 (counted separately; never green, never FAIL)
+RESULT: PASS (all repo governance checks)
+EXIT=0
