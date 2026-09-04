@@ -1,0 +1,8 @@
+# C5 fail-first — 2026-09-04T20:02:10Z — HEAD 73766ab
+# cmd: python -m pytest tests/agent_dev/test_checkpoint_r172.py -q -p no:cacheprovider -o addopts=""
+    from core.contracts.checkpoint import CheckpointRefusalCode
+E   ModuleNotFoundError: No module named 'core.contracts.checkpoint'
+=========================== short test summary info ============================
+ERROR tests/agent_dev/test_checkpoint_r172.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.60s
