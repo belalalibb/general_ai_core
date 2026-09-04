@@ -254,7 +254,7 @@
         "apps/",
         "ui/"
       ],
-      "changes_used": 4,
+      "changes_used": 5,
       "items": [
         "A2",
         "A3",
@@ -285,6 +285,12 @@
           "file": "apps/agent_dev/surface.py",
           "loc": "+32/-13",
           "summary": "wire GitToolset (git.* tools, mode-recording audit, git policy flag)"
+        },
+        {
+          "item": "A6",
+          "file": "apps/agent_dev/http.py",
+          "loc": "+99/-0",
+          "summary": "GET /v1/dev/bindings/{binding_id}/publish-modes read router (resolve seam, tenant-scoped 404 anti-enumeration, PublishModesResponse from contracts)"
         }
       ],
       "note": "R169 §3: one coherent edit to a file under core/ apps/ ui/ = one change; tests, contracts (INV-1), docs, evidence are budget-free"

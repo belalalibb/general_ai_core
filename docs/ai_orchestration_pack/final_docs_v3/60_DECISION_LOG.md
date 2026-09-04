@@ -1048,3 +1048,34 @@ implementation is shipped in R169.
 ### Ref
 `docs/r169/CAPABILITY_MAP.md` L67–85; `evidence/r169/A5/`; budget `round_r169` 4/6
 (796b0dd git_tools.py, 833a6ce surface.py).
+
+## IMPL-017 — PublishMode read endpoint lives on a separately composed dev router
+
+### Decision
+`GET /v1/dev/bindings/{binding_id}/publish-modes` is served by
+`apps/agent_dev/http.py::create_dev_router(bindings, *, resolve)` — a new
+`APIRouter` that is **not** mounted in `apps/api/app.py` in R169. The response is the
+contract type `core.contracts.publish_mode.PublishModesResponse`; `direct_push` is
+listed but non-selectable (`direct_push_not_enabled_for_binding`) unless the binding's
+`allowed_modes` opts in. Unknown, foreign-tenant and malformed binding ids return one
+identical 404 `validation_error` body.
+
+### Why
+1. INV-1: the option list, labels and refusal reasons are defined once in contracts and
+   consumed verbatim by the router; a future UI reads the same shape.
+2. INV-7: no admin-agent registry or permission class widened; the router is a new
+   surface composed from `RepoBindingRegistry` and the existing `resolve` seam used by
+   `apps/api/admin.py`.
+3. `ErrorCode` is a closed 11-value set without `not_found`; the admin router's
+   `validation_error`+404 convention is reused, and collapsing absent/foreign/malformed
+   ids prevents binding enumeration across tenants.
+4. Budget: mounting the router in the composition root would be production change #6
+   and was left to the operator (closure report, open decisions).
+
+### Guards
+`tests/agent_dev/test_publish_modes_http.py` (10): 401 before lookup, 404 shape parity,
+contract parse, enum order, default/opt-in/restricted bindings, no secret or path leakage.
+
+### Ref
+`docs/r169/CAPABILITY_MAP.md` L67–85; `evidence/r169/A6/`; budget `round_r169` 5/6
+(4ae4e09 `apps/agent_dev/http.py`).
