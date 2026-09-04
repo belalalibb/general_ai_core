@@ -177,7 +177,7 @@
     ],
     "round_a": {
       "ceiling": 5,
-      "changes_used": 2,
+      "changes_used": 4,
       "items": [
         "D-01",
         "D-07",
@@ -196,6 +196,18 @@
           "file": "apps/api/app.py",
           "loc": "+50/-1",
           "summary": "admission middleware before body validation: public_paths seam, anonymous 401, /v1/admin non-admin 403 (also closes D-07 route sweep)"
+        },
+        {
+          "item": "D-08",
+          "file": "apps/api/app.py",
+          "loc": "+22/-1",
+          "summary": "project_id admission on /v1/execute: hoisted ONE project_store; malformed/unknown/foreign reference => unknown_project 404 before replay/persistence/composition"
+        },
+        {
+          "item": "D-08",
+          "file": "apps/api/workspaces.py",
+          "loc": "+8/-1",
+          "summary": "unknown_project exported (was _unknown_project; alias kept) so /v1/execute answers byte-identically to GET /v1/projects/{id}"
         }
       ]
     },

@@ -67,6 +67,7 @@ __all__ = [
     "WorkspaceNotFound",
     "WorkspaceStorePort",
     "create_workspace_router",
+    "unknown_project",
 ]
 
 _MAX_NAME = 512  # BoundedStr bound (core/contracts/base.py)
@@ -249,13 +250,19 @@ def _unknown_workspace(workspace_id: str) -> JSONResponse:
     )
 
 
-def _unknown_project(project_id: str) -> JSONResponse:
+def unknown_project(project_id: str) -> JSONResponse:
+    """The ONE 404 for a project reference that does not resolve in the
+    caller's tenant (absent == foreign == malformed). Shared with
+    ``POST /v1/execute`` (R168 D-08) so both surfaces answer byte-identically."""
     return error_response(
         ErrorCode.VALIDATION_ERROR,
         "Unknown project id.",
         details={"project_id": project_id},
         http_status=404,
     )
+
+
+_unknown_project = unknown_project
 
 
 def _bad_uuid(field: str) -> JSONResponse:

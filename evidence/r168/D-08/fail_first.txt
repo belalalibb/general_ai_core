@@ -1,0 +1,14 @@
+E       assert (503, b'{"err...e_id":null}}') == (404, b'{"err...e_id":null}}')
+E         
+E         At index 0 diff: 503 != 404
+E         Use -v to get more diff
+E       assert (503, b'{"err...e_id":null}}') == (404, b'{"err...e_id":null}}')
+E         
+E         At index 0 diff: 503 != 404
+E         Use -v to get more diff
+E       assert 503 == 404
+E        +  where 503 = <Response [503 Service Unavailable]>.status_code
+FAILED tests/api/test_d08_execute_project_reference.py::test_foreign_project_id_is_the_unknown_404_byte_identical
+FAILED tests/api/test_d08_execute_project_reference.py::test_unknown_project_id_is_the_same_404
+FAILED tests/api/test_d08_execute_project_reference.py::test_malformed_project_id_is_indistinguishable_from_unknown
+3 failed, 1 passed in 1.35s

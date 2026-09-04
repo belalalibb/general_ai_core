@@ -1,0 +1,2 @@
+BEFORE (b8fa4fed, hermetic): PASS 2752/0/0/64; D-08 test 3 failed / 1 passed (503 instead of 404); budget round_a=2/5
+AFTER: D-08 4 passed; tests/api+tests/composition 602 passed / 4 skipped; budget round_a=4/5 (app.py +22/-1, workspaces.py +8/-1); full hermetic verifier: evidence/r168/D-08/check_repo_after.txt

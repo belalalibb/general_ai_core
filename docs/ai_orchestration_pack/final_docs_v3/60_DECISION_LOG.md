@@ -759,3 +759,30 @@ served non-public path ⇒ 401), `tests/composition/test_d10_admin_gate_order.py
 
 ### Ref
 `evidence/r168/D-07/`, `evidence/r168/D-10/`; budget round A 2/5.
+
+---
+
+## IMPL-008. A body reference is admitted like a path reference (R168 D-08)
+
+### Question
+`POST /v1/execute` accepted any `project_id` and ignored it — a foreign
+tenant's project, an unknown UUID or `not-a-uuid` all ran (silent acceptance
+of a foreign reference).
+
+### Decision (R168, 2026-09-04)
+1. `project_id` is resolved in the CALLER's tenant before replay, persistence
+   or composition; a reference that does not resolve leaves zero state.
+2. Foreign, unknown and malformed references all receive the ONE 404 body the
+   projects surface gives for an unknown id (`unknown_project`, now exported
+   from `apps/api/workspaces.py`) — byte-identical, no oracle between the
+   three (20 §6). Malformed is UNKNOWN, not a 422 field error.
+3. The store is ONE object (`project_store`) shared by `/v1/projects` and
+   `/v1/execute`; the field stays in `ExecuteRequest`; no attachment
+   semantics are introduced (nothing downstream consumes the reference).
+
+### Guards
+`tests/api/test_d08_execute_project_reference.py` (foreign / unknown /
+malformed ⇒ byte-identical 404; owned passes and equals the no-field path).
+
+### Ref
+`evidence/r168/D-08/`; budget round A 4/5.

@@ -161,9 +161,11 @@ from apps.api.streaming import Sleeper, event_stream
 from apps.api.workspaces import (
     InMemoryProjectStore,
     InMemoryWorkspaceStore,
+    ProjectNotFound,
     ProjectStorePort,
     WorkspaceStorePort,
     create_workspace_router,
+    unknown_project,
 )
 from core.context.composer import ContextComposer
 from core.context.errors import ContextBudgetExceeded
@@ -676,10 +678,13 @@ def create_app(
     # repositories (bridged) in the durable profile. Same per-request
     # principal resolver, same anti-enumeration mapping as every other
     # tenant-scoped route (apps/api/workspaces.py records the decisions).
+    # R168 D-08: ONE project store — the /v1/projects surface and the
+    # /v1/execute ``project_id`` reference resolve against the same rows.
+    project_store: ProjectStorePort = projects if projects is not None else InMemoryProjectStore()
     app.include_router(
         create_workspace_router(
             workspaces=(workspaces if workspaces is not None else InMemoryWorkspaceStore()),
-            projects=projects if projects is not None else InMemoryProjectStore(),
+            projects=project_store,
             resolve=_principal,
         )
     )
@@ -710,6 +715,22 @@ def create_app(
                     retryable=True,
                     details={"scope": "execute"},
                 )
+
+        # --- project reference admission (R168 D-08) ---------------------------
+        # ``project_id`` names a project in the CALLER's tenant or it is
+        # unknown: a foreign project, an unknown UUID and a non-UUID string
+        # all receive the ONE 404 body ``GET /v1/projects/{id}`` gives for an
+        # unknown id (20 §6 — no oracle between the three). Resolved BEFORE
+        # replay/persistence/composition, so a bad reference leaves no state.
+        if body.project_id is not None:
+            try:
+                project_ref = UUID(body.project_id)
+            except ValueError:
+                return unknown_project(body.project_id)
+            try:
+                await project_store.get(caller.tenant_id, project_ref)
+            except ProjectNotFound:
+                return unknown_project(body.project_id)
 
         # --- loud scope rejections (module docstring posture) ------------------
         policy = body.execution_policy
