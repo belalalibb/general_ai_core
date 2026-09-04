@@ -1,0 +1,21 @@
+_____________ test_200_plan_refusal_is_a_failed_call_not_a_success _____________
+    def test_200_plan_refusal_is_a_failed_call_not_a_success() -> None:
+E       assert True is False
+E        +  where True = ProviderGenerateResponse(request_id=UUID('d45e3d53-8716-4dcc-9d81-09fb52f76c50'), succeeded=True, output={'content': "...nish_reason': 'stop'}, usage={'prompt_tokens': 0, 'com
+E       assert None is not None
+E        +  where None = ProviderGenerateResponse(request_id=UUID('9af93a51-f078-477c-b2c2-f275dbb51fad'), succeeded=True, output={'content': "...nish_reason': 'stop'}, usage={'prompt_tokens': 0, 'com
+______________ test_refusal_run_is_failed_and_settles_zero_units _______________
+    def test_refusal_run_is_failed_and_settles_zero_units() -> None:
+E       AssertionError: assert <ExecutionStatus.SUCCEEDED: 'succeeded'> is <ExecutionStatus.FAILED: 'failed'>
+E        +  where <ExecutionStatus.SUCCEEDED: 'succeeded'> = Execution(id=UUID('7f5a89d8-7e96-41d5-bf4d-6bf8101dc7ca'), tenant_id=UUID('c3201c40-9f1a-4000-883f-10a921dcccd9'), use...fo=datetime.timezo
+E        +    where Execution(id=UUID('7f5a89d8-7e96-41d5-bf4d-6bf8101dc7ca'), tenant_id=UUID('c3201c40-9f1a-4000-883f-10a921dcccd9'), use...fo=datetime.timezone.utc), completed_at=datetime.datetime(2
+E        +  and   <ExecutionStatus.FAILED: 'failed'> = ExecutionStatus.FAILED
+E       AssertionError: assert 'Free-plan cr...his endpoint.' == 'real answer'
+E         
+E         - real answer
+E         + Free-plan credits can't be used with the Genspark API / LLM proxy. Please visit https://www.genspark.ai/pricing to subscribe or purchase credits to use this endpoint.
+FAILED tests/providers/test_d01_refusal_contract.py::test_200_plan_refusal_is_a_failed_call_not_a_success
+FAILED tests/providers/test_d01_refusal_contract.py::test_refusal_text_never_crosses_into_the_error
+FAILED tests/providers/test_d01_refusal_contract.py::test_refusal_run_is_failed_and_settles_zero_units
+FAILED tests/providers/test_d01_refusal_contract.py::test_refusal_is_failover_permitting
+4 failed, 2 passed in 0.59s
