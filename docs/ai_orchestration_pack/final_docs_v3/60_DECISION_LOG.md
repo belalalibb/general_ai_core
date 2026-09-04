@@ -1079,3 +1079,30 @@ contract parse, enum order, default/opt-in/restricted bindings, no secret or pat
 ### Ref
 `docs/r169/CAPABILITY_MAP.md` L67–85; `evidence/r169/A6/`; budget `round_r169` 5/6
 (4ae4e09 `apps/agent_dev/http.py`).
+
+## IMPL-018 — Hardened path denylist is a composition-time policy, not a primitive default (R172 C1)
+
+### Decision
+`core/tools/denied_paths.py` owns `DENIED_PATH_PATTERNS` (superset of
+`SourceReader.DEFAULT_DENIED_PATTERNS`) and `is_denied_path`. `apps/agent_dev/surface.py::
+build_dev_surface` constructs its default `SourceReader`/`SourceWriter` with that list. The
+primitives keep their 13-glob defaults; injected readers/writers are not overridden.
+
+### Why
+1. The R170 probe (`evidence/r170/denylist_probe.txt`) showed 19/27 EXPECT_DENIED paths
+   readable through the composed surface — the gate's own manifest included.
+2. Policy belongs at the composition root (INV-1: one list, consumed verbatim by reader and
+   writer); the primitives stay reusable and their 42+ existing tests stay untouched.
+3. Directive-mandated `*accounts*`/`*password*` globs collide with tracked sources
+   (`core/providers/accounts.py`, `infrastructure/security/password.py`). Kept as mandated
+   (fail-closed) and documented; narrowing requires an explicit allow-list change, not a
+   weaker glob.
+4. `.ENV*`/`.Env*` case variants are enumerated as a patch; normalisation is C4.
+
+### Guards
+`tests/tools/test_denied_paths_r172.py` (61 passed, 1 xfailed `acco33unts.txt`): consumes
+the probe table; required-pattern matrix; surface reader/writer carry the hardened list;
+bare primitives unchanged.
+
+### Ref
+`evidence/r172/C1/`; budget `round_r172` 1/8.

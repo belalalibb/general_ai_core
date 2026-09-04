@@ -1,0 +1,15 @@
+# C1 after-fix — 2026-09-04T19:12:01Z
+$ python -m pytest tests/tools/test_denied_paths_r172.py -q -p no:cacheprovider -o addopts="" -rx
+.......................x......................................           [100%]
+=========================== short test summary info ============================
+XFAIL tests/tools/test_denied_paths_r172.py::test_expect_denied_rows_deny[acco33unts.txt] - obfuscated name — needs content-based detection, out of scope
+61 passed, 1 xfailed in 0.47s
+
+$ python -m pytest tests/tools tests/agent_dev tests/verification -q -p no:cacheprovider -o addopts=""  (existing suites unmodified)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+286 passed, 1 xfailed, 1 warning in 5.24s
+
+$ ruff check + format --check (after ruff --fix/format of the three touched files)
+All checks passed!
+3 files already formatted

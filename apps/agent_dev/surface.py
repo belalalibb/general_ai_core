@@ -24,6 +24,7 @@ from core.contracts.security import ActorKind, FirewallDecisionInput
 from core.contracts.tools import ApprovalRequirement, Tool, ToolLocation, ToolStatus
 from core.identity.devices import DeviceRegistry
 from core.security.firewall import CapabilityFirewall, TenantPolicy
+from core.tools.denied_paths import DENIED_PATH_PATTERNS
 from core.tools.executor import ToolCallRecord, ToolExecutor
 from core.tools.gate import ToolCallGate
 from core.tools.registry import ToolRegistry
@@ -216,8 +217,12 @@ def build_dev_surface(
     the executor's single ``TOOL_CALL`` event (A6). Absent ``git`` the surface
     is exactly the A3 surface.
     """
-    reader = reader if reader is not None else SourceReader(root)
-    writer = writer if writer is not None else SourceWriter(root)
+    # R172 C1: the composed surface uses the hardened denylist; bare primitives
+    # keep their defaults (callers may still inject their own reader/writer).
+    if reader is None:
+        reader = SourceReader(root, denied_patterns=DENIED_PATH_PATTERNS)
+    if writer is None:
+        writer = SourceWriter(root, denied_patterns=DENIED_PATH_PATTERNS)
     read_tool, write_tool = _dev_tools()
     registry = ToolRegistry()
     registry.register(read_tool)

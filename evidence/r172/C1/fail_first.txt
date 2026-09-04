@@ -1,0 +1,14 @@
+# C1 fail-first — 2026-09-04T19:11:20Z — HEAD e8772f6
+$ python -m pytest tests/tools/test_denied_paths_r172.py -q -p no:cacheprovider -o addopts=""
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tools/test_denied_paths_r172.py:20: in <module>
+    from core.tools.denied_paths import DENIED_PATH_PATTERNS, is_denied_path
+E   ModuleNotFoundError: No module named 'core.tools.denied_paths'
+=========================== short test summary info ============================
+ERROR tests/tools/test_denied_paths_r172.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.57s

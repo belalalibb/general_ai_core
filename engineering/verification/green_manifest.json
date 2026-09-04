@@ -301,7 +301,7 @@
         "core/",
         "apps/"
       ],
-      "changes_used": 0,
+      "changes_used": 1,
       "items": [
         "C1",
         "C2",
@@ -312,7 +312,14 @@
         "C7",
         "C8"
       ],
-      "log": [],
+      "log": [
+        {
+          "item": "C1",
+          "file": "apps/agent_dev/surface.py",
+          "loc": "+7/-2 (+ NEW core/tools/denied_paths.py 81 lines)",
+          "summary": "build_dev_surface default SourceReader/SourceWriter constructed with core.tools.denied_paths.DENIED_PATH_PATTERNS (73 globs: R170 probe 27/27 denied incl. engineering/verification/**, .ssh/.aws/.kube/.gnupg, id_*/authorized_keys/known_hosts, *.pfx/*.asc/*.jks/*.keystore/*.pkcs12, passwd/shadow/.netrc/.pgpass, *accounts*/*cookies*/*tokens*/*password*, .ENV*/.Env* case patch). Bare primitives unchanged; test consumes evidence/r170/denylist_probe.txt; acco33unts.txt xfail"
+        }
+      ],
       "note": "R172 backend closure: one coherent edit to a file under core/ apps/ = one change; tests, contracts (INV-1), docs, evidence, .gitignore are budget-free. ui/** and apps/admin_agent/** are frozen (INV-7)."
     }
   },
