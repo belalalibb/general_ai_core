@@ -36,18 +36,18 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 2752
+      "min_passed": 2756
     },
     "last_measured": {
-      "passed": 2752,
+      "passed": 2756,
       "failed": 0,
       "errors": 0,
       "skipped": 64,
-      "at_head": "3111d987",
+      "at_head": "0ebeb6bf",
       "hermetic": true,
       "command": "env -u GSK_API_KEY -u GROQ_API_KEY -u GW_GROQ_API_KEY bash engineering/verification/check_repo.sh",
-      "evidence": "evidence/r168/D-07/check_repo_after.txt",
-      "note": "R168 after D-07/D-10 (+14 tests: test_d07_tokenless_401 5, test_d10_admin_gate_order 3, cli opt-in 1, exercise isolation 4, mypy guard 1); floor 2738→2752"
+      "evidence": "evidence/r168/D-08/check_repo_after.txt",
+      "note": "R168 after D-08 (+4 tests test_d08_execute_project_reference); floor 2752→2756"
     }
   },
   "non_test_items": [
