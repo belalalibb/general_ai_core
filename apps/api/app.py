@@ -169,6 +169,7 @@ from apps.api.workspaces import (
 )
 from core.context.composer import ContextComposer
 from core.context.errors import ContextBudgetExceeded
+from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import JsonObject, utc_now
 from core.contracts.context import ComposedContext, ContextComposeRequest
 from core.contracts.conversation import (
@@ -600,6 +601,32 @@ def create_app(
     if idempotency_index is None:
         idempotency_index = {}
 
+    # --- R168 D-11: denials are must-audit events (20 §9) ----------------------
+    # ONE emitter for the two denial kinds, writing into the ACTOR's tenant on
+    # the SAME audit log the admin surface reads (``admin.audit``). Absent
+    # seam ⇒ silent no-op (nothing to write into). Details carry method, path
+    # and a closed reason/reference — never a request body, never a secret,
+    # and never anything about the TARGET tenant (absent == foreign, 20 §6:
+    # the target is unknowable here by design, so no owner-side row exists).
+    denial_audit = admin.audit if admin is not None else None
+
+    def _audit_denied(
+        request: Request,
+        caller: Principal,
+        event_type: AuditEventType,
+        details: JsonObject,
+    ) -> None:
+        if denial_audit is None:
+            return
+        denial_audit.append(
+            AuditEvent(
+                tenant_id=caller.tenant_id,
+                event_type=event_type,
+                actor_id=caller.user_id,
+                details={"method": request.method, "path": request.url.path, **details},
+            )
+        )
+
     # --- AA-1 (IDN-1): per-request principal resolution -----------------------
     if auth is None:
         assert principal is not None  # checked above
@@ -655,6 +682,9 @@ def create_app(
             if isinstance(caller, JSONResponse):
                 return caller
             if path.startswith("/v1/admin/") and not caller.is_admin:
+                _audit_denied(
+                    request, caller, AuditEventType.PERMISSION_DENIED, {"reason": "admin_required"}
+                )
                 return error_response(ErrorCode.UNAUTHORIZED, "Admin access required.")
             return await call_next(request)
 
@@ -723,13 +753,20 @@ def create_app(
         # unknown id (20 §6 — no oracle between the three). Resolved BEFORE
         # replay/persistence/composition, so a bad reference leaves no state.
         if body.project_id is not None:
+            # R168 D-11: an unresolved reference is a denied access to a
+            # resource the caller does not own — foreign, unknown and
+            # malformed are recorded identically (the gate cannot tell them
+            # apart, 20 §6) and the 404 body stays byte-identical.
+            denied = {"resource": "project", "reference": body.project_id}
             try:
                 project_ref = UUID(body.project_id)
             except ValueError:
+                _audit_denied(request, caller, AuditEventType.CROSS_TENANT_ACCESS_DENIED, denied)
                 return unknown_project(body.project_id)
             try:
                 await project_store.get(caller.tenant_id, project_ref)
             except ProjectNotFound:
+                _audit_denied(request, caller, AuditEventType.CROSS_TENANT_ACCESS_DENIED, denied)
                 return unknown_project(body.project_id)
 
         # --- loud scope rejections (module docstring posture) ------------------

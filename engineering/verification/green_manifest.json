@@ -213,7 +213,7 @@
     },
     "round_b": {
       "ceiling": 5,
-      "changes_used": 3,
+      "changes_used": 4,
       "items": [
         "D-03",
         "D-04",
@@ -238,6 +238,12 @@
           "file": "core/execution/service.py",
           "loc": "+66/-3",
           "summary": "(also closes D-04) account_credentials + audit seams; _credential_ref_for (account ref wins), _has_credential precheck, PROVIDER_ACCOUNT_USED emitted per attempt for pooled candidates (no secrets)"
+        },
+        {
+          "item": "D-11",
+          "file": "apps/api/app.py",
+          "loc": "+37/-0",
+          "summary": "_audit_denied emitter over admin.audit (absent seam = no-op): PERMISSION_DENIED at the /v1/admin/* non-admin 403 (reason admin_required); CROSS_TENANT_ACCESS_DENIED at the D-08 unresolved project_id 404 (resource, reference as given); rows in the ACTOR's tenant, no body/secret/target echo; HTTP bodies unchanged"
         }
       ]
     }
