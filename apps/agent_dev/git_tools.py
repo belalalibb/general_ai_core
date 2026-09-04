@@ -131,6 +131,12 @@ class BindingStorePort(Protocol):
     def save(self, bindings: Iterable[RepoBinding]) -> None: ...
 
 
+class RemoteTrustPort(Protocol):
+    """Explicit per-tenant remote trust (R172 C3). Untrusted unless told otherwise."""
+
+    def is_trusted(self, tenant_id: UUID, remote_url: str) -> bool: ...
+
+
 class BindingLookupRefused(Exception):
     """Typed lookup failure; converted to ``GitRefusal`` by the handlers."""
 
@@ -309,6 +315,7 @@ class GitToolset:
     bindings: RepoBindingRegistry
     transport: GitTransportPort
     secrets: SecretManagerPort
+    trust: RemoteTrustPort | None = None
     trace: list[GitTraceEntry] = field(default_factory=list)
     _tools: tuple[Tool, ...] = field(default_factory=tuple, init=False, repr=False)
 
@@ -371,6 +378,26 @@ class GitToolset:
     def _binding(self, binding_id: UUID) -> RepoBinding:
         return self.bindings.get(binding_id, tenant_id=self.tenant_id)
 
+    def _require_trust(self, binding: RepoBinding) -> None:
+        """R172 C3: refuse network-reaching ops for untrusted remotes.
+
+        Runs BEFORE ``_token`` so an untrusted remote never triggers a credential
+        resolve. When no trust registry is wired (``trust is None``) the R169
+        behaviour is preserved unchanged. Any registry exception is treated as
+        "not trusted" (fail closed) rather than leaking into the tool path.
+        """
+        if self.trust is None:
+            return
+        try:
+            trusted = self.trust.is_trusted(self.tenant_id, binding.remote_url) is True
+        except Exception:  # defensive: registry faults must not become 500s
+            trusted = False
+        if not trusted:
+            raise BindingLookupRefused(
+                GitRefusalCode.REMOTE_NOT_TRUSTED,
+                f"remote {binding.remote_url} is not trusted for tenant {self.tenant_id}",
+            )
+
     def _token(self, binding: RepoBinding) -> str:
         try:
             return self.secrets.resolve(self.tenant_id, binding.credential_ref)
@@ -393,6 +420,7 @@ class GitToolset:
             return _validation_error(error, arguments.get("binding_id"))
         try:
             binding = self._binding(request.binding_id)
+            self._require_trust(binding)
             token = self._token(binding)
             head = await self.transport.fetch(binding, token=token)
         except BindingLookupRefused as exc:
@@ -465,6 +493,7 @@ class GitToolset:
         _CURRENT_MODE.set(mode)
         try:
             binding = self._binding(request.binding_id)
+            self._require_trust(binding)
         except BindingLookupRefused as exc:
             self._record(op, request.binding_id, ok=False, code=exc.code, mode=mode)
             return _refusal(exc.code, exc.reason, request.binding_id)

@@ -1135,3 +1135,35 @@ resurrection.
 ### Ref
 `evidence/r172/C2/`; budget `round_r172` 2/8. Composition wiring (default path + `outside_of`)
 deliberately NOT done — owner decision, see notes.md "Open".
+
+## IMPL-020 — Remote trust is explicit, per-(tenant, remote), and checked before any credential resolve (R172 C3)
+
+### Decision
+`GitToolset` gains an optional `trust: RemoteTrustPort`. When present, `git.fetch` and every mode of
+`git.publish` call `_require_trust(binding)` immediately after the binding lookup and *before*
+`_token()`. An untrusted remote returns `GitRefusal(code="remote_not_trusted")` as data; the secret
+manager is never consulted. `git.status` and `git.commit` are unaffected. Trust exists only as a
+`RemoteTrustGrant` (`trusted: StrictBool`, named `granted_by`, `granted_at`, optional revocation)
+keyed by `(tenant_id, remote_url.strip())`; the reference registry/store live in
+`core/tools/remote_trust.py` on the shared `core/tools/atomic_json.py` durability primitives.
+
+### Why
+1. Discovery D2: nothing distinguished a remote the owner bound deliberately from one an attacker
+   swapped in; the token flowed to whatever URL the binding carried.
+2. Ordering is the security property: a refusal *after* `resolve` would already have pulled the
+   token into process memory and the audit path. Tests count `resolve` calls (must be 0).
+3. `StrictBool` + fail-closed load: a `"true"` string, a corrupt store or a registry exception all
+   collapse to "untrusted" — never to an exception in the tool path and never to trust.
+4. Conservative normalisation (whitespace only): widening equivalence classes widens trust.
+5. Optional field + `trust=None` default keeps the 53 R169 git/contract tests byte-identical.
+
+### Guards
+`tests/agent_dev/test_remote_trust_r172.py` (19): contract strictness, default-untrusted,
+per-tenant/per-remote, revocation, conservative normalisation, store modes + fail-closed
+partial/malformed, untrusted fetch/publish(pr, direct_push, dry_run) refused with `resolve_calls == 0`,
+status/commit untouched, trusted path resolves once, revoke takes effect immediately, foreign-tenant
+grant does not trust, trace code, `trust=None` == R169.
+
+### Ref
+`evidence/r172/C3/`; budget `round_r172` 3/8. Composition wiring and the operator "grant" act are
+owner decisions — see notes.md "Open".

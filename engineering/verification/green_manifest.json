@@ -301,7 +301,7 @@
         "core/",
         "apps/"
       ],
-      "changes_used": 2,
+      "changes_used": 3,
       "items": [
         "C1",
         "C2",
@@ -324,6 +324,12 @@
           "file": "apps/agent_dev/git_tools.py",
           "loc": "+26/-2 (+ NEW core/contracts/binding_store.py 66 lines, NEW core/tools/binding_store.py 193 lines)",
           "summary": "RepoBindingRegistry(store=None) optional BindingStorePort; fail-closed load at construction with load_report (missing/ok/partial/malformed/unreadable); register() re-saves full valid set (no partial resurrection). JsonBindingStore: same-dir temp O_EXCL 0o600 -> flush -> fsync -> os.replace, dir 0o700, refuses path inside outside_of roots, credential_ref only (INV-3 byte-grep). 38 test_git_tools.py unmodified; 14 new tests"
+        },
+        {
+          "item": "C3",
+          "file": "apps/agent_dev/git_tools.py",
+          "loc": "+29/-0 (+1 enum line core/contracts/repo_binding.py; NEW core/contracts/remote_trust.py 75, core/tools/remote_trust.py 178, core/tools/atomic_json.py 150; core/tools/binding_store.py refactored onto atomic_json, API unchanged)",
+          "summary": "GitToolset.trust: RemoteTrustPort | None = None; _require_trust() raises BindingLookupRefused(REMOTE_NOT_TRUSTED) in fetch() and publish() after _binding() and BEFORE _token() — secrets.resolve never called for untrusted remotes; status/commit untouched; trust=None == R169. RemoteTrustGrant StrictBool (\"true\" string rejected/skipped), revocation, per-(tenant, remote) exact-match; JsonRemoteTrustStore fail-closed 0o700/0o600 atomic. 19 new tests; 53 R169 git/contract tests unmodified"
         }
       ],
       "note": "R172 backend closure: one coherent edit to a file under core/ apps/ = one change; tests, contracts (INV-1), docs, evidence, .gitignore are budget-free. ui/** and apps/admin_agent/** are frozen (INV-7)."

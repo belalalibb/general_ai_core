@@ -47,6 +47,7 @@ class GitRefusalCode(StrEnum):
     INVALID_REF = "invalid_ref"
     TRANSPORT_ERROR = "transport_error"
     VALIDATION_ERROR = "validation_error"
+    REMOTE_NOT_TRUSTED = "remote_not_trusted"
 
 
 class RepoBinding(ContractModel):

@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
@@ -153,10 +153,17 @@ def make_world(tmp_path: Path, *, trust: RemoteTrustRegistry | None) -> World:
 
 def call(world: World, perm: str, **args: object) -> dict[str, Any]:
     payload: dict[str, object] = {"binding_id": str(world.binding.id), **args}
-    return run(world.surface.call(perm, payload, approval_state="approved"))
+    record = run(world.surface.call(perm, payload, approval_state="approved"))
+    # Trust refusals are handler DATA (INV-2): the gate admits, the handler returns
+    # a GitRefusal — never "refused"/"failed" at the executor level.
+    assert record.status == "succeeded", (record.status, record.error, record.error_detail)
+    assert record.result is not None
+    return dict(record.result)
 
 
-def _grant(*, trusted: bool = True, tenant: UUID = TENANT, remote: str = REMOTE) -> RemoteTrustGrant:
+def _grant(
+    *, trusted: bool = True, tenant: UUID = TENANT, remote: str = REMOTE
+) -> RemoteTrustGrant:
     return RemoteTrustGrant(
         tenant_id=tenant,
         remote_url=remote,

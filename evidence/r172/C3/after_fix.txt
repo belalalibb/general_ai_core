@@ -1,0 +1,13 @@
+# C3 after-fix — 2026-09-04T19:41:01Z — base HEAD d24a213
+# cmd: python -m pytest tests/agent_dev tests/tools tests/verification -q -p no:cacheprovider -o addopts=""
+319 passed, 1 xfailed, 1 warning in 5.37s
+# C3 suite alone:
+19 passed in 0.37s
+# C2 suite after atomic_json refactor:
+14 passed in 0.42s
+# R169 git tests (must be unmodified):
+53 passed in 0.56s
+# git diff --stat 67824d0 -- tests/agent_dev/test_git_tools.py tests/agent_dev/test_contracts_r169.py (empty = unmodified):
+# ruff / mypy:
+All checks passed!
+Success: no issues found in 5 source files
