@@ -126,7 +126,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, MutableMapping
+from collections.abc import Awaitable, Callable, MutableMapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated
@@ -435,6 +435,15 @@ def _resolve_role(selector: RoleSelector, registry: RoleRegistry) -> Role | JSON
     return role
 
 
+#: R168 D-07: the /v1/auth/* entry points a token-less caller MUST reach.
+#: ``/v1/auth/session`` and ``/v1/auth/logout`` are NOT here: they are
+#: identity-bearing (session answers 401 or the hybrid demo identity;
+#: logout stays an idempotent 204 only for an admitted caller).
+_AUTH_ENTRY_PATHS: frozenset[str] = frozenset(
+    {"/v1/auth/register", "/v1/auth/verify", "/v1/auth/login"}
+)
+
+
 def create_app(
     *,
     router: SimpleScoringRouter,
@@ -472,8 +481,18 @@ def create_app(
     source_snapshots: SnapshotStorePort | None = None,
     agent: AgentSurface | None = None,
     engineering_admin: EngineeringAdminSurface | None = None,
+    public_paths: frozenset[str] = frozenset(),
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
+
+    R168 D-07/D-10 — ``public_paths`` is the composition's ONE list of paths a
+    token-less caller may reach. When ``auth`` is composed, an HTTP middleware
+    admits every other ``/v1/`` path BEFORE FastAPI body validation: no bearer
+    ⇒ the hybrid fallback principal or 401; invalid bearer ⇒ 401;
+    ``/v1/admin/*`` without ``is_admin`` ⇒ 403. Route handlers keep their own
+    ``_principal`` / ``_admit`` calls (no route-signature change); the
+    middleware only guarantees ORDER (identity before schema) so anonymous or
+    non-admin callers never see field-level validation hints.
 
     Phase 6 seams (all optional — absent seams keep prior slices' behavior):
     ``skills``/``roles`` default to EMPTY registries (deny-by-default:
@@ -606,6 +625,28 @@ def create_app(
             )
 
         app.include_router(create_auth_router(auth_surface, fallback=fallback_principal))
+
+        # R168 D-07/D-10: admission BEFORE body validation (see docstring).
+        # The auth router's entry points are public BY CONSTRUCTION (one
+        # cannot log in while unauthenticated otherwise); the composition's
+        # ``public_paths`` can only ADD to this set, never remove from it.
+        # Mounted sub-apps (static UIs) are outside /v1/ and stay reachable.
+        admitted_public = public_paths | _AUTH_ENTRY_PATHS
+
+        @app.middleware("http")
+        async def _admission(
+            request: Request,
+            call_next: Callable[[Request], Awaitable[Response]],
+        ) -> Response:
+            path = request.url.path
+            if path in admitted_public or not path.startswith("/v1/"):
+                return await call_next(request)
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
+            if path.startswith("/v1/admin/") and not caller.is_admin:
+                return error_response(ErrorCode.UNAUTHORIZED, "Admin access required.")
+            return await call_next(request)
 
     @app.exception_handler(RequestValidationError)
     async def _validation_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:

@@ -963,6 +963,9 @@ def build_runtime_profile(
         # mounted for the console's login. Durable profile: auth only.
         principal=demo_principal,
         auth=auth,
+        # R168 D-07: the ONE public-path list; everything else is admitted
+        # (identity, then admin) before body validation.
+        public_paths=PUBLIC_PATHS,
         system_info=_system_info,
         skills=skills,
         roles=roles,
