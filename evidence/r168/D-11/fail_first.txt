@@ -1,0 +1,19 @@
+FAIL FIRST @ 57ca12bc — HTTP 403/404 bodies already correct; zero PERMISSION_DENIED / CROSS_TENANT_ACCESS_DENIED rows written (emitters absent)
+E       AssertionError: []
+E       assert 0 == (0 + 1)
+E        +  where 0 = len([])
+E        +  and   0 = len([])
+E       AssertionError: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+E       AssertionError: assert [] == ['00000000-00... 'not-a-uuid']
+E         
+E         Right contains 2 more items, first extra item: '00000000-0000-4000-8000-000000000000'
+E         Use -v to get more diff
+E       assert 0 == 1
+E        +  where 0 = len([])
+FAILED tests/composition/test_d11_denials_are_audited.py::test_non_admin_denial_writes_permission_denied_in_callers_tenant
+FAILED tests/composition/test_d11_denials_are_audited.py::test_foreign_project_reference_writes_cross_tenant_denied_in_actors_tenant
+FAILED tests/composition/test_d11_denials_are_audited.py::test_unknown_and_malformed_project_references_are_also_recorded
+FAILED tests/composition/test_d11_denials_are_audited.py::test_tenant_admin_reads_denial_rows_over_http
+4 failed in 3.39s
