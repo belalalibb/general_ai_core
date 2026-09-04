@@ -291,3 +291,28 @@ def test_mypy_gate_scope_never_shrinks() -> None:
     recorded = set(_manifest()["mypy"]["gate_scope_packages"])
     assert recorded == {"core", "apps.api", "apps.composition"}
     assert recorded <= scope, sorted(recorded - scope)
+
+
+def test_change_budget_round_r172_consistent() -> None:
+    """R172 §2: 8-change backend closure budget (C1..C8), roots core/ apps/ only.
+
+    ui/** and apps/admin_agent/** are frozen this round (INV-7); a log row
+    touching either is a budget violation, not a bookkeeping slip.
+    """
+    cb = _manifest()["change_budget"]
+    rd = cb["round_r172"]
+    assert rd["ceiling"] == 8
+    roots = tuple(rd["counts_production_code_under"])
+    assert set(roots) == {"core/", "apps/"}
+    assert rd["changes_used"] <= rd["ceiling"]
+    assert rd["changes_used"] == len(rd["log"])
+    items = set(rd["items"])
+    assert items == {"C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8"}
+    seen: set[str] = set()
+    for e in rd["log"]:
+        assert {"item", "file", "loc", "summary"} <= set(e)
+        assert e["item"] in items
+        assert e["file"].startswith(roots)
+        assert not e["file"].startswith(("ui/", "apps/admin_agent/"))
+        assert e["item"] not in seen, "one commit per item"
+        seen.add(e["item"])

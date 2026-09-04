@@ -45,3 +45,11 @@ __pycache__/
 
 # QEVION evidence transcripts are tracked (contract: evidence/tasks/*.log)
 !evidence/tasks/*.log
+
+# R172 §0 secret hygiene — env files (any case/suffix), key material, raw captures
+.env*
+!.env.example
+*.key
+*.pem
+/secrets/
+evidence/**/raw_*

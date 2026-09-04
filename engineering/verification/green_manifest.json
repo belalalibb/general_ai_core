@@ -294,6 +294,26 @@
         }
       ],
       "note": "R169 §3: one coherent edit to a file under core/ apps/ ui/ = one change; tests, contracts (INV-1), docs, evidence are budget-free"
+    },
+    "round_r172": {
+      "ceiling": 8,
+      "counts_production_code_under": [
+        "core/",
+        "apps/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "C8"
+      ],
+      "log": [],
+      "note": "R172 backend closure: one coherent edit to a file under core/ apps/ = one change; tests, contracts (INV-1), docs, evidence, .gitignore are budget-free. ui/** and apps/admin_agent/** are frozen (INV-7)."
     }
   },
   "baseline": {
