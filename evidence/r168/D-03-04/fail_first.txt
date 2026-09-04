@@ -1,0 +1,25 @@
+policy = <CredentialPolicy.PLATFORM_ONLY: 'platform_only'>
+
+    def request(self, policy: CredentialPolicy | None) -> RoutingRequest:
+        kwargs: dict[str, Any] = {
+            "operation": ProviderOperation.GENERATE_TEXT,
+            "model_policy": AutoModelPolicy(type="auto"),
+        }
+        if policy is not None:
+            kwargs["credential_policy"] = policy
+>       return RoutingRequest(**kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for RoutingRequest
+E       credential_policy
+E         Extra inputs are not permitted [type=extra_forbidden, input_value=<CredentialPolicy.PLATFORM_ONLY: 'platform_only'>, input_type=CredentialPolicy]
+E           For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden
+
+tests/routing/test_d03_d04_two_account_failover.py:239: ValidationError
+=========================== short test summary info ============================
+FAILED tests/routing/test_d03_d04_two_account_failover.py::test_routing_request_carries_credential_policy
+FAILED tests/routing/test_d03_d04_two_account_failover.py::test_platform_only_policy_excludes_user_accounts_in_completion
+FAILED tests/routing/test_d03_d04_two_account_failover.py::test_complete_expands_pooled_provider_into_two_account_candidates
+FAILED tests/routing/test_d03_d04_two_account_failover.py::test_complete_leaves_pool_less_provider_untouched
+FAILED tests/routing/test_d03_d04_two_account_failover.py::test_two_accounts_same_provider_fail_over_with_distinct_refs_and_audit
+FAILED tests/routing/test_d03_d04_two_account_failover.py::test_account_completed_route_needs_no_provider_level_credential
+FAILED tests/routing/test_d03_d04_two_account_failover.py::test_no_eligible_account_fails_clearly
