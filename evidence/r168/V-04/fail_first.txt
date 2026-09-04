@@ -1,0 +1,6 @@
+# §6.5 /v1/ drift — FAIL FIRST (measure) at 20466220
+app.js /v1/ count: 73 ; N0 (baseline) = 73 ; manifest ceiling = 73
+index.html /v1/ occurrences (text/docs only, none wired via href/src/action/data-*): 15
+styles.css: 0
+
+Reduction target check: any reduction requires editing ui/admin/app.js (a served asset). No R168 defect (D-01..D-11) requires a UI edit; INV-2 additive-only forbids a rewrite of the api() call sites for count-only purposes.
