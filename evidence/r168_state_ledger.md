@@ -30,3 +30,4 @@ Baseline file: `engineering/verification/green_manifest.baseline.json`.
 |---|---|---|---|---|
 | 2026-09-04 | R168 start (after sandbox reset wiped uncommitted §6 draft) | §0 VERIFY: HEAD 2f1a0e9 clean, no R168 artifacts; RESTORE env; re-measure §4 | 2f1a0e9 | done |
 | 2026-09-04 | V-01 verification track | green_manifest.json/.md, baseline json, conflict ledger, check_repo.sh slices+counters+widened secret scan+NOT EVALUATED+budget guard, tests/verification guards (AH), tests/ui static check, decisions entry | 2f1a0e9 | in progress |
+| 2026-09-04 | V-01 (restart #5) | sandbox reset again wiped local-only checkpoint commits (fresh clone at 44052ef) AND the /mnt/aidrive tar backup (mount empty after reset). GitHub credentials unavailable → push impossible. New persistence: `git bundle create` of main uploaded to blob storage after every commit; restore with `git fetch <bundle> main`. Re-implement V-01 | 44052ef | in progress |
