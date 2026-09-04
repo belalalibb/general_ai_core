@@ -1,0 +1,2 @@
+BEFORE: pytest passed=2738 (V-01 hermetic)
+AFTER: +4 tests (tests/api/test_exercise_tenant_isolation.py); no production files changed; budget round_a=0/5 round_b=0/5
