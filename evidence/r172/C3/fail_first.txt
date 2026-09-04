@@ -1,0 +1,10 @@
+# C3 fail-first — 2026-09-04T19:30:27Z — HEAD d04dd7d
+# cmd: python -m pytest tests/agent_dev/test_remote_trust_r172.py -q -p no:cacheprovider -o addopts=""
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent_dev/test_remote_trust_r172.py:37: in <module>
+    from core.contracts.remote_trust import RemoteTrustGrant, TrustStoreDocument
+E   ModuleNotFoundError: No module named 'core.contracts.remote_trust'
+=========================== short test summary info ============================
+ERROR tests/agent_dev/test_remote_trust_r172.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.68s
