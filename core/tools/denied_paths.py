@@ -11,9 +11,10 @@ introduces no new matching semantics — it only widens the list. It is wired at
 ``apps.agent_dev.surface.build_dev_surface`` composition; the bare primitives
 keep their defaults.
 
-NOTE: the explicit case variants (``.ENV*`` / ``.Env*``) are a patch —
-enumeration cannot cover every spelling; the proper fix is path normalisation
-in the reader/writer admission check (R172 C4).
+NOTE: the explicit case variants (``.ENV*`` / ``.Env*``) are kept even though
+R172 C4 normalises the path (casefold, invisible chars, ``:stream``, trailing
+dots/spaces) before the deny check — belt and braces: the list catches the
+common spellings on its own, the normaliser catches the rest.
 """
 
 from __future__ import annotations
@@ -56,7 +57,7 @@ HARDENED_PATTERNS: tuple[str, ...] = (
     "*cookies*",
     "*tokens*",
     "*password*",
-    # case variants of .env — patch only; normalisation lands in C4
+    # case variants of .env — belt and braces alongside the C4 normaliser
     *_anywhere(".ENV", ".ENV.*", ".Env", ".Env.*"),
 )
 

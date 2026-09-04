@@ -24,6 +24,7 @@ Security posture (deny-by-default, capability != authority):
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
@@ -50,6 +51,48 @@ DEFAULT_MAX_FILE_BYTES = 65_536
 
 #: Entry cap for listings and search results.
 DEFAULT_MAX_ENTRIES = 500
+
+
+# --- deny-check normalisation (R172 C4) ----------------------------------------
+#
+# The denylist is matched against a *normalised* spelling of the relative path in
+# addition to the raw spelling, so ``.ENV``, ``.e\u200dnv``, ``.env::$DATA``,
+# ``.env.`` and ``.env `` all collapse to ``.env``. The explicit case variants in
+# ``core.tools.denied_paths`` are kept as well — belt and braces.
+
+_INVISIBLE_CATEGORIES = frozenset({"Cf", "Cc", "Mn", "Me"})  # format/control/combining
+
+
+def _strip_invisible(segment: str) -> str:
+    return "".join(ch for ch in segment if unicodedata.category(ch) not in _INVISIBLE_CATEGORIES)
+
+
+def normalize_deny_path(rel_posix: str) -> str:
+    """Canonical spelling used for the deny check (idempotent, pure).
+
+    Per segment: NFKC fold, drop invisible/zero-width/combining code points,
+    drop an NTFS alternate-data-stream suffix (``name:stream``), drop trailing
+    dots and spaces, casefold.
+    """
+    out: list[str] = []
+    for segment in rel_posix.split("/"):
+        seg = unicodedata.normalize("NFKC", segment)
+        seg = _strip_invisible(seg)
+        if ":" in seg:
+            seg = seg.split(":", 1)[0]
+        seg = seg.rstrip(". ")
+        seg = seg.casefold()
+        if seg:
+            out.append(seg)
+    return "/".join(out)
+
+
+def is_denied(rel_posix: str, patterns: tuple[str, ...]) -> bool:
+    """True when the raw OR normalised relative path matches any pattern."""
+    if any(fnmatch(rel_posix, pattern) for pattern in patterns):
+        return True
+    canon = normalize_deny_path(rel_posix)
+    return canon != rel_posix and any(fnmatch(canon, pattern) for pattern in patterns)
 
 
 class SourceReadRefused(Exception):
@@ -91,7 +134,7 @@ class SourceReader:
         return candidate
 
     def _denied(self, rel_posix: str) -> bool:
-        return any(fnmatch(rel_posix, pattern) for pattern in self.denied_patterns)
+        return is_denied(rel_posix, self.denied_patterns)
 
     # --- operations ----------------------------------------------------------
 

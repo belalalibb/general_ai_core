@@ -1167,3 +1167,36 @@ grant does not trust, trace code, `trust=None` == R169.
 ### Ref
 `evidence/r172/C3/`; budget `round_r172` 3/8. Composition wiring and the operator "grant" act are
 owner decisions — see notes.md "Open".
+
+## IMPL-021 — Source writes are atomic; the deny check matches a normalised spelling too (R172 C4)
+
+### Decision
+`SourceWriter` writes through `_atomic_write` (same-directory temp → flush → fsync → `os.replace`),
+so an interrupted write leaves the target byte-identical, leaves no temp file, and does not consume
+an op; the caller sees the existing `io_error` refusal and its next CAS write against the original
+digest succeeds. `SourceReader` gains module-level `normalize_deny_path` / `is_denied`; both reader
+and writer route `_denied` through `is_denied`, which matches the raw relative path first and then
+the normalised one (NFKC, invisible/zero-width/combining code points removed, `:stream` suffix cut,
+trailing dots/spaces removed, casefold). `DEFAULT_DENIED_PATTERNS` is unchanged; C1's explicit case
+variants stay as belt and braces.
+
+### Why
+1. Discovery D4: `write_bytes` truncates before it writes — a crash mid-write left a half file whose
+   digest matched nothing, so the agent's own CAS precondition would then refuse every repair.
+2. Discovery D5: the denylist was pure `fnmatch` on the raw spelling; `.ENV`, `.e<ZWJ>nv`,
+   `.env::$DATA`, `.env.` and `.env ` all read a credential file. Enumerating spellings (C1) cannot
+   close that class; normalising the checked string does.
+3. Raw-then-normalised matching can only ADD refusals, never remove one, so no green test can flip.
+4. Module functions rather than methods keep both public-surface pin tests (INV-6) untouched, and
+   let the writer share the exact same predicate (what cannot be read cannot be written).
+5. Cutting at the first `:` may over-deny a POSIX name like `.env:notes` — accepted; fail-closed.
+
+### Guards
+`tests/tools/test_source_hardening_r172.py` (39): normaliser table + idempotence; `is_denied`
+raw/normalised; reader refuses/hides 8 variants under the DEFAULT list; writer refuses the same 8
+with `path_denied` and creates nothing; interrupted overwrite and create; mode preservation; umask;
+no temp files on success. Pre-existing reader/writer/denylist suites (122+1) and `tests/admin_agent`
+(130) unmodified and green.
+
+### Ref
+`evidence/r172/C4/`; budget `round_r172` 4/8 (one commit, two files; manifest guard enforces one log row per item).

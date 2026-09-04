@@ -18,9 +18,11 @@ R169 A2. Design posture:
 from __future__ import annotations
 
 import hashlib
+import os
+import stat
+import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from fnmatch import fnmatch
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -33,7 +35,7 @@ from core.contracts.source_write import (
     SourceWriteRequest,
     SourceWriteResult,
 )
-from core.tools.source_reader import DEFAULT_DENIED_PATTERNS
+from core.tools.source_reader import DEFAULT_DENIED_PATTERNS, is_denied
 
 DEFAULT_MAX_WRITE_BYTES = 65_536
 DEFAULT_MAX_OPS = 50
@@ -41,6 +43,42 @@ DEFAULT_MAX_OPS = 50
 
 def _sha256(blob: bytes) -> str:
     return hashlib.sha256(blob).hexdigest()
+
+
+def _atomic_write(target: Path, blob: bytes) -> None:
+    """R172 C4: same-directory temp -> write -> flush -> fsync -> ``os.replace``.
+
+    An interruption at any step leaves ``target`` byte-identical to before and
+    removes the temp file; the ``OSError`` propagates to ``write()`` where it
+    becomes an ``io_error`` refusal. Mode: an existing file keeps its mode; a
+    new file gets the umask default (``0o666 & ~umask``), same as ``write_bytes``.
+    """
+    directory = target.parent
+    tmp = directory / f".{target.name}.{uuid.uuid4().hex}.tmp"
+    try:
+        mode = stat.S_IMODE(target.stat().st_mode) if target.exists() else None
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(blob)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if mode is not None:
+            os.chmod(tmp, mode)
+        os.replace(tmp, target)
+    except OSError:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+    try:  # best-effort durability of the rename itself
+        dfd = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(dfd)
+        finally:
+            os.close(dfd)
+    except OSError:
+        pass
 
 
 class _Refuse(Exception):
@@ -91,7 +129,7 @@ class SourceWriter:
         return candidate
 
     def _denied(self, rel_posix: str) -> bool:
-        return any(fnmatch(rel_posix, pattern) for pattern in self.denied_patterns)
+        return is_denied(rel_posix, self.denied_patterns)
 
     # -- helpers ----------------------------------------------------------------
 
@@ -175,12 +213,12 @@ class SourceWriter:
             if target.exists():
                 raise _Refuse(SourceWriteRefusalCode.FILE_EXISTS, "target already exists")
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(blob)
+            _atomic_write(target, blob)
             previous, new, written = None, _sha256(blob), len(blob)
         elif operation is SourceWriteOp.OVERWRITE:
             blob = self._payload(content)
             previous = self._existing_file_digest(target, expected_sha256)
-            target.write_bytes(blob)
+            _atomic_write(target, blob)
             new, written = _sha256(blob), len(blob)
         else:
             previous = self._existing_file_digest(target, expected_sha256)

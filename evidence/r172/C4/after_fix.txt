@@ -1,0 +1,13 @@
+# C4 after-fix — 2026-09-04T19:50:41Z — base HEAD ee36e15
+# cmd: python -m pytest tests/agent_dev tests/tools tests/verification -q -p no:cacheprovider -o addopts=""
+358 passed, 1 xfailed, 1 warning in 5.34s
+# C4 suite alone:
+39 passed in 0.36s
+# pre-existing reader/writer/denylist suites (must be unmodified):
+122 passed, 1 xfailed in 0.53s
+# git diff --stat 67824d0 -- tests/tools/test_source_reader.py tests/tools/test_source_writer.py (empty = unmodified):
+# admin_agent consumers of SourceReader (must stay green, untouched):
+130 passed in 7.32s
+# ruff / mypy:
+All checks passed!
+Success: no issues found in 3 source files

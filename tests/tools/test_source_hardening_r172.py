@@ -238,9 +238,9 @@ def test_writer_never_leaves_temp_files_on_success(repo: Path) -> None:
     assert writer.write(op=SourceWriteOp.CREATE, path="pkg/a.py", content="a\n")["ok"] is True
     sha = _sha(b"a\n")
     assert (
-        writer.write(op=SourceWriteOp.OVERWRITE, path="pkg/a.py", content="b\n", expected_sha256=sha)[
-            "ok"
-        ]
+        writer.write(
+            op=SourceWriteOp.OVERWRITE, path="pkg/a.py", content="b\n", expected_sha256=sha
+        )["ok"]
         is True
     )
     names = sorted(p.name for p in (repo / "pkg").iterdir())

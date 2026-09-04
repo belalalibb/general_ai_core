@@ -301,7 +301,7 @@
         "core/",
         "apps/"
       ],
-      "changes_used": 3,
+      "changes_used": 4,
       "items": [
         "C1",
         "C2",
@@ -330,6 +330,12 @@
           "file": "apps/agent_dev/git_tools.py",
           "loc": "+29/-0 (+1 enum line core/contracts/repo_binding.py; NEW core/contracts/remote_trust.py 75, core/tools/remote_trust.py 178, core/tools/atomic_json.py 150; core/tools/binding_store.py refactored onto atomic_json, API unchanged)",
           "summary": "GitToolset.trust: RemoteTrustPort | None = None; _require_trust() raises BindingLookupRefused(REMOTE_NOT_TRUSTED) in fetch() and publish() after _binding() and BEFORE _token() — secrets.resolve never called for untrusted remotes; status/commit untouched; trust=None == R169. RemoteTrustGrant StrictBool (\"true\" string rejected/skipped), revocation, per-(tenant, remote) exact-match; JsonRemoteTrustStore fail-closed 0o700/0o600 atomic. 19 new tests; 53 R169 git/contract tests unmodified"
+        },
+        {
+          "item": "C4",
+          "file": "core/tools/source_reader.py + core/tools/source_writer.py",
+          "loc": "+44/-1 reader, +43/-5 writer",
+          "summary": "Reader: normalize_deny_path (NFKC, strip Cf/Cc/Mn/Me invisibles, cut ':stream', rstrip '. ', casefold; per segment, idempotent) + is_denied(raw OR normalised); SourceReader._denied delegates; DEFAULT_DENIED_PATTERNS unchanged (13); public-surface pin unchanged. Writer: _atomic_write (same-dir temp O_EXCL -> write -> flush -> fsync -> chmod(existing mode) -> os.replace -> dir fsync; OSError unlinks temp -> io_error refusal, ops_used unchanged, next CAS against original digest succeeds); both write_bytes sites replaced; _denied shares is_denied. One commit, two files."
         }
       ],
       "note": "R172 backend closure: one coherent edit to a file under core/ apps/ = one change; tests, contracts (INV-1), docs, evidence, .gitignore are budget-free. ui/** and apps/admin_agent/** are frozen (INV-7)."
