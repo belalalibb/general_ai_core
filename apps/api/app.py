@@ -136,6 +136,7 @@ from fastapi import FastAPI, Header, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from apps.agent_dev.git_tools import RepoBindingRegistry
 from apps.api.admin import AdminSurface, create_admin_router
 from apps.api.agent import AGENT_STRATEGY, AgentSurface, AgentToolSelection, AgentToolsRejected
 from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
@@ -487,6 +488,7 @@ def create_app(
     agent: AgentSurface | None = None,
     engineering_admin: EngineeringAdminSurface | None = None,
     public_paths: frozenset[str] = frozenset(),
+    dev_bindings: RepoBindingRegistry | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -718,6 +720,22 @@ def create_app(
             resolve=_principal,
         )
     )
+
+    # --- /v1/dev (R169 A6 read surface; R172 C7 mounts it) --------------------
+    # Opt-in seam: the router existed since R169 but no composition root ever
+    # included it (R172 discovery D3). When a RepoBindingRegistry is injected the
+    # publish-modes read surface is served behind the same principal resolver
+    # (and, when auth is composed, the same /v1/* admission middleware); when it
+    # is absent the route is not in the table and ``dev.publish_modes`` is INERT.
+    if dev_bindings is not None:
+        # Composition-time import: apps.agent_dev.http imports apps.api.errors,
+        # whose package __init__ imports this module — a module-level import
+        # here would make ``import apps.agent_dev.http`` first fail with a
+        # partially-initialised cycle. Resolving it at the seam keeps both
+        # entry orders valid (pinned by tests/api/test_dev_router_mount_r172.py).
+        from apps.agent_dev.http import create_dev_router
+
+        app.include_router(create_dev_router(dev_bindings, resolve=_principal))
 
     @app.post("/v1/execute")
     async def execute(
@@ -1851,6 +1869,11 @@ def create_app(
             "auth seam -> /v1/auth/* (AA-1 IDN-1)",
         ),
         _cap("health.liveness", healthz, "healthz seam -> GET /healthz (SYS-1)"),
+        _cap(
+            "dev.publish_modes",
+            dev_bindings is not None,
+            "dev_bindings seam -> GET /v1/dev/bindings/{id}/publish-modes (R169 A6 / R172 C7)",
+        ),
     )
     # One derivation, two consumers (module header): the admin route below
     # AND the composition root (which hands the SAME tuple to the agent's
