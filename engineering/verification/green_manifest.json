@@ -36,7 +36,7 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 2762
+      "min_passed": 2769
     },
     "last_measured": {
       "passed": 2762,
