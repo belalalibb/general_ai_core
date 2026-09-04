@@ -1,0 +1,441 @@
+{
+  "captured_at_head": "2f1a0e9fb63cb014d7240299d686463d40b5208e",
+  "check_repo": {
+    "exit_code": 0,
+    "output": [
+      "PASS: exists: engineering/adr/ADR-TEMPLATE.md",
+      "PASS: exists: engineering/adr/README.md",
+      "PASS: exists: engineering/gates/GATE-TEMPLATE.md",
+      "PASS: exists: engineering/decisions/README.md",
+      "PASS: exists: engineering/verification/README.md",
+      "PASS: exists: docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md",
+      "PASS: exists: docs/ai_orchestration_pack/final_docs_v3/00_INDEX.md",
+      "PASS: exists: docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTOCOL.md",
+      "PASS: exists: docs/ai_orchestration_pack/final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md",
+      "PASS: no legacy state files (D10/D11)",
+      "PASS: v3 pack complete: 20 documents",
+      "PASS: state field present: STATE_REVISION",
+      "PASS: state field present: RESUME_TOKEN",
+      "PASS: state field present: CURRENT_TASK",
+      "PASS: state field present: NEXT_TASK",
+      "PASS: state field present: PHASE_2_STATUS",
+      "PASS: pytest: all tests pass",
+      "PASS: mypy --strict (core/): clean",
+      "PASS: ruff: clean",
+      "PASS: import-linter: architecture boundaries kept (40 \u00a76.2)",
+      "PASS: secret scan clean",
+      "RESULT: PASS (all repo governance checks)",
+      "exit=0"
+    ]
+  },
+  "pytest": {
+    "command": "python3 -m pytest tests/ -o addopts='' -q -rs -p no:cacheprovider -W ignore::DeprecationWarning",
+    "passed": 2706,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 64,
+    "summary_line": "2706 passed, 64 skipped, 1 warning in 36.62s",
+    "skipped_tests": [
+      {
+        "file": "tests/composition/test_durable_execution_store_pa1.py",
+        "line": 431,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/composition/test_durable_identity_pa2.py",
+        "line": 403,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/composition/test_durable_sourcechange_pa3.py",
+        "line": 361,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/composition/test_runtime_pb.py",
+        "line": 243,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live durable-profile test runs manually only"
+      },
+      {
+        "file": "tests/infrastructure/test_async_execution_durable_v2.py",
+        "line": 85,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_async_execution_durable_v2.py",
+        "line": 113,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_audit_repository_v1.py",
+        "line": 165,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_audit_repository_v1.py",
+        "line": 185,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_audit_repository_v1.py",
+        "line": 200,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_catalog_repositories_v1.py",
+        "line": 250,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_catalog_repositories_v1.py",
+        "line": 281,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_catalog_repositories_v1.py",
+        "line": 293,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_catalog_repositories_v1.py",
+        "line": 304,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_execution_repository_v1.py",
+        "line": 246,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_execution_repository_v1.py",
+        "line": 264,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_execution_repository_v1.py",
+        "line": 280,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_execution_repository_v1.py",
+        "line": 297,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_execution_repository_v1.py",
+        "line": 313,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_memory_repositories_v1.py",
+        "line": 274,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_memory_repositories_v1.py",
+        "line": 296,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_memory_repositories_v1.py",
+        "line": 311,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_memory_repositories_v1.py",
+        "line": 330,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_memory_repositories_v1.py",
+        "line": 343,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_memory_repositories_v1.py",
+        "line": 359,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_outbox_repository_v1.py",
+        "line": 128,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_outbox_repository_v1.py",
+        "line": 142,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_outbox_repository_v1.py",
+        "line": 151,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_outbox_repository_v1.py",
+        "line": 159,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_s3_live_smoke.py",
+        "line": 59,
+        "count": 1,
+        "reason": "OBJECT_STORAGE_* not set \u2014 live S3 smoke runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_s3_live_smoke.py",
+        "line": 75,
+        "count": 1,
+        "reason": "OBJECT_STORAGE_* not set \u2014 live S3 smoke runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_s3_live_smoke.py",
+        "line": 85,
+        "count": 1,
+        "reason": "OBJECT_STORAGE_* not set \u2014 live S3 smoke runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_s3_live_smoke.py",
+        "line": 95,
+        "count": 1,
+        "reason": "OBJECT_STORAGE_* not set \u2014 live S3 smoke runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_usage_repository_v1.py",
+        "line": 217,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_usage_repository_v1.py",
+        "line": 251,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_usage_repository_v1.py",
+        "line": 286,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_usage_repository_v1.py",
+        "line": 304,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_usage_repository_v1.py",
+        "line": 319,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_usage_repository_v1.py",
+        "line": 330,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_vault_live_smoke.py",
+        "line": 48,
+        "count": 1,
+        "reason": "VAULT_ADDR/VAULT_TOKEN not set \u2014 live Vault smoke runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_vault_live_smoke.py",
+        "line": 60,
+        "count": 1,
+        "reason": "VAULT_ADDR/VAULT_TOKEN not set \u2014 live Vault smoke runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_vault_live_smoke.py",
+        "line": 68,
+        "count": 1,
+        "reason": "VAULT_ADDR/VAULT_TOKEN not set \u2014 live Vault smoke runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_vault_live_smoke.py",
+        "line": 77,
+        "count": 1,
+        "reason": "VAULT_ADDR/VAULT_TOKEN not set \u2014 live Vault smoke runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_workspace_repository_v1.py",
+        "line": 225,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_workspace_repository_v1.py",
+        "line": 241,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_workspace_repository_v1.py",
+        "line": 261,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_workspace_repository_v1.py",
+        "line": 286,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_workspace_repository_v1.py",
+        "line": 305,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_workspace_repository_v1.py",
+        "line": 323,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/infrastructure/test_workspace_repository_v1.py",
+        "line": 340,
+        "count": 1,
+        "reason": "DATABASE_URL not set \u2014 live Postgres tests run manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_gateway_groq_live_e2e.py",
+        "line": 199,
+        "count": 1,
+        "reason": "GW_GROQ_API_KEY not set \u2014 live e2e runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_genspark_llm_live.py",
+        "line": 60,
+        "count": 1,
+        "reason": "GSK_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_genspark_llm_live.py",
+        "line": 65,
+        "count": 1,
+        "reason": "GSK_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_genspark_llm_live.py",
+        "line": 70,
+        "count": 1,
+        "reason": "GSK_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_genspark_llm_live.py",
+        "line": 77,
+        "count": 1,
+        "reason": "GSK_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_genspark_llm_live.py",
+        "line": 99,
+        "count": 1,
+        "reason": "GSK_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_genspark_llm_live.py",
+        "line": 119,
+        "count": 1,
+        "reason": "GSK_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_genspark_llm_live.py",
+        "line": 141,
+        "count": 1,
+        "reason": "GSK_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_genspark_llm_live_e2e.py",
+        "line": 134,
+        "count": 1,
+        "reason": "GSK_API_KEY not set \u2014 live e2e runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_groq_live.py",
+        "line": 60,
+        "count": 1,
+        "reason": "GROQ_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_groq_live.py",
+        "line": 65,
+        "count": 1,
+        "reason": "GROQ_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_groq_live.py",
+        "line": 70,
+        "count": 1,
+        "reason": "GROQ_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_groq_live.py",
+        "line": 76,
+        "count": 1,
+        "reason": "GROQ_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_groq_live.py",
+        "line": 96,
+        "count": 1,
+        "reason": "GROQ_API_KEY not set \u2014 live verification runs manually only (41 \u00a749)"
+      },
+      {
+        "file": "tests/providers/test_groq_live_e2e.py",
+        "line": 136,
+        "count": 1,
+        "reason": "GROQ_API_KEY not set \u2014 live e2e runs manually only (41 \u00a749)"
+      }
+    ]
+  },
+  "ui": {
+    "v1_count_N0": 73,
+    "bytes": {
+      "ui/admin/app.js": 79351,
+      "ui/admin/index.html": 32385,
+      "ui/admin/styles.css": 16392
+    },
+    "bytes_previously_recorded": {
+      "ui/admin/app.js": 79351,
+      "ui/admin/index.html": 32385,
+      "ui/admin/styles.css": 16392
+    }
+  },
+  "final_docs_v3_md_count": 20,
+  "check_repo_sh_bytes": 3343,
+  "check_repo_sh_bytes_previously_recorded": 3343
+}

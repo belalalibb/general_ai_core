@@ -1,0 +1,32 @@
+# R168 — State Ledger
+
+One line per checkpoint. Format: `| UTC | item | intended change | HEAD at start | status |`.
+Read this file first after any interruption (§0). An item is complete only when
+`evidence/r168/<item-id>/` holds fail_first.txt, after_fix.txt, notes.md, gate_before_after.txt
+and the commit hash resolves.
+
+## §4 Baseline (captured at HEAD 2f1a0e9, before any edit) — MEASURED
+
+| Metric | Measured | Previously recorded | Delta |
+|---|---|---|---|
+| `git rev-parse HEAD` | `2f1a0e9fb63cb014d7240299d686463d40b5208e` | — | — |
+| `check_repo.sh` | RESULT: PASS, exit 0 (full output in `green_manifest.baseline.json`) | PASS | none |
+| pytest `tests/ -o addopts="" -q -rs` | **2706 passed, 64 skipped, 0 failed, 0 errors**, exit 0 | 2706 / 64 | none |
+| skipped by missing env | DATABASE_URL 41 · GSK_API_KEY 8 · GROQ_API_KEY 6 · VAULT_ADDR/VAULT_TOKEN 4 · OBJECT_STORAGE_* 4 · GW_GROQ_API_KEY 1 (= 64; every nodeid+reason in `green_manifest.baseline.json`) | — | all 64 reason-known |
+| N0 = `grep -c '/v1/' ui/admin/app.js` | **73** (permanent ceiling) | — | — |
+| `wc -c` app.js / index.html / styles.css | 79351 / 32385 / 16392 | 79351 / 32385 / 16392 | none |
+| `final_docs_v3/*.md` count | 20 | 20 | none |
+| `wc -c check_repo.sh` | 3343 | 3343 | none |
+| mypy scope | `pyproject.toml [tool.mypy] packages=["core"]`, strict | — | — |
+| secret scan (widened dry run) | 5 hits, all test sentinels (see manifest `secret_scan.exceptions`) | — | — |
+| `.env` git-tracked | none | — | — |
+| playwright / selenium | not installed → live suite NOT EVALUATED: missing dependency | — | — |
+
+Baseline file: `engineering/verification/green_manifest.baseline.json`.
+
+## Checkpoints
+
+| UTC | item | intended change | HEAD at start | status |
+|---|---|---|---|---|
+| 2026-09-04 | R168 start (after sandbox reset wiped uncommitted §6 draft) | §0 VERIFY: HEAD 2f1a0e9 clean, no R168 artifacts; RESTORE env; re-measure §4 | 2f1a0e9 | done |
+| 2026-09-04 | V-01 verification track | green_manifest.json/.md, baseline json, conflict ledger, check_repo.sh slices+counters+widened secret scan+NOT EVALUATED+budget guard, tests/verification guards (AH), tests/ui static check, decisions entry | 2f1a0e9 | in progress |
