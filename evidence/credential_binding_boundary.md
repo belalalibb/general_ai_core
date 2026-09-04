@@ -59,3 +59,20 @@ var, (ii) a per-request `CredentialPolicy`/owner scope carried from `ExecuteRequ
 `RoutingRequest` into `ExecutionService`, and (iii) `account_id` populated on
 `CandidateScore` so `AttemptRecord`/`TraceAttempt` can name the account. Until then §4C
 must be re-evaluated, not re-asserted.
+
+## R168 re-evaluation (D-03/D-04) — 2026-09-04
+
+§4C was re-evaluated, not re-asserted. The three missing links named above:
+
+| Link | Status | Where |
+|---|---|---|
+| (i) pools populated from a SecretManagerPort-backed source (not one env var) | PROVEN hermetically — `AccountPool` of two `ProviderAccount`s whose `credential_ref`s are secret-manager references; `ExecutionService(account_credentials={account_id: ref})` resolves per account | `tests/routing/test_d03_d04_two_account_failover.py::World` |
+| (ii) per-request `CredentialPolicy` carried through `RoutingRequest` into selection | PROVEN hermetically — `RoutingRequest.credential_policy` (None = AUTO); `ResourceSelector.complete(decision, policy=...)` filters via `AccountPoolManager.eligible_accounts`; USER_ONLY admits a USER pool, PLATFORM_ONLY excludes it (`NoEligibleAccount`) | `core/contracts/routing.py`, `core/routing/resources.py` |
+| (iii) `account_id` populated on `CandidateScore` so the attempt can name the account | PROVEN hermetically — `complete()` expands each pooled candidate into one candidate per eligible account (LRU order); `ExecutionService` emits `PROVIDER_ACCOUNT_USED` per attempt with `account_id/provider_id/model_id/node_key/attempt/succeeded/error_category` (no secret material) | `core/routing/resources.py`, `core/execution/service.py` |
+
+Outcome:
+- **Contract level: SUPPORTED.** Two accounts of ONE provider; the first returns `INVALID_CREDENTIAL` (route-indicting, non-retryable) and the walk continues to the second account of the same provider, which succeeds; two audit rows name the two accounts.
+- **Composition level: NOT WIRED.** `apps/composition/runtime.py` still builds `ExecutionService` without `account_credentials`/`audit` and never calls `complete()`. OUT OF SCOPE (R168): budget — scheduled for R169 (Round B 3/5 used; the remaining 2 are reserved for D-11).
+- **Live 2-account run: NOT EVALUATED** (no second credential is available in this envelope; nothing about the live gateway is asserted).
+
+Budget Round B 3/5: `core/contracts/routing.py` +5/−1 · `core/routing/resources.py` +60/−0 · `core/execution/service.py` +66/−3.

@@ -821,3 +821,44 @@ asserted the defect).
 
 ### Ref
 `evidence/r168/D-01/`; budget round A unchanged 4/5 (providers/ only).
+
+## IMPL-010. Account-complete routes and per-account credentials (R168 D-03/D-04)
+
+### Question
+`RoutingDecision` named a provider+model but never an account; `credential_refs`
+is `Mapping[provider_id, str]`, so a second credential for the same provider
+overwrote the first and no failover between accounts of ONE provider existed
+(D-03). No emitter named the account a call used (D-04). 30 §10 defines
+`CredentialPolicy` and `AccountPool`; 11 §2 defines Provider/Account Selection —
+both had zero call sites.
+
+### Decision (R168, 2026-09-04)
+1. `RoutingRequest.credential_policy: CredentialPolicy | None` — the 30 §10
+   policy travels WITH the request; `None` means the caller expressed no
+   preference and the selector applies AUTO. Additive (INV-2).
+2. `ResourceSelector.complete(decision, *, policy, rate_limits, bindings)` turns
+   a model-level decision into an account-complete one: every pooled candidate
+   becomes one candidate per eligible account (LRU order, all seven
+   `eligible_accounts` filters), pool-less candidates pass through unchanged,
+   candidates with no eligible account become `ExclusionRecord`s, and an empty
+   route raises `NoEligibleAccount`. `select()` is unchanged.
+3. `ExecutionService(account_credentials=..., audit=...)` — two optional seams.
+   The account's credential_ref wins over the provider-level ref; the
+   `_validate_route` precheck accepts either. Existing composition passes
+   neither and behaves exactly as before.
+4. `PROVIDER_ACCOUNT_USED` is emitted once per ATTEMPT for pooled candidates
+   only, with `account_id, provider_id, model_id, node_key, attempt, succeeded,
+   error_category`; never a secret, never a credential_ref value. It is not an
+   admin change, so it carries no `admin_change`.
+5. Wiring `complete()`/the two seams into `apps/composition/runtime.py` is
+   deferred: OUT OF SCOPE (R168): budget — scheduled for R169. Until then the
+   HTTP surface is unchanged and D-03/D-04 are closed at the contract level.
+
+### Guards
+`tests/routing/test_d03_d04_two_account_failover.py` (7 tests: two accounts of
+ONE provider, first INVALID_CREDENTIAL → second succeeds; policy filter;
+audit rows; pool-less pass-through; NoEligibleAccount; no secret in audit).
+
+### Ref
+`evidence/r168/D-03-04/`; `evidence/credential_binding_boundary.md` (R168
+re-evaluation); budget round B 3/5.

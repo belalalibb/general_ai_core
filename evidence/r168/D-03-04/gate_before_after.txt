@@ -1,0 +1,2 @@
+BEFORE (20466220 → 76913e5a, hermetic): PASS 2762/0/0/64; D-03/D-04 tests 7 failed (RoutingRequest extra_forbidden: credential_policy); budget round_b=0/5
+AFTER (824dce8a + docs): D-03/D-04 7 passed; tests/verification + tests/certification/test_r167a_routing_matrix.py + tests/routing 102 passed; budget round_b=3/5 (routing.py +5/-1, resources.py +60/-0, service.py +66/-3); full hermetic verifier: evidence/r168/D-03-04/check_repo_after.txt

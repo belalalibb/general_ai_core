@@ -213,14 +213,33 @@
     },
     "round_b": {
       "ceiling": 5,
-      "changes_used": 0,
+      "changes_used": 3,
       "items": [
         "D-03",
         "D-04",
         "D-11",
         "D-02 (if budget allows)"
       ],
-      "log": []
+      "log": [
+        {
+          "item": "D-04",
+          "file": "core/contracts/routing.py",
+          "loc": "+5/-1",
+          "summary": "RoutingRequest.credential_policy (30 §10 policy travels with the request; None = AUTO)"
+        },
+        {
+          "item": "D-03",
+          "file": "core/routing/resources.py",
+          "loc": "+60/-0",
+          "summary": "ResourceSelector.complete(): pooled candidates expanded per eligible account (LRU, policy-filtered) so the failover walk tries a 2nd account of the SAME provider; pool-less pass-through; NoEligibleAccount when nothing survives"
+        },
+        {
+          "item": "D-03",
+          "file": "core/execution/service.py",
+          "loc": "+66/-3",
+          "summary": "(also closes D-04) account_credentials + audit seams; _credential_ref_for (account ref wins), _has_credential precheck, PROVIDER_ACCOUNT_USED emitted per attempt for pooled candidates (no secrets)"
+        }
+      ]
     }
   },
   "baseline": {

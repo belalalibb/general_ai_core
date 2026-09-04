@@ -444,9 +444,13 @@ def case_concurrent_tenants_a_degraded() -> None:
 
 
 def case_two_credentials_same_provider() -> None:
-    """§4C — can the contract hold two credentials for ONE provider? It cannot:
-    credential_refs is Mapping[provider_id, str]; a second registration of the same
-    provider_key is refused by the registry; a second dict entry overwrites the first."""
+    """§4C — can the contract hold two credentials for ONE provider?
+    Pool-less path (this case, unchanged): credential_refs is Mapping[provider_id, str];
+    a second registration of the same provider_key is refused by the registry; a second
+    dict entry overwrites the first.
+    R168 D-03/D-04 added the POOLED path: ResourceSelector.complete() +
+    ExecutionService(account_credentials=...) give each account of ONE provider its own
+    credential_ref — proven hermetically in tests/routing/test_d03_d04_two_account_failover.py."""
     w = World()
     m = _model(M)
     p = w.provider("A", m)
@@ -456,8 +460,9 @@ def case_two_credentials_same_provider() -> None:
     with pytest.raises(DuplicateRegistration):
         w.providers.register(p, _manifest("A"))  # duplicate key refused
     print(
-        "MATRIX|two_credentials_same_provider|NOT SUPPORTED BY CURRENT CONTRACT"
-        "|credential_refs is 1:1 per provider_id; registry refuses duplicate provider_key"
+        "MATRIX|two_credentials_same_provider|SUPPORTED VIA ACCOUNT POOL (R168 D-03/D-04)"
+        "|pool-less path stays 1:1 per provider_id; pooled path: ResourceSelector.complete"
+        " + per-account credential_ref, hermetic proof tests/routing/test_d03_d04_*"
     )
 
 
