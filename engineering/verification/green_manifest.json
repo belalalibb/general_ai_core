@@ -28,7 +28,7 @@
       },
       {
         "name": "rest",
-        "selection": "tests/agent tests/audit tests/context tests/db tests/engineering tests/events tests/identity tests/learning tests/memory tests/observability tests/roles tests/routing tests/runtime tests/secrets tests/skills tests/sourcechange tests/storage tests/tools tests/ui tests/unit tests/usage tests/verification tests/workspace",
+        "selection": "tests/agent tests/agent_dev tests/audit tests/context tests/db tests/engineering tests/events tests/identity tests/learning tests/memory tests/observability tests/roles tests/routing tests/runtime tests/secrets tests/skills tests/sourcechange tests/storage tests/tools tests/ui tests/unit tests/usage tests/verification tests/workspace",
         "time_ceiling_s": 300
       }
     ],
@@ -254,7 +254,7 @@
         "apps/",
         "ui/"
       ],
-      "changes_used": 1,
+      "changes_used": 2,
       "items": [
         "A2",
         "A3",
@@ -267,6 +267,12 @@
           "file": "core/tools/source_writer.py",
           "loc": "+226/-0",
           "summary": "NEW SourceWriter (root jail mirrors SourceReader._admit, shared denylist incl .git/**, byte+op caps, typed create/overwrite/delete with sha256 preconditions, 12 refusal codes as data) + source_write_handler ToolExecutor binding (validation_error as data)"
+        },
+        {
+          "item": "A3",
+          "file": "apps/agent_dev/surface.py",
+          "loc": "+236/-0",
+          "summary": "NEW dev-agent composition root (separate from admin agent, INV-7): ToolRegistry(source.read NONE, source.write BEFORE_ACTION) + ToolCallGate + ToolExecutor; source_read_handler (SourceReadRefused->read_refused data, validation_error data); dev_tenant_policy(write opt-in); admin registry/permission classes untouched"
         }
       ],
       "note": "R169 §3: one coherent edit to a file under core/ apps/ ui/ = one change; tests, contracts (INV-1), docs, evidence are budget-free"

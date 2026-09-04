@@ -1,0 +1,9 @@
+# A3/A4 fail-first: apps/agent_dev removed (moved aside), tests collected
+$ python3 -m pytest tests/agent_dev -q -p no:cacheprovider
+==================================== ERRORS ====================================
+___________ ERROR collecting tests/agent_dev/test_admin_boundary.py ____________
+_____________ ERROR collecting tests/agent_dev/test_dev_surface.py _____________
+ERROR tests/agent_dev/test_admin_boundary.py
+ERROR tests/agent_dev/test_dev_surface.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+EXIT=2

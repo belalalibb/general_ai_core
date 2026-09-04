@@ -988,3 +988,29 @@ handler-refused / invalid / gate-refused calls.
 
 ### Ref
 `docs/r169/CAPABILITY_MAP.md`; `evidence/r169/A2/`; budget `round_r169` 1/6.
+
+## IMPL-015 — R169 A3/A4: a separate development-agent composition root
+
+### Decision
+Compose the development agent in a NEW root, `apps/agent_dev/surface.py`
+(`build_dev_surface`), that reuses the core tool fabric (`ToolRegistry`,
+`ToolCallGate`, `ToolExecutor`) and the R169 source engines. The admin agent
+(`apps/admin_agent`) is not imported by it and not modified.
+
+### Why
+1. INV-7: the admin registry and its R0/R1/R2 classes are audited surfaces; new
+   write power is composed separately instead of widening them.
+2. INV-2: every refusal on the dev path is data — gate refusals as
+   `ToolCallRecord(status="refused", gate_decision.reason=...)`, engine refusals
+   as `ok=False` payloads with a machine-readable `code`.
+3. INV-5: `source.write` carries `ApprovalRequirement.BEFORE_ACTION`; without an
+   approved request the gate refuses before the handler runs.
+
+### Guards
+`tests/agent_dev/test_dev_surface.py` (28) and
+`tests/agent_dev/test_admin_boundary.py` (9): admin name/class snapshots,
+disjointness of dev/admin names, closed admin registry, unchanged
+`AgentToolSurface` fields.
+
+### Ref
+`docs/r169/CAPABILITY_MAP.md`; `evidence/r169/A3/`; budget `round_r169` 2/6.

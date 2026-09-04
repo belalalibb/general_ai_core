@@ -1,0 +1,4 @@
+# A3/A4 after fix: apps/agent_dev present
+$ python3 -m pytest tests/agent_dev -q -p no:cacheprovider
+.....................................                                    [100%]
+EXIT=0
