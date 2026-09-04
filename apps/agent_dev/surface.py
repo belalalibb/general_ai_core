@@ -30,6 +30,8 @@ from core.tools.registry import ToolRegistry
 from core.tools.source_reader import SourceReader, SourceReadRefused
 from core.tools.source_writer import SourceWriter, source_write_handler
 
+from .git_tools import GIT_PERMISSIONS, GitToolset, mode_recording_audit
+
 if TYPE_CHECKING:
     from core.audit.ports import AuditLogPort
     from core.usage.ports import UsageAccountingPort
@@ -105,11 +107,13 @@ def source_read_handler(reader: SourceReader) -> Callable[[JsonObject], Awaitabl
     return handle
 
 
-def dev_tenant_policy(*, write: bool) -> TenantPolicy:
-    """Tenant policy granting the dev-agent entitlement plus read (and optionally write)."""
+def dev_tenant_policy(*, write: bool, git: bool = False) -> TenantPolicy:
+    """Tenant policy granting the dev-agent entitlement plus read (and optionally write/git)."""
     granted = {PERM_SOURCE_READ}
     if write:
         granted.add(PERM_SOURCE_WRITE)
+    if git:
+        granted |= GIT_PERMISSIONS
     return TenantPolicy(
         granted_permissions=frozenset(granted),
         granted_entitlements=frozenset({DEV_ENTITLEMENT}),
@@ -150,6 +154,7 @@ class DevAgentSurface:
     reader: SourceReader
     writer: SourceWriter
     tool_ids: dict[str, UUID]
+    git: GitToolset | None = None
 
     def request(
         self,
@@ -202,28 +207,41 @@ def build_dev_surface(
     devices: DeviceRegistry | None = None,
     reader: SourceReader | None = None,
     writer: SourceWriter | None = None,
+    git: GitToolset | None = None,
 ) -> DevAgentSurface:
-    """Compose the dev-agent surface over ``root`` using the core tool fabric."""
+    """Compose the dev-agent surface over ``root`` using the core tool fabric.
+
+    When a ``GitToolset`` is supplied (R169 A5) its four ``git.*`` tools join
+    the registry and the audit port is wrapped so the publish ``mode`` lands in
+    the executor's single ``TOOL_CALL`` event (A6). Absent ``git`` the surface
+    is exactly the A3 surface.
+    """
     reader = reader if reader is not None else SourceReader(root)
     writer = writer if writer is not None else SourceWriter(root)
     read_tool, write_tool = _dev_tools()
     registry = ToolRegistry()
     registry.register(read_tool)
     registry.register(write_tool)
+    handlers: dict[UUID, Callable[[JsonObject], Awaitable[JsonObject]]] = {
+        read_tool.id: source_read_handler(reader),
+        write_tool.id: source_write_handler(writer),
+    }
+    tool_ids = {read_tool.name: read_tool.id, write_tool.name: write_tool.id}
+    if git is not None:
+        if git.tenant_id != tenant_id:
+            msg = "GitToolset tenant does not match the dev surface tenant"
+            raise ValueError(msg)
+        for tool in git.tools():
+            registry.register(tool)
+            tool_ids[tool.name] = tool.id
+        handlers.update(git.handlers())
+        audit = mode_recording_audit(audit)
     gate = ToolCallGate(
         tools=registry,
         firewall=firewall,
         devices=devices if devices is not None else DeviceRegistry(),
     )
-    executor = ToolExecutor(
-        gate=gate,
-        handlers={
-            read_tool.id: source_read_handler(reader),
-            write_tool.id: source_write_handler(writer),
-        },
-        audit=audit,
-        usage=usage,
-    )
+    executor = ToolExecutor(gate=gate, handlers=handlers, audit=audit, usage=usage)
     return DevAgentSurface(
         tenant_id=tenant_id,
         root=writer.root,
@@ -232,5 +250,6 @@ def build_dev_surface(
         executor=executor,
         reader=reader,
         writer=writer,
-        tool_ids={read_tool.name: read_tool.id, write_tool.name: write_tool.id},
+        tool_ids=tool_ids,
+        git=git,
     )
