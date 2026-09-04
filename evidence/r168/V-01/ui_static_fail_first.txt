@@ -1,0 +1,4 @@
+FAILED tests/ui/test_admin_static_check.py::test_ui_route_literals_exist_on_served_app
+FAILED tests/ui/test_admin_static_check.py::test_v1_occurrence_count_never_exceeds_N0
+FAILED tests/ui/test_admin_static_check.py::test_no_provider_branching[groq]
+3 failed, 11 passed in 1.55s
