@@ -1,0 +1,33 @@
+R170 seed (d) probe -- core/tools/source_reader.py DEFAULT_DENIED_PATTERNS (L32-46), fnmatch as used by SourceReader._denied (L93-94)
+patterns: ('.git', '.git/*', '*/.git', '*/.git/*', '.env', '.env.*', '*/.env', '*/.env.*', '*.pem', '*.key', '*.p12', '*credentials*', '*.git-credentials*')
+GAP  denied=False engineering/verification/green_manifest.json  EXPECT_DENIED(gate)
+GAP  denied=False engineering/verification/check_repo.sh        EXPECT_DENIED(gate)
+GAP  denied=False green_manifest.json                           EXPECT_DENIED(gate)
+ok   denied=False pyproject.toml                                expect_allowed
+ok   denied=False .github/workflows/ci.yml                      expect_allowed
+ok   denied=True  .env                                          EXPECT_DENIED
+ok   denied=True  .env.local                                    EXPECT_DENIED
+ok   denied=True  config/.env                                   EXPECT_DENIED
+GAP  denied=False .ENV                                          EXPECT_DENIED(case)
+GAP  denied=False .Env.local                                    EXPECT_DENIED(case)
+GAP  denied=False keys/id_rsa                                   EXPECT_DENIED
+GAP  denied=False .ssh/id_ed25519                               EXPECT_DENIED
+GAP  denied=False .aws/config                                   EXPECT_DENIED
+GAP  denied=False .kube/config                                  EXPECT_DENIED
+GAP  denied=False cert.pfx                                      EXPECT_DENIED
+GAP  denied=False cert.pkcs12                                   EXPECT_DENIED
+GAP  denied=False key.asc                                       EXPECT_DENIED
+ok   denied=True  cert.pem                                      EXPECT_DENIED
+ok   denied=True  server.key                                    EXPECT_DENIED
+ok   denied=True  store.p12                                     EXPECT_DENIED
+ok   denied=True  gcp_credentials.json                          EXPECT_DENIED
+ok   denied=True  .git-credentials                              EXPECT_DENIED
+GAP  denied=False passwd                                        EXPECT_DENIED
+GAP  denied=False shadow                                        EXPECT_DENIED
+GAP  denied=False acco33unts.txt                                EXPECT_DENIED(qa SEC-004)
+GAP  denied=False accounts.txt                                  EXPECT_DENIED
+GAP  denied=False cookies.txt                                   EXPECT_DENIED
+ok   denied=False session_dump.txt                              expect_allowed?
+ok   denied=True  .git/config                                   EXPECT_DENIED
+ok   denied=True  sub/.git/HEAD                                 EXPECT_DENIED
+gaps=17 of 27 expected-denied probes

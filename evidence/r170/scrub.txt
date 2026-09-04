@@ -1,0 +1,29 @@
+R170 §7 scrub — 2026-09-04T18:11:13Z
+note: run before staging; docs/r170/HARVEST.md + evidence/r170/ are the intended untracked additions
+
+$ git status --porcelain
+?? docs/r170/
+?? evidence/r170/
+
+$ git status --porcelain --untracked-files=no   (tracked-only view, expected empty)
+
+$ git ls-files | grep -i -E "claude-fable|/ref/"   (expected nothing)
+exit=1  (1 = no match)
+
+$ grep -rIl "Claude-Fable" --exclude-dir=.git .   (expected only HARVEST.md)
+./docs/r170/HARVEST.md
+
+$ git remote -v   (expected origin only)
+origin	https://github.com/belalalibb/general_ai_core.git (fetch)
+origin	https://github.com/belalalibb/general_ai_core.git (push)
+
+$ ls .gitmodules   (expected absent)
+ls: cannot access '.gitmodules': No such file or directory
+
+$ rm -rf /tmp/ref
+
+$ ls /tmp/ref
+ls: cannot access '/tmp/ref': No such file or directory
+
+$ ls /tmp/r170_denylist_probe.txt  (scratch, expected absent)
+ls: cannot access '/tmp/r170_denylist_probe.txt': No such file or directory
