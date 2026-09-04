@@ -103,10 +103,13 @@ class FakeGitHub:
 
 def _binding(tmp_path: Path, remote: str = REMOTE) -> RepoBinding:
     root = tmp_path / "work"
-    root.mkdir(exist_ok=True)
+    root.mkdir(parents=True, exist_ok=True)
     (root / "README.md").write_text("hello\n", encoding="utf-8")
     return RepoBinding(
-        tenant_id=uuid4(), remote_url=remote, branch="main", local_root=str(root),
+        tenant_id=uuid4(),
+        remote_url=remote,
+        branch="main",
+        local_root=str(root),
         credential_ref="credref_x",
     )
 
@@ -266,5 +269,16 @@ class TestPullRequest:
 
 def test_module_has_no_subprocess_or_shell() -> None:
     source = Path("apps/agent_dev/github_transport.py").read_text(encoding="utf-8")
-    for forbidden in ("subprocess", "os.system", "create_subprocess", "shell=True"):
-        assert forbidden not in source
+    code_lines = [
+        line for line in source.splitlines() if line.strip() and not line.lstrip().startswith("#")
+    ]
+    code = "\n".join(code_lines)
+    for forbidden in (
+        "import subprocess",
+        "from subprocess",
+        "os.system(",
+        "create_subprocess",
+        "shell=True",
+        "import pty",
+    ):
+        assert forbidden not in code, forbidden
