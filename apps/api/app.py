@@ -435,12 +435,14 @@ def _resolve_role(selector: RoleSelector, registry: RoleRegistry) -> Role | JSON
     return role
 
 
-#: R168 D-07: the /v1/auth/* entry points a token-less caller MUST reach.
-#: ``/v1/auth/session`` and ``/v1/auth/logout`` are NOT here: they are
-#: identity-bearing (session answers 401 or the hybrid demo identity;
-#: logout stays an idempotent 204 only for an admitted caller).
+#: R168 D-07: the /v1/auth/* paths a token-less caller MUST reach. The three
+#: entry points by construction; ``/v1/auth/logout`` because its frozen
+#: contract is "ALWAYS 204, never a token-validity oracle" (apps/api/auth.py)
+#: — a 401 for a missing/garbage bearer would BE that oracle. It is not
+#: tenant-bearing (no read, no write for an unadmitted caller).
+#: ``/v1/auth/session`` is NOT here: it is identity-bearing.
 _AUTH_ENTRY_PATHS: frozenset[str] = frozenset(
-    {"/v1/auth/register", "/v1/auth/verify", "/v1/auth/login"}
+    {"/v1/auth/register", "/v1/auth/verify", "/v1/auth/login", "/v1/auth/logout"}
 )
 
 
@@ -641,6 +643,12 @@ def create_app(
             path = request.url.path
             if path in admitted_public or not path.startswith("/v1/"):
                 return await call_next(request)
+            # Admin surfaces ALWAYS authenticate: the hybrid fallback principal
+            # is never admin, so an anonymous caller gets the ONE constant 401
+            # (the console's own posture) rather than a 403 that presumes an
+            # identity it never presented.
+            if path.startswith("/v1/admin/") and bearer_token(request) is None:
+                return unauthenticated()
             caller = _principal(request)
             if isinstance(caller, JSONResponse):
                 return caller

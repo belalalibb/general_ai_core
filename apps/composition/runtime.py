@@ -211,6 +211,8 @@ PUBLIC_PATHS: frozenset[str] = frozenset(
         "/v1/auth/register",
         "/v1/auth/verify",
         "/v1/auth/login",
+        # Frozen contract: always 204, never a token-validity oracle.
+        "/v1/auth/logout",
     }
 )
 

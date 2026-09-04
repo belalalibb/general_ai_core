@@ -60,16 +60,27 @@ class TestEvidence:
     def test_describe_reports_profile_facts(
         self, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        for var in ("DATABASE_URL", "GROQ_API_KEY", "GSK_API_KEY"):
+        for var in ("DATABASE_URL", "GROQ_API_KEY", "GSK_API_KEY", "DEV_DEMO_PRINCIPAL"):
             monkeypatch.delenv(var, raising=False)
         assert cli.main(["describe"]) == 0
         facts = json.loads(capsys.readouterr().out)
         assert facts["durable"] is False
-        assert facts["demo_principal"] is True
+        # R168 D-07: the header-less demo principal is closed by default.
+        assert facts["demo_principal"] is False
         assert facts["agent_runtime"] is True
         assert "/app" in facts["ui_mounts"] and "/admin" in facts["ui_mounts"]
         assert facts["route_count"] > 50
         assert "routes" not in facts
+
+    def test_describe_reports_dev_opt_in_demo_principal(
+        self, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        for var in ("DATABASE_URL", "GROQ_API_KEY", "GSK_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("DEV_DEMO_PRINCIPAL", "1")
+        assert cli.main(["describe"]) == 0
+        facts = json.loads(capsys.readouterr().out)
+        assert facts["demo_principal"] is True
 
     def test_unknown_command_is_refused(self) -> None:
         with pytest.raises(SystemExit) as exc:

@@ -214,10 +214,17 @@ class TestHydration:
 
 
 class TestRuntimeSeam:
+    # R168 D-07/D-10: an anonymous caller is 401 BEFORE body validation on
+    # every /v1/admin/* path — so route presence is proven structurally
+    # (served OpenAPI), while the wire answer is the ONE constant 401 in
+    # both cases (anti-enumeration: absent and present look identical).
     def test_route_absent_without_gateway_binding(self) -> None:
         profile = build_runtime_profile({})
+        assert "/v1/admin/providers/onboard" not in profile.app.openapi()["paths"]
         client = TestClient(profile.app)
-        assert client.post("/v1/admin/providers/onboard", json={}).status_code == 404
+        response = client.post("/v1/admin/providers/onboard", json={})
+        assert response.status_code == 401
+        assert response.json()["error"]["code"] == "unauthenticated"
 
     def test_route_present_with_gateway_binding(self) -> None:
         profile = build_runtime_profile(
@@ -227,8 +234,10 @@ class TestRuntimeSeam:
                 "GATEWAY_SECRET_VERSION": "1",
             }
         )
+        assert "/v1/admin/providers/onboard" in profile.app.openapi()["paths"]
         client = TestClient(profile.app)
-        # 422 (body validation) proves the route EXISTS; admission and the
-        # walker are pinned elsewhere.
+        # Anonymous ⇒ 401 before validation (no schema hints leak); admission
+        # and the walker are pinned elsewhere.
         response = client.post("/v1/admin/providers/onboard", json={})
-        assert response.status_code == 422
+        assert response.status_code == 401
+        assert response.json()["error"]["code"] == "unauthenticated"
