@@ -1,0 +1,38 @@
+# R172 C7 — fail-first (before any edit to apps/api/app.py or apps/api/capabilities.py)
+# HEAD: bde7276  UTC: 2026-09-04T21:35:22Z
+# cmd: python -m pytest tests/api/test_dev_router_mount_r172.py -q -p no:cacheprovider -o addopts="" -rA --tb=line
+
+FFFFFFFF.F.                                                              [100%]
+=================================== FAILURES ===================================
+E   AssertionError: assert 'dev.publish_modes' in frozenset({'admin.control_plane', 'auth.sessions', 'context.composition', 'conversations.persistence', 'execute.async', 'execute.sync', ...})
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:108: AssertionError: assert 'dev.publish_modes' in frozenset({'admin.control_plane', 'auth.sessions', 'context.composition', 'conversations.persistence', 'execute.async', 'execute.sync', ...})
+E   TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:77: TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+E   TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:77: TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+E   TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:77: TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+E   TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:77: TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+E   TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:77: TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+E   TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:77: TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+E   TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:77: TypeError: create_app() got an unexpected keyword argument 'dev_bindings'
+E   KeyError: 'dev.publish_modes'
+/home/user/webapp/tests/api/test_dev_router_mount_r172.py:100: KeyError: 'dev.publish_modes'
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/api/test_dev_router_mount_r172.py::TestSeamAbsent::test_route_absent_when_not_composed
+PASSED tests/api/test_dev_router_mount_r172.py::TestSeamAbsent::test_default_runtime_profile_does_not_compose_the_dev_seam
+FAILED tests/api/test_dev_router_mount_r172.py::test_dev_publish_modes_is_a_closed_capability_id
+FAILED tests/api/test_dev_router_mount_r172.py::TestSeamComposed::test_publish_modes_resolves_with_four_modes
+FAILED tests/api/test_dev_router_mount_r172.py::TestSeamComposed::test_route_table_contains_the_dev_path
+FAILED tests/api/test_dev_router_mount_r172.py::TestSeamComposed::test_capability_is_available_when_composed
+FAILED tests/api/test_dev_router_mount_r172.py::TestSeamComposed::test_unknown_binding_is_one_typed_404
+FAILED tests/api/test_dev_router_mount_r172.py::TestSeamComposed::test_malformed_binding_id_is_the_same_404
+FAILED tests/api/test_dev_router_mount_r172.py::TestSeamComposed::test_foreign_tenant_binding_is_indistinguishable_from_unknown
+FAILED tests/api/test_dev_router_mount_r172.py::TestSeamComposed::test_own_binding_still_resolves_beside_foreign_one
+FAILED tests/api/test_dev_router_mount_r172.py::TestSeamAbsent::test_capability_is_inert_when_not_composed
+9 failed, 2 passed in 1.28s
