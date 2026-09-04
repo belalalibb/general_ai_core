@@ -1,0 +1,3 @@
+BEFORE (scope core): evidence/r168/V-01/check_repo_hermetic.txt — PASS: mypy --strict (scope: pyproject.toml [tool.mypy].packages): clean
+AFTER (scope core+apps.api+apps.composition):
+Success: no issues found in 181 source files

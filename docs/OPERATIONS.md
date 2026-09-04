@@ -251,7 +251,7 @@ tested, reviewed, never auto-applied.
 | Full repo gate (what CI would run) | `python3 -m apps.cli check` (= `engineering/verification/check_repo.sh`) | yes |
 | Full hermetic suite | `env -u GSK_API_KEY -u GROQ_API_KEY python3 -m pytest` | yes |
 | Targeted | `python3 -m apps.cli test tests/agent tests/learning -q` | yes |
-| Types (recorded scopes) | `mypy --strict core apps/api apps/admin_agent` | yes |
+| Types (gate scope = `pyproject.toml [tool.mypy].packages`: `core`, `apps.api`, `apps.composition`) | `python3 -m mypy` (same call as check_repo.sh) · `apps.admin_agent` measured clean in R168 but enters the gate in R169 | yes |
 | Lint / imports | `ruff check .` · `lint-imports` (12 contracts) | yes |
 | Live provider smoke (**spends real credits**) | run with `GROQ_API_KEY`/`GSK_API_KEY` set: `pytest tests/providers/test_*_live.py` | no — production-readiness only |
 | End-to-end over the wire | start `apps.cli serve` with `ADMIN_EMAILS`, then register → verify (console token) → login → exercise §5–§8 with curl | yes (local) |
@@ -259,10 +259,11 @@ tested, reviewed, never auto-applied.
 
 Read the pytest summary without the `-q` addopt: `python3 -m pytest -o addopts="" -q | tail -3`.
 
-Note: `mypy --strict apps` (broader than the recorded scope) reports missing
-third-party stubs for `hvac`/`boto3` in `apps/composition/{secrets,storage}.py`
-and `infrastructure/` — a stubs gap, not a defect; install `types-boto3`/
-`mypy-boto3-s3` to clear it.
+Note: third-party stubs are part of the dev extras (`pip install -e ".[dev]"`):
+`boto3-stubs[s3]` (the PyPI distribution name; it installs `mypy_boto3_s3`) and
+`types-hvac`. Do not add `types-boto3` — it is a different, unmaintained package.
+Without the extras, `mypy --strict` on `apps/composition/{secrets,storage}.py`
+reports missing stubs — a stubs gap, not a defect.
 
 ---
 

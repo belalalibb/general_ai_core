@@ -87,7 +87,9 @@ select = ["E", "F", "W", "I", "UP", "B"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-packages = ["core"]
+# R168 §6.7: scope widened after measuring zero errors (evidence/r168/V-02).
+# apps.admin_agent measured clean too but stays out of the gate until R169 (mandate).
+packages = ["core", "apps.api", "apps.composition"]
 
 # Architecture boundary tests (40 §6.2): Core / Infrastructure / Providers never mix.
 # Enforced by import-linter; CI runs the same entry point as local (check_repo.sh).

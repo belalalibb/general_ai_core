@@ -260,3 +260,16 @@ def test_budget_section_passes_on_current_manifest(tmp_path: Path) -> None:
 )
 def test_r168_ledgers_present(rel: str) -> None:
     assert (ROOT / rel).is_file()
+
+
+def test_mypy_gate_scope_never_shrinks() -> None:
+    """R168 §6.7: the mypy gate scope (pyproject [tool.mypy].packages) was widened
+    after measuring zero errors; it must never shrink below the recorded scope."""
+    import tomllib
+
+    py = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    scope = set(py["tool"]["mypy"]["packages"])
+    assert py["tool"]["mypy"]["strict"] is True
+    recorded = set(_manifest()["mypy"]["gate_scope_packages"])
+    assert recorded == {"core", "apps.api", "apps.composition"}
+    assert recorded <= scope, sorted(recorded - scope)

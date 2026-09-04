@@ -207,5 +207,18 @@
     "secret_scan_exception_count": 5,
     "not_evaluated_count": 2,
     "changes_used": 0
+  },
+  "mypy": {
+    "gate_scope_packages": [
+      "core",
+      "apps.api",
+      "apps.composition"
+    ],
+    "measured_r168": {
+      "apps.api": "0 errors / 22 files",
+      "apps.composition": "0 errors / 15 files",
+      "apps.admin_agent": "0 errors / 7 files (measured; out of gate until R169 per §6.7)"
+    },
+    "evidence": "evidence/r168/V-02/"
   }
 }

@@ -699,3 +699,29 @@ every `tests/<pkg>` belongs to exactly one slice.
 ### Ref
 `engineering/verification/green_manifest.md` (human view),
 `evidence/r168_conflict_ledger.md` (C-01, C-02, C-03).
+
+---
+
+## IMPL-006. mypy gate scope widened to `core`, `apps.api`, `apps.composition` (R168 §6.7)
+
+### Question
+The strict-mypy gate covered only `core`. Should `apps/` enter the gate, and how?
+
+### Decision (R168, 2026-09-04)
+Measure first, then widen only to zero-error scopes: `mypy --strict -p apps.api`
+(22 files) and `-p apps.composition` (15 files) both measured 0 errors, so
+`pyproject.toml [tool.mypy].packages` is now `["core", "apps.api", "apps.composition"]`.
+`check_repo.sh` is unchanged — it already calls `python3 -m mypy` and reads the
+scope from pyproject. `apps.admin_agent` also measured 0 errors but stays out of
+the gate until R169 (mandate §6.7); it is listed in `green_manifest.json
+deferred_out_of_gate`. Stub naming corrected in OPERATIONS §10: the dev extra is
+`boto3-stubs[s3]` (installs `mypy_boto3_s3`) plus `types-hvac`; `types-boto3` is
+a different package and must not be added.
+
+### Guard
+`tests/verification/test_green_manifest_guards.py::test_mypy_gate_scope_never_shrinks`
+— pyproject scope must be a superset of `green_manifest.json mypy.gate_scope_packages`
+and `strict = true` must stay.
+
+### Ref
+`evidence/r168/V-02/{fail_first,after_fix,gate_before_after}.txt`, `notes.md`.
