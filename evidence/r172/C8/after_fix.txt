@@ -1,0 +1,39 @@
+# C8 after-fix — captured at 6314116
+# production edit: apps/agent_dev/github_transport.py NEW (+345) — budget row 8/8
+# live evidence: evidence/r172/live_transport.txt (13 passed live; 0 strict-pattern hits)
+
+$ python -m pytest tests/agent_dev/test_github_transport_r172.py -q -p no:cacheprovider -o addopts=""
+25 passed in 0.50s
+
+$ env -u GITHUB_TOKEN -u GROQ_API_KEY_1 -u GROQ_API_KEY_2 -u GROQ_API_KEY_3 -u GROQ_API_KEY_4 \
+    python -m pytest tests_live/r172 -q -p no:cacheprovider -o addopts=""
+10 skipped in 0.64s                       # every live test skips without keys
+
+$ python -m pytest --collect-only -q -p no:cacheprovider -o addopts="" | grep -c tests_live
+0                                         # default collection (testpaths=tests) never sees tests_live/
+
+$ python -m pytest tests_live/r172 -q -p no:cacheprovider -o addopts="" -v     # keys exported in-shell
+13 passed in 9.74s                        # 4 Groq keys + invalid + timeout + 429-probe; 6 GitHub
+
+$ python -m pytest tests/agent_dev tests/tools tests/verification -q -p no:cacheprovider -o addopts=""
+416 passed, 1 xfailed, 1 warning in 3.45s # 391 -> 416 (+25 hermetic C8)
+
+$ python -m pytest tests/api -q ...        473 passed
+$ python -m pytest tests/ui -q ...         14 passed          # UI route guard did NOT trip
+$ python -m pytest tests/admin_agent -q ...130 passed
+$ python -m pytest tests/providers -q ...  312 passed, 9 skipped   # unchanged skip count
+
+$ python -m ruff check .                   All checks passed!
+$ ruff format --check apps tests tests_live core   445 files already formatted
+$ mypy                                     Success: no issues found in 195 source files
+$ mypy apps/agent_dev/github_transport.py  Success: no issues found in 1 source file
+$ lint-imports                             Contracts: 13 kept, 0 broken.
+
+$ git diff --stat cc04872 -- core/tools/gate.py          (empty)
+$ git diff --stat 67824d0..HEAD -- ui apps/admin_agent   (empty)
+$ grep -cE "import subprocess|from subprocess|os\.system\(|create_subprocess|shell=True" apps/agent_dev/github_transport.py
+0
+
+# Throwaway repo state after the live run (never general_ai_core):
+#   belalalibb/r172-live-transport-throwaway-48b263 — main still at f69adaf (auto_init commit),
+#   PR #1 and PR #2 open from dev/<binding8>/<hex8> work branches; protection: PR-only, enforce_admins.
