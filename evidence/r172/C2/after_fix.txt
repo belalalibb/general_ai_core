@@ -1,0 +1,13 @@
+# C2 after-fix — 2026-09-04T19:23:30Z — base HEAD 3728f0a
+# cmd: python -m pytest tests/agent_dev tests/tools tests/verification -q -p no:cacheprovider -o addopts=""
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+300 passed, 1 xfailed, 1 warning in 5.29s
+# C2 suite alone:
+14 passed in 0.35s
+# test_git_tools.py count:
+38 passed in 0.58s
+# test_git_tools.py diff vs round-start 67824d0 (empty = unmodified):
+# ruff/mypy:
+All checks passed!
+Success: no issues found in 3 source files

@@ -29,7 +29,9 @@ OTHER = UUID("00000000-0000-0000-0000-00000000c202")
 TOKEN = "ghp_" + "Z" * 36  # synthetic; must never appear in the store bytes
 
 
-def _binding(tenant: UUID = TENANT, *, ref: str = "credref_x", root: str = "/tmp/repo") -> RepoBinding:
+def _binding(
+    tenant: UUID = TENANT, *, ref: str = "credref_x", root: str = "/tmp/repo"
+) -> RepoBinding:
     return RepoBinding(
         tenant_id=tenant,
         remote_url="https://github.com/example/repo.git",
@@ -58,7 +60,9 @@ def test_save_creates_dir_0700_and_file_0600(tmp_path: Path) -> None:
     assert not list(d.glob("*.tmp*")), "temp file must be replaced, not left behind"
 
 
-def test_save_is_atomic_on_interrupted_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_save_is_atomic_on_interrupted_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     store = _store(tmp_path)
     first = _binding()
     store.save([first])

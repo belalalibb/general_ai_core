@@ -1106,3 +1106,32 @@ bare primitives unchanged.
 
 ### Ref
 `evidence/r172/C1/`; budget `round_r172` 1/8.
+
+## IMPL-019 — Binding persistence is an optional, fail-closed store behind the registry (R172 C2)
+
+### Decision
+`RepoBindingRegistry` gains an optional `store: BindingStorePort` (`load()`/`save()`). The
+reference implementation `core/tools/binding_store.py::JsonBindingStore` writes a versioned
+`BindingStoreDocument` (contract in `core/contracts/binding_store.py`) via same-directory temp →
+flush → fsync → `os.replace`, dir `0o700`, file `0o600`, and refuses any path inside an
+`outside_of` working tree. Load never raises into the tool path: every bad record is skipped and
+reported in `BindingStoreLoadReport.skipped`; `source_state` names the outcome.
+
+### Why
+1. Discovery D1 (no binding persistence) — a process restart lost every binding, so the dev agent
+   could never be "bound" in production.
+2. Partial resurrection is worse than none: a half-parsed store silently drops tenant scoping or
+   `allowed_modes`. Therefore whole-document failures load nothing (`malformed`/`unreadable`) and
+   per-record failures are indexed and reported (`partial`), then purged on the next save.
+3. INV-3: only `credential_ref` is serialised; a byte-grep test proves the token never hits disk.
+4. Optional parameter keeps the 38 existing git-tool tests byte-identical (INV-6).
+
+### Guards
+`tests/agent_dev/test_binding_store_r172.py` (14): dir/file modes, interrupted `os.replace` leaves
+prior bytes, round-trip equality, protected-tree refusal, missing/malformed/partial/version/
+unreadable states, INV-3 byte-grep, restart survival, tenant scoping after restart, no partial
+resurrection.
+
+### Ref
+`evidence/r172/C2/`; budget `round_r172` 2/8. Composition wiring (default path + `outside_of`)
+deliberately NOT done — owner decision, see notes.md "Open".

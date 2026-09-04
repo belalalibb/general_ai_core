@@ -30,7 +30,7 @@ surface consumed by ``apps.agent_dev.surface``.
 from __future__ import annotations
 
 import contextvars
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -41,6 +41,7 @@ from pydantic import ValidationError
 
 from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import ContractModel, JsonObject, utc_now
+from core.contracts.binding_store import BindingStoreLoadReport
 from core.contracts.publish_mode import DEFAULT_PUBLISH_MODE, PublishMode
 from core.contracts.repo_binding import (
     GitCommitRequest,
@@ -122,6 +123,14 @@ class GitTransportPort(Protocol):
 # --- Binding registry (tenant-scoped) --------------------------------------------
 
 
+class BindingStorePort(Protocol):
+    """Durable backing for :class:`RepoBindingRegistry` (R172 C2)."""
+
+    def load(self) -> BindingStoreLoadReport: ...
+
+    def save(self, bindings: Iterable[RepoBinding]) -> None: ...
+
+
 class BindingLookupRefused(Exception):
     """Typed lookup failure; converted to ``GitRefusal`` by the handlers."""
 
@@ -137,13 +146,28 @@ class RepoBindingRegistry:
     ``get`` is tenant-scoped: a binding owned by another tenant is reported as
     ``binding_tenant_mismatch`` (never as "unknown", so audits can distinguish
     a cross-tenant probe from a typo).
+
+    R172 C2: an optional ``store`` (``core.tools.binding_store.JsonBindingStore``)
+    makes the registry durable. Valid records are loaded fail-closed at
+    construction (``load_report`` says what was skipped); every ``register``
+    re-saves the full valid set so bad on-disk records are dropped, never
+    resurrected. Without a store the behaviour is byte-for-byte the R169 one.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, store: BindingStorePort | None = None) -> None:
         self._bindings: dict[UUID, RepoBinding] = {}
+        self._store = store
+        self.load_report: BindingStoreLoadReport | None = None
+        if store is not None:
+            report = store.load()
+            self.load_report = report
+            for binding in report.bindings:
+                self._bindings[binding.id] = binding
 
     def register(self, binding: RepoBinding) -> RepoBinding:
         self._bindings[binding.id] = binding
+        if self._store is not None:
+            self._store.save(self._bindings.values())
         return binding
 
     def get(self, binding_id: UUID, *, tenant_id: UUID) -> RepoBinding:
