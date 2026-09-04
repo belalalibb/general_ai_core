@@ -133,8 +133,15 @@ class TestSeamComposed:
     def test_route_table_contains_the_dev_path(self, tmp_path: Path) -> None:
         world = World()
         app = _app(world, dev_bindings=RepoBindingRegistry())
+        # FastAPI 0.141 (recorded in tests/api/test_aa1_api_seams.py): included
+        # routers sit lazily in ``app.routes`` as ``_IncludedRouter`` without a
+        # ``path``; the served route table is enumerated through ``app.openapi()``.
         assert ROUTE_TEMPLATE in _served_paths(app)
-        assert ROUTE_TEMPLATE in {getattr(r, "path", None) for r in app.routes}
+        # And the template really dispatches (not just documents): a GET on the
+        # path reaches the router's own handler, never FastAPI's generic 404.
+        response = _publish_modes(app, str(uuid4()))
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "validation_error"
 
     def test_capability_is_available_when_composed(self) -> None:
         world = World()
