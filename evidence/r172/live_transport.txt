@@ -1,0 +1,40 @@
+# R172 C8 live run — HEAD 070a796 UTC 2026-09-04T22:24:05Z
+# repo: belalalibb/r172-live-transport-throwaway-48b263 (throwaway, created for this round; main protected PR-only, enforce_admins=true)
+# keys present: GROQ_API_KEY_1..4 lengths 56/56/56/56; GITHUB_TOKEN length 40 (values never written)
+# command: python -m pytest tests_live/r172 -q -p no:cacheprovider -o addopts="" -v
+
+## pytest (redacted through the strict regex before writing)
+tests_live/r172/test_live_transport.py::TestGroqLive::test_completion_per_key_is_typed_either_way[GROQ_API_KEY_1..4]  (4) PASSED
+tests_live/r172/test_live_transport.py::TestGroqLive::test_invalid_key_is_typed_refusal_without_leak PASSED
+tests_live/r172/test_live_transport.py::TestGroqLive::test_timeout_is_typed_and_retryable PASSED
+tests_live/r172/test_live_transport.py::TestGroqLive::test_rate_limit_shape_is_typed_when_observed PASSED
+tests_live/r172/test_live_transport.py::TestGitHubLive::test_fetch_and_status PASSED
+tests_live/r172/test_live_transport.py::TestGitHubLive::test_commit_and_publish_pull_request_yields_real_pr_url PASSED
+tests_live/r172/test_live_transport.py::TestGitHubLive::test_direct_push_disallowed_is_refused_and_remote_unmodified PASSED
+tests_live/r172/test_live_transport.py::TestGitHubLive::test_direct_push_to_protected_branch_is_typed PASSED
+tests_live/r172/test_live_transport.py::TestGitHubLive::test_untrusted_binding_refuses_before_any_secret_resolve PASSED
+tests_live/r172/test_live_transport.py::TestGitHubLive::test_credential_never_in_artifacts PASSED
+============================== 13 passed in 9.74s ==============================
+
+## per-test evidence (model / latency / status / tokens / codes only)
+{"category": "invalid_credential", "key": "GROQ_API_KEY_1", "latency_ms": 94, "model": "llama-3.1-8b-instant", "provider_code": "organization_restricted", "retry_after_ms": null, "retryable": false, "section": "groq.completion", "succeeded": false, "total_tokens": null, "utc": "2026-09-04T22:24:06+00:00"}
+{"category": "invalid_credential", "key": "GROQ_API_KEY_2", "latency_ms": 80, "model": "llama-3.1-8b-instant", "provider_code": "organization_restricted", "retry_after_ms": null, "retryable": false, "section": "groq.completion", "succeeded": false, "total_tokens": null, "utc": "2026-09-04T22:24:06+00:00"}
+{"category": "invalid_credential", "key": "GROQ_API_KEY_3", "latency_ms": 102, "model": "llama-3.1-8b-instant", "provider_code": "organization_restricted", "retry_after_ms": null, "retryable": false, "section": "groq.completion", "succeeded": false, "total_tokens": null, "utc": "2026-09-04T22:24:06+00:00"}
+{"category": "invalid_credential", "key": "GROQ_API_KEY_4", "latency_ms": 101, "model": "llama-3.1-8b-instant", "provider_code": "organization_restricted", "retry_after_ms": null, "retryable": false, "section": "groq.completion", "succeeded": false, "total_tokens": null, "utc": "2026-09-04T22:24:06+00:00"}
+{"category": "invalid_credential", "model": "llama-3.1-8b-instant", "provider_code": "invalid_api_key", "retry_after_ms": null, "retryable": false, "section": "groq.invalid_key", "utc": "2026-09-04T22:24:06+00:00"}
+{"category": "timeout", "model": "llama-3.1-8b-instant", "provider_code": "timeout", "retry_after_ms": null, "retryable": true, "section": "groq.timeout", "timeout_ms": 1, "utc": "2026-09-04T22:24:06+00:00"}
+{"adapter_retries": 0, "calls": 6, "categories": ["invalid_credential"], "model": "llama-3.1-8b-instant", "observed_429": false, "section": "groq.rate_limit_probe", "utc": "2026-09-04T22:24:07+00:00"}
+{"latency_ms": 317, "remote_head": "f69adaf", "section": "github.fetch_status", "utc": "2026-09-04T22:24:07+00:00"}
+{"latency_ms": 3871, "pull_request_url": "https://github.com/belalalibb/r172-live-transport-throwaway-48b263/pull/2", "section": "github.publish.pull_request", "utc": "2026-09-04T22:24:11+00:00", "work_branch": "dev/5f300707/047cdec8"}
+{"code": "publish_mode_not_allowed", "remote_head_unchanged": true, "section": "github.publish.direct_push_disallowed", "suggested_mode": "pull_request", "utc": "2026-09-04T22:24:12+00:00"}
+{"code": "remote_rejected_protected_branch", "remote_head_unchanged": true, "section": "github.publish.protected_branch", "suggested_mode": "pull_request", "utc": "2026-09-04T22:24:15+00:00"}
+{"fetch_code": "remote_not_trusted", "publish_code": "remote_not_trusted", "secret_resolves": 0, "section": "github.untrusted_binding", "utc": "2026-09-04T22:24:15+00:00"}
+{"checked": 750, "section": "github.no_credential_in_artifacts", "utc": "2026-09-04T22:24:15+00:00"}
+
+## findings
+- Groq: all four supplied keys answer HTTP 400 organization_restricted on /models and /chat/completions (account-level block, 2026-09-04). Adapter maps it to invalid_credential / retryable=false (route-indicting, never bad_request). No real completion could be obtained with these keys — recorded, not over-claimed.
+- Groq 429: NOT observed in a 6-call burst (the restriction short-circuits before rate limiting). Adapter performs NO retry/backoff itself (retries live in ExecutionService, max_retries_per_candidate); classification path for 429 is pinned hermetically in tests/providers/test_groq_adapter.py.
+- Groq timeout: typed timeout / retryable=true at timeout_ms=1.
+- Groq bogus key (gsk_ + zeros): HTTP 401 invalid_api_key -> invalid_credential / retryable=false; no gsk_ in any artifact.
+- GitHub: fetch/status OK; PULL_REQUEST publish opened a real PR (URL above); DIRECT_PUSH not in allowed_modes -> publish_mode_not_allowed + suggested_mode=pull_request, remote head unchanged; DIRECT_PUSH allowed but main protected -> remote_rejected_protected_branch + suggested_mode=pull_request, remote head unchanged (GitHub 422 'Changes must be made through a pull request.'); untrusted binding -> remote_not_trusted on fetch AND publish with secrets.resolve called 0 times; credential absent from trace/repr/binding dumps.
+- Harness finding: GroqAdapter's pooled client is bound to the loop that created it; generate()+aclose() must share one asyncio.run (first live attempt failed with 'Event loop is closed' — test-side only, fixed).

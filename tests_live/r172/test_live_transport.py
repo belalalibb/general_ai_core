@@ -120,10 +120,17 @@ def _generate(
         },
         timeout_ms=timeout_ms,
     )
-    try:
-        return run(adapter.generate(request))
-    finally:
-        run(adapter.aclose())
+
+    async def _call() -> ProviderGenerateResponse:
+        # generate + aclose in ONE event loop: the adapter's pooled client is bound
+        # to the loop that created it (S2), so a second asyncio.run would close it
+        # on a dead loop ("Event loop is closed").
+        try:
+            return await adapter.generate(request)
+        finally:
+            await adapter.aclose()
+
+    return run(_call())
 
 
 def _error_fields(response: ProviderGenerateResponse) -> dict[str, object]:
@@ -204,22 +211,29 @@ class TestGroqLive:
         """
         adapter, ref, tenant_id = _groq(present_groq_keys[0])
         observed: list[dict[str, object]] = []
-        for _ in range(6):
-            request = ProviderGenerateRequest(
-                request_id=uuid4(),
-                tenant_id=tenant_id,
-                operation=ProviderOperation.GENERATE_TEXT,
-                provider_model_name=LIVE_MODEL,
-                credential_ref=ref,
-                payload={"ask": "OK", "generation": {"max_tokens": 1}},
-                timeout_ms=30_000,
-            )
-            response = run(adapter.generate(request))
-            observed.append({"succeeded": response.succeeded, **_error_fields(response)})
-            if response.error and response.error.category is ProviderErrorCategory.RATE_LIMITED:
-                assert response.error.retryable is True
-                break
-        run(adapter.aclose())
+
+        async def _burst() -> None:
+            try:
+                for _ in range(6):
+                    request = ProviderGenerateRequest(
+                        request_id=uuid4(),
+                        tenant_id=tenant_id,
+                        operation=ProviderOperation.GENERATE_TEXT,
+                        provider_model_name=LIVE_MODEL,
+                        credential_ref=ref,
+                        payload={"ask": "OK", "generation": {"max_tokens": 1}},
+                        timeout_ms=30_000,
+                    )
+                    response = await adapter.generate(request)
+                    observed.append({"succeeded": response.succeeded, **_error_fields(response)})
+                    error = response.error
+                    if error and error.category is ProviderErrorCategory.RATE_LIMITED:
+                        assert error.retryable is True
+                        break
+            finally:
+                await adapter.aclose()
+
+        run(_burst())
         categories = sorted({str(o.get("category")) for o in observed})
         _record(
             "groq.rate_limit_probe",
