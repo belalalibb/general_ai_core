@@ -73,6 +73,8 @@ CAPABILITY_IDS: frozenset[str] = frozenset(
         "rate_limits.execute",
         "auth.sessions",
         "health.liveness",
+        # R172 C7: dev seam (create_app(dev_bindings=)) -> /v1/dev publish-modes.
+        "dev.publish_modes",
     }
 )
 
