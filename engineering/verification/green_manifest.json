@@ -6,55 +6,196 @@
   "pytest": {
     "collect_root": "tests/",
     "slices": [
-      {"name": "api", "selection": "tests/api", "time_ceiling_s": 300},
-      {"name": "contract-providers", "selection": "tests/contract tests/providers", "time_ceiling_s": 300},
-      {"name": "execution-composition-infra", "selection": "tests/execution tests/composition tests/infrastructure", "time_ceiling_s": 300},
-      {"name": "admin-security-evaluation", "selection": "tests/admin tests/admin_agent tests/security tests/evaluation tests/certification", "time_ceiling_s": 300},
-      {"name": "rest", "selection": "tests/agent tests/audit tests/context tests/db tests/engineering tests/events tests/identity tests/learning tests/memory tests/observability tests/roles tests/routing tests/runtime tests/secrets tests/skills tests/sourcechange tests/storage tests/tools tests/ui tests/unit tests/usage tests/verification tests/workspace", "time_ceiling_s": 300}
+      {
+        "name": "api",
+        "selection": "tests/api",
+        "time_ceiling_s": 300
+      },
+      {
+        "name": "contract-providers",
+        "selection": "tests/contract tests/providers",
+        "time_ceiling_s": 300
+      },
+      {
+        "name": "execution-composition-infra",
+        "selection": "tests/execution tests/composition tests/infrastructure",
+        "time_ceiling_s": 300
+      },
+      {
+        "name": "admin-security-evaluation",
+        "selection": "tests/admin tests/admin_agent tests/security tests/evaluation tests/certification",
+        "time_ceiling_s": 300
+      },
+      {
+        "name": "rest",
+        "selection": "tests/agent tests/audit tests/context tests/db tests/engineering tests/events tests/identity tests/learning tests/memory tests/observability tests/roles tests/routing tests/runtime tests/secrets tests/skills tests/sourcechange tests/storage tests/tools tests/ui tests/unit tests/usage tests/verification tests/workspace",
+        "time_ceiling_s": 300
+      }
     ],
-    "gate": {"failed": 0, "errors": 0, "max_skipped": 64, "min_passed": 2706},
-    "last_measured": {"passed": 2706, "skipped": 64, "at_head": "2f1a0e9fb63cb014d7240299d686463d40b5208e"}
+    "gate": {
+      "failed": 0,
+      "errors": 0,
+      "max_skipped": 64,
+      "min_passed": 2738
+    },
+    "last_measured": {
+      "passed": 2738,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 64,
+      "at_head": "2362e9a24a8e5bea620ae43b982a306d7c9f3df6",
+      "hermetic": true,
+      "command": "env -u GSK_API_KEY -u GROQ_API_KEY -u GW_GROQ_API_KEY bash engineering/verification/check_repo.sh",
+      "evidence": "evidence/r168/V-01/check_repo_hermetic.txt"
+    }
   },
   "non_test_items": [
-    {"name": "mypy", "command": "python3 -m mypy", "scope_source": "pyproject.toml [tool.mypy].packages"},
-    {"name": "ruff", "command": "python3 -m ruff check ."},
-    {"name": "import-linter", "command": "lint-imports"},
-    {"name": "secret-scan", "command": "grep -rEn <secret_scan.patterns> --include=<globs> --exclude-dir=<dirs> ."},
-    {"name": "env-not-tracked", "command": "git ls-files | grep -E '(^|/)\\.env($|\\.)'"},
-    {"name": "ui-static-check", "command": "pytest tests/ui (declared slice: rest)"},
-    {"name": "live-suite", "command": "browser automation against the running server and real UI (playwright)"}
+    {
+      "name": "mypy",
+      "command": "python3 -m mypy",
+      "scope_source": "pyproject.toml [tool.mypy].packages"
+    },
+    {
+      "name": "ruff",
+      "command": "python3 -m ruff check ."
+    },
+    {
+      "name": "import-linter",
+      "command": "lint-imports"
+    },
+    {
+      "name": "secret-scan",
+      "command": "grep -rEn <secret_scan.patterns> --include=<globs> --exclude-dir=<dirs> ."
+    },
+    {
+      "name": "env-not-tracked",
+      "command": "git ls-files | grep -E '(^|/)\\.env($|\\.)'"
+    },
+    {
+      "name": "ui-static-check",
+      "command": "pytest tests/ui (declared slice: rest)"
+    },
+    {
+      "name": "live-suite",
+      "command": "browser automation against the running server and real UI (playwright)"
+    }
   ],
   "secret_scan": {
     "patterns": "AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|xox[bap]-[0-9A-Za-z-]{10,}|ghp_[0-9A-Za-z]{36}|sk-[A-Za-z0-9]{40,}",
-    "include_globs": ["*.md", "*.sh", "*.yml", "*.yaml", "*.json", "*.txt", "*.py", "*.js", "*.html", "*.css", "*.env*"],
-    "exclude_dirs": [".git", ".venv", "venv", "node_modules", "__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache", "dist", "build", "*.egg-info"],
+    "include_globs": [
+      "*.md",
+      "*.sh",
+      "*.yml",
+      "*.yaml",
+      "*.json",
+      "*.txt",
+      "*.py",
+      "*.js",
+      "*.html",
+      "*.css",
+      "*.env*"
+    ],
+    "exclude_dirs": [
+      ".git",
+      ".venv",
+      "venv",
+      "node_modules",
+      "__pycache__",
+      ".mypy_cache",
+      ".pytest_cache",
+      ".ruff_cache",
+      "dist",
+      "build",
+      "*.egg-info"
+    ],
     "exceptions": [
-      {"file": "tests/admin_agent/test_aa2_admin_agent.py", "line": 533, "reason": "AWS documented example access key (AKIA...EXAMPLE) used as a scrub sentinel"},
-      {"file": "tests/memory/test_memory_stores.py", "line": 346, "reason": "literal PEM header used to prove secret-like values are rejected"},
-      {"file": "tests/memory/test_memory_stores.py", "line": 347, "reason": "AWS documented example access key (AKIA...EXAMPLE) used to prove rejection"},
-      {"file": "tests/security/test_log_secret_leakage.py", "line": 38, "reason": "AWS documented example access key (AKIA...EXAMPLE) used to prove log scrubbing"},
-      {"file": "tests/security/test_log_secret_leakage.py", "line": 74, "reason": "literal PEM header used to prove log scrubbing"}
+      {
+        "file": "tests/admin_agent/test_aa2_admin_agent.py",
+        "line": 533,
+        "reason": "AWS documented example access key (AKIA...EXAMPLE) used as a scrub sentinel"
+      },
+      {
+        "file": "tests/memory/test_memory_stores.py",
+        "line": 346,
+        "reason": "literal PEM header used to prove secret-like values are rejected"
+      },
+      {
+        "file": "tests/memory/test_memory_stores.py",
+        "line": 347,
+        "reason": "AWS documented example access key (AKIA...EXAMPLE) used to prove rejection"
+      },
+      {
+        "file": "tests/security/test_log_secret_leakage.py",
+        "line": 38,
+        "reason": "AWS documented example access key (AKIA...EXAMPLE) used to prove log scrubbing"
+      },
+      {
+        "file": "tests/security/test_log_secret_leakage.py",
+        "line": 74,
+        "reason": "literal PEM header used to prove log scrubbing"
+      }
     ],
     "exception_count_ceiling": 5
   },
   "ui_static_check": {
-    "files": ["ui/admin/app.js", "ui/admin/index.html", "ui/admin/styles.css"],
+    "files": [
+      "ui/admin/app.js",
+      "ui/admin/index.html",
+      "ui/admin/styles.css"
+    ],
     "v1_count_ceiling_N0": 73,
     "exception_count_ceiling": 0
   },
   "not_evaluated": [
-    {"item": "live-suite: browser automation against the real server and real UI", "reason": "missing dependency"},
-    {"item": "real two-account provider round-trip (D-03 Class-A failover against live providers)", "reason": "credential unavailable"}
+    {
+      "item": "live-suite: browser automation against the real server and real UI",
+      "reason": "missing dependency"
+    },
+    {
+      "item": "real two-account provider round-trip (D-03 Class-A failover against live providers)",
+      "reason": "credential unavailable"
+    }
   ],
-  "not_evaluated_reason_closed_set": ["missing dependency", "credential unavailable", "environment unavailable"],
+  "not_evaluated_reason_closed_set": [
+    "missing dependency",
+    "credential unavailable",
+    "environment unavailable"
+  ],
   "not_evaluated_count_ceiling": 2,
   "deferred_out_of_gate": [
-    {"item": "mypy --strict apps/admin_agent", "disposition": "OUT OF SCOPE (R168): deferred to R169 per mandate §6.7; 'deferred' is not a closed-set NOT EVALUATED reason (conflict ledger C-01), so it is listed here and never printed as a gate line"}
+    {
+      "item": "mypy --strict apps/admin_agent",
+      "disposition": "OUT OF SCOPE (R168): deferred to R169 per mandate §6.7; 'deferred' is not a closed-set NOT EVALUATED reason (conflict ledger C-01), so it is listed here and never printed as a gate line"
+    }
   ],
   "change_budget": {
-    "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-    "round_a": {"ceiling": 5, "changes_used": 0, "items": ["D-01", "D-07", "D-08", "D-10"], "log": []},
-    "round_b": {"ceiling": 5, "changes_used": 0, "items": ["D-03", "D-04", "D-11", "D-02 (if budget allows)"], "log": []}
+    "counts_production_code_under": [
+      "core/",
+      "apps/",
+      "infrastructure/"
+    ],
+    "round_a": {
+      "ceiling": 5,
+      "changes_used": 0,
+      "items": [
+        "D-01",
+        "D-07",
+        "D-08",
+        "D-10"
+      ],
+      "log": []
+    },
+    "round_b": {
+      "ceiling": 5,
+      "changes_used": 0,
+      "items": [
+        "D-03",
+        "D-04",
+        "D-11",
+        "D-02 (if budget allows)"
+      ],
+      "log": []
+    }
   },
   "baseline": {
     "file": "engineering/verification/green_manifest.baseline.json",
