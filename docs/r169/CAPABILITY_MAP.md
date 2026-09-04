@@ -5,9 +5,10 @@ Verified against HEAD `199b1cf` (2026-09-04). Every claim points at code in this
 
 ## How a state is decided (the single rule)
 
-`apps/api/capabilities.py` holds ONLY the closed id set (`CAPABILITY_IDS`, 16 ids) and the closed
+`apps/api/capabilities.py` holds ONLY the closed id set (`CAPABILITY_IDS`, 17 ids — 16 from V7 plus
+`dev.publish_modes` added by R172 C7) and the closed
 state set `CapabilityState = {available, inert, unavailable}`. It declares NO states. States are
-derived in `apps/api/app.py::create_app` (L1771–1858), from the same variables that mounted (or
+derived in `apps/api/app.py::create_app` (`capability_catalog` tuple, ~L1801–1881 at R172 C7), from the same variables that mounted (or
 did not mount) each route:
 
 ```python
@@ -47,6 +48,7 @@ The default composition root `apps/composition/runtime.py::build_runtime_profile
 | `rate_limits.execute` | `rate_limits is not None and execute_rate_limit > 0` | `rate_limits=InMemoryRateLimiter()` always; `EXECUTE_RATE_LIMIT` env (default `0`) → **inert** unless `EXECUTE_RATE_LIMIT>0` | no per-tenant execute limit enforced | `POST /v1/execute` ⇒ 429 `rate_limited` (retryable) when exceeded | Enforce a per-tenant execute rate once the operator sets `EXECUTE_RATE_LIMIT`. |
 | `auth.sessions` | `auth is not None` | `auth=` → **available**; `DEV_DEMO_PRINCIPAL=1` (dev only, closed by default, R168 D-07) substitutes a demo principal | every tenant route ⇒ 401 `unauthenticated` (no fallback) | `/v1/auth/register` (201), `/verify`, `/login`, `/logout` (204), `GET /session`; `REGISTER_RATE_LIMIT` env | Register/verify/login; each user gets a personal tenant; bearer sessions for every other route. |
 | `health.liveness` | `healthz` (bool) | `healthz=True` → **available** | route absent | `GET /healthz` → `{status: alive, scope: process, time}`; admin `GET /v1/admin/system` | Liveness probe for this process. |
+| `dev.publish_modes` (R172 C7) | `dev_bindings is not None` | `dev_bindings=` (`apps.agent_dev.git_tools.RepoBindingRegistry`) — **NOT injected by `runtime.py`** → **inert** in the default profile (owner decision; pinned by `tests/api/test_dev_router_mount_r172.py`) | route absent (FastAPI generic 404, no `binding_id` echo) | `GET /v1/dev/bindings/{binding_id}/publish-modes` → `PublishModesResponse`; unknown / malformed / foreign-tenant id ⇒ ONE typed 404 `validation_error` with `details={binding_id}` only | Enumerate the publish modes a UI dropdown may bind to for a repository binding, once a composition root injects a binding registry (C2 store + C3 trust registry are the missing production pieces). |
 
 ### Exercise surface (real probes)
 `GET /v1/admin/capabilities/exercisable` lists ids with a REAL probe; `POST /v1/admin/capabilities/{id}/exercise`
@@ -55,9 +57,12 @@ without a probe is honestly not exercisable.
 
 ## Not capabilities (yet) — surfaces R169 adds beside the catalog
 
-The 16-id set is closed by test; R169 does NOT extend it (extending it is a deliberate edit to
+The V7 16-id set is closed by test; R169 did NOT extend it (extending it is a deliberate edit to
 `capabilities.py`, counted against budget, and would require a catalog row for a seam the default
-runtime does not compose). R169 delivers these as a separately composed **development-agent surface**
+runtime does not compose). **R172 C7 made exactly that deliberate edit**: one id (`dev.publish_modes`),
+one seam (`create_app(dev_bindings=)`) that mounts the R169 A6 router, honest `inert` in the default
+profile because `apps/composition/runtime.py` still injects no `RepoBindingRegistry`. Everything else
+below remains outside the catalog. R169 delivers these as a separately composed **development-agent surface**
 (`apps/agent_dev/`, INV-7) with its own tool registry; nothing is added to the admin agent:
 
 | Surface | Contract | Tool ids (dev registry) | Notes |
@@ -70,6 +75,8 @@ runtime does not compose). R169 delivers these as a separately composed **develo
 ### Publish modes (A6) — the list a UI dropdown binds to (never hard-code it)
 
 Read endpoint: `GET /v1/dev/bindings/{binding_id}/publish-modes` (bearer; tenant-scoped; absent dev seam ⇒ 404).
+Mounted by `create_app(dev_bindings=RepoBindingRegistry)` since R172 C7 (before that the router existed but
+no composition root included it — R172 discovery D3); catalog row `dev.publish_modes` derives from the same seam.
 Response `PublishModesResponse{default: "pull_request", modes: [PublishModeOption…]}` where each option is
 `{id, label, description, selectable: bool, reason: str|null}` — same posture as `GET /v1/models`.
 

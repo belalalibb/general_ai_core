@@ -301,7 +301,7 @@
         "core/",
         "apps/"
       ],
-      "changes_used": 6,
+      "changes_used": 7,
       "items": [
         "C1",
         "C2",
@@ -348,6 +348,12 @@
           "file": "apps/agent_dev/surface.py",
           "loc": "+142/-4 (+ NEW core/contracts/approval_binding.py 50 lines, NEW core/tools/payload_binding.py 94 lines)",
           "summary": "Opt-in approval<->payload binding for write-class dev-surface calls (source.write, git.commit, git.publish): canonical JSON sha256 vs approved hash checked above the gate; typed ApprovalBindingRefusal + one TOOL_CALL audit event; gate NOT modified (pinned); NOT enabled in production composition (owner decision)."
+        },
+        {
+          "item": "C7",
+          "file": "apps/api/app.py",
+          "loc": "+23/-0 (+ apps/api/capabilities.py +2: dev.publish_modes added to closed CAPABILITY_IDS, 16->17)",
+          "summary": "create_app(dev_bindings: RepoBindingRegistry | None = None) mounts the R169 A6 /v1/dev router (composition-time import to avoid the apps.agent_dev.http <-> apps.api cycle); catalog row dev.publish_modes derives from the same seam (available when injected, inert otherwise). Opt-in flag, NOT injected by apps/composition/runtime.py (owner decision, pinned). 11 tests; UI route guard did not trip."
         }
       ],
       "note": "R172 backend closure: one coherent edit to a file under core/ apps/ = one change; tests, contracts (INV-1), docs, evidence, .gitignore are budget-free. ui/** and apps/admin_agent/** are frozen (INV-7)."

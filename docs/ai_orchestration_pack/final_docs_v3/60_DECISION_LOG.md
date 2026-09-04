@@ -1285,3 +1285,52 @@ at `73766ab`.
 
 ### Ref
 - `evidence/r172/C6/{fail_first.txt,after_fix.txt,notes.md}`; budget row 6/8 in `green_manifest.json`.
+
+## IMPL-024 — Mount the R169 A6 `/v1/dev` router behind an opt-in `dev_bindings` seam (R172 C7)
+
+### Decision
+- `apps.api.app.create_app(..., dev_bindings: RepoBindingRegistry | None = None)`. When a
+  registry is passed, `create_dev_router(dev_bindings, resolve=_principal)` is included and
+  `GET /v1/dev/bindings/{binding_id}/publish-modes` resolves (200, four `PublishModeOption`s,
+  `default=pull_request`). Unknown, malformed and foreign-tenant binding ids all return the SAME
+  typed 404 (`validation_error`, `details={"binding_id": ...}`) — no existence oracle.
+- `dev.publish_modes` added to the closed `CAPABILITY_IDS` (16 → 17); the catalog row derives
+  `available` from `dev_bindings is not None`, so the catalog never claims a route that is not
+  mounted.
+- The router import is performed at composition time inside the `if dev_bindings is not None:`
+  block: `apps.agent_dev.http → apps.api.errors → apps.api.__init__ → apps.api.app` is a cycle,
+  and a module-level import in `app.py` breaks the http-first import order (finding recorded;
+  both orders verified).
+
+### Owner decision — boundary
+- Flag, NOT always-on. Always-on would need a registry the production composition does not build;
+  an empty always-on registry would advertise a capability that can never resolve — a hidden claim.
+- `apps/composition/runtime.py` does NOT pass `dev_bindings=` — production stays inert; pinned by
+  `test_default_runtime_profile_does_not_compose_the_dev_seam`. Wiring is tracked as an open item in
+  `docs/r172/BACKEND_STATE_OF_TRUTH.md`.
+- `ui/**` and `apps/admin_agent/**` untouched (diffs verified empty); UI route guard (`tests/ui`,
+  14 passed) did not trip.
+
+### Why
+- Discovery D3: the R169 A6 router existed but was never mounted — a dead surface the CAPABILITY_MAP
+  had to describe as inert. Mounting it through an explicit seam closes the gap without widening
+  the default runtime.
+- Honesty rule (INV-4): a capability row must reflect the composed app, hence `available` derives
+  from the same seam that performs the mount.
+- One typed 404 for unknown/malformed/foreign ids keeps tenant boundaries opaque (INV-2/INV-3).
+
+### Guards
+- 11 tests in `tests/api/test_dev_router_mount_r172.py` (closed-id membership; composed: 200 + four
+  modes, route table via `app.openapi()` + dispatch check, capability available, unknown/malformed/
+  foreign → same 404, own binding beside foreign; absent: route 404, capability inert, runtime does
+  not compose).
+- `tests/api` 473 passed; `tests/ui` 14; slice `tests/agent_dev tests/tools tests/verification`
+  391 passed / 1 xfailed; `tests/admin_agent` 130; ruff / ruff format / mypy (195 files) /
+  import-linter (13 kept) clean.
+- Fail-first captured at bde7276: 9 failed / 2 passed.
+- FastAPI 0.141 / Starlette 1.6.0 finding: included routers appear in `app.routes` as
+  `_IncludedRouter` without `.path`; route-table assertions go through `app.openapi()["paths"]`.
+
+### Ref
+- `evidence/r172/C7/{fail_first.txt,after_fix.txt,notes.md}`; `docs/r169/CAPABILITY_MAP.md`
+  updated (17 ids); budget row 7/8 in `green_manifest.json`.

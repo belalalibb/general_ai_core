@@ -1,0 +1,47 @@
+# C7 after-fix — captured at be710dd (+ docs/CAPABILITY_MAP + evidence in working tree)
+# production edits: apps/api/capabilities.py (+2, commit 38b3acf), apps/api/app.py (+23, commit 93f66c0)
+
+$ python -m pytest tests/api/test_dev_router_mount_r172.py -q -p no:cacheprovider -o addopts=""
+11 passed in 1.44s
+
+$ python -m pytest tests/ui -q -p no:cacheprovider -o addopts=""      # UI route guard — did NOT trip
+14 passed in 2.14s
+
+$ python -m pytest tests/api -q -p no:cacheprovider -o addopts=""
+473 passed in 18.80s
+
+$ python -m pytest tests/agent_dev tests/tools tests/verification -q -p no:cacheprovider -o addopts=""
+391 passed, 1 xfailed, 1 warning in 4.87s
+
+$ python -m pytest tests/admin_agent -q -p no:cacheprovider -o addopts=""
+130 passed in 7.92s
+
+$ python -m ruff check .
+All checks passed!
+
+$ ruff format --check apps tests core
+440 files already formatted
+
+$ mypy            # scope from pyproject: core, apps.api, apps.composition
+Success: no issues found in 195 source files
+
+$ lint-imports
+Contracts: 13 kept, 0 broken.
+
+$ python -c "import apps.agent_dev.http, apps.api"   # http-first import order
+ok
+$ python -c "import apps.api, apps.agent_dev.http"   # api-first import order
+ok
+
+$ git diff --stat cc04872 -- core/tools/gate.py
+(empty — gate untouched)
+$ git diff --stat 67824d0..HEAD -- ui apps/admin_agent
+(empty — frozen trees untouched)
+
+# Finding recorded while wiring: a module-level `from apps.agent_dev.http import create_dev_router`
+# in apps/api/app.py creates a partially-initialised cycle when apps.agent_dev.http is imported
+# first (http -> apps.api.errors -> apps.api.__init__ -> apps.api.app -> http). Resolved with a
+# composition-time import inside the `if dev_bindings is not None:` block; both orders pinned above.
+# Finding recorded (pre-existing, tests/api/test_aa1_api_seams.py): FastAPI 0.141 includes routers
+# lazily as `_IncludedRouter` without `.path`; the route-table assertion therefore goes through
+# app.openapi()["paths"] plus a dispatch check (typed 404 from the router, not FastAPI's generic 404).
