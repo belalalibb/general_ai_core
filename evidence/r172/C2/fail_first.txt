@@ -1,0 +1,14 @@
+# C2 fail-first — 2026-09-04T19:20:48Z — HEAD b049d26
+# cmd: python -m pytest tests/agent_dev/test_binding_store_r172.py -q -p no:cacheprovider -o addopts=""
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent_dev/test_binding_store_r172.py:21: in <module>
+    from core.contracts.binding_store import BindingStoreDocument, BindingStoreLoadReport
+E   ModuleNotFoundError: No module named 'core.contracts.binding_store'
+=========================== short test summary info ============================
+ERROR tests/agent_dev/test_binding_store_r172.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.64s

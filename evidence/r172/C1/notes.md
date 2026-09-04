@@ -3,7 +3,7 @@
 **Round-start:** `67824d0` · **prep HEAD:** `e8772f6` · **budget:** 1/8 (`apps/agent_dev/surface.py`; `core/tools/denied_paths.py` is a NEW file, counted inside the same C1 change)
 
 ## What changed
-- NEW `core/tools/denied_paths.py` — `DENIED_PATH_PATTERNS` (superset of `SourceReader.DEFAULT_DENIED_PATTERNS`, 13 → 73 unique globs) + `is_denied_path(rel_posix)`. Same `fnmatch` semantics as `SourceReader._denied` / `SourceWriter._denied`; no new matching engine.
+- NEW `core/tools/denied_paths.py` — `DENIED_PATH_PATTERNS` (superset of `SourceReader.DEFAULT_DENIED_PATTERNS`, 13 → 64 unique globs) + `is_denied_path(rel_posix)`. Same `fnmatch` semantics as `SourceReader._denied` / `SourceWriter._denied`; no new matching engine.
 - `apps/agent_dev/surface.py::build_dev_surface` — default reader/writer now constructed with `denied_patterns=DENIED_PATH_PATTERNS`. Injected reader/writer are untouched. **Not edited:** `source_reader.py`, `source_writer.py` (C4 targets), `core/tools/gate.py`.
 - Comment in module: case-variant enumeration (`.ENV*`/`.Env*`) is a patch; the proper fix is normalisation (C4).
 
