@@ -1,0 +1,8 @@
+# C4 fail-first — 2026-09-04T19:49:16Z — HEAD 9598239
+# cmd: python -m pytest tests/tools/test_source_hardening_r172.py -q -p no:cacheprovider -o addopts=""
+    from core.tools.source_reader import (
+E   ImportError: cannot import name 'is_denied' from 'core.tools.source_reader' (/home/user/webapp/core/tools/source_reader.py)
+=========================== short test summary info ============================
+ERROR tests/tools/test_source_hardening_r172.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.44s
