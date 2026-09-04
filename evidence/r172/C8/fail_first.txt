@@ -1,0 +1,11 @@
+# R172 C8 — fail-first (hermetic transport spec, before apps/agent_dev/github_transport.py exists)
+# HEAD: 6d09e56  UTC: 2026-09-04T22:16:08Z
+
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent_dev/test_github_transport_r172.py:40: in <module>
+    from apps.agent_dev.github_transport import GitHubRestTransport, parse_github_remote
+E   ModuleNotFoundError: No module named 'apps.agent_dev.github_transport'
+=========================== short test summary info ============================
+ERROR tests/agent_dev/test_github_transport_r172.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.67s
