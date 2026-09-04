@@ -198,6 +198,21 @@ _ENV_AGENT_DEADLINE_MS = "AGENT_DEADLINE_MS"
 _ENV_AGENT_REASONING_MAX_TOKENS = "AGENT_REASONING_MAX_TOKENS"
 _ENV_GROQ_KEY = "GROQ_API_KEY"
 _ENV_GSK_KEY = "GSK_API_KEY"
+#: R168 D-07: the header-less demo principal is an EXPLICIT dev opt-in,
+#: closed by default. Only the literal "1" opens it; the durable profile
+#: never composes it regardless of the value.
+DEV_DEMO_PRINCIPAL_ENV = "DEV_DEMO_PRINCIPAL"
+#: R168 D-07: the ONE list of paths a token-less caller may reach. Every
+#: other served path answers 401 ``unauthenticated`` before body validation
+#: (route-enumeration guard: tests/composition/test_d07_tokenless_401.py).
+PUBLIC_PATHS: frozenset[str] = frozenset(
+    {
+        "/healthz",
+        "/v1/auth/register",
+        "/v1/auth/verify",
+        "/v1/auth/login",
+    }
+)
 
 
 @dataclass
@@ -802,7 +817,10 @@ def build_runtime_profile(
         # Local convenience: one demo principal with a budget so the API
         # is exercisable without registering (composition DATA, in-memory
         # profile ONLY — the durable profile always authenticates).
-        demo_principal = Principal(tenant_id=uuid4(), user_id=uuid4())
+        # R168 D-07: closed by default — a token-less caller is 401 unless
+        # the operator sets DEV_DEMO_PRINCIPAL=1 explicitly.
+        if env.get(DEV_DEMO_PRINCIPAL_ENV, "") == "1":
+            demo_principal = Principal(tenant_id=uuid4(), user_id=uuid4())
 
     # P-D.1: registration admission control is composition DATA — same
     # env posture as EXECUTE_RATE_LIMIT (0 ⇒ disabled, byte-identical).
