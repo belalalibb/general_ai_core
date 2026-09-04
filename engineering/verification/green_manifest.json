@@ -254,14 +254,21 @@
         "apps/",
         "ui/"
       ],
-      "changes_used": 0,
+      "changes_used": 1,
       "items": [
         "A2",
         "A3",
         "A5",
         "A6"
       ],
-      "log": [],
+      "log": [
+        {
+          "item": "A2",
+          "file": "core/tools/source_writer.py",
+          "loc": "+226/-0",
+          "summary": "NEW SourceWriter (root jail mirrors SourceReader._admit, shared denylist incl .git/**, byte+op caps, typed create/overwrite/delete with sha256 preconditions, 12 refusal codes as data) + source_write_handler ToolExecutor binding (validation_error as data)"
+        }
+      ],
       "note": "R169 §3: one coherent edit to a file under core/ apps/ ui/ = one change; tests, contracts (INV-1), docs, evidence are budget-free"
     }
   },

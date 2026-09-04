@@ -1,0 +1,5 @@
+E   ModuleNotFoundError: No module named 'core.tools.source_writer'
+=========================== short test summary info ============================
+ERROR tests/tools/test_source_writer.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+EXIT=2

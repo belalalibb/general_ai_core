@@ -962,3 +962,29 @@ roots). Existing `test_change_budget_consistent` unchanged.
 
 ### Ref
 `evidence/r169_conflict_ledger.md` C-01; `evidence/r169_state_ledger.md`.
+
+## IMPL-014 — R169 A2: write capability as a separate primitive, refusals as data
+
+### Decision
+Introduce `core/tools/source_writer.py::SourceWriter` as a new primitive that is
+NOT registered anywhere by the core package. The admin agent keeps exactly its
+R0/R1/R2 registry; the writer will only be composed into the separate
+development-agent root (A3).
+
+### Why
+1. INV-7: widening the admin registry would change an audited permission class;
+   a new primitive held by a new composition root does not.
+2. INV-2: `overwrite`/`delete` refuse without a matching `expected_sha256`; every
+   refusal is a typed `SourceWriteRefusal` (12 codes) returned as tool data, so
+   the ToolExecutor still emits exactly one `TOOL_CALL` audit event and the
+   gate/firewall path is untouched.
+3. Symmetry: the jail (`_admit`) and denylist are the reader's, so the set of
+   unwritable paths is a superset of the unreadable ones.
+
+### Guards
+`tests/tools/test_source_writer.py` (42): jail escapes (abs, `..`, symlink
+file/dir), denylist, byte/op caps, preconditions, executor audit for admitted /
+handler-refused / invalid / gate-refused calls.
+
+### Ref
+`docs/r169/CAPABILITY_MAP.md`; `evidence/r169/A2/`; budget `round_r169` 1/6.

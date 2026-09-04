@@ -23,3 +23,5 @@ Recovery this session: sandbox had been reset (deps absent, credential store abs
 | When | Item | Note | HEAD | Status |
 |---|---|---|---|---|
 | 2026-09-04 | §0/§2 | VERIFY → RESTORE → baseline verifier PASS 2777/0/0/64; ledgers created; manifest gains `round_r169` (ceiling 6, roots core/ apps/ ui/) + verifier/guard extended ADDITIVELY | see commit | done |
+| 2026-09-04 | A1 | `docs/r169/CAPABILITY_MAP.md` — read/write/git surface map + design commitments | d3a5ca4 | done |
+| 2026-09-04 | A2 | contract `core/contracts/source_write.py`; engine `core/tools/source_writer.py` (budget 1/6); tests `tests/tools/test_source_writer.py` 42 passed; evidence `evidence/r169/A2/`; IMPL-014. Sandbox reset wiped the first uncommitted A2 pass — recreated from ledgered design, committed immediately | see commit | done |
