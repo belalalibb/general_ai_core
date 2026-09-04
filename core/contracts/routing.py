@@ -29,7 +29,7 @@ from uuid import UUID
 from pydantic import Field
 
 from core.contracts.base import BoundedStr, ContractModel, utc_now
-from core.contracts.domain import Modality
+from core.contracts.domain import CredentialPolicy, Modality
 from core.contracts.model_policy import FallbackScope, ModelPolicy
 from core.contracts.provider import ProviderOperation
 
@@ -116,6 +116,10 @@ class RoutingRequest(ContractModel):
     task_analysis: TaskAnalysis | None = None
     context_length_hint: int | None = Field(default=None, ge=1)
     weights: ScoringWeights | None = None
+    # R168 D-04: the 30 §10 credential policy travels WITH the request so the
+    # Resource Selector (11 §2 "Provider/Account Selection") can apply it.
+    # None = caller expressed no preference (selector defaults to AUTO).
+    credential_policy: CredentialPolicy | None = None
 
 
 class RoutingDecision(ContractModel):

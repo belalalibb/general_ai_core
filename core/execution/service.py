@@ -91,6 +91,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from core.audit.ports import AuditLogPort
+from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import JsonObject, utc_now
 from core.contracts.execute import ExecutionStatus
 from core.contracts.execution import (
@@ -248,6 +250,8 @@ class ExecutionService:
         sleeper: Callable[[float], Awaitable[None]] | None = None,
         id_factory: Callable[[], UUID] = uuid4,
         clock: Callable[[], datetime] = utc_now,
+        account_credentials: Mapping[UUID, str] | None = None,
+        audit: AuditLogPort | None = None,
     ) -> None:
         if max_retries_per_candidate < 0:
             msg = "max_retries_per_candidate must be >= 0"
@@ -263,6 +267,14 @@ class ExecutionService:
         self._units_per_stage = units_per_stage
         self._adapters = adapters
         self._credential_refs = credential_refs
+        # R168 D-03: account_id -> OPAQUE credential reference for pooled
+        # accounts (30 §10). Looked up BEFORE the provider-level ref so two
+        # accounts of the same provider carry distinct refs.
+        self._account_credentials: Mapping[UUID, str] = (
+            account_credentials if account_credentials is not None else {}
+        )
+        # R168 D-04: optional PROVIDER_ACCOUNT_USED emitter (40 §audit).
+        self._audit = audit
         self._bindings = bindings
         self._max_retries = max_retries_per_candidate
         self._sleeper = sleeper if sleeper is not None else _default_sleeper
@@ -506,7 +518,7 @@ class ExecutionService:
         for candidate in route:
             adapter = self._adapters[candidate.provider_id]
             binding = self._bindings.get(candidate.provider_id, candidate.model_id)
-            credential_ref = self._credential_refs[candidate.provider_id]
+            credential_ref = self._credential_ref_for(candidate)
 
             attempt = 0
             while attempt <= self._max_retries:
@@ -522,15 +534,24 @@ class ExecutionService:
                     timeout_ms=timeout_ms,
                 )
                 response, error = await self._attempt(adapter, request)
+                succeeded = response is not None and response.succeeded
                 attempts.append(
                     AttemptRecord(
                         node_key=stage.node_key,
                         candidate=candidate,
                         attempt=attempt,
-                        succeeded=response is not None and response.succeeded,
+                        succeeded=succeeded,
                         error=error,
                         latency_ms=None if response is None else response.latency_ms,
                     )
+                )
+                self._audit_account_used(
+                    tenant_id=tenant_id,
+                    node_key=stage.node_key,
+                    candidate=candidate,
+                    attempt=attempt,
+                    succeeded=succeeded,
+                    error=error,
                 )
                 if response is not None and response.succeeded:
                     return _NodeRun(attempts=tuple(attempts), response=response, error=None)
@@ -626,6 +647,48 @@ class ExecutionService:
         )
         return NodeReport(node=node, attempts=(), response=None)
 
+    # --- per-account credentials + audit (R168 D-03/D-04) ------------------------
+
+    def _credential_ref_for(self, candidate: CandidateScore) -> str:
+        """Account-level ref wins over provider-level ref (30 §10.3)."""
+        if candidate.account_id is not None and candidate.account_id in self._account_credentials:
+            return self._account_credentials[candidate.account_id]
+        return self._credential_refs[candidate.provider_id]
+
+    def _has_credential(self, candidate: CandidateScore) -> bool:
+        if candidate.account_id is not None and candidate.account_id in self._account_credentials:
+            return True
+        return candidate.provider_id in self._credential_refs
+
+    def _audit_account_used(
+        self,
+        *,
+        tenant_id: UUID,
+        node_key: str,
+        candidate: CandidateScore,
+        attempt: int,
+        succeeded: bool,
+        error: ProviderError | None,
+    ) -> None:
+        """Emit PROVIDER_ACCOUNT_USED for pooled candidates only (no secrets)."""
+        if self._audit is None or candidate.account_id is None:
+            return
+        self._audit.append(
+            AuditEvent(
+                tenant_id=tenant_id,
+                event_type=AuditEventType.PROVIDER_ACCOUNT_USED,
+                details={
+                    "account_id": str(candidate.account_id),
+                    "provider_id": str(candidate.provider_id),
+                    "model_id": str(candidate.model_id),
+                    "node_key": node_key,
+                    "attempt": attempt,
+                    "succeeded": succeeded,
+                    "error_category": None if error is None else error.category.value,
+                },
+            )
+        )
+
     # --- composition validation -----------------------------------------------------
 
     def _validate_route(self, decision: RoutingDecision) -> None:
@@ -633,7 +696,7 @@ class ExecutionService:
         for candidate in [decision.selected, *decision.fallback_candidates]:
             if candidate.provider_id not in self._adapters:
                 raise AdapterNotBound(candidate.provider_id)
-            if candidate.provider_id not in self._credential_refs:
+            if not self._has_credential(candidate):
                 raise CredentialNotConfigured(candidate.provider_id)
             # Binding must exist (raises BindingNotFound loudly if not —
             # the Router built candidates FROM bindings, so absence is a

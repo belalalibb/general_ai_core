@@ -279,13 +279,18 @@ def test_routing_request_carries_credential_policy() -> None:
     assert world.request(None).credential_policy is None
 
 
-def test_platform_only_policy_excludes_user_accounts_in_completion() -> None:
+def test_credential_policy_is_applied_by_completion() -> None:
+    """A pool is single-sided (30 §10.5), so the policy filter is proven on a
+    USER-side pool: USER_ONLY admits it, PLATFORM_ONLY excludes it entirely."""
+    from core.providers.errors import NoEligibleAccount
+
     world = World()
-    platform = world.account("sk-platform")
-    world.account("sk-user", owner=OwnerType.USER)
-    decision = world.complete(CredentialPolicy.PLATFORM_ONLY)
+    user = world.account("sk-user", owner=OwnerType.USER)
+    decision = world.complete(CredentialPolicy.USER_ONLY)
     ids = [c.account_id for c in [decision.selected, *decision.fallback_candidates]]
-    assert ids == [platform.id]
+    assert ids == [user.id]
+    with pytest.raises(NoEligibleAccount):
+        world.complete(CredentialPolicy.PLATFORM_ONLY)
 
 
 def test_complete_expands_pooled_provider_into_two_account_candidates() -> None:

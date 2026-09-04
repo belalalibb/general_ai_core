@@ -90,3 +90,63 @@ class ResourceSelector:
         reasons = "; ".join(record.reason for record in skipped) or "no candidates"
         msg = f"no candidate could be resource-completed (11 §2/§14): {reasons}"
         raise NoEligibleAccount(msg)
+
+    def complete(
+        self,
+        decision: RoutingDecision,
+        *,
+        policy: CredentialPolicy | None = None,
+        rate_limits: dict[UUID, RateLimitStatus] | None = None,
+        bindings: BindingRegistry | None = None,
+    ) -> RoutingDecision:
+        """Return an ACCOUNT-COMPLETE decision (R168 D-03/D-04).
+
+        Every pooled candidate in ``decision.ranked`` is expanded into one
+        candidate PER ELIGIBLE ACCOUNT (LRU order from
+        :meth:`AccountPoolManager.eligible_accounts`, filtered by ``policy``
+        — 30 §10), so the Execution Service's failover walk
+        ``[selected, *fallback_candidates]`` naturally tries a second account
+        of the SAME provider before moving to the next provider. Pool-less
+        providers pass through untouched (30 §10.1). Pooled candidates with
+        no eligible account are recorded in ``excluded``. Raises
+        :class:`NoEligibleAccount` when nothing survives.
+        """
+        effective = policy if policy is not None else CredentialPolicy.AUTO
+        route: list[CandidateScore] = []
+        skipped: list[ExclusionRecord] = []
+        for candidate in decision.ranked:
+            entry = self._providers.get_by_id(candidate.provider_id)
+            if not entry.manifest.account_pool.supported:
+                route.append(candidate)
+                continue
+            accounts = self._accounts.eligible_accounts(
+                entry.provider.provider_key,
+                policy=effective,
+                rate_limits=rate_limits,
+                bindings=bindings,
+                model_id=candidate.model_id,
+            )
+            if not accounts:
+                skipped.append(
+                    ExclusionRecord(
+                        model_key=str(candidate.model_id),
+                        provider_key=entry.provider.provider_key,
+                        reason=f"no eligible account under policy {effective.value}",
+                    )
+                )
+                continue
+            route.extend(
+                candidate.model_copy(update={"account_id": account.id}) for account in accounts
+            )
+        if not route:
+            reasons = "; ".join(record.reason for record in skipped) or "no candidates"
+            msg = f"no candidate could be resource-completed (11 §2/§14): {reasons}"
+            raise NoEligibleAccount(msg)
+        return decision.model_copy(
+            update={
+                "selected": route[0],
+                "ranked": route,
+                "fallback_candidates": route[1:],
+                "excluded": [*decision.excluded, *skipped],
+            }
+        )
