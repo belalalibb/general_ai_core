@@ -585,17 +585,21 @@ def test_shape_401_detail_only_is_invalid_credential() -> None:
     )
 
 
-def test_shape_unknown_model_400_detail_only_lands_as_bad_request() -> None:
+def test_shape_unknown_model_400_detail_only_is_model_unavailable() -> None:
     """Proxy answers 400 + {'detail': "Model ... is not allowed"} with no error.code.
-    The shipped normaliser cannot see a model problem and books bad_request
-    (request-indicting ⇒ no failover). Recorded in the ledger as D-02."""
+    R167-A booked bad_request (request-indicting ⇒ no failover) — ledger D-02.
+    R168: the Groq normaliser detects the shape structurally and books
+    model_unavailable (candidate-indicting ⇒ failover permitted); the detail
+    text never crosses (tests/providers/test_d02_groq_detail_only_400.py)."""
     status, body = _shape("genspark_llm_unknown_model.json")
     r = _groq_replay(status, body)
     assert r.error is not None
     print(
         f"MAP|400_detail_model_not_allowed|{r.error.category.value}|retryable={r.error.retryable}"
+        "|D-02 FIXED R168"
     )
-    assert r.error.category is ProviderErrorCategory.BAD_REQUEST
+    assert r.error.category is ProviderErrorCategory.MODEL_UNAVAILABLE
+    assert r.error.provider_code == "model_not_allowed"
 
 
 def test_shape_200_plan_refusal_is_quota_exceeded_r168() -> None:

@@ -446,6 +446,20 @@ class GroqAdapter:
                 provider_code=code,
                 safe_message="provider could not produce a valid generation",
             )
+        if status == 400 and _is_model_not_allowed(response):
+            # R168 D-02: the OpenAI-compatible proxy fronting Groq answers a
+            # disallowed model with FastAPI's ``{"detail": "Model '<x>' is
+            # not allowed…"}`` — no ``error.code``. The REQUEST is fine; this
+            # CANDIDATE lacks the model — candidate-indicting, so the walk
+            # fails over to a provider that has it (never ``bad_request``,
+            # which forbids failover). Same structural detection as the
+            # genspark_llm adapter; the detail text never crosses.
+            return ProviderError(
+                category=ProviderErrorCategory.MODEL_UNAVAILABLE,
+                retryable=False,
+                provider_code="model_not_allowed",
+                safe_message="requested model is not available at the provider",
+            )
         if status in (400, 413, 422):
             # Groq reports content-policy rejections inside 400s; the error
             # code distinguishes them when present.
@@ -585,6 +599,24 @@ def _error_param(response: httpx.Response) -> str | None:
         return None
     param = error.get("param") if isinstance(error, dict) else None
     return param if isinstance(param, str) and param else None
+
+
+def _is_model_not_allowed(response: httpx.Response) -> bool:
+    """Structurally detect the proxy's model-allowlist rejection (R168 D-02).
+
+    Captured shape (tests/certification/shapes/genspark_llm_unknown_model.json):
+    HTTP 400 ``{"detail": "Model '<name>' is not allowed. See GET /v1/models…"}``.
+    Only the boolean verdict leaves this function — the detail text echoes the
+    requested model name and the allowlist and never crosses the boundary.
+    """
+    try:
+        parsed = response.json()
+    except ValueError:
+        return False
+    if not isinstance(parsed, dict):
+        return False
+    detail = parsed.get("detail")
+    return isinstance(detail, str) and detail.startswith("Model ") and "is not allowed" in detail
 
 
 def _safe_error_code(response: httpx.Response) -> str | None:

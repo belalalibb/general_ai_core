@@ -1,0 +1,5 @@
+PASSED tests/providers/test_d02_groq_detail_only_400.py::test_detail_only_400_model_not_allowed_is_model_unavailable
+PASSED tests/providers/test_d02_groq_detail_only_400.py::test_detail_text_never_crosses_the_boundary
+PASSED tests/providers/test_d02_groq_detail_only_400.py::test_other_detail_only_400_stays_bad_request
+PASSED tests/providers/test_d02_groq_detail_only_400.py::test_error_code_shapes_unchanged
+4 passed in 0.38s
