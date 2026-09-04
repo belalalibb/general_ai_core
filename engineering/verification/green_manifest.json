@@ -29,10 +29,10 @@
     "include_globs": ["*.md", "*.sh", "*.yml", "*.yaml", "*.json", "*.txt", "*.py", "*.js", "*.html", "*.css", "*.env*"],
     "exclude_dirs": [".git", ".venv", "venv", "node_modules", "__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache", "dist", "build", "*.egg-info"],
     "exceptions": [
-      {"file": "tests/admin_agent/test_aa2_admin_agent.py", "line": 533, "reason": "AWS documented example key AKIAIOSFODNN7EXAMPLE used as a scrub sentinel"},
+      {"file": "tests/admin_agent/test_aa2_admin_agent.py", "line": 533, "reason": "AWS documented example access key (AKIA...EXAMPLE) used as a scrub sentinel"},
       {"file": "tests/memory/test_memory_stores.py", "line": 346, "reason": "literal PEM header used to prove secret-like values are rejected"},
-      {"file": "tests/memory/test_memory_stores.py", "line": 347, "reason": "AWS documented example key AKIAIOSFODNN7EXAMPLE used to prove rejection"},
-      {"file": "tests/security/test_log_secret_leakage.py", "line": 38, "reason": "AWS documented example key AKIAIOSFODNN7EXAMPLE used to prove log scrubbing"},
+      {"file": "tests/memory/test_memory_stores.py", "line": 347, "reason": "AWS documented example access key (AKIA...EXAMPLE) used to prove rejection"},
+      {"file": "tests/security/test_log_secret_leakage.py", "line": 38, "reason": "AWS documented example access key (AKIA...EXAMPLE) used to prove log scrubbing"},
       {"file": "tests/security/test_log_secret_leakage.py", "line": 74, "reason": "literal PEM header used to prove log scrubbing"}
     ],
     "exception_count_ceiling": 5

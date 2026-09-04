@@ -663,3 +663,39 @@ provider spans is retrofit-free from day one.
 ### Ref
 engineering/adr/ADR-0004-observability-setup.md (ACCEPTED, append-only from
 this point). Applied by T-IMPL-017 (implementation part).
+
+---
+
+## IMPL-005. Single verifier reads a green manifest: pytest slices with counters and a floor gate, widened secret scan with bounded per-line exceptions, NOT EVALUATED lines, change-budget guard (R168 §6)
+
+### Question
+How does `engineering/verification/check_repo.sh` stay the single verifier
+(INV-3) while distinguishing failed from skipped, scanning production code for
+secrets, surfacing what was not evaluated, and enforcing the R168 production
+change budget — without `|| true`, raised ceilings, or a second script?
+
+### Decision (R168, 2026-09-04)
+(a) `engineering/verification/green_manifest.json` is the only authority the
+script reads; every other consumer reads and never writes. (b) pytest runs per
+declared slice with `-o addopts="" -q` (conflict ledger C-02), each slice under
+its own time ceiling; the gate is failed == 0, errors == 0, skipped <= 64,
+passed >= 2706 (floor = baseline; ceilings never rise). (c) The secret scan is
+widened to `*.py *.js *.html *.css *.env*`; hits are allowed only by declared
+`file:line` exceptions (ceiling 5, reasons must not self-match); a tracked
+`.env` is FAIL. (d) NOT EVALUATED items print one line each with a reason from
+the closed set {missing dependency, credential unavailable, environment
+unavailable}; any other reason or count over ceiling is FAIL; the count is a
+SUMMARY line, never green. (e) `change_budget.changes_used` must equal the log
+length and stay <= 5 per round; log files must live under core/ apps/
+infrastructure/.
+
+### Guard
+`tests/verification/test_green_manifest_guards.py` executes the real shell
+sections in a temporary git skeleton: planted secret → FAIL, tracked `.env` →
+FAIL, exception list over ceiling → FAIL, reason outside closed set → FAIL,
+budget over ceiling → FAIL, clean tree → PASS; plus the AH partition guard that
+every `tests/<pkg>` belongs to exactly one slice.
+
+### Ref
+`engineering/verification/green_manifest.md` (human view),
+`evidence/r168_conflict_ledger.md` (C-01, C-02, C-03).
