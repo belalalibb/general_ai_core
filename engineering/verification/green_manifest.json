@@ -36,18 +36,18 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 2756
+      "min_passed": 2762
     },
     "last_measured": {
-      "passed": 2756,
+      "passed": 2762,
       "failed": 0,
       "errors": 0,
       "skipped": 64,
-      "at_head": "0ebeb6bf",
+      "at_head": "0ef7820a",
       "hermetic": true,
       "command": "env -u GSK_API_KEY -u GROQ_API_KEY -u GW_GROQ_API_KEY bash engineering/verification/check_repo.sh",
-      "evidence": "evidence/r168/D-08/check_repo_after.txt",
-      "note": "R168 after D-08 (+4 tests test_d08_execute_project_reference); floor 2752→2756"
+      "evidence": "evidence/r168/D-01/check_repo_after.txt",
+      "note": "R168 after D-01 (+6 tests test_d01_refusal_contract); floor 2756→2762"
     }
   },
   "non_test_items": [

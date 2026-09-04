@@ -144,6 +144,15 @@ class TestLiveEndToEnd:
                 )
 
         response = run(call())
+        if response.status_code == 403:
+            details = response.json().get("error", {}).get("details", {})
+            if details.get("provider_error_category") == "quota_exceeded":
+                # R168 D-01: the live key is plan-exhausted; the platform now
+                # reports the refusal honestly instead of a fake 200. No
+                # inference happened — credential unavailable for this proof.
+                pytest.skip(
+                    "GSK_API_KEY plan-exhausted (403 entitlement_exceeded) — credential unavailable"
+                )
         assert response.status_code == 200, response.text
         body = response.json()
         # 10 §3 result shape with REAL model output

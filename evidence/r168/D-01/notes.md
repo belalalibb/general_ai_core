@@ -56,3 +56,14 @@ is the consistent classification.
 ## Budget
 Production diff is in `providers/` only (counts: core/ apps/ infrastructure/) ⇒
 round A stays 4/5.
+
+## Follow-up (same item, after the first credentialed gate run)
+With `GSK_API_KEY` exported the two live GSK-gated tests turned RED because the
+sandbox key is plan-exhausted and the platform now reports it honestly (adapter
+`plan_refusal_200`; API `403 entitlement_exceeded / quota_exceeded`). A live
+success cannot be asserted on a refusal, so both tests now `pytest.skip(...)` with
+the closed-set reason "credential unavailable" when — and only when — the observed
+outcome is the D-01 refusal (`provider_code == "plan_refusal_200"` /
+`provider_error_category == "quota_exceeded"`). Any other live failure still fails.
+Hermetic (key unset): 8 skipped as before. Credentialed gate: PASS 2768/0/0/58.
+Hermetic gate (canonical, C-03): PASS 2762/0/0/64 → `check_repo_after.txt`.

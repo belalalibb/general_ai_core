@@ -87,6 +87,13 @@ class TestGensparkLLMLive:
             }
         )
         response = run(adapter.generate(request))
+        if response.error is not None and response.error.provider_code == "plan_refusal_200":
+            # R168 D-01: the gateway performed NO inference for this key (in-band
+            # plan refusal, now booked FAILED/quota_exceeded). A live success
+            # cannot be asserted on a refusal — credential unavailable.
+            pytest.skip(
+                "GSK_API_KEY is plan-exhausted (live plan refusal) — credential unavailable"
+            )
         assert response.succeeded is True, f"live generate failed: {response.error}"
         assert isinstance(response.output["content"], str)
         assert response.output["content"].strip() != ""
