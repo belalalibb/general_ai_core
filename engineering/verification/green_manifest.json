@@ -246,6 +246,23 @@
           "summary": "_audit_denied emitter over admin.audit (absent seam = no-op): PERMISSION_DENIED at the /v1/admin/* non-admin 403 (reason admin_required); CROSS_TENANT_ACCESS_DENIED at the D-08 unresolved project_id 404 (resource, reference as given); rows in the ACTOR's tenant, no body/secret/target echo; HTTP bodies unchanged"
         }
       ]
+    },
+    "round_r169": {
+      "ceiling": 6,
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "ui/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "A2",
+        "A3",
+        "A5",
+        "A6"
+      ],
+      "log": [],
+      "note": "R169 §3: one coherent edit to a file under core/ apps/ ui/ = one change; tests, contracts (INV-1), docs, evidence are budget-free"
     }
   },
   "baseline": {

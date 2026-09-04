@@ -168,6 +168,24 @@ def test_change_budget_consistent() -> None:
             assert {"item", "file", "loc"} <= set(e)
 
 
+def test_change_budget_round_r169_consistent() -> None:
+    """R169 §3: separate 6-change budget with its own roots (core/ apps/ ui/)."""
+    cb = _manifest()["change_budget"]
+    rd = cb["round_r169"]
+    assert rd["ceiling"] == 6
+    roots = tuple(rd["counts_production_code_under"])
+    assert set(roots) == {"core/", "apps/", "ui/"}
+    assert rd["changes_used"] <= rd["ceiling"]
+    assert rd["changes_used"] == len(rd["log"])
+    items = set(rd["items"])
+    assert items == {"A2", "A3", "A5", "A6"}
+    for e in rd["log"]:
+        assert {"item", "file", "loc"} <= set(e)
+        assert e["item"] in items
+        assert e["file"].startswith(roots)
+        assert (ROOT / e["file"]).exists()
+
+
 def test_secret_exceptions_are_real_hits_and_reasons_do_not_self_match() -> None:
     m = _manifest()
     pattern = re.compile(m["secret_scan"]["patterns"])

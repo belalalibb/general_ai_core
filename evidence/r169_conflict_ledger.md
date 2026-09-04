@@ -1,0 +1,8 @@
+# R169 — conflict ledger (mandate vs repository)
+
+| Id | Mandate says | Repository shows | Resolution |
+|---|---|---|---|
+| C-01 | §3 budget counts files under `core/, apps/, or ui/` | `green_manifest.json` `change_budget.counts_production_code_under = [core/, apps/, infrastructure/]`; the verifier (check_repo.sh §6) and `tests/verification/test_green_manifest_guards.py` only know `round_a`/`round_b` | Repository wins for existing rounds (left untouched). R169 gets its OWN block `change_budget.round_r169` with `ceiling: 6` and its own `counts_production_code_under: [core/, apps/, ui/]` per the mandate; verifier + guard test extended additively (no existing check loosened, INV-6). |
+| C-02 | §2.8 "record min_passed, last_measured" | `pytest.last_measured.passed = 2762 @ 0ef7820a` is stale vs the floor 2777 and the last hermetic measurement (2777 @ c25f586f) | Recorded as stale; floor NOT lowered; `last_measured` updated upward to this round's measurement at closure. |
+| C-03 | §2.9 "their declared states. Expected 16 ids" | 16 ids confirmed; `capabilities.py` declares NO static states — states are derived in `create_app` from composed seams | A1 map documents the DERIVATION rule per id (quoting the deciding code) instead of a static state. |
+| C-04 | §4 A3/A4 "admin-agent registry … byte-for-byte unchanged in capability set" | admin-agent `ToolRegistry` is built by `apps/admin_agent/tools.py::build_registry(surface)` from `ToolSpec`s; capability set = tool names + classes | Boundary test snapshots the name→class set of `build_registry()` and asserts it equals a frozen expected set; plus a guard that no spec has class R3/R4 and no name matches write/github tools. |

@@ -936,3 +936,29 @@ over to a provider that has the model (ledger D-02, S2).
 
 ### Ref
 `evidence/r168/D-02/`; `evidence/error_classification_map.md` row updated.
+
+## IMPL-013 — R169 §3 per-round change-budget roots (verifier extension, additive)
+
+### Decision
+`green_manifest.json` gains `change_budget.round_r169` (ceiling 6, roots
+`core/ apps/ ui/`, items A2/A3/A5/A6). `check_repo.sh` §6 iterates
+`("round_a","round_b","round_r169")`, skips absent rounds, and reads each
+round's own `counts_production_code_under` (falling back to the global roots).
+
+### Why
+1. R169 mandate counts `ui/` and NOT `infrastructure/`; rounds A/B counted
+   `infrastructure/` and not `ui/`. Rewriting the existing rounds' roots would
+   change how their logged entries are judged (INV-6). A separate block keeps
+   both truths verifiable.
+2. Existing round_a/round_b evaluation is byte-identical: their blocks carry no
+   `counts_production_code_under`, so the fallback equals the previous roots.
+3. `if r not in cb: continue` makes the loop forward-compatible for future
+   rounds without another verifier edit.
+
+### Guards
+`tests/verification/test_green_manifest_guards.py::test_change_budget_round_r169_consistent`
+(ceiling, roots, used == len(log), item set, every logged file exists under its
+roots). Existing `test_change_budget_consistent` unchanged.
+
+### Ref
+`evidence/r169_conflict_ledger.md` C-01; `evidence/r169_state_ledger.md`.

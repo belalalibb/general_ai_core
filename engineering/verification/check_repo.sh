@@ -140,14 +140,16 @@ fi
 # 6. Production change budget — changes_used <= ceiling per round; log consistent (R168 §2)
 BUDGET=$(mf '
 cb = m["change_budget"]; roots = tuple(cb["counts_production_code_under"]); bad = []; parts = []
-for r in ("round_a", "round_b"):
+for r in ("round_a", "round_b", "round_r169"):
+    if r not in cb: continue
     rd = cb[r]; used = rd["changes_used"]; ceil = rd["ceiling"]; log = rd["log"]
+    rroots = tuple(rd.get("counts_production_code_under", roots))  # R169 §3: per-round roots
     parts.append(r + "=" + str(used) + "/" + str(ceil))
     if used > ceil: bad.append(r + " over ceiling")
     if used != len(log): bad.append(r + " changes_used != len(log)")
     items = {i.split(" ")[0] for i in rd["items"]}
     for e in log:
-        if not e["file"].startswith(roots): bad.append(r + " log file outside roots: " + e["file"])
+        if not e["file"].startswith(rroots): bad.append(r + " log file outside roots: " + e["file"])
         if e["item"] not in items: bad.append(r + " item not scheduled: " + e["item"])
 print(("BAD " if bad else "OK ") + "; ".join(parts) + ((" | " + "; ".join(bad)) if bad else ""))
 ')
