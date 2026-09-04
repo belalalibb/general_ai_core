@@ -1,0 +1,19 @@
+# C6 fail-first — captured at cc04872 (pre-fix)
+# cmd: python -m pytest tests/agent_dev/test_payload_binding_r172.py -q -p no:cacheprovider -o addopts=""
+
+
+==================================== ERRORS ====================================
+________ ERROR collecting tests/agent_dev/test_payload_binding_r172.py _________
+ImportError while importing test module '/home/user/webapp/tests/agent_dev/test_payload_binding_r172.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent_dev/test_payload_binding_r172.py:34: in <module>
+    from apps.agent_dev.surface import (
+E   ImportError: cannot import name 'PAYLOAD_BOUND_PERMISSIONS' from 'apps.agent_dev.surface' (/home/user/webapp/apps/agent_dev/surface.py)
+=========================== short test summary info ============================
+ERROR tests/agent_dev/test_payload_binding_r172.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.68s
