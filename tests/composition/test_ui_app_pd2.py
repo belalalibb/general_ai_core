@@ -39,7 +39,12 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from apps.composition.runtime import UI_APP_DIR, RuntimeProfile, build_runtime_profile
+from apps.composition.runtime import (
+    DEV_DEMO_PRINCIPAL_ENV,
+    UI_APP_DIR,
+    RuntimeProfile,
+    build_runtime_profile,
+)
 from core.contracts.domain import BindingAvailability
 from core.contracts.execute import ExecutionStatus
 
@@ -58,7 +63,8 @@ def _client(app: FastAPI) -> httpx.AsyncClient:
 
 @pytest.fixture()
 def profile() -> RuntimeProfile:
-    return build_runtime_profile(environ={})
+    # R168 D-07: the demo-profile loop is an explicit dev opt-in.
+    return build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1"})
 
 
 # --- 1 + 2: the mount serves and shadows nothing -----------------------------------

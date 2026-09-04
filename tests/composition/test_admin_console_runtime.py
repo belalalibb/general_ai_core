@@ -34,7 +34,11 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from apps.composition.runtime import RuntimeProfile, build_runtime_profile
+from apps.composition.runtime import (
+    DEV_DEMO_PRINCIPAL_ENV,
+    RuntimeProfile,
+    build_runtime_profile,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_PY = REPO_ROOT / "apps" / "composition" / "runtime.py"
@@ -50,7 +54,8 @@ def _client(app: FastAPI) -> httpx.AsyncClient:
 
 @pytest.fixture()
 def profile() -> RuntimeProfile:
-    return build_runtime_profile(environ={})
+    # R168 D-07: header-less demo principal is an explicit dev opt-in.
+    return build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1"})
 
 
 # --- 1: the console routes and shell exist on the runtime app ----------------
@@ -182,6 +187,8 @@ class TestConsoleAuthPosture:
 
 
 ADMIN_EMAIL = "skills-admin@example.test"
+#: R168 D-07: ADMIN_EMAILS session + the header-less demo tenant (dev opt-in).
+_ADMIN_HYBRID_ENV = {"ADMIN_EMAILS": ADMIN_EMAIL, DEV_DEMO_PRINCIPAL_ENV: "1"}
 PASSWORD = "correct horse battery staple"  # noqa: S105 — test credential
 
 
@@ -222,7 +229,7 @@ class TestExternalSkillAcquisition:
     def test_import_review_approve_activate_then_selectable(self) -> None:
         """import → scan → validate → review → approve → activate → listed
         by /v1/skills and admissible in /v1/execute — ONE registry."""
-        profile = build_runtime_profile(environ={"ADMIN_EMAILS": ADMIN_EMAIL})
+        profile = build_runtime_profile(environ=_ADMIN_HYBRID_ENV)
         token = _admin_token(profile)
         headers = {"Authorization": f"Bearer {token}"}
         skill_key = "acquired_review"
@@ -301,7 +308,7 @@ class TestExternalSkillAcquisition:
         run(scenario())
 
     def test_non_admin_cannot_acquire(self) -> None:
-        profile = build_runtime_profile(environ={})
+        profile = build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1"})
 
         # Demo principal (in-memory profile) is NOT admin.
         async def scenario() -> None:
@@ -320,7 +327,7 @@ class TestExternalSkillAcquisition:
         run(scenario())
 
     def test_unlisted_source_is_refused(self) -> None:
-        profile = build_runtime_profile(environ={"ADMIN_EMAILS": ADMIN_EMAIL})
+        profile = build_runtime_profile(environ=_ADMIN_HYBRID_ENV)
         headers = {"Authorization": f"Bearer {_admin_token(profile)}"}
 
         async def scenario() -> None:
@@ -363,7 +370,7 @@ class TestAdminParityAgentCatalog:
     def test_admin_and_tenant_read_the_same_catalog(self) -> None:
         """ONE derivation, two consumers: the body an admin session receives
         from /v1/agent-tools is byte-identical to the tenant's."""
-        profile = build_runtime_profile(environ={"ADMIN_EMAILS": ADMIN_EMAIL})
+        profile = build_runtime_profile(environ=_ADMIN_HYBRID_ENV)
         token = _admin_token(profile)
 
         async def scenario() -> None:
@@ -385,7 +392,7 @@ class TestAdminParityAgentCatalog:
                         "risk_level",
                     }
             # The tenant view (demo principal profile) offers the SAME data.
-            tenant = build_runtime_profile(environ={})
+            tenant = build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1"})
             async with _client(tenant.app) as c:
                 as_tenant = await c.get("/v1/agent-tools")
             assert as_tenant.status_code == 200
@@ -474,7 +481,7 @@ class TestAdminSurfacesR160:
         """The exact request shapes the UI sends succeed over the runtime with
         an ADMIN_EMAILS session (R160 hybrid identity): capture → list →
         sanitize → retest → retest-with-baseline (delta) → ask."""
-        profile = build_runtime_profile(environ={"ADMIN_EMAILS": ADMIN_EMAIL})
+        profile = build_runtime_profile(environ=_ADMIN_HYBRID_ENV)
         headers = {"Authorization": f"Bearer {_admin_token(profile)}"}
 
         async def scenario() -> None:

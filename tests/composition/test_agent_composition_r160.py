@@ -28,12 +28,17 @@ from apps.composition.agent import (
     READ_ONLY_AGENT_POLICY,
     SOURCE_READ_PERMISSION,
 )
-from apps.composition.runtime import RuntimeProfile, build_runtime_profile
+from apps.composition.runtime import (
+    DEV_DEMO_PRINCIPAL_ENV,
+    RuntimeProfile,
+    build_runtime_profile,
+)
 from core.contracts.security import ActorKind, FirewallDecision, FirewallDecisionInput
 
 
 def _profile(**env: str) -> RuntimeProfile:
-    return build_runtime_profile(environ=env)
+    # R168 D-07: these scenarios exercise the header-less demo tenant (dev opt-in).
+    return build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1", **env})
 
 
 def _decision(profile: RuntimeProfile, tenant_id) -> FirewallDecision:

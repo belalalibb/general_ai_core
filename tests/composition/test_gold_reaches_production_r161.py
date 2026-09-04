@@ -36,7 +36,11 @@ from uuid import UUID, uuid4
 
 import httpx
 
-from apps.composition.runtime import RuntimeProfile, build_runtime_profile
+from apps.composition.runtime import (
+    DEV_DEMO_PRINCIPAL_ENV,
+    RuntimeProfile,
+    build_runtime_profile,
+)
 from core.contracts.base import utc_now
 from core.contracts.evaluation import VerificationLevel
 from core.contracts.memory import MemoryItem, MemoryScope
@@ -66,7 +70,8 @@ def run[T](coro: Coroutine[Any, Any, T]) -> T:
 
 
 def _profile() -> RuntimeProfile:
-    return build_runtime_profile(environ={})
+    # R168 D-07: header-less demo principal is an explicit dev opt-in.
+    return build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1"})
 
 
 async def _execute(profile: RuntimeProfile, ask: str) -> dict[str, Any]:

@@ -47,6 +47,7 @@ from fastapi import FastAPI
 from apps.composition.database import database_settings_from_env
 from apps.composition.runtime import (
     DEFAULT_PLAN_NAME,
+    DEV_DEMO_PRINCIPAL_ENV,
     ConsoleEmailSender,
     RuntimeProfile,
     build_runtime_profile,
@@ -64,7 +65,8 @@ def _client(app: FastAPI) -> httpx.AsyncClient:
 
 @pytest.fixture()
 def profile() -> RuntimeProfile:
-    return build_runtime_profile(environ={})
+    # R168 D-07: header-less demo principal is an explicit dev opt-in.
+    return build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1"})
 
 
 # --- 1. the in-memory default profile --------------------------------------------
@@ -201,7 +203,7 @@ class TestConsoleEmailSender:
 
 class TestLifespan:
     def test_lifespan_starts_and_cancels_background_tasks(self) -> None:
-        prof = build_runtime_profile(environ={})
+        prof = build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1"})
         app = create_runtime_app(prof)
 
         async def scenario() -> None:

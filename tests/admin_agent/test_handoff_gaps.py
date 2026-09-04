@@ -30,6 +30,7 @@ from typing import Any
 from apps.admin_agent.service import AdminAgentService
 from apps.composition.runtime import (
     DEFAULT_TASK_UNITS,
+    DEV_DEMO_PRINCIPAL_ENV,
     BudgetGrantingIdentity,
     build_runtime_profile,
 )
@@ -119,7 +120,7 @@ class TestInMemoryBudgetGrant:
 
     def test_demo_principal_budget_unchanged(self) -> None:
         """The demo principal's explicit grant is untouched by the wrapper."""
-        prof = build_runtime_profile(environ={})
+        prof = build_runtime_profile(environ={DEV_DEMO_PRINCIPAL_ENV: "1"})  # R168 D-07 opt-in
         assert prof.demo_principal is not None
         summary = prof.usage.summary(prof.demo_principal.tenant_id)
         assert summary.task_units.limit == DEFAULT_TASK_UNITS
