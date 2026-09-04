@@ -19,20 +19,34 @@ from uuid import UUID, uuid4
 
 from pydantic import Field, ValidationError
 
+from core.contracts.approval_binding import ApprovalBindingRefusal, ApprovalBindingRefusalCode
+from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
-from core.contracts.security import ActorKind, FirewallDecisionInput
+from core.contracts.errors import ErrorCode
+from core.contracts.security import ActorKind, FirewallDecision, FirewallDecisionInput
 from core.contracts.tools import ApprovalRequirement, Tool, ToolLocation, ToolStatus
 from core.identity.devices import DeviceRegistry
 from core.security.firewall import CapabilityFirewall, TenantPolicy
 from core.tools.checkpoint import CheckpointManager, checkpointed_write_handler
 from core.tools.denied_paths import DENIED_PATH_PATTERNS
 from core.tools.executor import ToolCallRecord, ToolExecutor
-from core.tools.gate import ToolCallGate
+from core.tools.gate import ToolCallDecision, ToolCallGate
+from core.tools.payload_binding import (
+    NonCanonicalPayload,
+    check_payload_binding,
+    payload_hash,
+)
 from core.tools.registry import ToolRegistry
 from core.tools.source_reader import SourceReader, SourceReadRefused
 from core.tools.source_writer import SourceWriter, source_write_handler
 
-from .git_tools import GIT_PERMISSIONS, GitToolset, mode_recording_audit
+from .git_tools import (
+    GIT_PERMISSIONS,
+    PERM_GIT_COMMIT,
+    PERM_GIT_PUBLISH,
+    GitToolset,
+    mode_recording_audit,
+)
 
 if TYPE_CHECKING:
     from core.audit.ports import AuditLogPort
@@ -46,6 +60,13 @@ DEV_TOOL_VERSION = "r169.1"
 DEV_RESOURCE = "repo:local"
 DEV_SCOPE = "project"
 DEV_RISK_LEVEL = "medium"
+
+# R172 C6: write-class permissions whose approval is bound to the payload hash
+# when the composition enables ``payload_binding``. Read-class calls are never
+# bound. Closed set; extending it is an owner decision.
+PAYLOAD_BOUND_PERMISSIONS: frozenset[str] = frozenset(
+    {PERM_SOURCE_WRITE, PERM_GIT_COMMIT, PERM_GIT_PUBLISH}
+)
 
 ReadAction = Literal["read_file", "list_files", "search"]
 
@@ -158,6 +179,8 @@ class DevAgentSurface:
     tool_ids: dict[str, UUID]
     git: GitToolset | None = None
     checkpoints: CheckpointManager | None = None
+    payload_binding: bool = False
+    audit: AuditLogPort | None = None
 
     def request(
         self,
@@ -185,19 +208,126 @@ class DevAgentSurface:
         tenant_id: UUID | None = None,
         approval_state: Literal["approved"] | None = None,
         actor_id: UUID | None = None,
+        approved_payload_hash: str | None = None,
     ) -> ToolCallRecord:
         """Execute a named dev tool through the gate + executor.
 
         Raises ``KeyError`` for tool names not composed into this surface.
+
+        R172 C6 (opt-in, ``payload_binding=True`` at composition): for a
+        write-class permission (``PAYLOAD_BOUND_PERMISSIONS``) called under
+        ``approval_state="approved"``, ``arguments`` are canonicalised and
+        their sha256 compared against ``approved_payload_hash`` BEFORE the
+        gate. A missing hash, a mismatch, or a non-canonicalisable payload
+        yields a refused ``ToolCallRecord`` carrying a typed
+        ``ApprovalBindingRefusal`` in ``error_detail`` (hashes only, never
+        the payload). The gate itself is unchanged and remains non-binding
+        (owner decision). Default ``payload_binding=False`` is byte-identical
+        to pre-C6 behaviour.
         """
         tool_id = self.tool_ids[tool_name]
         permission = str(self.registry.get(tool_id).permissions[0])
+        request = self.request(permission, tenant_id=tenant_id, approval_state=approval_state)
+        if (
+            self.payload_binding
+            and permission in PAYLOAD_BOUND_PERMISSIONS
+            and approval_state == "approved"
+        ):
+            code = check_payload_binding(payload=arguments, approved_hash=approved_payload_hash)
+            if code is not None:
+                return self._refuse_payload_binding(
+                    tool_id=tool_id,
+                    request=request,
+                    arguments=arguments,
+                    approved_hash=approved_payload_hash,
+                    code=code,
+                    actor_id=actor_id,
+                )
         return await self.executor.execute(
             tool_id=tool_id,
-            request=self.request(permission, tenant_id=tenant_id, approval_state=approval_state),
+            request=request,
             arguments=arguments,
             actor_id=actor_id,
         )
+
+    def _refuse_payload_binding(
+        self,
+        *,
+        tool_id: UUID,
+        request: FirewallDecisionInput,
+        arguments: JsonObject,
+        approved_hash: str | None,
+        code: ApprovalBindingRefusalCode,
+        actor_id: UUID | None,
+    ) -> ToolCallRecord:
+        """Build the executor-shaped refusal for a payload-binding failure.
+
+        Mirrors ``ToolExecutor`` for a gate refusal: ``status="refused"``,
+        ``gate_decision`` REQUIRE_APPROVAL naming the check, error code
+        ``tool_approval_required``, and exactly one ``TOOL_CALL`` audit event.
+        """
+        try:
+            actual: str | None = payload_hash(arguments)
+        except NonCanonicalPayload:
+            actual = None
+        refusal = ApprovalBindingRefusal(
+            code=code,
+            permission=request.permission,
+            approved_hash=approved_hash,
+            payload_hash=actual,
+            reason=_BINDING_REASONS[code],
+        )
+        decision = ToolCallDecision(
+            admitted=False,
+            decision=FirewallDecision.REQUIRE_APPROVAL,
+            reason=code.value,
+        )
+        call_id = uuid4()
+        error = ErrorCode.TOOL_APPROVAL_REQUIRED.value
+        error_detail = refusal.model_dump_json()
+        record = ToolCallRecord(
+            call_id=call_id,
+            tool_id=tool_id,
+            tenant_id=request.tenant_id,
+            permission=request.permission,
+            status="refused",
+            gate_decision=decision,
+            result=None,
+            error=error,
+            error_detail=error_detail,
+        )
+        if self.audit is not None:
+            self.audit.append(
+                AuditEvent(
+                    tenant_id=request.tenant_id,
+                    event_type=AuditEventType.TOOL_CALL,
+                    actor_id=actor_id,
+                    details={
+                        "call_id": str(call_id),
+                        "tool_id": str(tool_id),
+                        "permission": request.permission,
+                        "status": "refused",
+                        "gate_decision": decision.decision.value,
+                        "gate_reason": code.value,
+                        "error": error,
+                        "error_detail": error_detail,
+                    },
+                )
+            )
+        return record
+
+
+_BINDING_REASONS: dict[ApprovalBindingRefusalCode, str] = {
+    ApprovalBindingRefusalCode.APPROVAL_HASH_REQUIRED: (
+        "write-class call under approved state must present the approved payload hash"
+    ),
+    ApprovalBindingRefusalCode.APPROVAL_PAYLOAD_MISMATCH: (
+        "submitted arguments do not match the payload the approval was granted for"
+    ),
+    ApprovalBindingRefusalCode.PAYLOAD_NOT_CANONICALISABLE: (
+        "arguments contain values without a canonical JSON form (floats / non-JSON)"
+    ),
+}
 
 
 def build_dev_surface(
@@ -212,6 +342,7 @@ def build_dev_surface(
     writer: SourceWriter | None = None,
     git: GitToolset | None = None,
     checkpoints: CheckpointManager | None = None,
+    payload_binding: bool = False,
 ) -> DevAgentSurface:
     """Compose the dev-agent surface over ``root`` using the core tool fabric.
 
@@ -224,6 +355,11 @@ def build_dev_surface(
     handler snapshots the pre-apply content and seals/marks-partial after the
     write (result gains ``checkpoint_id`` on success). Absent ``checkpoints``
     the plain handler is used and the result shape is unchanged.
+
+    R172 C6: ``payload_binding=True`` binds approvals of write-class calls to
+    the sha256 of the canonical arguments (see ``DevAgentSurface.call``). The
+    default ``False`` keeps the pre-C6 behaviour byte-identical; the gate is
+    not modified either way (owner decision, pinned by test).
     """
     # R172 C1: the composed surface uses the hardened denylist; bare primitives
     # keep their defaults (callers may still inject their own reader/writer).
@@ -270,4 +406,6 @@ def build_dev_surface(
         tool_ids=tool_ids,
         git=git,
         checkpoints=checkpoints,
+        payload_binding=payload_binding,
+        audit=audit,
     )
