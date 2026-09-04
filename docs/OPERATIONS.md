@@ -22,9 +22,13 @@ curl -s localhost:8000/healthz
 ```
 
 No environment variables ⇒ hermetic in-memory profile: a `local_echo`
-provider (honestly labelled — it never pretends a real model answered), a
-demo principal (tenant id printed in the startup banner), in-process worker
-and outbox relay. This is exactly the posture the 2,500+ hermetic tests prove.
+provider (honestly labelled — it never pretends a real model answered),
+in-process worker and outbox relay, **auth only** (R168 D-07: a request
+without a Bearer token is `401 unauthenticated` on every `/v1/*` path except
+the public list below). To exercise the API without registering, opt in
+explicitly: `DEV_DEMO_PRINCIPAL=1 python3 -m apps.cli serve` composes a demo
+principal (tenant id printed in the startup banner; never admin). This is
+exactly the posture the 2,700+ hermetic tests prove.
 
 ---
 
@@ -93,8 +97,18 @@ secret-containment suites).
 
 | Profile | Mode | Behaviour |
 |---|---|---|
-| in-memory | **hybrid** | no token ⇒ demo principal (never admin); Bearer ⇒ real session; bad token ⇒ 401 |
-| durable | **auth only** | Bearer required on protected routes |
+| in-memory (default) | **auth only** | no token ⇒ 401; Bearer ⇒ real session; bad token ⇒ 401 |
+| in-memory + `DEV_DEMO_PRINCIPAL=1` | **hybrid** (dev opt-in) | no token ⇒ demo principal (never admin); Bearer ⇒ real session; bad token ⇒ 401 |
+| durable | **auth only** | Bearer required on protected routes; `DEV_DEMO_PRINCIPAL` is ignored |
+
+**Public paths** (the ONE list, `apps.composition.runtime.PUBLIC_PATHS`, passed
+to `create_app(public_paths=…)`): `/healthz`, `/v1/auth/register`,
+`/v1/auth/verify`, `/v1/auth/login`, `/v1/auth/logout` (frozen contract: always
+204, never a token-validity oracle). Everything else under `/v1/` is admitted
+by an HTTP middleware **before body validation** (R168 D-07/D-10): anonymous ⇒
+the one constant 401; `/v1/admin/*` without an admin session ⇒ 403 — so schema
+hints (422) are only ever observed by an admitted caller. `GET /v1/admin/system`
+reports `identity_mode`: `auth` or `hybrid`.
 
 Flow (both profiles): `POST /v1/auth/register {email,password,preferred_language}`
 → verification token is **printed to the server console** (no email delivery
@@ -271,7 +285,8 @@ reports missing stubs — a stubs gap, not a defect.
 
 | Symptom | Cause / fix |
 |---|---|
-| `403` on `/v1/admin/*` | not an admin: email absent from `ADMIN_EMAILS`, or no Bearer token (hybrid mode demo principal is never admin) |
+| `401` on any `/v1/*` (except public paths) | no Bearer token (default auth-only posture; `DEV_DEMO_PRINCIPAL=1` opens the dev demo principal in the in-memory profile) or invalid/expired session |
+| `403` on `/v1/admin/*` | Bearer present but not an admin: email absent from `ADMIN_EMAILS` (the dev demo principal is never admin) |
 | `404` on `/v1/admin/providers/onboard` | `GATEWAY_BASE_URL` not set — the route is not mounted by design (P2) |
 | `404` on learning routes | memory seam absent — the whole lifecycle is absent, not half-available |
 | `422` on auth bodies | closed shapes: use `preferred_language`, no extra fields |

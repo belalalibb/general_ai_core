@@ -176,14 +176,27 @@
     ],
     "round_a": {
       "ceiling": 5,
-      "changes_used": 0,
+      "changes_used": 2,
       "items": [
         "D-01",
         "D-07",
         "D-08",
         "D-10"
       ],
-      "log": []
+      "log": [
+        {
+          "item": "D-07",
+          "file": "apps/composition/runtime.py",
+          "loc": "+24/-1",
+          "summary": "DEV_DEMO_PRINCIPAL opt-in (closed by default), PUBLIC_PATHS, create_app(public_paths=...)"
+        },
+        {
+          "item": "D-10",
+          "file": "apps/api/app.py",
+          "loc": "+50/-1",
+          "summary": "admission middleware before body validation: public_paths seam, anonymous 401, /v1/admin non-admin 403 (also closes D-07 route sweep)"
+        }
+      ]
     },
     "round_b": {
       "ceiling": 5,

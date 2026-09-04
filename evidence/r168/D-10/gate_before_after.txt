@@ -1,0 +1,2 @@
+BEFORE (39e89322, hermetic V-01): PASS 2738/0/0/64; D-07 sweep: 22 leaks; D-10: 14/59 typed-body 422 to non-admin; budget round_a=0/5
+AFTER: D-07 5 passed; D-10 3 passed; budget round_a=2/5 (runtime.py +24/-1, app.py +50/-1); full hermetic verifier: evidence/r168/D-07/check_repo_after.txt

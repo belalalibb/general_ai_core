@@ -725,3 +725,37 @@ and `strict = true` must stay.
 
 ### Ref
 `evidence/r168/V-02/{fail_first,after_fix,gate_before_after}.txt`, `notes.md`.
+
+---
+
+## IMPL-007. Identity before schema: one admission middleware, one public-path list (R168 D-07/D-10)
+
+### Question
+A token-less caller was silently mapped to a composition-owned demo principal
+(D-07), and FastAPI validated typed bodies before `_admit` so non-admins saw
+schema hints (D-10). Fix both without a route-signature refactor and within
+the R168 budget.
+
+### Decision (R168, 2026-09-04)
+1. The demo principal is an EXPLICIT dev opt-in: `DEV_DEMO_PRINCIPAL=1`
+   (literal "1", in-memory profile only). Default = auth only in BOTH
+   profiles; `GET /v1/admin/system` reports `identity_mode`.
+2. `apps.composition.runtime.PUBLIC_PATHS` is the ONE list of token-less
+   paths (`/healthz`, `/v1/auth/{register,verify,login,logout}`), passed to
+   `create_app(public_paths=…)`. `apps/api/app.py` keeps `_AUTH_ENTRY_PATHS`
+   public by construction — a composition may add, never remove.
+3. One `@app.middleware("http")` (registered only when `auth` is composed)
+   runs BEFORE body validation on every `/v1/` path: anonymous ⇒ the constant
+   401; `/v1/admin/*` non-admin ⇒ 403; then the route's own `_principal` /
+   `_admit` still runs (defence in depth, zero signature changes).
+4. `/v1/auth/logout` is public because its frozen contract is "always 204,
+   never a token-validity oracle"; `/v1/auth/session` is identity-bearing.
+
+### Guards
+`tests/composition/test_d07_tokenless_401.py` (route enumeration: every
+served non-public path ⇒ 401), `tests/composition/test_d10_admin_gate_order.py`
+(all admin operations: 403 non-admin, 401 anonymous, admin reaches 422),
+`test_cli_entrypoint` (describe reports `demo_principal` false by default).
+
+### Ref
+`evidence/r168/D-07/`, `evidence/r168/D-10/`; budget round A 2/5.
