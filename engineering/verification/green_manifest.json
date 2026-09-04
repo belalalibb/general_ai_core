@@ -36,18 +36,18 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 2920
+      "min_passed": 3126
     },
     "last_measured": {
-      "passed": 2920,
+      "passed": 3126,
       "failed": 0,
       "errors": 0,
       "skipped": 64,
-      "at_head": "5268ef3",
+      "at_head": "c930963",
       "hermetic": true,
       "command": "env -u GSK_API_KEY -u GROQ_API_KEY -u GW_GROQ_API_KEY bash engineering/verification/check_repo.sh",
-      "evidence": "evidence/r169/check_repo_final.txt",
-      "note": "R169 closure: +158 vs 0ef7820a = R169 tests 143 (tests/agent_dev 100, tests/tools/test_source_writer 42, manifest guard +1) + R168 post-D-01 tests 15 (D-02/D-03/D-04/D-11); floor 2777→2920"
+      "evidence": "evidence/r172/check_repo_final.txt",
+      "note": "R172 closure: +206 vs 5268ef3 (2920) = C1 denied_paths, C2 binding_store, C3 remote_trust+atomic_json, C4 normalisation/atomic writes, C5 checkpoint, C6 payload_binding, C7 dev router mount, C8 github_transport (25) + guards; floor 2920->3126; skipped unchanged at 64; tests_live/ (13 env-gated live tests) intentionally outside the verifier"
     }
   },
   "non_test_items": [

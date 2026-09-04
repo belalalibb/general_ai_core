@@ -1,0 +1,45 @@
+# R172 §10 closure — verifiable facts only
+utc: 2026-09-04
+round_start: 67824d0
+head_before_closure_commit: c930963
+
+## Verifier (hermetic, no provider keys in env)
+command: env -u GSK_API_KEY -u GROQ_API_KEY -u GW_GROQ_API_KEY bash engineering/verification/check_repo.sh
+result: RESULT: PASS — passed=3126 failed=0 errors=0 skipped=64 ; round_r172=8/8 ; exit=0
+raw tail: evidence/r172/check_repo_final.txt
+floor: pytest.gate.min_passed 2920 -> 3126 (raised, never lowered); max_skipped 64 unchanged
+last_measured: {passed:3126, failed:0, errors:0, skipped:64, at_head:c930963, hermetic:true}
+guards after floor raise: python -m pytest tests/verification -q -> 21 passed
+
+## Frozen trees (git diff --stat 67824d0..HEAD -- ui apps/admin_agent core/tools/gate.py)
+lines of output: 0  (no file under ui/**, apps/admin_agent/**, or core/tools/gate.py touched this round)
+files touched this round (git diff --name-only 67824d0..HEAD | wc -l): 66
+
+## UI byte sizes (stat -c%s, unchanged from mandate)
+ui/admin/app.js      79351
+ui/admin/index.html  32385
+ui/admin/styles.css  16392
+ui/app/app.js        28395
+ui/app/index.html    11686
+ui/app/styles.css    19604
+
+## Secret sweep over git log -p 67824d0..HEAD
+strict  grep -cE 'gsk_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}'  -> 0
+loose   grep -cE 'gsk_|ghp_'                                  -> 79 (all self-referential; breakdown sums to 79)
+  28  regex pattern text (the scanner/helper/test regex itself, e.g. `{20,}` / `{36}` character classes)
+  33  evidence/r172/secret_scan.txt log lines — literal placeholder `<gsk_/ghp_/github_pat_ pattern>`
+   7  synthetic fixtures built by concatenation ("ghp_" + "T" * 36, "gsk_" + "0" * 52, "gsk_" + "A" * 52, ...)
+   7  negative assertions (assert "gsk_" not in ..., assert b"ghp_" not in raw)
+   4  prose/docstring mentions of the prefix (HERMETIC note, notes.md, C8 findings line)
+no real key value appears in any commit of this round.
+
+## Budget
+change_budget.round_r172: used 8 / ceiling 8 — C1..C8 = IMPL-018..IMPL-025 (each with fail_first/after_fix/notes under evidence/r172/C*/)
+
+## Not evaluated (unchanged)
+- browser live-suite (no browser in sandbox)
+- two-account provider round-trip
+- real Groq completion: NOT obtained in R172 — all 4 keys organization_restricted (HTTP 400) -> typed invalid_credential only
+
+## Final state
+HEAD == origin/main asserted by the closure push (see git ls-remote line appended below by the closure step)
