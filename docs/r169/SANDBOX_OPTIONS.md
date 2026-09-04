@@ -178,3 +178,23 @@ Cloudflare-fronted VM / plain Linux host; no Kubernetes assumed).
 - No claim that any option has been exercised in this repository: every "yes" in §4 is a property of the
   named mechanism, NOT EVALUATED here (INV-4). The round that adopts an option must produce fail-first
   evidence (e.g. a test proving `~/.git-credentials` is unreadable and `curl` fails inside the sandbox).
+
+## 8. Evidence for the O1 refusal (R170 harvest row 4; cited by R172 D8)
+
+O1 ("run tools in the same process / plain `subprocess` with a SAFE list") stays **refused**, and since
+R170 the refusal rests on a line-cited external anti-pattern rather than on opinion. `docs/r170/HARVEST.md`
+row 4 (and confirmation (c) in its seed table) records, from the reference project's `actions/command_runner.py`:
+
+- interpreter names (`node`, `python`, `python3`, `py`) inside the SAFE list (L28-33);
+- `_is_safe` matches on the **first word only** (L251-265), so `python -c "<anything>"` is admitted;
+- `cwd = os.path.abspath(cwd)` with no jail or containment (L49);
+- `subprocess.run(..., env=env)` inheriting the parent environment, with redaction by key-name
+  substring only (L135-148, L157-167);
+- approval through a blocking `input()` (L279-291).
+
+Our admission layer (`core/engineering/command.py::CommandPolicy` — `python3/pytest/ruff` allowlist,
+`-c/--command` denied, cwd jail) is already stricter on admission; sandboxing itself remains design-only
+here (§4 O1, §6). R172 C8 additionally shows the transport side can avoid subprocesses entirely
+(`apps/agent_dev/github_transport.py` speaks the GitHub REST API; see IMPL-025). This section is
+docs-only: no code, tool id, permission or route changed (R172 discovery D8 was "0 hits for R170 in
+this note").

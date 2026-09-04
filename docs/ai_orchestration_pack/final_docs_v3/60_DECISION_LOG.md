@@ -1334,3 +1334,69 @@ at `73766ab`.
 ### Ref
 - `evidence/r172/C7/{fail_first.txt,after_fix.txt,notes.md}`; `docs/r169/CAPABILITY_MAP.md`
   updated (17 ids); budget row 7/8 in `green_manifest.json`.
+
+## IMPL-025 — REST-only GitHub transport + env-gated live transport proof (R172 C8)
+
+### Decision
+- `apps/agent_dev/github_transport.py` (NEW): `GitHubRestTransport` implements the R169
+  `GitTransportPort` over the GitHub Git Data / Pulls REST API with httpx. No subprocess, no
+  shell, no hooks, no local `.git`. `commit()` stages a content-addressed in-memory snapshot of
+  the jailed paths (no token, no network); `push()` uploads blobs → tree → commit and creates or
+  non-force-moves `refs/heads/<branch>`; `open_pull_request()` returns the PR `html_url`.
+  `parse_github_remote` admits only `https://github.com/{owner}/{repo}[.git][/]`.
+- Error mapping feeds the existing `GitToolset` refusal codes unchanged: HTTP 422 whose message
+  names a pull-request / protected-branch rule → `ProtectedBranchRejected`
+  (→ `remote_rejected_protected_branch` + `suggested_mode="pull_request"`); other 4xx →
+  `RemoteRejected`; network / malformed / missing ref → `TransportError`; nothing staged →
+  `NothingToCommit`. `GitRefusalCode` and `ErrorCode` NOT widened.
+- The token arrives per call, rides only the `Authorization` header of that call, is never stored
+  on the instance and never appears in results, exceptions or `repr`.
+- Live proof lives in `tests_live/r172/test_live_transport.py` — OUTSIDE `pyproject::testpaths`
+  and outside every `green_manifest.json` slice, so the hermetic verifier never collects it and the
+  skip budget is untouched. Every live test skips unless `GROQ_API_KEY_n` / `GITHUB_TOKEN` +
+  `R172_LIVE_GITHUB_REPO` are in the environment; secrets are read from `os.environ` only and
+  routed through `InMemorySecretManager` credential_refs; the suite refuses any remote naming
+  `general_ai_core`.
+
+### Owner decision — boundary
+- REST over the `git` CLI: the CLI would violate the R172 no-subprocess rule and needs a per-binding
+  checkout the sandbox does not have. Trade-off: no local history/merge; `status.head` is the
+  staging-snapshot id until `push()` succeeds.
+- `GitHubRestTransport` is NOT wired into `apps/composition/runtime.py`; no production composition
+  builds a `GitToolset` yet (same posture as C2 store, C3 trust registry, C5 checkpoints, C6
+  payload binding, C7 dev seam). Tracked in `docs/r172/BACKEND_STATE_OF_TRUTH.md`.
+- Live runs create real branches / PRs on the throwaway repository only
+  (`belalalibb/r172-live-transport-throwaway-48b263`, main protected PR-only, enforce_admins).
+
+### Why
+- "live git transport NOT EVALUATED" had been open since R169 (only a test fake behind the port);
+  a real transport plus a real run is the only way to close it without over-claiming.
+- INV-3 (opaque credential): header-only token; `test_credential_never_in_artifacts` + hermetic
+  `repr`/exception assertions.
+- INV-5 (human authority): DIRECT_PUSH refusals and the protected-branch mapping were proven live —
+  the remote head stayed at the auto-init commit throughout.
+
+### Guards
+- 25 hermetic tests in `tests/agent_dev/test_github_transport_r172.py` (remote parsing, fetch,
+  status/commit locality, path jail, content addressing, push object flow, protected 422,
+  non-fast-forward, PR open, unknown head, no-subprocess source scan).
+- 13 live tests passed on 2026-09-04 (`evidence/r172/live_transport.txt`): real PR URL; DIRECT_PUSH
+  not allowed → `publish_mode_not_allowed`; DIRECT_PUSH onto protected `main` →
+  `remote_rejected_protected_branch` + `suggested_mode=pull_request`; untrusted binding →
+  `remote_not_trusted` with `secrets.resolve` called 0 times; Groq: all four supplied keys are
+  `organization_restricted` → typed `invalid_credential` / non-retryable (no completion obtainable
+  — recorded, not claimed); bogus key → `invalid_credential`; `timeout_ms=1` → `timeout`/retryable;
+  429 not observed; adapter performs no retry itself (finding — retries belong to ExecutionService).
+- Slice 391 → 416 passed / 1 xfailed; api 473; ui 14; admin_agent 130; providers 312 passed /
+  9 skipped (unchanged); ruff / ruff format / mypy (195 + module) / import-linter (13 kept) clean.
+- Fail-first at 6d09e56: `ModuleNotFoundError: apps.agent_dev.github_transport`.
+
+### Findings recorded
+- GitHub signals a protected-branch refusal on the Git Data API as HTTP 422
+  "Changes must be made through a pull request." (not 403).
+- `GroqAdapter`'s pooled client is bound to the loop that created it; live harness must run
+  `generate()`+`aclose()` in one `asyncio.run` (first attempt: "Event loop is closed", test-side).
+
+### Ref
+- `evidence/r172/C8/{fail_first.txt,after_fix.txt,notes.md}`, `evidence/r172/live_transport.txt`;
+  budget row 8/8 in `green_manifest.json`.
