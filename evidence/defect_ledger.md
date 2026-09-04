@@ -42,3 +42,20 @@ Tenant isolation: foreign execution by-id/events/trace/diagnosis → 404; list e
 
 S1: 0 found / 0 fixed. S2: 4 found (D-01, D-02, D-07, D-09) / 1 fixed in R167-A (D-09) + 3 fixed in R168 (D-01, D-02, D-07). S3: 5 (D-03, D-04, D-08, D-10, D-11) / 5 fixed in R168 (D-03, D-04, D-08, D-10, D-11 partial). S4: 0.
 Containment probes D-05/D-06: HELD. Accepted changes used: 1/5 (FIX D-09, +36/−5 LOC).
+
+# R169 — Defect Ledger entries (capability round, not a probe round)
+
+R169 was a build round (development-agent surface), so the ledger records the defects it
+**prevented by construction** and the gaps it **left open**, with evidence paths. No S1–S4
+defect against the pre-existing backend was found or booked during R169.
+
+| id | class | finding | disposition | evidence |
+|---|---|---|---|---|
+| R169-G-01 | prevented | A write primitive without a jail/denylist/precondition would let a dev agent clobber files outside its binding or overwrite concurrently edited files | `core/tools/source_writer.py` refuses `PATH_OUTSIDE_ROOT`, denylist paths, byte/op caps, sha256 precondition mismatch — all typed (`SourceWriteRefusalCode`) | `evidence/r169/A2/`, `tests/tools/test_source_writer.py` (42) |
+| R169-G-02 | prevented | Granting `source.write`/`git.*` to the admin agent would widen its permission class (INV-7) | Separate dev surface `apps/agent_dev/`, own registry + `dev_tenant_policy`; admin registry asserted unchanged | `tests/agent_dev/test_admin_boundary.py` (9), `evidence/r169/A3/` |
+| R169-G-03 | prevented | GitHub token reaching argv/env/audit/trace | Token only via `SecretManagerPort.resolve(credential_ref)` inside the transport call; asserted absent from `ToolCallRecord`, audit and trace; `RepoBinding` accepts https-only remotes | `tests/agent_dev/test_git_tools.py` (38), `evidence/r169/A5/` |
+| R169-G-04 | prevented | Silent downgrade/upgrade of publish mode (e.g. push when PR requested, or direct push when not enabled) | `publish_mode_not_allowed` refusal; protected-branch rejection → `remote_rejected_protected_branch` + `suggested_mode=pull_request`; mode recorded in the single `TOOL_CALL` event | same as above; `core/contracts/publish_mode.py` |
+| R169-G-05 | prevented | Binding-id enumeration across tenants via the publish-modes endpoint | Absent, foreign-tenant and malformed ids → one identical 404 `validation_error` body, after 401 check | `tests/agent_dev/test_publish_modes_http.py` (10), `evidence/r169/A6/` |
+| R169-O-01 | open | Live GitHub transport (real `git`/PR API) NOT EVALUATED — only `FakeTransport` exercised | Operator decision; a real transport is a future production change with its own fail-first evidence | `docs/r169/R169_CLOSURE_REPORT.md` |
+| R169-O-02 | open | Dev router not mounted in `apps/api/app.py` — endpoint exists, is tested, and is unreachable in the shipped profile | Operator decision (would be change #6, composition root) | `evidence/r169/A6/notes.md` |
+| R169-O-03 | open | No command-execution sandbox for tenant code; the existing `SubprocessCommandRunner` is unsuitable for tenant code | Design note only; adoption of O3/O4 is a future round | `docs/r169/SANDBOX_OPTIONS.md` |
