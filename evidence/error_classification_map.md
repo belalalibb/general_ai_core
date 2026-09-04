@@ -14,7 +14,7 @@ the `MAP|` line, not a reading of the code. Misclassification threshold per cont
 |------------|----------|------|--------------------|---------------------|-----------|--------|-----------|-----------|
 | `groq_400_organization_restricted.json` | groq | 400 | `error.code=organization_restricted` | `invalid_credential` | False | no | **yes** | CORRECT (fixed in ae295f6; before that: `bad_request`, no failover) [CAPTURED+INJECTED] |
 | `genspark_llm_invalid_credential.json` | genspark proxy | 401 | `{"detail":"Invalid or expired token"}` (no `error` object) | `invalid_credential` | False | no | yes | CORRECT — status-driven; body shape irrelevant [CAPTURED+INJECTED] |
-| `genspark_llm_unknown_model.json` | genspark proxy | 400 | `{"detail":"Model '…' is not allowed. See GET /v1/models…"}` (no `error.code`) | `bad_request` | False | no | **no** (request-indicting) | **MISCLASSIFIED — D-02, S2.** Semantically `model_unavailable` (should fail over to a provider that has the model). The normaliser only reads `error.code`/`error.param`; the proxy uses FastAPI's `detail`. [CAPTURED+INJECTED] |
+| `genspark_llm_unknown_model.json` | genspark proxy | 400 | `{"detail":"Model '…' is not allowed. See GET /v1/models…"}` (no `error.code`) | `model_unavailable` (R168; was `bad_request`) | False | no | **yes** (candidate-indicting) | **FIXED R168 — D-02.** Structural `detail` detection (`_is_model_not_allowed`) in the Groq normaliser, mirroring genspark_llm. Was: Semantically `model_unavailable` (should fail over to a provider that has the model). The normaliser only reads `error.code`/`error.param`; the proxy uses FastAPI's `detail`. [CAPTURED+INJECTED] |
 | `genspark_llm_200_plan_refusal.json` | genspark proxy | 200 | `choices[0].message.content` = "Free-plan credits can't be used…" | **none — success** | — | no | no | **UNCLASSIFIABLE — D-01, S2.** No seam exists for an in-band refusal; booked as a successful, billable completion; agent then fails `invalid_proposal`; diagnosis says "no provider error was recorded". [CAPTURED live + INJECTED] |
 
 ## Injected categories (§9 fault classes) → contract behaviour
@@ -55,3 +55,7 @@ Reproduced by the matrix harness with scripted `ProviderError`s (no real provide
   would be a normaliser edit, which §6 permits only for a §4A contract defect; item 5 lists
   the taxonomy as VERIFIED and this is a *provider-shape coverage* gap, so it is recorded
   with a fail-first test candidate for R168 rather than patched under certification.
+  **R168: FIXED** (`9118f4d7`) — `providers/real/groq/adapter.py` books `model_unavailable`
+  (`provider_code=model_not_allowed`) on the captured shape; other `detail`-only 400s stay
+  `bad_request` by recorded decision (IMPL-012). Guards:
+  `tests/providers/test_d02_groq_detail_only_400.py`; certification MAP row updated.

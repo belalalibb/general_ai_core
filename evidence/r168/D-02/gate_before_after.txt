@@ -1,0 +1,2 @@
+BEFORE (fd85c4b6 → d0b26985, hermetic): PASS 2773/0/0/64; D-02 test 1 failed / 3 passed (bad_request on the model-not-allowed shape); budget round_b=4/5
+AFTER (9118f4d7 + docs): D-02 4 passed; certification MAP row model_unavailable|D-02 FIXED R168; tests/providers/test_groq_adapter.py + tests/certification 67 passed; budget unchanged (providers/ is budget-free); full hermetic verifier: evidence/r168/D-02/check_repo_after.txt

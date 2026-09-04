@@ -902,3 +902,37 @@ unknown/malformed recorded; admin reads over HTTP).
 
 ### Ref
 `evidence/r168/D-11/`; budget round B 4/5 (`apps/api/app.py` +37/−0).
+
+## IMPL-012. Groq normaliser: `detail`-only 400 "model not allowed" (R168 D-02)
+
+### Question
+The OpenAI-compatible proxy fronting Groq rejects a disallowed model with HTTP
+400 `{"detail": "Model '<x>' is not allowed…"}` (FastAPI shape, no
+`error.code`). The Groq normaliser read only `error.code`/`error.param` and
+booked `bad_request` — request-indicting, so the execution walk never failed
+over to a provider that has the model (ledger D-02, S2).
+
+### Decision (R168, 2026-09-04)
+1. Structural detection `_is_model_not_allowed(response)` in
+   `providers/real/groq/adapter.py` (same predicate the genspark_llm adapter
+   already uses): 400 + `detail` str starting "Model " and containing "is not
+   allowed" ⇒ `model_unavailable`, `retryable=False`,
+   `provider_code="model_not_allowed"`, fixed safe message. Candidate-indicting
+   (30 §14): the walk fails over; the request is not indicted.
+2. The detail text (echoes the requested model name and the allowlist) never
+   crosses the boundary — only the boolean verdict does.
+3. Any OTHER `detail`-only 400 stays `bad_request`. No captured evidence says an
+   unknown FastAPI detail is non-indicting; widening would be a guess (INV-4).
+   Revisit only with a captured shape.
+4. The branch sits BEFORE the generic 400/413/422 branch and AFTER the
+   `error.code`-driven ones; every existing `error.code` mapping is unchanged
+   (guarded).
+5. Budget: `providers/` is outside the counted set ⇒ round B stays 4/5.
+
+### Guards
+`tests/providers/test_d02_groq_detail_only_400.py` (4);
+`tests/certification/test_r167a_routing_matrix.py::test_shape_unknown_model_400_detail_only_is_model_unavailable`
+(MAP row `…|model_unavailable|retryable=False|D-02 FIXED R168`).
+
+### Ref
+`evidence/r168/D-02/`; `evidence/error_classification_map.md` row updated.
