@@ -1,0 +1,20 @@
+PASS: exists: engineering/adr/ADR-TEMPLATE.md
+PASS: exists: engineering/adr/README.md
+PASS: exists: engineering/gates/GATE-TEMPLATE.md
+PASS: exists: engineering/decisions/README.md
+PASS: exists: engineering/verification/README.md
+PASS: exists: engineering/verification/green_manifest.json
+PASS: exists: docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/00_INDEX.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTOCOL.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md
+PASS: no legacy state files (D10/D11)
+PASS: v3 pack complete: 20 documents
+PASS: state field present: STATE_REVISION
+PASS: state field present: RESUME_TOKEN
+PASS: state field present: CURRENT_TASK
+PASS: state field present: NEXT_TASK
+PASS: state field present: PHASE_2_STATUS
+pytest slice api: passed=462 failed=0 errors=0 skipped=0
+pytest slice contract-providers: passed=629 failed=0 errors=0 skipped=15
+pytest slice execution-composition-infra: passed=380 failed=0 errors=0 skipped=49
