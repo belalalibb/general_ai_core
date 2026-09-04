@@ -786,3 +786,38 @@ malformed ⇒ byte-identical 404; owned passes and equals the no-field path).
 
 ### Ref
 `evidence/r168/D-08/`; budget round A 4/5.
+
+## IMPL-009. An in-band HTTP-200 refusal is a FAILED provider call (R168 D-01)
+
+### Question
+`genspark_llm` returns HTTP 200 with the gateway's plan-refusal sentence as the
+assistant message and `usage = {0,0,0}`. The adapter booked it as a completion:
+run SUCCEEDED, 1.0 unit settled, refusal text served as the answer, no
+provider error recorded, no failover.
+
+### Decision (R168, 2026-09-04)
+1. Detection lives in the ADAPTER (`providers/real/genspark_llm/adapter.py`),
+   the only layer that knows this gateway's wording. Core stays provider-agnostic.
+2. A 200 is a refusal iff BOTH signals hold: reported usage present with
+   `total_tokens == 0 and completion_tokens == 0` (no inference) AND the content
+   carries a plan-refusal marker. One signal alone is never a refusal (a real
+   completion quoting the wording consumed tokens; zero-usage plain text is not
+   a refusal).
+3. Classification: `quota_exceeded`, `retryable=False`,
+   `provider_code="plan_refusal_200"`, generic `safe_message`; output/usage
+   empty — the refusal text never crosses the boundary. `content_rejected` was
+   rejected because it is request-indicting and forbids failover in the frozen
+   core (conflict ledger C-05).
+4. Downstream is unchanged and already correct: route-indicting ⇒ failover to
+   the next candidate, else node FAILED; usage `fail` ⇒ 0 units; evaluation
+   `JudgeFailure` ⇒ unverified; API `403 entitlement_exceeded`.
+
+### Guards
+`tests/providers/test_d01_refusal_contract.py` (6: failed call, no leak, quoted
+wording stays success, zero usage alone stays success, run FAILED + 0 units,
+failover to next provider); `tests/certification/test_r167a_routing_matrix.py::
+test_shape_200_plan_refusal_is_quota_exceeded_r168` (replaces the R167-A row that
+asserted the defect).
+
+### Ref
+`evidence/r168/D-01/`; budget round A unchanged 4/5 (providers/ only).

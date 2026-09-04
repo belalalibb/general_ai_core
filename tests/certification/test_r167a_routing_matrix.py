@@ -60,6 +60,8 @@ from core.providers import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.providers.errors import DuplicateRegistration
 from core.routing import NoEligibleCandidates, SimpleScoringRouter
 from core.usage.memory import InMemoryUsageAccounting
+from providers.real.genspark_llm import MANIFEST as GENSPARK_MANIFEST
+from providers.real.genspark_llm import GensparkLLMAdapter
 from providers.real.groq import MANIFEST as GROQ_MANIFEST
 from providers.real.groq import GroqAdapter
 
@@ -528,6 +530,29 @@ def _groq_replay(status: int, body: Any) -> ProviderGenerateResponse:
     return run(adapter.generate(request))
 
 
+def _genspark_replay(status: int, body: Any) -> ProviderGenerateResponse:
+    def responder(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(status, json=body)
+
+    adapter = GensparkLLMAdapter(
+        GENSPARK_MANIFEST,
+        secret_resolver=lambda ref: "not-a-real-key",
+        health_credential_ref=CRED_REF,
+        transport=httpx.MockTransport(responder),
+    )
+    request = ProviderGenerateRequest.model_validate(
+        {
+            "request_id": uuid4(),
+            "tenant_id": uuid4(),
+            "operation": ProviderOperation.GENERATE_TEXT,
+            "provider_model_name": "gpt-5-nano",
+            "credential_ref": CRED_REF,
+            "payload": {"ask": "hello"},
+        }
+    )
+    return run(adapter.generate(request))
+
+
 def _shape(name: str) -> tuple[int, Any]:
     doc = json.loads((SHAPES / name).read_text())
     return int(doc["_meta"]["http_status"]), doc["body"]
@@ -568,13 +593,21 @@ def test_shape_unknown_model_400_detail_only_lands_as_bad_request() -> None:
     assert r.error.category is ProviderErrorCategory.BAD_REQUEST
 
 
-def test_shape_200_plan_refusal_is_booked_as_success() -> None:
+def test_shape_200_plan_refusal_is_quota_exceeded_r168() -> None:
+    """D-01 fixed in R168: the genspark_llm adapter (origin of the captured
+    shape) now books an in-band HTTP-200 plan refusal as a FAILED,
+    account-indicting call. R167-A recorded this as SUCCESS with no
+    classification path; that assertion was the defect, not the contract."""
     doc = json.loads((SHAPES / "genspark_llm_200_plan_refusal.json").read_text())
     assert doc["_meta"]["http_status"] == 200
-    r = _groq_replay(200, doc["body"])
-    assert r.succeeded is True and r.error is None
-    assert "Free-plan credits" in str(r.output)
-    print("MAP|200_plan_refusal|SUCCESS (no classification path)|D-01")
+    r = _genspark_replay(200, doc["body"])
+    assert r.succeeded is False and r.error is not None
+    assert r.error.category is ProviderErrorCategory.QUOTA_EXCEEDED
+    assert r.error.retryable is False
+    assert r.error.provider_code == "plan_refusal_200"
+    assert r.output == {} and r.usage == {}
+    assert "Free-plan" not in r.error.model_dump_json()
+    print("MAP|200_plan_refusal|quota_exceeded|retryable=False|D-01 FIXED R168")
 
 
 # --- §9 injection is unreachable from production ------------------------------------

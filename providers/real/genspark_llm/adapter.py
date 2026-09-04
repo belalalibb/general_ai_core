@@ -292,11 +292,30 @@ class GensparkLLMAdapter:
                 output = {"content": content, "finish_reason": finish_reason}
         except (ValueError, KeyError, IndexError, TypeError) as exc:
             return self._failed(request, self.normalize_error(exc), latency_ms=latency_ms)
+        usage = _extract_usage(parsed)
+        if request.operation is not ProviderOperation.CREATE_EMBEDDINGS and _is_plan_refusal(
+            str(output.get("content", "")), usage
+        ):
+            # D-01 (R168): an in-band HTTP-200 refusal is NOT a completion. The
+            # gateway performed no inference (zero reported usage) and answered
+            # with its plan-refusal notice instead of the model. Book it as a
+            # FAILED, account-indicting call so the run fails, settles 0 units
+            # and the router may fail over. The refusal text never crosses.
+            return self._failed(
+                request,
+                ProviderError(
+                    category=ProviderErrorCategory.QUOTA_EXCEEDED,
+                    retryable=False,
+                    provider_code="plan_refusal_200",
+                    safe_message="provider plan refused inference; no tokens were consumed",
+                ),
+                latency_ms=latency_ms,
+            )
         return ProviderGenerateResponse(
             request_id=request.request_id,
             succeeded=True,
             output=output,
-            usage=_extract_usage(parsed),
+            usage=usage,
             error=None,
             latency_ms=latency_ms,
         )
@@ -568,6 +587,27 @@ def _extract_usage(parsed: dict[str, Any]) -> dict[str, Any]:
         for key in ("prompt_tokens", "completion_tokens", "total_tokens")
         if isinstance(usage.get(key), int)
     }
+
+
+# D-01 (R168): signature of the gateway's in-band plan refusal (captured shape
+# evidence/failure_shapes/genspark_llm_200_plan_refusal.json). Matching is
+# case-insensitive and requires *both* signals — zero reported usage (no
+# inference happened) AND the refusal wording — so a genuine completion that
+# merely quotes the wording (and therefore consumed tokens) stays a success.
+_PLAN_REFUSAL_MARKERS: tuple[str, ...] = (
+    "free-plan credits",
+    "genspark.ai/pricing",
+    "purchase credits",
+)
+
+
+def _is_plan_refusal(content: str, usage: dict[str, Any]) -> bool:
+    if not usage:
+        return False  # no usage block at all: cannot prove "no inference"
+    if usage.get("total_tokens", 0) != 0 or usage.get("completion_tokens", 0) != 0:
+        return False
+    lowered = content.lower()
+    return any(marker in lowered for marker in _PLAN_REFUSAL_MARKERS)
 
 
 def _retry_after_ms(response: httpx.Response) -> int | None:
