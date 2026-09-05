@@ -181,3 +181,36 @@ class TestStep5NoCheckSurface:
         with pytest.raises(OnboardingRefused) as excinfo:
             world.onboard(FakeAdapter(credential_ok=False))
         assert excinfo.value.step == "step-5-credential-validation"
+
+
+class NoHealthSurfaceAdapter(FakeAdapter):
+    """health_check has NO wire surface (gateway ``health_supported: false``)."""
+
+    async def health_check(self, scope):  # type: ignore[override]
+        raise NotImplementedError("gateway performed no health check (checked_at null)")
+
+
+class TestStep6NoCheckSurface:
+    """R174 F-6: step 6 mirrors step 5 — a missing SURFACE is UNVERIFIED, a
+    definite non-HEALTHY answer still refuses (41 §49, never fake)."""
+
+    def test_not_implemented_is_unverified_not_failed(self) -> None:
+        world = SeamWorld()
+        report = world.onboard(NoHealthSurfaceAdapter())
+        assert "step-6-health-check" not in report.steps_passed
+        assert any(
+            u.startswith("step-6-health-check (adapter has no check surface")
+            for u in report.unverified
+        )
+        # The walk CONTINUED — the provider registered (disabled), executable maps filled.
+        assert "step-11-register-provider" in report.steps_passed
+        assert "step-13-provider-kept-disabled" in report.steps_passed
+        assert world.providers.get("cand").is_routable is False
+        assert report.provider_id in world.adapters
+
+    def test_definite_unhealthy_still_refuses_loudly(self) -> None:
+        world = SeamWorld()
+        with pytest.raises(OnboardingRefused) as excinfo:
+            world.onboard(FakeAdapter(healthy=False))
+        assert excinfo.value.step == "step-6-health-check"
+        assert world.providers.all_keys() == []
