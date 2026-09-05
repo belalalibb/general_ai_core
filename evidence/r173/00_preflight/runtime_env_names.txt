@@ -19,7 +19,7 @@ storage.py   : OBJECT_STORAGE_ENDPOINT/BUCKET/ACCESS_KEY/SECRET_KEY/REGION
 engineering.py: AGENT_WORKSPACE_ROOT (ws_run; never changed in R173)
 main.py      : HOST, PORT, LOG_LEVEL (server only, not composition)
 Only `apps/cli.py:59` and `apps/main.py` pass `os.environ`; no other module reads secrets from env.
-`GW_GROQ_API_KEY` (in the R172 hermetic unset list) does NOT exist anywhere in the code — phantom name.
+`GW_GROQ_API_KEY` is NOT read by apps/composition — it is read by gateway-service/providers/groq/_upstream.py:25 (separate service) and gates one live e2e test. [CORRECTED in §1.4 — earlier "phantom name" wording was wrong; see guards_and_skips.txt]
 
 ## derived hermetic unset list (real-provider / external-binding names)
 GROQ_API_KEY GSK_API_KEY GATEWAY_BASE_URL GATEWAY_SECRET GATEWAY_SECRET_VERSION

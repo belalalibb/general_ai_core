@@ -1,0 +1,47 @@
+# R173 §1.4 — hermetic baseline verifier, raw tail
+# HEAD fccae7e  UTC 2026-09-05T03:16:13Z
+# command: env <unset list> bash engineering/verification/check_repo.sh
+# unset list (derived from build_runtime_profile readers + harness + platform-injected names, runtime_env_names.txt):
+#   GROQ_API_KEY GSK_API_KEY GATEWAY_BASE_URL GATEWAY_SECRET GATEWAY_SECRET_VERSION VAULT_ADDR VAULT_TOKEN VAULT_MOUNT DATABASE_URL OBJECT_STORAGE_BUCKET OBJECT_STORAGE_ENDPOINT OBJECT_STORAGE_ACCESS_KEY OBJECT_STORAGE_SECRET_KEY OBJECT_STORAGE_REGION AGENT_WORKSPACE_ROOT ADMIN_EMAILS DEV_DEMO_PRINCIPAL GROQ_API_KEY_1 GROQ_API_KEY_2 GROQ_API_KEY_3 GROQ_API_KEY_4 GROQ_API_KEY_5 GROQ_API_KEY_6 GITHUB_TOKEN GSK_TOKEN ANTHROPIC_API_KEY OPENAI_API_KEY GENSPARK_TOKEN R173_PROBE_KEYS
+# hermeticity proof (inside the same env, before check_repo): names from the unset list that are still present ->
+#   still-set count: 0
+
+PASS: exists: engineering/adr/ADR-TEMPLATE.md
+PASS: exists: engineering/adr/README.md
+PASS: exists: engineering/gates/GATE-TEMPLATE.md
+PASS: exists: engineering/decisions/README.md
+PASS: exists: engineering/verification/README.md
+PASS: exists: engineering/verification/green_manifest.json
+PASS: exists: docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/00_INDEX.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTOCOL.md
+PASS: exists: docs/ai_orchestration_pack/final_docs_v3/41_IMPLEMENTATION_PLAN_AND_MVP.md
+PASS: no legacy state files (D10/D11)
+PASS: v3 pack complete: 20 documents
+PASS: state field present: STATE_REVISION
+PASS: state field present: RESUME_TOKEN
+PASS: state field present: CURRENT_TASK
+PASS: state field present: NEXT_TASK
+PASS: state field present: PHASE_2_STATUS
+pytest slice api: passed=473 failed=0 errors=0 skipped=0
+pytest slice contract-providers: passed=636 failed=0 errors=0 skipped=15
+pytest slice execution-composition-infra: passed=380 failed=0 errors=0 skipped=49
+pytest slice admin-security-evaluation: passed=417 failed=0 errors=0 skipped=0
+pytest slice rest: passed=1220 failed=0 errors=0 skipped=0
+pytest coverage: slices ran = 5; passed=3126 failed=0 errors=0 skipped=64
+PASS: pytest: passed=3126 (>= 3126) failed=0 errors=0 skipped=64 (<= 64)
+PASS: mypy --strict (scope: pyproject.toml [tool.mypy].packages): clean
+PASS: ruff: clean
+PASS: import-linter: architecture boundaries kept (40 §6.2)
+PASS: secret scan clean (declared exceptions: 5/5)
+PASS: no .env tracked
+PASS: change budget within ceilings: round_a=4/5; round_b=4/5; round_r169=5/6; round_r172=8/8
+NOT EVALUATED: live-suite: browser automation against the real server and real UI — missing dependency
+NOT EVALUATED: real two-account provider round-trip (D-03 Class-A failover against live providers) — credential unavailable
+SUMMARY: not_evaluated=2 (counted separately; never green, never FAIL)
+RESULT: PASS (all repo governance checks)
+
+real	1m28.555s
+user	1m26.255s
+sys	0m5.306s
+exit=0

@@ -1,0 +1,20 @@
+# R173 §1.4 — guards after baseline (HEAD fccae7e)
+.....................                                                    [100%]
+21 passed in 1.74s
+
+# skipped tests by reason (hermetic env, 64 expected)
+     40 DATABASE_URL not set — live Postgres tests run manually only (41 §49)
+      7 GSK_API_KEY not set — live verification runs manually only (41 §49)
+      5 GROQ_API_KEY not set — live verification runs manually only (41 §49)
+      4 VAULT_ADDR/VAULT_TOKEN not set — live Vault smoke runs manually only (41 §49)
+      4 OBJECT_STORAGE_* not set — live S3 smoke runs manually only (41 §49)
+      1 GW_GROQ_API_KEY not set — live e2e runs manually only (41 §49)
+      1 GSK_API_KEY not set — live e2e runs manually only (41 §49)
+      1 GROQ_API_KEY not set — live e2e runs manually only (41 §49)
+      1 DATABASE_URL not set — live durable-profile test runs manually only
+
+# CORRECTION to runtime_env_names.txt (§1.2): "GW_GROQ_API_KEY does NOT exist anywhere in the code — phantom name" is WRONG.
+# The §1.2 grep was scoped to apps/composition/*.py. GW_GROQ_API_KEY IS read by gateway-service/providers/groq/_upstream.py:25
+# (GROQ_API_KEY_ENV = "GW_GROQ_API_KEY") and gates tests/providers/test_gateway_groq_live_e2e.py (1 of the 64 skips above).
+# Consequence: the R172 hermetic command was right to unset it; the R173 unset list must include it too (it was not exported in
+# this sandbox, so the baseline above is still hermetic — verified: the skip fired). Recorded as self-refutation for §1.7.
