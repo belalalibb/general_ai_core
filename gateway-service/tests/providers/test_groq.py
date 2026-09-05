@@ -288,6 +288,53 @@ class TestCategoryMapping:
         assert result.error is not None
         assert result.error.category is ErrorCategory.CONTENT_REJECTED
 
+    async def test_organization_restricted_400_is_invalid_credential(
+        self, monkeypatch: pytest.MonkeyPatch, recorder: list[httpx.Request]
+    ) -> None:
+        # R175 §3 live (F-R175-02): Groq answers HTTP 400 ``organization_restricted``
+        # for a blocked ACCOUNT. The request is fine; the credential is what is
+        # indicted -> invalid_credential (failover allowed), never bad_request
+        # (failover forbidden). Same posture as the platform in-process adapter.
+        _install(monkeypatch, _http_error(400, code="organization_restricted"), recorder)
+        result = await generate_text(_context())
+        assert result.succeeded is False
+        assert result.error is not None
+        assert result.error.category is ErrorCategory.INVALID_CREDENTIAL
+        assert result.error.retryable is False
+        assert result.error.provider_code == "organization_restricted"
+        assert UPSTREAM_SECRET_MARKER not in result.error.message
+        assert len(recorder) == 1
+
+    def test_account_indicting_codes_match_platform_adapter(self) -> None:
+        # The two Groq surfaces (platform in-process adapter, gateway Layer-1)
+        # must indict the same upstream codes, or the identical upstream reply
+        # gets two different categories depending on the path (F-R175-02).
+        # Both projects own a top-level ``providers`` package, so the platform
+        # file is READ by path (no import, no sys.path pollution) and the
+        # frozenset literal is parsed out of the AST — same read-only posture
+        # as the platform's tests/providers/test_gateway_adapter.py.
+        import ast
+        from pathlib import Path
+
+        from providers.groq import adapter as gateway
+
+        platform_src = (
+            Path(__file__).resolve().parents[3] / "providers" / "real" / "groq" / "adapter.py"
+        ).read_text()
+        platform_codes: frozenset[str] | None = None
+        for node in ast.walk(ast.parse(platform_src)):
+            if (
+                isinstance(node, ast.Assign)
+                and any(
+                    isinstance(t, ast.Name) and t.id == "_ACCOUNT_INDICTING_CODES"
+                    for t in node.targets
+                )
+                and isinstance(node.value, ast.Call)
+            ):
+                platform_codes = frozenset(ast.literal_eval(node.value.args[0]))
+        assert platform_codes is not None, "platform adapter no longer declares the set"
+        assert gateway._ACCOUNT_INDICTING_CODES == platform_codes
+
     async def test_timeout_maps_to_timeout(
         self, monkeypatch: pytest.MonkeyPatch, recorder: list[httpx.Request]
     ) -> None:

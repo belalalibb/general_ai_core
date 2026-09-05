@@ -37,6 +37,15 @@ _FINISH_REASON_MAP = {
     "content_filter": "filter",
 }
 
+#: Upstream short codes that indict the ACCOUNT behind the key, not the
+#: request. R175 §3 live (2026-09-05): Groq answers HTTP 400
+#: ``organization_restricted`` for a blocked organisation. The platform-side
+#: in-process adapter already maps this to ``invalid_credential`` (route-
+#: indicting, failover allowed); the bare status table below would say
+#: ``bad_request`` (failover forbidden) — the two surfaces diverged for the
+#: identical upstream reply. Checked BEFORE the status table.
+_ACCOUNT_INDICTING_CODES = frozenset({"organization_restricted"})
+
 #: Upstream HTTP status -> canonical category (mirrors the platform-side
 #: in-process Groq adapter's documented mapping; content-policy 400s are
 #: distinguished by the upstream short code when present).
@@ -131,6 +140,15 @@ def _translate_failure(reply: UpstreamReply) -> FacadeResult:
         )
     # fail_kind == "http"
     status = reply.http_status or 0
+    if reply.error_code in _ACCOUNT_INDICTING_CODES:
+        return FacadeResult(
+            succeeded=False,
+            error=make_error(
+                ErrorCategory.INVALID_CREDENTIAL,
+                "provider rejected the credential",
+                provider_code=reply.error_code,
+            ),
+        )
     category = _HTTP_STATUS_MAP.get(status, ErrorCategory.NON_RETRYABLE_ERROR)
     if (
         category is ErrorCategory.BAD_REQUEST

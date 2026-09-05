@@ -1,0 +1,3 @@
+PASSED tests/providers/test_groq.py::TestCategoryMapping::test_organization_restricted_400_is_invalid_credential
+PASSED tests/providers/test_groq.py::TestCategoryMapping::test_account_indicting_codes_match_platform_adapter
+194 passed, 1 warning in 1.37s

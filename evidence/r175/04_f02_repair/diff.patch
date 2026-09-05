@@ -1,0 +1,94 @@
+diff --git a/gateway-service/providers/groq/adapter.py b/gateway-service/providers/groq/adapter.py
+index 59852913..167732c5 100644
+--- a/gateway-service/providers/groq/adapter.py
++++ b/gateway-service/providers/groq/adapter.py
+@@ -37,6 +37,15 @@ _FINISH_REASON_MAP = {
+     "content_filter": "filter",
+ }
+ 
++#: Upstream short codes that indict the ACCOUNT behind the key, not the
++#: request. R175 §3 live (2026-09-05): Groq answers HTTP 400
++#: ``organization_restricted`` for a blocked organisation. The platform-side
++#: in-process adapter already maps this to ``invalid_credential`` (route-
++#: indicting, failover allowed); the bare status table below would say
++#: ``bad_request`` (failover forbidden) — the two surfaces diverged for the
++#: identical upstream reply. Checked BEFORE the status table.
++_ACCOUNT_INDICTING_CODES = frozenset({"organization_restricted"})
++
+ #: Upstream HTTP status -> canonical category (mirrors the platform-side
+ #: in-process Groq adapter's documented mapping; content-policy 400s are
+ #: distinguished by the upstream short code when present).
+@@ -131,6 +140,15 @@ def _translate_failure(reply: UpstreamReply) -> FacadeResult:
+         )
+     # fail_kind == "http"
+     status = reply.http_status or 0
++    if reply.error_code in _ACCOUNT_INDICTING_CODES:
++        return FacadeResult(
++            succeeded=False,
++            error=make_error(
++                ErrorCategory.INVALID_CREDENTIAL,
++                "provider rejected the credential",
++                provider_code=reply.error_code,
++            ),
++        )
+     category = _HTTP_STATUS_MAP.get(status, ErrorCategory.NON_RETRYABLE_ERROR)
+     if (
+         category is ErrorCategory.BAD_REQUEST
+diff --git a/gateway-service/tests/providers/test_groq.py b/gateway-service/tests/providers/test_groq.py
+index 1da3f0b8..b2c87b1a 100644
+--- a/gateway-service/tests/providers/test_groq.py
++++ b/gateway-service/tests/providers/test_groq.py
+@@ -288,6 +288,53 @@ class TestCategoryMapping:
+         assert result.error is not None
+         assert result.error.category is ErrorCategory.CONTENT_REJECTED
+ 
++    async def test_organization_restricted_400_is_invalid_credential(
++        self, monkeypatch: pytest.MonkeyPatch, recorder: list[httpx.Request]
++    ) -> None:
++        # R175 §3 live (F-R175-02): Groq answers HTTP 400 ``organization_restricted``
++        # for a blocked ACCOUNT. The request is fine; the credential is what is
++        # indicted -> invalid_credential (failover allowed), never bad_request
++        # (failover forbidden). Same posture as the platform in-process adapter.
++        _install(monkeypatch, _http_error(400, code="organization_restricted"), recorder)
++        result = await generate_text(_context())
++        assert result.succeeded is False
++        assert result.error is not None
++        assert result.error.category is ErrorCategory.INVALID_CREDENTIAL
++        assert result.error.retryable is False
++        assert result.error.provider_code == "organization_restricted"
++        assert UPSTREAM_SECRET_MARKER not in result.error.message
++        assert len(recorder) == 1
++
++    def test_account_indicting_codes_match_platform_adapter(self) -> None:
++        # The two Groq surfaces (platform in-process adapter, gateway Layer-1)
++        # must indict the same upstream codes, or the identical upstream reply
++        # gets two different categories depending on the path (F-R175-02).
++        # Both projects own a top-level ``providers`` package, so the platform
++        # file is READ by path (no import, no sys.path pollution) and the
++        # frozenset literal is parsed out of the AST — same read-only posture
++        # as the platform's tests/providers/test_gateway_adapter.py.
++        import ast
++        from pathlib import Path
++
++        from providers.groq import adapter as gateway
++
++        platform_src = (
++            Path(__file__).resolve().parents[3] / "providers" / "real" / "groq" / "adapter.py"
++        ).read_text()
++        platform_codes: frozenset[str] | None = None
++        for node in ast.walk(ast.parse(platform_src)):
++            if (
++                isinstance(node, ast.Assign)
++                and any(
++                    isinstance(t, ast.Name) and t.id == "_ACCOUNT_INDICTING_CODES"
++                    for t in node.targets
++                )
++                and isinstance(node.value, ast.Call)
++            ):
++                platform_codes = frozenset(ast.literal_eval(node.value.args[0]))
++        assert platform_codes is not None, "platform adapter no longer declares the set"
++        assert gateway._ACCOUNT_INDICTING_CODES == platform_codes
++
+     async def test_timeout_maps_to_timeout(
+         self, monkeypatch: pytest.MonkeyPatch, recorder: list[httpx.Request]
+     ) -> None:
