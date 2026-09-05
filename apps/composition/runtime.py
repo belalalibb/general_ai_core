@@ -82,9 +82,10 @@ from apps.composition.engineering import (
     grant_engineering_reads,
     grant_engineering_writes,
 )
-from apps.composition.gateway import gateway_settings_from_env
+from apps.composition.gateway import gateway_settings_from_env, onboarding_secrets_from_env
 from apps.composition.identity import build_durable_identity_service
 from apps.composition.provider_onboarding import (
+    PLATFORM_TENANT_ID,
     CatalogPersistence,
     build_onboarding_surface,
     hydrate_gateway_providers,
@@ -744,7 +745,16 @@ def build_runtime_profile(
     # the same honest dev custody the real-provider env keys use; production
     # secret custody is the Vault binding (ADR-0007) — swapped HERE only.
     gateway_settings = gateway_settings_from_env(env_dict)
-    onboarding_secrets = InMemorySecretManager()
+    # R174 F-3: GATEWAY_ROUTE_TOKENS="ref=token,..." preloads operator-named
+    # route-token refs under PLATFORM_TENANT_ID — the ONLY way a
+    # `route_token_ref` on /v1/admin/providers/onboard can resolve. Absent
+    # ⇒ the bare in-memory manager, exactly as before.
+    onboarding_secrets = onboarding_secrets_from_env(
+        env_dict,
+        tenant_id=PLATFORM_TENANT_ID,
+        gateway_configured=gateway_settings is not None,
+        inner=InMemorySecretManager(),
+    )
 
     store: ExecutionStorePort
     idempotency: IdempotencyPort
