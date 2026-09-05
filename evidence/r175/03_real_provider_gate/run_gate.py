@@ -118,7 +118,8 @@ def run_pytest(key: str | None) -> tuple[int, str]:
         "-W", "ignore::DeprecationWarning",
     ]
     proc = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=600)
-    return proc.returncode, proc.stdout + ("\n--- stderr ---\n" + proc.stderr if proc.stderr.strip() else "")
+    stderr = "\n--- stderr ---\n" + proc.stderr if proc.stderr.strip() else ""
+    return proc.returncode, proc.stdout + stderr
 
 
 def parse_summary(report: str) -> dict:
@@ -133,7 +134,9 @@ def parse_summary(report: str) -> dict:
 def main() -> int:
     key = _key()
     started = datetime.now(UTC).isoformat(timespec="seconds")
-    head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+    head = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True
+    ).stdout.strip()
 
     probe = upstream_probe(key)
     rc, report = run_pytest(key)
@@ -160,9 +163,11 @@ def main() -> int:
         "expected": {"passed": EXPECTED_PASSED, "skipped": 0, "failed": 0, "error": 0},
         "PROMOTED": promoted,
         "disposition": (
-            "EVIDENCE — real upstream call succeeded through every live module; the 7 tests count"
+            "EVIDENCE — real upstream call succeeded through every live module; "
+            "the 7 tests count"
             if promoted
-            else "NOT_PROMOTED — raw only; the 7 Groq tests carry no certification weight for this run"
+            else "NOT_PROMOTED — raw only; the 7 Groq tests carry no certification "
+            "weight for this run"
         ),
         "paid_calls_upper_bound": (
             # test_groq_live: 1 generation; groq_live_e2e: 1 execute; gateway e2e: 2 entry points
@@ -171,7 +176,8 @@ def main() -> int:
     }
     _write(dest / "pytest_live_report.txt", report, key)
     _write(dest / "verdict.json", json.dumps(verdict, indent=2), key)
-    print(json.dumps({k: verdict[k] for k in ("PROMOTED", "pytest_summary", "upstream_probe", "disposition")}, indent=2))
+    shown = ("PROMOTED", "pytest_summary", "upstream_probe", "disposition")
+    print(json.dumps({k: verdict[k] for k in shown}, indent=2))
     return 0 if promoted else 1
 
 
