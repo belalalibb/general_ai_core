@@ -63,14 +63,22 @@ def record(name: str, resp: httpx.Response, body_sent: dict | None) -> dict:
     rec = {
         "name": name,
         "http_status": resp.status_code,
-        "request_headers": {k: ("<redacted>" if k == "X-Gateway-Secret" else v) for k, v in HEADERS.items()},
+        "request_headers": {
+            k: ("<redacted>" if k == "X-Gateway-Secret" else v) for k, v in HEADERS.items()
+        },
         "request_body": body_sent,
-        "response_headers": {k: v for k, v in resp.headers.items() if k.lower() in ("content-type", "retry-after")},
+        "response_headers": {
+            k: v
+            for k, v in resp.headers.items()
+            if k.lower() in ("content-type", "retry-after")
+        },
         "response_body": parsed,
     }
     text = json.dumps(rec)
     assert SECRET not in text, "gateway secret leaked into evidence"
-    assert not re.search(r"\b[0-9a-f]{32}\b", text), "32-hex token (AssemblyAI key shape) in evidence"
+    assert not re.search(r"\b[0-9a-f]{32}\b", text), (
+        "32-hex token (AssemblyAI key shape) in evidence"
+    )
     (OUT / f"{name}.json").write_text(json.dumps(rec, indent=2, ensure_ascii=False) + "\n")
     return rec
 
@@ -108,7 +116,8 @@ def main() -> int:
         "A.usage.tokens_present": (A.get("usage") or {}).get("input_tokens") is not None,
         "B.http_200": results[1]["http_status"] == 200,
         "B.succeeded_false": B.get("succeeded") is False,
-        "B.category_model_unavailable": (B.get("error") or {}).get("category") == "model_unavailable",
+        "B.category_model_unavailable": (B.get("error") or {}).get("category")
+        == "model_unavailable",
         "B.retryable_false": (B.get("error") or {}).get("retryable") is False,
         "C.route_rejected_4xx": 400 <= results[2]["http_status"] < 500,
         "D.describe_200": results[3]["http_status"] == 200,

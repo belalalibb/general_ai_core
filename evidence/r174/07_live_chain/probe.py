@@ -279,7 +279,11 @@ def main() -> int:
 
         # --- X1: execute → fixture_echo (FREE, marker expected) -----------------
         def execute(model_key: str, provider_id: str | None, ask: str) -> tuple[dict, list[str]]:
-            policy: dict = {"type": "explicit_model", "model_id": model_key, "allow_fallback": False}
+            policy: dict = {
+                "type": "explicit_model",
+                "model_id": model_key,
+                "allow_fallback": False,
+            }
             if provider_id is not None:
                 policy["provider_id"] = provider_id
             body = {"ask": ask, "model_policy": policy}
@@ -398,7 +402,8 @@ def main() -> int:
     x1 = results["X1_execute_fixture_echo"]
     x1_content = str(x1["response_body"].get("result", {}).get("content", ""))
     ck(
-        "X1 execute pinned to fixture_echo/<model> → 200 with the FIXTURE MARKER (routed by provider)",
+        "X1 execute pinned to fixture_echo/<model> → 200 with the FIXTURE MARKER "
+        "(routed by provider)",
         x1["http_status"] == 200
         and x1["response_body"].get("status") == "succeeded"
         and MARKER in x1_content,
@@ -415,7 +420,8 @@ def main() -> int:
     else:
         x2_content = str(x2["response_body"].get("result", {}).get("content", ""))
         ck(
-            "X2 execute pinned to assemblyai/<model> → 200 real text WITHOUT the marker (one paid call)",
+            "X2 execute pinned to assemblyai/<model> → 200 real text WITHOUT the marker "
+            "(one paid call)",
             x2["http_status"] == 200
             and x2["response_body"].get("status") == "succeeded"
             and MARKER not in x2_content

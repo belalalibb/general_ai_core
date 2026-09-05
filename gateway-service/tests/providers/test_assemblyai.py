@@ -61,7 +61,9 @@ def _install(
     monkeypatch.setattr(_upstream, "_default_transport", httpx.MockTransport(_handler))
 
 
-def _context(payload: dict[str, Any] | None = None, model: str = "qwen3.5-4b-32k-fast") -> ProviderContext:
+def _context(
+    payload: dict[str, Any] | None = None, model: str = "qwen3.5-4b-32k-fast"
+) -> ProviderContext:
     return ProviderContext(
         operation=GatewayOperation.GENERATE_TEXT,
         model=model,
@@ -539,7 +541,11 @@ class TestCategoryMapping:
     async def test_non_json_error_body_still_maps_by_status(
         self, monkeypatch: pytest.MonkeyPatch, recorder: list[httpx.Request]
     ) -> None:
-        _install(monkeypatch, lambda request: httpx.Response(502, text="<html>bad gateway</html>"), recorder)
+        _install(
+            monkeypatch,
+            lambda request: httpx.Response(502, text="<html>bad gateway</html>"),
+            recorder,
+        )
         result = await generate_text(_context())
         assert result.error is not None
         assert result.error.category is ErrorCategory.RETRYABLE_SERVER_ERROR

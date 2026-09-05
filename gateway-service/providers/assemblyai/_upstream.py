@@ -106,7 +106,11 @@ def _parse_error_body(response: httpx.Response) -> tuple[str | None, list[str]]:
     safe_code = str(code) if isinstance(code, int) else None
     metadata = parsed.get("metadata")
     errors_raw = metadata.get("errors") if isinstance(metadata, dict) else None
-    errors = [item for item in errors_raw if isinstance(item, str)] if isinstance(errors_raw, list) else []
+    errors = (
+        [item for item in errors_raw if isinstance(item, str)]
+        if isinstance(errors_raw, list)
+        else []
+    )
     return safe_code, errors
 
 
