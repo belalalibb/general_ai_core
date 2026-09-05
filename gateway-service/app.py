@@ -48,9 +48,12 @@ def register_live_providers(registry: ProviderRegistry) -> None:
     credential mode) — the platform never learns it.
     """
 
+    from providers.assemblyai.definition import DEFINITION as ASSEMBLYAI_DEFINITION
     from providers.groq.definition import DEFINITION as GROQ_DEFINITION
 
     registry.register("groq", GROQ_DEFINITION, "providers.groq.adapter")
+    # R174: second live provider, same door. Key: GW_ASSEMBLYAI_API_KEY (platform mode).
+    registry.register("assemblyai", ASSEMBLYAI_DEFINITION, "providers.assemblyai.adapter")
 
 
 if __name__ == "__main__":  # pragma: no cover
