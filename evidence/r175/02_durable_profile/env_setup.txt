@@ -1,0 +1,5 @@
+# §2 durable-profile environment (secrets: none — local throwaway Postgres role)
+postgresql: 17 (apt, Ubuntu package) ; extension: vector (postgresql-17-pgvector)
+role/db: qevion / qevion ; DATABASE_URL=postgresql+asyncpg://qevion:***@127.0.0.1:5432/qevion
+migrations: cd infrastructure/db && alembic upgrade head  ->  alembic_version = 0018
+command: python3 -m pytest tests -q -p no:cacheprovider -o addopts="" -W ignore::DeprecationWarning -rs
