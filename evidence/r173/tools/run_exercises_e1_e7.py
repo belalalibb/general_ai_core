@@ -79,13 +79,13 @@ def agent_turn(name: str, ask: str, tools: list[str] | None) -> None:
     if tools is not None:
         body["tools"] = {"allowed": tools}
     t0 = time.perf_counter()
-    r = C.post("/v1/execute", json=body, headers=bearer(USER))
+    r = C.post("/v1/execute", json=body, headers=bearer(ADMIN))  # admin: trace is tenant-scoped
     ms = int((time.perf_counter() - t0) * 1000)
     j = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
     exec_id = j.get("execution_id") or (j.get("error") or {}).get("details", {}).get("execution_id")
     facts: dict[str, Any] = {"http": r.status_code, "latency_ms": ms, "status": j.get("status"), "stop_reason": j.get("stop_reason"), "error": err(r), "execution_id": exec_id}
     if exec_id:
-        rec = C.get(f"/v1/executions/{exec_id}", headers=bearer(USER))
+        rec = C.get(f"/v1/executions/{exec_id}", headers=bearer(ADMIN))
         tr = C.get(f"/v1/agent/executions/{exec_id}/trace", headers=bearer(ADMIN))
         stages: list[str] = []
         if tr.status_code == 200:
