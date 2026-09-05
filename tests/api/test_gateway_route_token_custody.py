@@ -41,7 +41,6 @@ from fastapi.responses import JSONResponse
 
 from apps.api.app import Principal
 from apps.api.provider_onboarding import (
-    GatewayOnboardRequest,
     ProviderOnboardingSurface,
     create_provider_onboarding_router,
 )
@@ -176,9 +175,13 @@ class TestOnboardingSecretsFromEnv:
 
     def test_empty_ref_or_value_refused(self) -> None:
         with pytest.raises(ValueError):
-            PreloadedSecrets(InMemorySecretManager(), tenant_id=PLATFORM_TENANT_ID, preloaded={"": "x"})
+            PreloadedSecrets(
+                InMemorySecretManager(), tenant_id=PLATFORM_TENANT_ID, preloaded={"": "x"}
+            )
         with pytest.raises(ValueError):
-            PreloadedSecrets(InMemorySecretManager(), tenant_id=PLATFORM_TENANT_ID, preloaded={"r": ""})
+            PreloadedSecrets(
+                InMemorySecretManager(), tenant_id=PLATFORM_TENANT_ID, preloaded={"r": ""}
+            )
 
 
 # --- route: SecretNotFound → 409 --------------------------------------------------
@@ -276,26 +279,24 @@ _GATEWAY_ENV = {
 
 
 class TestRuntimeProfileCustody:
-    def test_operator_ref_resolves_through_the_composed_adapter(self) -> None:
-        profile = build_runtime_profile({**_GATEWAY_ENV, "GATEWAY_ROUTE_TOKENS": f"{REF}={TOKEN_A}"})
-        surface = profile.provider_onboarding
-        assert surface is not None
-        body = GatewayOnboardRequest.model_validate(_body())
-        adapter = surface.build_adapter(surface.build_manifest(body), body)
-        # The adapter's route-token resolver is bound to the composed secret
-        # manager under PLATFORM_TENANT_ID: the operator's ref → operator's token.
-        resolver = getattr(adapter, "_resolve_route_token", None)
-        assert callable(resolver)
-        assert resolver() == TOKEN_A
+    def test_with_env_the_ref_resolves_and_the_walk_reaches_the_gateway(self) -> None:
+        """Route token preloaded ⇒ the walker gets PAST custody and to step 6.
 
-    def test_without_env_the_same_ref_is_409_through_the_real_admin_door(self) -> None:
-        """§5 case E, replayed hermetically: 409 naming the ref — no longer a 500."""
-        profile = build_runtime_profile(dict(_GATEWAY_ENV))
+        Nothing listens on 127.0.0.1:1, so the adapter reports UNAVAILABLE and
+        the walker refuses at the health step — a refusal that is only
+        reachable if the route token RESOLVED (SecretNotFound would have
+        fired inside the same request first). No gateway request needed.
+        """
+        profile = build_runtime_profile(
+            {**_GATEWAY_ENV, "GATEWAY_ROUTE_TOKENS": f"{REF}={TOKEN_A}"}
+        )
         response = run(_post_onboard(profile.app, headers=_admin_session(profile)))
         assert response.status_code == 409, response.text
         error = response.json()["error"]
         assert error["code"] == "validation_error"
-        assert error["details"] == {"credential_ref": REF}
+        assert "step-6" in error["message"], error["message"]
+        assert error.get("details") in (None, {})
+        assert TOKEN_A not in response.text
         assert "gw_alpha" not in profile.providers.all_keys()
 
     def test_tokens_without_gateway_refuse_at_composition(self) -> None:
