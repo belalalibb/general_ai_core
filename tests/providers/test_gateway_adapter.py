@@ -48,6 +48,7 @@ from providers.real.gateway import (
     CREDENTIAL_MODE_USER_KEY,
     EXCLUDED_OPERATIONS_V1,
     GatewayCredentialCheckUnsupported,
+    GatewayHealthCheckUnsupported,
     GatewaySecret,
     RemoteGatewayAdapter,
     build_gateway_manifest,
@@ -607,7 +608,6 @@ class TestPortSurface:
             ("OK", ProviderHealthState.HEALTHY),
             ("DEGRADED", ProviderHealthState.DEGRADED),
             ("DOWN", ProviderHealthState.UNAVAILABLE),
-            ("UNKNOWN", ProviderHealthState.UNAVAILABLE),  # unknown never healthy
         ],
     )
     def test_health_status_mapping(self, wire_status: str, expected: ProviderHealthState) -> None:
@@ -617,6 +617,29 @@ class TestPortSurface:
         health = run(adapter.health_check(HealthScope.PROVIDER))
         assert health.state is expected
         assert health.provider_id == "remote-alpha"
+
+    def test_checked_unknown_is_unavailable(self) -> None:
+        """A CHECKED UNKNOWN is a verdict: unknown is never healthy (11 §5)."""
+        adapter, _, _ = _adapter(
+            lambda request: httpx.Response(
+                200, json={"status": "UNKNOWN", "checked_at": "2026-09-05T00:00:00Z"}
+            )
+        )
+        health = run(adapter.health_check(HealthScope.PROVIDER))
+        assert health.state is ProviderHealthState.UNAVAILABLE
+        assert health.detail is not None and "UNKNOWN" in health.detail
+
+    def test_unchecked_unknown_is_a_missing_surface_not_a_verdict(self) -> None:
+        """R174 F-6: UNKNOWN + checked_at=null is the gateway's contract answer
+        for health_supported=false — no check ran. Raise (NotImplementedError
+        family), never invent HEALTHY or UNAVAILABLE."""
+        adapter, _, _ = _adapter(
+            lambda request: httpx.Response(200, json={"status": "UNKNOWN", "checked_at": None})
+        )
+        with pytest.raises(GatewayHealthCheckUnsupported) as info:
+            run(adapter.health_check(HealthScope.PROVIDER))
+        assert isinstance(info.value, NotImplementedError)
+        assert "health_supported=false" in str(info.value)
 
     def test_health_unreachable_is_unavailable(self) -> None:
         def _raise(request: httpx.Request) -> httpx.Response:

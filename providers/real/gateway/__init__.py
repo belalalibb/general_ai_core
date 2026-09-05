@@ -35,6 +35,7 @@ from providers.real.gateway.adapter import (
     CREDENTIAL_MODE_USER_KEY,
     EXCLUDED_OPERATIONS_V1,
     GatewayCredentialCheckUnsupported,
+    GatewayHealthCheckUnsupported,
     GatewaySecret,
     RemoteGatewayAdapter,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "CREDENTIAL_MODE_USER_KEY",
     "EXCLUDED_OPERATIONS_V1",
     "GatewayCredentialCheckUnsupported",
+    "GatewayHealthCheckUnsupported",
     "GatewaySecret",
     "RemoteGatewayAdapter",
     "build_gateway_manifest",

@@ -107,7 +107,10 @@ _GENERATE_TEXT_PARAM_WHITELIST = frozenset({"temperature", "max_tokens"})
 
 #: gateway /v1/health status -> platform ProviderHealthState (30 §11).
 #: UNKNOWN maps conservatively to UNAVAILABLE — "Unknown = ineligible"
-#: (11 §5): an unverifiable provider is never treated as healthy.
+#: (11 §5): an unverifiable provider is never treated as healthy. The one
+#: exception is UNKNOWN with ``checked_at=None`` — "no check was performed"
+#: (gateway ``health_supported: false``) — which is a MISSING surface, not
+#: an answer, and raises :class:`GatewayHealthCheckUnsupported` instead.
 _HEALTH_STATUS_MAP: dict[str, ProviderHealthState] = {
     "OK": ProviderHealthState.HEALTHY,
     "DEGRADED": ProviderHealthState.DEGRADED,
@@ -128,6 +131,23 @@ class GatewaySecret:
 
     def __repr__(self) -> str:
         return f"GatewaySecret(version={self.version}, value='[SCRUBBED]')"
+
+
+class GatewayHealthCheckUnsupported(NotImplementedError):
+    """The gateway performed NO health check for this provider (R174 F-6).
+
+    Wire shape: ``GET /v1/health`` → ``{"status": "UNKNOWN", "checked_at": null}``
+    — the gateway's contract answer for ``health_supported: false``
+    (gateway-service ``project_health``). That is a missing check SURFACE,
+    not a health verdict: nothing was probed, so neither HEALTHY nor
+    UNAVAILABLE would be honest. Same raise-not-guess posture as
+    :class:`GatewayCredentialCheckUnsupported`; the onboarding walker
+    (31 §19 step 6) records the step UNVERIFIED and continues, exactly as
+    step 5 already does for a missing credential-check surface (41 §49).
+
+    A CHECKED UNKNOWN (``checked_at`` set) is a verdict and still maps to
+    UNAVAILABLE — "unknown is never healthy" is unchanged for real checks.
+    """
 
 
 class GatewayCredentialCheckUnsupported(NotImplementedError):
@@ -517,6 +537,11 @@ class RemoteGatewayAdapter:
         ACCOUNT scope: upstream accounts (if any) are gateway-internal
         (Layer 1 freedom) and invisible here — reported as provider-scope
         evidence with an empty accounts map, mirroring the Groq posture.
+
+        Raises :class:`GatewayHealthCheckUnsupported` when the gateway
+        answers ``UNKNOWN`` with ``checked_at`` null (no check performed).
+        Every other outcome — unreachable, denied, DOWN, checked-UNKNOWN,
+        garbage — is a definite non-HEALTHY verdict and is returned as one.
         """
         checked_at = self._clock()
         try:
@@ -548,9 +573,15 @@ class RemoteGatewayAdapter:
                 detail=f"gateway returned http {response.status_code}",
             )
         try:
-            status = response.json().get("status")
+            body = response.json()
         except ValueError:
-            status = None
+            body = None
+        status = body.get("status") if isinstance(body, dict) else None
+        if status == "UNKNOWN" and isinstance(body, dict) and body.get("checked_at") is None:
+            raise GatewayHealthCheckUnsupported(
+                "gateway performed no health check for this provider "
+                "(health_supported=false: status UNKNOWN, checked_at null)"
+            )
         state = _HEALTH_STATUS_MAP.get(status) if isinstance(status, str) else None
         if state is None:
             return ProviderHealth(
