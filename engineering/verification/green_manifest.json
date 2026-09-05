@@ -39,15 +39,15 @@
       "min_passed": 3127
     },
     "last_measured": {
-      "passed": 3126,
+      "passed": 3127,
       "failed": 0,
       "errors": 0,
       "skipped": 64,
-      "at_head": "c930963",
+      "at_head": "2b54b87",
       "hermetic": true,
-      "command": "env -u GSK_API_KEY -u GROQ_API_KEY -u GW_GROQ_API_KEY bash engineering/verification/check_repo.sh",
-      "evidence": "evidence/r172/check_repo_final.txt",
-      "note": "R172 closure: +206 vs 5268ef3 (2920) = C1 denied_paths, C2 binding_store, C3 remote_trust+atomic_json, C4 normalisation/atomic writes, C5 checkpoint, C6 payload_binding, C7 dev router mount, C8 github_transport (25) + guards; floor 2920->3126; skipped unchanged at 64; tests_live/ (13 env-gated live tests) intentionally outside the verifier"
+      "command": "env -u <32-name list: §1.4 derived list + GROQ_API_KEY_7 GROQ_API_KEY_8 GW_GROQ_API_KEY> bash engineering/verification/check_repo.sh  (still-set count proven 0 in-env)",
+      "evidence": "evidence/r173/19_closure/check_repo_final.txt",
+      "note": "R173 closure: +1 vs c930963 (3126) = F-15.2 pin test (tests/composition/test_agent_source_seam.py::test_runtime_reader_composes_hardened_denylist); floor 3126->3127; skipped unchanged at 64; production diff for the round = apps/composition/runtime.py +6/-1 only; frozen trees ui/ apps/admin_agent/ core/tools/gate.py zero diff; tests_live/ (env-gated live tests incl. tests_live/r173 recorder) intentionally outside the verifier"
     }
   },
   "non_test_items": [
