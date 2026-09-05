@@ -1,0 +1,11 @@
+PASS: change budget within ceilings: round_a=4/5; round_b=4/5; round_r169=5/6; round_r172=8/8
+NOT EVALUATED: live-suite: browser automation against the real server and real UI — missing dependency
+NOT EVALUATED: real two-account provider round-trip (D-03 Class-A failover against live providers) — credential unavailable
+SUMMARY: not_evaluated=2 (counted separately; never green, never FAIL)
+RESULT: PASS (all repo governance checks)
+pytest slice api: passed=473 failed=0 errors=0 skipped=0
+pytest slice contract-providers: passed=636 failed=0 errors=0 skipped=15
+pytest slice execution-composition-infra: passed=381 failed=0 errors=0 skipped=49
+pytest slice admin-security-evaluation: passed=417 failed=0 errors=0 skipped=0
+pytest slice rest: passed=1220 failed=0 errors=0 skipped=0
+SUMMARY: not_evaluated=2 (counted separately; never green, never FAIL)

@@ -29,3 +29,11 @@ class TestSourceReaderSeam:
         reader = _source_reader(str(tmp_path))
         assert reader is not None
         assert reader.root == tmp_path.resolve()
+
+    def test_runtime_reader_composes_hardened_denylist(self, tmp_path: Path) -> None:
+        """R173 F-15.2: the platform agent's reader is as strict as the dev surface."""
+        from core.tools.denied_paths import DENIED_PATH_PATTERNS
+
+        reader = _source_reader(str(tmp_path))
+        assert reader is not None
+        assert tuple(reader.denied_patterns) == DENIED_PATH_PATTERNS

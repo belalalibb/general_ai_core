@@ -143,6 +143,7 @@ from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, Outbox
 from core.runtime.worker import IdempotencyPort, InMemoryIdempotencyStore, Worker
 from core.secrets.memory import InMemorySecretManager
 from core.skills.importing import SkillImportService
+from core.tools.denied_paths import DENIED_PATH_PATTERNS
 from core.tools.source_reader import SourceReader
 from core.usage.memory import InMemoryUsageAccounting
 from infrastructure.security.password import Argon2idPasswordHasher
@@ -616,7 +617,11 @@ def _source_reader(root: str) -> SourceReader | None:
     path = Path(candidate)
     if not path.is_dir():
         return None
-    return SourceReader(root=path)
+    # R173 F-15.2: the platform agent's reader composes the SAME hardened
+    # denylist as the dev surface (R172 C1), not the 13-pattern primitive
+    # default — the gate manifest, verifier, password hasher and provider
+    # accounts are unreadable under both surfaces.
+    return SourceReader(root=path, denied_patterns=DENIED_PATH_PATTERNS)
 
 
 #: Bounded same-candidate retry budget for retryable provider errors
