@@ -1,0 +1,15 @@
+{
+ "head": "51d00fd692a8",
+ "probes": {
+  "../../etc/passwd": "SourceReadRefused",
+  ".env": "SourceReadRefused",
+  ".git/config": "SourceReadRefused",
+  "core/agent/runtime.py": "admitted",
+  "core/providers/accounts.py": "SourceReadRefused",
+  "engineering/verification/check_repo.sh": "SourceReadRefused",
+  "engineering/verification/green_manifest.json": "SourceReadRefused",
+  "id_rsa.key": "SourceReadRefused",
+  "infrastructure/security/password.py": "SourceReadRefused"
+ },
+ "reader_patterns": 64
+}
