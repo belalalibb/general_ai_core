@@ -50,7 +50,15 @@ _SECRETS += [ADMIN, USER]
 
 
 def record(section: str, **facts: Any) -> None:
-    line = json.dumps({"section": section, "label": LABEL, "utc": datetime.now(UTC).isoformat(timespec="seconds"), **facts}, sort_keys=True)
+    line = json.dumps(
+        {
+            "section": section,
+            "label": LABEL,
+            "utc": datetime.now(UTC).isoformat(timespec="seconds"),
+            **facts,
+        },
+        sort_keys=True,
+    )
     for s in _SECRETS:
         assert s not in line, f"secret value would leak into evidence ({section})"
     assert not _SECRET_PREFIX_RE.search(line), f"secret-shaped literal in evidence ({section})"
@@ -83,7 +91,14 @@ def agent_turn(name: str, ask: str, tools: list[str] | None) -> None:
     ms = int((time.perf_counter() - t0) * 1000)
     j = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
     exec_id = j.get("execution_id") or (j.get("error") or {}).get("details", {}).get("execution_id")
-    facts: dict[str, Any] = {"http": r.status_code, "latency_ms": ms, "status": j.get("status"), "stop_reason": j.get("stop_reason"), "error": err(r), "execution_id": exec_id}
+    facts: dict[str, Any] = {
+        "http": r.status_code,
+        "latency_ms": ms,
+        "status": j.get("status"),
+        "stop_reason": j.get("stop_reason"),
+        "error": err(r),
+        "execution_id": exec_id,
+    }
     if exec_id:
         rec = C.get(f"/v1/executions/{exec_id}", headers=bearer(ADMIN))
         tr = C.get(f"/v1/agent/executions/{exec_id}/trace", headers=bearer(ADMIN))
@@ -93,26 +108,46 @@ def agent_turn(name: str, ask: str, tools: list[str] | None) -> None:
             for st in tj.get("stages") or tj.get("trace") or []:
                 if isinstance(st, dict):
                     stages.append(str(st.get("node_key") or st.get("name")))
-        facts.update(record_http=rec.status_code, record_status=(rec.json() or {}).get("status") if rec.status_code == 200 else None,
-                     trace_http=tr.status_code, stage_count=len(stages), act_stages=sum(1 for s in stages if s.startswith("act")), stages=stages[:12])
+        facts.update(
+            record_http=rec.status_code,
+            record_status=(rec.json() or {}).get("status") if rec.status_code == 200 else None,
+            trace_http=tr.status_code,
+            stage_count=len(stages),
+            act_stages=sum(1 for s in stages if s.startswith("act")),
+            stages=stages[:12],
+        )
     record(name, **facts)
 
 
 # ---------------------------------------------------------------- E1 / E2
-agent_turn("E1.agent_with_tools", "List the files under core/agent and read the first one's docstring.", ["source_list", "source_read"])
+agent_turn(
+    "E1.agent_with_tools",
+    "List the files under core/agent and read the first one's docstring.",
+    ["source_list", "source_read"],
+)
 agent_turn("E2.agent_no_tools", "Reply with the single word PONG.", None)
 
 # ---------------------------------------------------------------- E3
 r = C.get("/v1/admin/capabilities/exercisable", headers=bearer(ADMIN))
-ex_ids = [e if isinstance(e, str) else e.get("capability_id") or e.get("id") for e in (r.json().get("exercisable") if r.status_code == 200 else [])]
+ex_ids = [
+    e if isinstance(e, str) else e.get("capability_id") or e.get("id")
+    for e in (r.json().get("exercisable") if r.status_code == 200 else [])
+]
 record("E3.exercisable", http=r.status_code, count=len(ex_ids), ids=ex_ids)
 target = "execute.sync" if "execute.sync" in ex_ids else (ex_ids[0] if ex_ids else "execute.sync")
 r = C.post(f"/v1/admin/capabilities/{target}/exercise", json={}, headers=bearer(ADMIN))
 j = r.json() if r.status_code == 200 else {}
 res = j.get("result") or {}
 ev = res.get("evidence") or {}
-record("E3.exercise", http=r.status_code, capability_id=j.get("capability_id"), exercised=res.get("exercised"),
-       evidence_status=ev.get("status") if isinstance(ev, dict) else None, result_keys=sorted(res.keys())[:10], error=err(r))
+record(
+    "E3.exercise",
+    http=r.status_code,
+    capability_id=j.get("capability_id"),
+    exercised=res.get("exercised"),
+    evidence_status=ev.get("status") if isinstance(ev, dict) else None,
+    result_keys=sorted(res.keys())[:10],
+    error=err(r),
+)
 r = C.post("/v1/admin/capabilities/no.such.capability/exercise", json={}, headers=bearer(ADMIN))
 record("E3.exercise_unknown", http=r.status_code, error=err(r))
 
@@ -122,31 +157,69 @@ garbage = C.get("/v1/admin/system", headers=bearer("not-a-real-session-token-" +
 nonadmin = C.get("/v1/admin/system", headers=bearer(USER))
 admin_sys = C.get("/v1/admin/system", headers=bearer(ADMIN))
 admin_audit = C.get("/v1/admin/audit", headers=bearer(ADMIN))
-record("E4.console_boundary", anon=anon.status_code, anon_error=err(anon), garbage=garbage.status_code, garbage_error=err(garbage),
-       anon_garbage_identical=(anon.status_code == garbage.status_code and anon.text == garbage.text),
-       nonadmin=nonadmin.status_code, nonadmin_error=err(nonadmin), admin_system=admin_sys.status_code, admin_audit=admin_audit.status_code)
+record(
+    "E4.console_boundary",
+    anon=anon.status_code,
+    anon_error=err(anon),
+    garbage=garbage.status_code,
+    garbage_error=err(garbage),
+    anon_garbage_identical=(anon.status_code == garbage.status_code and anon.text == garbage.text),
+    nonadmin=nonadmin.status_code,
+    nonadmin_error=err(nonadmin),
+    admin_system=admin_sys.status_code,
+    admin_audit=admin_audit.status_code,
+)
 
 # ---------------------------------------------------------------- E5
 unknown = str(uuid4())
 rows = {}
-for label, path in {"record_unknown": f"/v1/executions/{unknown}", "record_malformed": "/v1/executions/not-a-uuid",
-                    "trace_unknown": f"/v1/agent/executions/{unknown}/trace", "trace_malformed": "/v1/agent/executions/not-a-uuid/trace",
-                    "diag_unknown": f"/v1/agent/executions/{unknown}/diagnosis", "diag_malformed": "/v1/agent/executions/not-a-uuid/diagnosis"}.items():
+for label, path in {
+    "record_unknown": f"/v1/executions/{unknown}",
+    "record_malformed": "/v1/executions/not-a-uuid",
+    "trace_unknown": f"/v1/agent/executions/{unknown}/trace",
+    "trace_malformed": "/v1/agent/executions/not-a-uuid/trace",
+    "diag_unknown": f"/v1/agent/executions/{unknown}/diagnosis",
+    "diag_malformed": "/v1/agent/executions/not-a-uuid/diagnosis",
+}.items():
     rr = C.get(path, headers=bearer(ADMIN))
     rows[label] = {"http": rr.status_code, "error": err(rr)}
 record("E5.existence_oracle", **rows)
 
 # ---------------------------------------------------------------- E6
-r = C.post("/v1/execute", json={"ask": "x", "execution_policy": {"strategy": "agent"}, "tools": {"allowed": ["shell_exec"]}}, headers=bearer(USER))
-record("E6.unknown_tool", http=r.status_code, error=err(r), execution_created=bool((r.json() if r.status_code < 500 else {}).get("execution_id")))
+r = C.post(
+    "/v1/execute",
+    json={
+        "ask": "x",
+        "execution_policy": {"strategy": "agent"},
+        "tools": {"allowed": ["shell_exec"]},
+    },
+    headers=bearer(USER),
+)
+record(
+    "E6.unknown_tool",
+    http=r.status_code,
+    error=err(r),
+    execution_created=bool((r.json() if r.status_code < 500 else {}).get("execution_id")),
+)
 
-# ---------------------------------------------------------------- E7 (in-process reader, same object the runtime composes)
+# ---------------------------------- E7 (in-process reader: the object the runtime composes)
 sys.path.insert(0, os.getcwd())
 from apps.composition.runtime import _source_reader  # noqa: E402
 
 reader = _source_reader(os.environ.get("AGENT_SOURCE_ROOT", os.getcwd()))
-probes = [".env", ".git/config", "secrets.pem", "id_rsa.key", "../../etc/passwd", ".ENV", ".e\u200bnv", "core/agent/runtime.py",
-          "engineering/verification/green_manifest.json", "core/providers/accounts.py", "infrastructure/security/password.py"]
+probes = [
+    ".env",
+    ".git/config",
+    "secrets.pem",
+    "id_rsa.key",
+    "../../etc/passwd",
+    ".ENV",
+    ".e\u200bnv",
+    "core/agent/runtime.py",
+    "engineering/verification/green_manifest.json",
+    "core/providers/accounts.py",
+    "infrastructure/security/password.py",
+]
 results = {}
 for p in probes:
     try:
@@ -154,5 +227,9 @@ for p in probes:
         results[p] = "admitted"
     except Exception as e:  # noqa: BLE001
         results[p] = type(e).__name__
-record("E7.source_reader_denylist", reader_patterns=len(reader.denied_patterns) if reader else None, probes=results)
+record(
+    "E7.source_reader_denylist",
+    reader_patterns=len(reader.denied_patterns) if reader else None,
+    probes=results,
+)
 record("done", exercises=7)

@@ -2,7 +2,7 @@
   "B_minus_A": 14,
   "forms": {
     "A_default_runtime": {
-      "composed_by": "apps/composition/runtime.py::_source_reader (platform agent source_* tools)",
+      "composed_by": "apps/composition/runtime.py::_source_reader (platform agent source_*)",
       "denied": 4,
       "pattern_count": 13,
       "pattern_hits": {
@@ -46,10 +46,10 @@
     "C_normalised_check": {
       "denied_total": 18,
       "normalisation_only_hits": 0,
-      "note": "is_denied() runs raw fnmatch then NFKC/invisible/ADS/trailing/casefold canon; on an ASCII tracked tree canonical == raw so C == B unless a tracked name carries case/unicode variance"
+      "note": "is_denied() = raw fnmatch then NFKC/invisible/ADS/trailing/casefold canon; on an ASCII tracked tree canonical == raw so C == B unless a tracked name carries case/unicode variance"
     }
   },
-  "head": "430ca4d",
+  "head": "1659849",
   "patterns_with_zero_tracked_hits_B": [
     "*.asc",
     "*.git-credentials*",
@@ -111,5 +111,5 @@
     "passwd",
     "shadow"
   ],
-  "tracked_files": 870
+  "tracked_files": 876
 }
