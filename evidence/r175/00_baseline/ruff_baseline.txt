@@ -1,0 +1,12 @@
+evidence/r174/04_gateway_live/probe.py:66:101: E501 Line too long (109 > 100)
+evidence/r174/04_gateway_live/probe.py:68:101: E501 Line too long (116 > 100)
+evidence/r174/04_gateway_live/probe.py:73:101: E501 Line too long (102 > 100)
+evidence/r174/04_gateway_live/probe.py:111:101: E501 Line too long (102 > 100)
+evidence/r174/07_live_chain/probe.py:282:101: E501 Line too long (101 > 100)
+evidence/r174/07_live_chain/probe.py:401:101: E501 Line too long (103 > 100)
+evidence/r174/07_live_chain/probe.py:418:101: E501 Line too long (105 > 100)
+gateway-service/providers/assemblyai/_upstream.py:109:101: E501 Line too long (107 > 100)
+gateway-service/tests/providers/test_assemblyai.py:64:101: E501 Line too long (107 > 100)
+gateway-service/tests/providers/test_assemblyai.py:542:101: E501 Line too long (109 > 100)
+Found 10 errors.
+ruff 0.16.6

@@ -1,0 +1,33 @@
+45e0eb76914433fb09b01a4c834b4a16c9beb941
+main
+1
+45e0eb76 chore(r174): ledger §7-run3 done — the one paid call landed, whole chain proven live; reset #11 recovered via bundle; R174 closed (F-2 recorded, unfixed)
+b780639d evidence(r174 §7 run3_paid): the ONE paid call — live two-process chain 18/18, paid_calls=1: platform admin door → RemoteGatewayAdapter → gateway-service assemblyai slug → AssemblyAI upstream; execute pinned to assemblyai/qwen3.5-4b-32k-fast returns real text 'chain verified' WITHOUT the fixture marker (usage settled 1 unit), fixture_echo leg still returns the MARKER, cross-slug pin still refused 503; provider key scrubbed and asserted absent (32-hex shape scan clean)
+f6d4c78d chore(r174): ledger §7-run2 done — live chain + collision proven with 0 paid calls; X2 paid leg pending key
+3d1c5c86 evidence(r174 §7 run2_free): live two-process chain, 0 paid calls, 16/16 — assemblyai+fixture_echo both onboarded 201 via the real door (F-3+F-6 live), same model name → distinct model_keys by provider, both enabled via draft→validate→preview→publish, execute pinned to fixture_echo/<model> returns the FIXTURE MARKER (routed by provider), cross-slug pin refused 503 with nothing reaching the gateway, paid leg honestly SKIPPED
+76e7b878 test(r174 §7): live-chain + collision probe driver (two real processes; fixture_echo partner; paid leg gated on key presence, never simulated)
+0b89332f feat(gateway): R174 §7 — fixture_echo hermetic provider slug declaring AssemblyAI's exact model name (collision partner for the route-by-provider proof); opt-in via GW_ENABLE_FIXTURE_ECHO=1, never default; 11 hermetic tests; zero lines in core/
+202d9c36 chore(r174): ledger §7′ reset #9 recorded; §7 corrected design (fixture slug for collision, one paid call)
+c39e7f1d chore(r174): ledger §6-F6 done — door opens (201) hermetically; full suite green
+a0a7efba test(r174 F-6): §5 case E replayed hermetically through the real composition root — with F-3+F-6 the admin door returns 201 (provider DISABLED, steps 5/6 recorded UNVERIFIED, model registered, route token only in the X-Route-Token header); checked UNKNOWN still 409 at step 6
+5ead7d86 test(r174 F-6): pin walker step 6 — NotImplementedError from health_check is UNVERIFIED-and-recorded (walk continues, provider DISABLED, maps filled); definite UNAVAILABLE still refuses
+abd10b50 fix(onboarding): R174 F-6 — walker step 6 treats NotImplementedError from health_check as UNVERIFIED-and-recorded (same 41 §49 posture as step 5); a returned non-HEALTHY state still refuses
+7d49d2d7 feat(gateway adapter): R174 F-6 — UNKNOWN+checked_at=null (health_supported=false) raises GatewayHealthCheckUnsupported (NotImplementedError family): a missing check surface, not a verdict; checked UNKNOWN still maps to UNAVAILABLE
+ecbbfeac chore(r174): ledger §6-F3′ — reset #8, restored from bundle, pushed b1a3d0f
+b1a3d0fb chore(r174): ledger §6-F3 done locally; push blocked, bundle recorded
+7e2579f6 test(r174 F-3): real admin door — with GATEWAY_ROUTE_TOKENS the walk reaches step 6; without it 409 names the ref
+f5d073e3 test(r174 F-3): pin route-token custody seam + 409 mapping + real composition root
+bec9d372 fix(api): R174 F-3 — onboarding route maps SecretNotFound to 409 naming the ref (was uncaught 500 'Internal error.')
+74ce8150 style: ruff format gateway.py
+4ff7b5b7 feat(composition): R174 F-3 route-token custody seam — GATEWAY_ROUTE_TOKENS preloaded under PLATFORM_TENANT_ID (PreloadedSecrets decorator; values never in repr/errors)
+c12e4f19 chore(r174): ledger §6′ — reset #7 wiped uncommitted F-3 work; rebuilding
+3c709af1 chore(r174): ledger §5′ result + §6 minimal fixes plan (F-3 custody seam, F-6 health semantics)
+75164ddc evidence(r174 §5): platform→gateway link is BROKEN in 3 places — F-3 confirmed (route-token custody has no seam → 500 SecretNotFound, no request reaches gateway), F-2 confirmed (user_key mode → 409), F-6 NEW (gateway UNKNOWN health → adapter UNAVAILABLE → walker step 6 would refuse even with F-3 fixed); 10/10 checks, 0 paid calls
+bd8fd57f evidence(r174 §5): platform→gateway probe driver (F-2/F-3 live, two processes)
+07a1b245 chore(r174): ledger §4′ (reset #6 recovery via bundle) + §5 platform→gateway link
+59077a06 evidence(r174 §4): live E2E through the gateway process — AssemblyAI, 10/10 PASS
+9c689e75 chore(r174): ledger §3′ (rebuild after reset #5) + §4 gateway live E2E
+b1313451 feat(gateway/assemblyai): second live provider through the same door (R174 §3)
+3d1ede4c chore(r174): ledger §3 build provider
+732624c4 evidence(r174): §2 upstream probe — both auth forms 200, 401 body is a third shape, unknown model = 400 metadata.errors
+ee3b0e7f chore(r174): ledger §2 upstream probe
