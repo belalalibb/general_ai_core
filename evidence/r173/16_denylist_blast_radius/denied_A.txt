@@ -1,0 +1,4 @@
+engineering/proposals/provider_gateway_kit/providers/_credentials.py
+evidence/credentials_manifest.md
+gateway-service/gateway/credentials.py
+infrastructure/db/migrations/versions/0012_credentials.py
