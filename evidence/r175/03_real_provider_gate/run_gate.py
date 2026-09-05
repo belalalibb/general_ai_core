@@ -43,7 +43,7 @@ import httpx
 
 ROOT = Path(__file__).resolve().parents[3]
 OUT = Path(__file__).parent
-RAW = OUT / "raw"
+RAW = OUT / "not_promoted" / "latest"  # tracked; `raw_*` paths are gitignored
 KEY_ENVS = ("GROQ_API_KEY", "GW_GROQ_API_KEY")
 MODULES = (
     "tests/providers/test_groq_live.py",

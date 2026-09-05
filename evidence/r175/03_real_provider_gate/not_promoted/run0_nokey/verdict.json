@@ -1,0 +1,32 @@
+{
+  "run_started_utc": "2026-09-05T21:37:25+00:00",
+  "head": "3dd8dd58",
+  "key_present_in_env": false,
+  "key_env_names": [
+    "GROQ_API_KEY",
+    "GW_GROQ_API_KEY"
+  ],
+  "distinct_keys": 0,
+  "upstream_probe": {
+    "status": "SKIPPED",
+    "reason": "no key in env"
+  },
+  "pytest_exit": 0,
+  "pytest_summary": {
+    "summary_line": "7 skipped in 1.85s",
+    "passed": 0,
+    "failed": 0,
+    "skipped": 7,
+    "error": 0,
+    "xfailed": 0
+  },
+  "expected": {
+    "passed": 7,
+    "skipped": 0,
+    "failed": 0,
+    "error": 0
+  },
+  "PROMOTED": false,
+  "disposition": "NOT_PROMOTED \u2014 raw only; the 7 Groq tests carry no certification weight for this run",
+  "paid_calls_upper_bound": "unknown (see report)"
+}

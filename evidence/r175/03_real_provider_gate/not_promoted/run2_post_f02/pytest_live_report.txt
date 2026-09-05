@@ -1,0 +1,178 @@
+FFFF.FF                                                                  [100%]
+=================================== FAILURES ===================================
+________________ TestGroqLive.test_credential_validates_active _________________
+
+self = <tests.providers.test_groq_live.TestGroqLive object at 0x7efc2a165450>
+
+    def test_credential_validates_active(self) -> None:
+        adapter, ref = _live_adapter()
+>       health = run(adapter.validate_credential(ref))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/providers/test_groq_live.py:62: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/providers/test_groq_live.py:42: in run
+    return asyncio.run(coro)
+           ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:196: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:119: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <providers.real.groq.adapter.GroqAdapter object at 0x7efc27d656a0>
+credential_ref = 'credref__enbzJCKbodS1-y3MLemJ_j5l0HDJSy2'
+
+    async def validate_credential(self, credential_ref: str) -> CredentialHealth:
+        """Check the credential via GET /models (cheapest authenticated call).
+    
+        Definite answers only: 200 => active; 401/403 => invalid. Anything
+        else (network failure, 5xx, timeouts) raises
+        :class:`GroqCredentialCheckInconclusive` — inconclusive is NOT
+        evidence about the credential.
+        """
+        api_key = self._resolve(credential_ref)
+        try:
+            response = await self._client().get(
+                "/models", headers=self._auth_headers(api_key), timeout=self._timeout
+            )
+        except httpx.HTTPError as exc:
+            raise GroqCredentialCheckInconclusive(
+                "credential check could not reach the provider"
+            ) from exc
+        if response.status_code == 200:
+            status = CredentialStatus.ACTIVE
+            detail = None
+        elif response.status_code in (401, 403):
+            status = CredentialStatus.INVALID
+            detail = "provider rejected the credential"
+        else:
+>           raise GroqCredentialCheckInconclusive(
+                f"credential check inconclusive (http {response.status_code})"
+            )
+E           providers.real.groq.adapter.GroqCredentialCheckInconclusive: credential check inconclusive (http 400)
+
+providers/real/groq/adapter.py:194: GroqCredentialCheckInconclusive
+_________________ TestGroqLive.test_provider_health_is_healthy _________________
+
+self = <tests.providers.test_groq_live.TestGroqLive object at 0x7efc2a165bd0>
+
+    def test_provider_health_is_healthy(self) -> None:
+        adapter, _ = _live_adapter()
+        health = run(adapter.health_check(HealthScope.PROVIDER))
+>       assert health.state is ProviderHealthState.HEALTHY
+E       AssertionError: assert <ProviderHealthState.UNAVAILABLE: 'UNAVAILABLE'> is <ProviderHealthState.HEALTHY: 'HEALTHY'>
+E        +  where <ProviderHealthState.UNAVAILABLE: 'UNAVAILABLE'> = ProviderHealth(provider_id='groq', state=<ProviderHealthState.UNAVAILABLE: 'UNAVAILABLE'>, accounts={}, checked_at=datetime.datetime(2026, 9, 5, 21, 44, 7, 740050, tzinfo=datetime.timezone.utc), detail='provider returned http 400').state
+E        +  and   <ProviderHealthState.HEALTHY: 'HEALTHY'> = ProviderHealthState.HEALTHY
+
+tests/providers/test_groq_live.py:68: AssertionError
+_______________ TestGroqLive.test_discovery_returns_real_models ________________
+
+self = <tests.providers.test_groq_live.TestGroqLive object at 0x7efc2a28e2c0>
+
+    def test_discovery_returns_real_models(self) -> None:
+        adapter, _ = _live_adapter()
+        models = run(adapter.discover_models())
+        names = {m.provider_model_name for m in models}
+>       assert LIVE_MODEL in names  # the verified model list stays honest
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: assert 'allam-2-7b' in set()
+
+tests/providers/test_groq_live.py:74: AssertionError
+___________________ TestGroqLive.test_end_to_end_generation ____________________
+
+self = <tests.providers.test_groq_live.TestGroqLive object at 0x7efc2a28e520>
+
+    def test_end_to_end_generation(self) -> None:
+        adapter, ref = _live_adapter()
+        request = ProviderGenerateRequest(
+            request_id=uuid4(),
+            tenant_id=uuid4(),
+            operation=ProviderOperation.GENERATE_TEXT,
+            provider_model_name=LIVE_MODEL,
+            credential_ref=ref,
+            payload={
+                "ask": "Reply with exactly the word: OK",
+                "generation": {"max_tokens": 10, "temperature": 0},
+            },
+            timeout_ms=30_000,
+        )
+        response = run(adapter.generate(request))
+>       assert response.succeeded is True, response.error
+E       AssertionError: ProviderError(category=<ProviderErrorCategory.INVALID_CREDENTIAL: 'invalid_credential'>, retryable=False, retry_after_ms=None, provider_code='organization_restricted', safe_message='provider rejected the credential')
+E       assert False is True
+E        +  where False = ProviderGenerateResponse(request_id=UUID('d5cf73aa-93d1-4d09-b3a4-51ae4956c3a6'), succeeded=False, output={}, usage={}...fter_ms=None, provider_code='organization_restricted', safe_message='provider rejected the credential'), latency_ms=93).succeeded
+
+tests/providers/test_groq_live.py:91: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  providers.groq:adapter.py:634 groq_http_error status=400 type=invalid_request_error code=organization_restricted param=None failed_generation=False
+__________ TestLiveEndToEnd.test_execute_end_to_end_through_real_groq __________
+
+self = <tests.providers.test_groq_live_e2e.TestLiveEndToEnd object at 0x7efc2a165e50>
+
+    def test_execute_end_to_end_through_real_groq(self) -> None:
+        app, usage, principal = _live_world()
+    
+        async def call() -> httpx.Response:
+            transport = httpx.ASGITransport(app=app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                return await client.post(
+                    "/v1/execute",
+                    json={"ask": "Reply with exactly the word: OK"},
+                    timeout=60.0,
+                )
+    
+        response = run(call())
+>       assert response.status_code == 200, response.text
+E       AssertionError: {"error":{"code":"execution_failed","message":"provider rejected the credential","retryable":false,"details":{"execution_id":"17a5d93e-02a0-4d49-ac1c-0f02638e8aeb","provider_error_category":"invalid_credential"}}}
+E       assert 502 == 200
+E        +  where 502 = <Response [502 Bad Gateway]>.status_code
+
+tests/providers/test_groq_live_e2e.py:149: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  providers.groq:adapter.py:634 groq_http_error status=400 type=invalid_request_error code=organization_restricted param=None failed_generation=False
+_ TestLiveGatewayEndToEnd.test_both_entry_points_through_real_gateway_and_real_groq _
+
+self = <tests.providers.test_gateway_groq_live_e2e.TestLiveGatewayEndToEnd object at 0x7efc27d61590>
+
+    def test_both_entry_points_through_real_gateway_and_real_groq(self) -> None:
+        world = _live_world()
+        principal: Principal = world["principal"]
+        usage: InMemoryUsageAccounting = world["usage"]
+        live_key = os.environ[GROQ_KEY_ENV]
+    
+        # ---- Entry point 1 (decision D): platform HTTP API, {"ask": ...} ----
+        async def api_call() -> httpx.Response:
+            transport = httpx.ASGITransport(app=world["app"])
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                return await client.post(
+                    "/v1/execute",
+                    json={"ask": "Reply with exactly the word: OK"},
+                    timeout=60.0,
+                )
+    
+        response = run(api_call())
+>       assert response.status_code == 200, response.text
+E       AssertionError: {"error":{"code":"execution_failed","message":"provider rejected the credential","retryable":false,"details":{"execution_id":"23c0149f-ecc2-4f76-ad7f-cce20f60744a","provider_error_category":"invalid_credential"}}}
+E       assert 502 == 200
+E        +  where 502 = <Response [502 Bad Gateway]>.status_code
+
+tests/providers/test_gateway_groq_live_e2e.py:216: AssertionError
+==================================== PASSES ====================================
+____________ TestGroqLive.test_live_key_never_in_response_artifacts ____________
+------------------------------ Captured log call -------------------------------
+WARNING  providers.groq:adapter.py:634 groq_http_error status=400 type=invalid_request_error code=organization_restricted param=None failed_generation=False
+=========================== short test summary info ============================
+PASSED tests/providers/test_groq_live.py::TestGroqLive::test_live_key_never_in_response_artifacts
+FAILED tests/providers/test_groq_live.py::TestGroqLive::test_credential_validates_active
+FAILED tests/providers/test_groq_live.py::TestGroqLive::test_provider_health_is_healthy
+FAILED tests/providers/test_groq_live.py::TestGroqLive::test_discovery_returns_real_models
+FAILED tests/providers/test_groq_live.py::TestGroqLive::test_end_to_end_generation
+FAILED tests/providers/test_groq_live_e2e.py::TestLiveEndToEnd::test_execute_end_to_end_through_real_groq
+FAILED tests/providers/test_gateway_groq_live_e2e.py::TestLiveGatewayEndToEnd::test_both_entry_points_through_real_gateway_and_real_groq
+6 failed, 1 passed in 2.49s

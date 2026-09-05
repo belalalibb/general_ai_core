@@ -1,0 +1,54 @@
+{
+  "run_started_utc": "2026-09-05T21:44:05+00:00",
+  "head": "64776a89",
+  "key_present_in_env": true,
+  "key_env_names": [
+    "GROQ_API_KEY",
+    "GW_GROQ_API_KEY"
+  ],
+  "distinct_keys": 2,
+  "upstream_probe": {
+    "GROQ_API_KEY": {
+      "status": "HTTP_400",
+      "http_status": 400,
+      "latency_ms": 161,
+      "model_count": 0,
+      "allam-2-7b_present": false,
+      "error": {
+        "message": "Organization has been restricted. Please reach out to support if you believe this was in error.",
+        "type": "invalid_request_error",
+        "code": "organization_restricted"
+      }
+    },
+    "GW_GROQ_API_KEY": {
+      "status": "HTTP_400",
+      "http_status": 400,
+      "latency_ms": 116,
+      "model_count": 0,
+      "allam-2-7b_present": false,
+      "error": {
+        "message": "Organization has been restricted. Please reach out to support if you believe this was in error.",
+        "type": "invalid_request_error",
+        "code": "organization_restricted"
+      }
+    }
+  },
+  "pytest_exit": 1,
+  "pytest_summary": {
+    "summary_line": "6 failed, 1 passed in 2.49s",
+    "passed": 1,
+    "failed": 6,
+    "skipped": 0,
+    "error": 0,
+    "xfailed": 0
+  },
+  "expected": {
+    "passed": 7,
+    "skipped": 0,
+    "failed": 0,
+    "error": 0
+  },
+  "PROMOTED": false,
+  "disposition": "NOT_PROMOTED \u2014 raw only; the 7 Groq tests carry no certification weight for this run",
+  "paid_calls_upper_bound": "unknown (see report)"
+}
