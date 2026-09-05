@@ -1,0 +1,21 @@
+{
+  "name": "C_bad_route_token",
+  "http_status": 404,
+  "request_headers": {
+    "X-Gateway-Secret": "<redacted>",
+    "X-Gateway-Secret-Version": "1",
+    "X-Route-Token": "rt_does_not_exist",
+    "Content-Type": "application/json"
+  },
+  "request_body": null,
+  "response_headers": {
+    "content-type": "application/json"
+  },
+  "response_body": {
+    "error": {
+      "category": "provider_unavailable",
+      "retryable": false,
+      "message": "unknown route"
+    }
+  }
+}

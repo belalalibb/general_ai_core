@@ -1,0 +1,12 @@
+{
+  "A.http_200": true,
+  "A.succeeded": true,
+  "A.output.text_nonempty": true,
+  "A.usage.tokens_present": true,
+  "B.http_200": true,
+  "B.succeeded_false": true,
+  "B.category_model_unavailable": true,
+  "B.retryable_false": true,
+  "C.route_rejected_4xx": true,
+  "D.describe_200": true
+}

@@ -1,0 +1,46 @@
+{
+  "name": "B_unknown_model",
+  "http_status": 200,
+  "request_headers": {
+    "X-Gateway-Secret": "<redacted>",
+    "X-Gateway-Secret-Version": "1",
+    "X-Route-Token": "rt_aai_r174",
+    "Content-Type": "application/json"
+  },
+  "request_body": {
+    "operation": "generate_text",
+    "model": "no-such-model-r174",
+    "request_id": "r174-b-1788620482",
+    "tenant_id": "tenant-r174",
+    "credential": {
+      "mode": "platform"
+    },
+    "payload": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Reply with the single word: pong"
+        }
+      ],
+      "max_tokens": 8,
+      "temperature": 0
+    },
+    "timeout_ms": 30000
+  },
+  "response_headers": {
+    "content-type": "application/json"
+  },
+  "response_body": {
+    "succeeded": false,
+    "output": null,
+    "usage": null,
+    "latency_ms": 295,
+    "error": {
+      "category": "model_unavailable",
+      "retryable": false,
+      "message": "model is not supported by the provider",
+      "retry_after_ms": null,
+      "provider_code": "unsupported_model"
+    }
+  }
+}

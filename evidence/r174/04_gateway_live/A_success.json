@@ -1,0 +1,47 @@
+{
+  "name": "A_success",
+  "http_status": 200,
+  "request_headers": {
+    "X-Gateway-Secret": "<redacted>",
+    "X-Gateway-Secret-Version": "1",
+    "X-Route-Token": "rt_aai_r174",
+    "Content-Type": "application/json"
+  },
+  "request_body": {
+    "operation": "generate_text",
+    "model": "qwen3.5-4b-32k-fast",
+    "request_id": "r174-a-1788620482",
+    "tenant_id": "tenant-r174",
+    "credential": {
+      "mode": "platform"
+    },
+    "payload": {
+      "messages": [
+        {
+          "role": "user",
+          "content": "Reply with the single word: pong"
+        }
+      ],
+      "max_tokens": 8,
+      "temperature": 0
+    },
+    "timeout_ms": 30000
+  },
+  "response_headers": {
+    "content-type": "application/json"
+  },
+  "response_body": {
+    "succeeded": true,
+    "output": {
+      "text": "pong",
+      "finish_reason": "stop"
+    },
+    "usage": {
+      "input_tokens": 19,
+      "output_tokens": 2,
+      "units": 1
+    },
+    "latency_ms": 410,
+    "error": null
+  }
+}
