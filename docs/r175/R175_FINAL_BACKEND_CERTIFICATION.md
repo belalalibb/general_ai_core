@@ -45,7 +45,7 @@ Repair protocol followed for both fixes: fail-first (both new tests fail on the 
 
 ## 4. Change budget
 
-`core/` 0 lines · `apps/` 0 · `infrastructure/` 0 · `providers/` 0. Changes: `gateway-service/providers/groq/adapter.py` +18, `gateway-service/providers/assemblyai/_upstream.py` +3/−3 (wrap), tests +57, two R174 probe scripts (wraps). Budget ceilings: within (`check_repo_after.txt` line 30).
+`core/` 0 lines · `apps/` 0 · `infrastructure/` 0 · `providers/` 0. Changes: `gateway-service/providers/groq/adapter.py` +18, `gateway-service/providers/assemblyai/_upstream.py` +5/−1 (wrap), tests +57, two R174 probe scripts (wraps). Budget ceilings: within (`check_repo_after.txt` line 30).
 
 ## 5. Not evaluated (verbatim from the gate; never green, never FAIL)
 
