@@ -1,0 +1,30 @@
+{
+  "http_status": 503,
+  "request_body": {
+    "ask": "must not route",
+    "model_policy": {
+      "type": "explicit_model",
+      "model_id": "assemblyai/qwen3.5-4b-32k-fast",
+      "allow_fallback": false,
+      "provider_id": "fixture_echo"
+    }
+  },
+  "response_body": {
+    "error": {
+      "code": "model_unavailable",
+      "message": "No eligible model candidates for this request.",
+      "retryable": false,
+      "details": {
+        "excluded": [
+          {
+            "model_key": "assemblyai/qwen3.5-4b-32k-fast",
+            "provider_key": "assemblyai",
+            "reason": "excluded by explicit provider selection"
+          }
+        ]
+      },
+      "trace_id": null
+    }
+  },
+  "gateway_log_lines_during_call": []
+}

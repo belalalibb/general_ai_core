@@ -1,0 +1,15 @@
+{
+  "register": 201,
+  "verify": 200,
+  "login": 200,
+  "session": {
+    "http_status": 200,
+    "request_body": null,
+    "response_body": {
+      "user_id": "bce28a67-3128-4cd3-ba9c-b989c7222d33",
+      "tenant_id": "b303fb26-3715-45b8-975b-5f553fbf301a",
+      "email": "r174-admin@example.test",
+      "is_admin": true
+    }
+  }
+}
