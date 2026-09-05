@@ -39,6 +39,7 @@ from core.providers.onboarding import (
     ProviderOnboardingService,
 )
 from core.providers.ports import ProviderAdapterPort
+from core.secrets.errors import SecretNotFound
 
 if TYPE_CHECKING:
     from apps.api.app import Principal
@@ -253,6 +254,21 @@ def create_provider_onboarding_router(
             # The walker's refusal, verbatim (409 — state conflict, the
             # same mapping the config lifecycle routes use).
             return error_response(ErrorCode.VALIDATION_ERROR, str(exc), http_status=409)
+        except SecretNotFound as exc:
+            # R174 F-3: a `credential_ref` / `route_token_ref` the platform's
+            # secret manager cannot resolve is an OPERATOR error (the ref was
+            # never provisioned — see GATEWAY_ROUTE_TOKENS), not an internal
+            # fault. Name the ref (refs are opaque and safe to echo); the
+            # walker refused before step 11 so nothing was registered.
+            ref = str(exc)  # SecretNotFound carries the ref at most, never a value
+            return error_response(
+                ErrorCode.VALIDATION_ERROR,
+                f"credential reference {ref!r} does not resolve in the platform "
+                "secret manager — provision it before onboarding "
+                "(route tokens: GATEWAY_ROUTE_TOKENS).",
+                details={"credential_ref": ref},
+                http_status=409,
+            )
 
         # ADR-0011: persist the registration definition (refs only) so the
         # composition root rebuilds this adapter at the next startup.
