@@ -1,0 +1,28 @@
+{
+  "http_status": 500,
+  "request_body": {
+    "provider_key": "assemblyai",
+    "display_name": "AssemblyAI LLM Gateway",
+    "operations": [
+      "generate_text"
+    ],
+    "capabilities": {},
+    "static_models": [
+      "qwen3.5-4b-32k-fast",
+      "gemini-2.5-flash-lite"
+    ],
+    "credential_ref": "cred-ref-assemblyai-r174",
+    "route_token_ref": "route-token-ref-assemblyai-r174",
+    "credential_mode": "platform"
+  },
+  "response_body": {
+    "error": {
+      "code": "internal_error",
+      "message": "Internal error.",
+      "retryable": false,
+      "details": {},
+      "trace_id": null
+    }
+  },
+  "gateway_log_lines_during_call": []
+}

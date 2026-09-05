@@ -1,0 +1,52 @@
+[
+  {
+    "check": "G gateway reachable + route resolves",
+    "pass": true,
+    "detail": "{'display_name': 'AssemblyAI LLM Gateway', 'credential_mode': 'platform', 'capabilities': {'chat': True, 'reasoning': True, 'code': True}, 'operations': ['generate_text'], 'models': [{'name': 'qwen3.5"
+  },
+  {
+    "check": "E platform-mode onboarding did NOT succeed (F-3 predicted break)",
+    "pass": true,
+    "detail": "http 500"
+  },
+  {
+    "check": "E failure names the route-token custody gap (SecretNotFound) or is a bare 500",
+    "pass": true,
+    "detail": "{\"error\": {\"code\": \"internal_error\", \"message\": \"Internal error.\", \"retryable\": false, \"details\": {}, \"trace_id\": null}}"
+  },
+  {
+    "check": "E no request reached the gateway (log has no route hit)",
+    "pass": true,
+    "detail": "<no lines>"
+  },
+  {
+    "check": "F user_key onboarding refused 409 (F-2 predicted: no user_key_resolver)",
+    "pass": true,
+    "detail": "{\"error\": {\"code\": \"validation_error\", \"message\": \"user_key credential mode requires a user_key_resolver\", \"retryable\": false, \"details\": {}, \"trace_id\": null}}"
+  },
+  {
+    "check": "H with token stored, request DID reach the gateway (/v1/health in gateway log)",
+    "pass": true,
+    "detail": "INFO:     127.0.0.1:51948 - \"GET /v1/health HTTP/1.1\" 200 OK"
+  },
+  {
+    "check": "H step 6 would STILL refuse: gateway UNKNOWN \u2192 adapter UNAVAILABLE (F-6, new break)",
+    "pass": true,
+    "detail": "{\"state\": \"UNAVAILABLE\", \"detail\": \"gateway reported UNKNOWN health (treated as unavailable: unknown is never healthy)\"}"
+  },
+  {
+    "check": "after: neither provider registered (no half-state)",
+    "pass": true,
+    "detail": "{\"providers\": [{\"id\": \"05ec2c04-c8c4-4f4e-a90e-046db9e09218\", \"provider_key\": \"genspark_llm\", \"display_name\": \"Genspark LLM Proxy\", \"status\": \"active\", \"auth_types\": [\"api_key\"], \"supports_account_pool\": false, \"is_template\": false, \"is_routable\": true}]}"
+  },
+  {
+    "check": "secret shape absent from evidence (gw secret)",
+    "pass": true,
+    "detail": "scrubbed"
+  },
+  {
+    "check": "secret shape absent from evidence (admin pw)",
+    "pass": true,
+    "detail": "scrubbed"
+  }
+]

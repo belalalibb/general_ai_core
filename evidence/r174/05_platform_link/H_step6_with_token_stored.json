@@ -1,0 +1,10 @@
+{
+  "builder": "apps.composition.provider_onboarding.adapter_from_definition (real)",
+  "route_token_stored_by_hand": true,
+  "health_check_result": {
+    "state": "UNAVAILABLE",
+    "detail": "gateway reported UNKNOWN health (treated as unavailable: unknown is never healthy)"
+  },
+  "walker_step6_would_refuse": true,
+  "walker_message": "step-6-health-check: provider health is UNAVAILABLE"
+}

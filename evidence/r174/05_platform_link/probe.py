@@ -19,6 +19,14 @@ Cases (all FREE — no upstream model call is possible before onboarding succeed
      RemoteGatewayAdapter.__init__ raises ValueError ⇒ route returns 409.
   G. control: the gateway IS reachable from this host with a correct route token
      (describe only, free) — so E's failure is the platform link, not the network.
+  H. one link further: IF the route token were stored (hypothetical F-3 fix), does
+     the onboarding walker pass? In-process, using the REAL composition builder
+     `apps.composition.provider_onboarding.adapter_from_definition` with a secret
+     manager that HAS the token, against the REAL gateway process: run step 6
+     (`health_check`) exactly as core/providers/onboarding.py does. Prediction:
+     gateway `/v1/health` → UNKNOWN (health_supported=false) → adapter maps to
+     UNAVAILABLE → walker would refuse `step-6-health-check`. That is a SECOND,
+     independent break (F-6) — fixing F-3 alone does not open the door.
 
 The AssemblyAI key is NOT required for E/F/G and is not present in either process
 env for this run. The gateway log is captured to show whether any request from the
@@ -81,6 +89,50 @@ def _resp(resp: httpx.Response, sent: dict | None) -> dict:
     except ValueError:
         body = {"_raw_text": resp.text[:800]}
     return {"http_status": resp.status_code, "request_body": sent, "response_body": body}
+
+
+def _case_h(definition: dict) -> dict:
+    import asyncio
+
+    sys.path.insert(0, str(ROOT))
+    from apps.api.provider_onboarding import GatewayOnboardRequest
+    from apps.composition.gateway import GatewaySettings
+    from apps.composition.provider_onboarding import (
+        PLATFORM_TENANT_ID,
+        adapter_from_definition,
+        manifest_from_definition,
+    )
+    from core.contracts.provider import HealthScope
+    from core.secrets.memory import InMemorySecretManager
+
+    secrets = InMemorySecretManager()
+    ref = secrets.store(PLATFORM_TENANT_ID, ROUTE_TOKEN)  # the missing act, done by hand
+    body = GatewayOnboardRequest(**dict(definition, route_token_ref=ref))
+    settings = GatewaySettings(base_url=GW, secret=GW_SECRET, secret_version=1)
+    adapter = adapter_from_definition(settings, secrets, manifest_from_definition(body), body)
+
+    async def _run() -> dict:
+        try:
+            health = await adapter.health_check(HealthScope.PROVIDER)
+            out = {"state": health.state.value, "detail": health.detail}
+        finally:
+            closer = getattr(adapter, "aclose", None)
+            if callable(closer):
+                await closer()
+        return out
+
+    health = asyncio.run(_run())
+    # what core/providers/onboarding.py:218-224 would do with this answer
+    would_refuse = health["state"] != "HEALTHY"
+    return {
+        "builder": "apps.composition.provider_onboarding.adapter_from_definition (real)",
+        "route_token_stored_by_hand": True,
+        "health_check_result": health,
+        "walker_step6_would_refuse": would_refuse,
+        "walker_message": f"step-6-health-check: provider health is {health['state']}"
+        if would_refuse
+        else None,
+    }
 
 
 def main() -> int:
@@ -191,6 +243,11 @@ def main() -> int:
         # --- providers listing after the attempts (nothing half-registered) ----
         lst = c.get(f"{PLATFORM}/v1/admin/providers", headers=auth)
         results["after_listing"] = record("after_listing", _resp(lst, None))
+
+        # --- H: hypothetical F-3 fix — does step 6 pass against the real gateway? ---
+        results["H_step6_with_token_stored"] = record(
+            "H_step6_with_token_stored", _case_h(definition)
+        )
     finally:
         pf.terminate()
         gw.terminate()
@@ -200,7 +257,8 @@ def main() -> int:
         gw_log.close()
         for name in ("gateway.log", "platform.log"):
             p = OUT / name
-            p.write_text(_scrub(p.read_text()))
+            scrubbed = re.sub(r'"token": "[^"]+"', '"token": "<redacted>"', _scrub(p.read_text()))
+            p.write_text(scrubbed)
 
     # --- checks ------------------------------------------------------------
     checks = []
@@ -216,7 +274,7 @@ def main() -> int:
     e_text = json.dumps(e_body)
     ck("E platform-mode onboarding did NOT succeed (F-3 predicted break)",
        e_res["http_status"] != 201, f"http {e_res['http_status']}")
-    ck("E failure names the route token custody gap (SecretNotFound / unresolvable ref) or is a 500",
+    ck("E failure names the route-token custody gap (SecretNotFound) or is a bare 500",
        "route-token-ref" in e_text or "SecretNotFound" in e_text or "secret" in e_text.lower()
        or e_res["http_status"] == 500, e_text[:300])
     ck("E no request reached the gateway (log has no route hit)",
@@ -226,13 +284,22 @@ def main() -> int:
     f_text = json.dumps(f_res["response_body"])
     ck("F user_key onboarding refused 409 (F-2 predicted: no user_key_resolver)",
        f_res["http_status"] == 409 and "user_key_resolver" in f_text, f_text[:300])
+    h = results["H_step6_with_token_stored"]
+    gw_log_text = (OUT / "gateway.log").read_text()
+    gw_health_lines = [ln for ln in gw_log_text.splitlines() if "/v1/health" in ln]
+    ck("H with token stored, request DID reach the gateway (/v1/health in gateway log)",
+       len(gw_health_lines) >= 1, "\n".join(gw_health_lines)[:200] or "<none>")
+    ck("H step 6 would STILL refuse: gateway UNKNOWN → adapter UNAVAILABLE (F-6, new break)",
+       h["walker_step6_would_refuse"] and h["health_check_result"]["state"] == "UNAVAILABLE",
+       json.dumps(h["health_check_result"]))
     lst_text = json.dumps(results["after_listing"]["response_body"])
     ck("after: neither provider registered (no half-state)",
        "assemblyai" not in lst_text, lst_text[:300])
     for s in SECRET_SHAPES:
         ck(f"secret shape absent from evidence ({'gw secret' if s == GW_SECRET else 'admin pw'})",
-           all(s not in p.read_text() for p in OUT.glob("*.json")) and s not in (OUT / "gateway.log").read_text()
-           and s not in (OUT / "platform.log").read_text(), "scrubbed")
+           all(s not in p.read_text() for p in OUT.glob("*.json"))
+           and all(s not in (OUT / n).read_text() for n in ("gateway.log", "platform.log")),
+           "scrubbed")
 
     (OUT / "checks.json").write_text(json.dumps(checks, indent=2) + "\n")
     passed = sum(1 for x in checks if x["pass"])

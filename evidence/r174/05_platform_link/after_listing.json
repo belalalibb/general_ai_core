@@ -1,0 +1,20 @@
+{
+  "http_status": 200,
+  "request_body": null,
+  "response_body": {
+    "providers": [
+      {
+        "id": "05ec2c04-c8c4-4f4e-a90e-046db9e09218",
+        "provider_key": "genspark_llm",
+        "display_name": "Genspark LLM Proxy",
+        "status": "active",
+        "auth_types": [
+          "api_key"
+        ],
+        "supports_account_pool": false,
+        "is_template": false,
+        "is_routable": true
+      }
+    ]
+  }
+}
