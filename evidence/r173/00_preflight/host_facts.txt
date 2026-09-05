@@ -1,0 +1,48 @@
+# R173 §1.1 host facts — measured 2026-09-05T00:46:37Z
+## uname
+Linux sandbox.local 6.1.155 #1 SMP PREEMPT_DYNAMIC Thu Mar 12 10:53:17 UTC 2026 x86_64 GNU/Linux
+## os-release
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+VERSION_ID="13"
+ID=debian
+## WSL markers
+0
+ls: cannot access '/mnt/c': No such file or directory
+WSL_DISTRO_NAME=<unset>
+## container markers
+ls: cannot access '/.dockerenv': No such file or directory
+systemd
+## python
+/usr/local/bin/python
+Python 3.13.14
+## shell
+/bin/bash
+GNU bash, version 5.2.37(1)-release (x86_64-pc-linux-gnu)
+## git
+git version 2.47.3
+core.autocrlf=<unset>
+core.filemode=true
+core.symlinks=<unset>
+core.ignorecase=<unset>
+core.hooksPath=<unset>
+## filesystem case sensitivity
+case-SENSITIVE
+ext2/ext3
+## identity
+uid=1000(user) gid=1000(user) groups=1000(user)
+passwordless sudo: YES
+## sandbox mechanism presence (for §10)
+bwrap        ABSENT
+podman       ABSENT
+docker       ABSENT
+firejail     ABSENT
+unshare      /usr/bin/unshare
+nsenter      /usr/bin/nsenter
+systemd-run  /usr/bin/systemd-run
+unshare from util-linux 2.41
+unshare -Ur true => OK
+unshare -rn true => OK
+max_user_namespaces=3915
+seccomp_field=Seccomp:	0
+cgroup_fs=cgroup2fs
+## VERDICT: directive claim 'dev host is Windows / Git Bash vs WSL2' is REFUTED — Linux sandbox, not WSL, not Windows.

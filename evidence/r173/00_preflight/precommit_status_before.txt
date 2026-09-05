@@ -1,0 +1,19 @@
+# R173 §1.1 pre-commit scanner status BEFORE — 2026-09-05T00:46:46Z @ 3c0f357
+## tracked hook-ish files
+core/contracts/webhooks.py
+core/events/webhooks.py
+tests/api/test_webhook_producers_v6.py
+tests/api/test_webhooks_api_t067.py
+tests/events/test_webhook_delivery_v6.py
+## .githooks / .pre-commit-config.yaml
+ls: cannot access '.githooks': No such file or directory
+ls: cannot access '.pre-commit-config.yaml': No such file or directory
+## scripts/
+dev_server.py
+## core.hooksPath
+<unset>
+## .git/hooks non-sample
+(none)
+## .git/r172_commit.sh
+ls: cannot access '.git/r172_commit.sh': No such file or directory
+## VERDICT: ABSENT — no tracked pre-commit secret scanner; directive [UNVERIFIED] claim CONFIRMED as finding.

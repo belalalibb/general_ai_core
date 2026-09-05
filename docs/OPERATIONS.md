@@ -332,3 +332,23 @@ by design (the engineering workspace refuses the platform's own checkout —
 ADR-0009 §14 unchanged); engineering tickets/grants live in-process (lost on
 restart, re-issued by an admin); `ws_run` is a subprocess with a scrubbed
 environment and timeout, not a container sandbox.
+
+## 14. Pre-commit secret scanner (tracked; R173 §1.1)
+The scanner lives **in the repository** at `engineering/githooks/pre-commit`
+(previously there was none — a per-clone `.git/hooks` file does not survive
+a fresh clone or a sandbox reset; R173 confirmed this by finding the R172
+hook gone). Install once per clone:
+
+    git config core.hooksPath engineering/githooks
+
+Scope: staged content only. Blocks (1) token-prefix patterns
+(`gsk_`, `ghp_`, `github_pat_`, `AKIA`, PEM blocks, `xox*`, `sk-`), and
+(2) the **literal value** of any secret-shaped environment variable exported
+in the committing shell (`GROQ_API_KEY*`, `GSK_API_KEY`, `GSK_TOKEN`,
+`GENSPARK_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`, `OPENAI_API_KEY`,
+`ANTHROPIC_API_KEY`, `GATEWAY_SECRET`, `VAULT_TOKEN`) — so a pasted key of an
+unknown shape is still caught if it is live in the shell. Lines listed in
+`green_manifest.json → secret_scan.exceptions` are honored. Binary blobs are
+skipped. Bypass (audited, must be justified in the commit message):
+`SECRET_SCAN_BYPASS=1 git commit …`. Canary proof:
+`evidence/r173/00_preflight/precommit_canary_transcript.txt`.

@@ -1,0 +1,31 @@
+# R173 §1.1 pre-commit canary transcript — scratch repo 2026-09-05T00:48:07Z; synthetic tokens only; hook=engineering/githooks/pre-commit
+--- clean commit
+EXIT=0
+--- gsk_ canary
+BLOCKED: b.txt:1 matches secret token pattern
+pre-commit: secret scan FAILED — commit refused. Redact, or SECRET_SCAN_BYPASS=1 with justification in the commit message.
+EXIT=1
+--- ghp_ canary
+BLOCKED: c.txt:1 matches secret token pattern
+pre-commit: secret scan FAILED — commit refused. Redact, or SECRET_SCAN_BYPASS=1 with justification in the commit message.
+EXIT=1
+--- github_pat_ canary
+BLOCKED: d.txt:1 matches secret token pattern
+pre-commit: secret scan FAILED — commit refused. Redact, or SECRET_SCAN_BYPASS=1 with justification in the commit message.
+EXIT=1
+--- env-literal canary (GROQ_API_KEY_9 synthetic len 41, no prefix match)
+BLOCKED: e.txt contains literal value of $GROQ_API_KEY_9 (len 41, first-four zzsy)
+pre-commit: secret scan FAILED — commit refused. Redact, or SECRET_SCAN_BYPASS=1 with justification in the commit message.
+EXIT=1
+--- binary file skipped
+EXIT=0
+--- redacted reference
+EXIT=0
+--- bypass path (SECRET_SCAN_BYPASS=1)
+pre-commit: secret scan BYPASSED (SECRET_SCAN_BYPASS=1)
+EXIT=0
+--- final log
+bypass
+ok
+bin
+clean

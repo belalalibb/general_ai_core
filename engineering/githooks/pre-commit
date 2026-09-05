@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# R173 §1.1 — tracked pre-commit secret scanner.
+# Install (once per clone):  git config core.hooksPath engineering/githooks
+# Bypass (documented, audited): SECRET_SCAN_BYPASS=1 git commit ...
+# Scope: staged content only (git diff --cached). Three checks:
+#   1. token-prefix regexes (gsk_/ghp_/github_pat_/AKIA/PEM/xox/sk-)
+#   2. literal VALUE of any secret-shaped env var currently exported in the committing shell
+#   3. manifest exceptions (engineering/verification/green_manifest.json secret_scan.exceptions) are honored
+set -u
+if [ "${SECRET_SCAN_BYPASS:-0}" = "1" ]; then
+  echo "pre-commit: secret scan BYPASSED (SECRET_SCAN_BYPASS=1)" >&2
+  exit 0
+fi
+PREFIX_RE='gsk_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH|PRIVATE) [A-Z ]*KEY-----|xox[bap]-[0-9A-Za-z-]{10,}|sk-[A-Za-z0-9]{40,}'
+ENV_NAME_RE='^(GROQ_API_KEY(_[0-9]+)?|GSK_API_KEY|GSK_TOKEN|GENSPARK_TOKEN|GW_GROQ_API_KEY|GITHUB_TOKEN|GH_TOKEN|OPENAI_API_KEY|ANTHROPIC_API_KEY|GATEWAY_SECRET|VAULT_TOKEN)$'
+blocked=0
+exceptions_file="engineering/verification/green_manifest.json"
+is_excepted() { # $1=file $2=line-number
+  [ -f "$exceptions_file" ] || return 1
+  python3 - "$exceptions_file" "$1" "$2" <<'PY' 2>/dev/null
+import json,sys
+m=json.load(open(sys.argv[1]))
+ex=m.get("secret_scan",{}).get("exceptions",[])
+f,l=sys.argv[2],int(sys.argv[3])
+sys.exit(0 if any(e.get("file")==f and int(e.get("line",-1))==l for e in ex) else 1)
+PY
+}
+# Collect staged files (added/copied/modified/renamed), skip deletions and binaries.
+while IFS= read -r -d '' f; do
+  [ -f "$f" ] || continue
+  # skip binary
+  if [ "$(git show ":$f" | head -c 8000 | tr -d -c '\000' | wc -c)" -gt 0 ]; then continue; fi
+  # 1. prefix regex on staged blob
+  while IFS=: read -r ln _; do
+    if is_excepted "$f" "$ln"; then continue; fi
+    echo "BLOCKED: $f:$ln matches secret token pattern" >&2; blocked=1
+  done < <(git show ":$f" | grep -nE "$PREFIX_RE" | cut -d: -f1 | sed 's/$/:/')
+  # 2. literal values of exported secret-shaped env vars
+  while IFS='=' read -r name _; do
+    [[ "$name" =~ $ENV_NAME_RE ]] || continue
+    val="${!name:-}"; [ -n "$val" ] || continue
+    [ "${#val}" -ge 12 ] || continue
+    if git show ":$f" | grep -qF -- "$val"; then
+      echo "BLOCKED: $f contains literal value of \$$name (len ${#val}, first-four ${val:0:4})" >&2; blocked=1
+    fi
+  done < <(env)
+done < <(git diff --cached --name-only --diff-filter=ACMR -z)
+if [ "$blocked" = 1 ]; then
+  echo "pre-commit: secret scan FAILED — commit refused. Redact, or SECRET_SCAN_BYPASS=1 with justification in the commit message." >&2
+  exit 1
+fi
+exit 0
