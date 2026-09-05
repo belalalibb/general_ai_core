@@ -269,9 +269,7 @@ def route_tokens_from_env(
                 "must be 'ref=token' with a non-empty ref and token."
             )
         if ref in tokens:
-            raise ValueError(
-                f"Gateway misconfigured: {_ENV_ROUTE_TOKENS} names ref {ref!r} twice."
-            )
+            raise ValueError(f"Gateway misconfigured: {_ENV_ROUTE_TOKENS} names ref {ref!r} twice.")
         tokens[ref] = token
     return tokens
 
