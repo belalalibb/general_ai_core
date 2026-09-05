@@ -215,13 +215,22 @@ class ProviderOnboardingService:
             steps.append("step-5-credential-validation")
 
         # --- step 6: health check works ---------------------------------------
-        health = await adapter.health_check(HealthScope.PROVIDER)
-        if health.state is not ProviderHealthState.HEALTHY:
-            raise OnboardingRefused(
-                "step-6-health-check",
-                f"provider health is {health.state.value}",
-            )
-        steps.append("step-6-health-check")
+        # Same 41 §49 posture as step 5: NotImplementedError (e.g.
+        # GatewayHealthCheckUnsupported — gateway answered UNKNOWN with
+        # checked_at=None, i.e. NO check was performed) is a missing check
+        # SURFACE → recorded UNVERIFIED, never faked as HEALTHY. Any
+        # returned non-HEALTHY state is a definite verdict and still refuses.
+        try:
+            health = await adapter.health_check(HealthScope.PROVIDER)
+        except NotImplementedError as exc:
+            unverified_extra.append(f"step-6-health-check (adapter has no check surface: {exc})")
+        else:
+            if health.state is not ProviderHealthState.HEALTHY:
+                raise OnboardingRefused(
+                    "step-6-health-check",
+                    f"provider health is {health.state.value}",
+                )
+            steps.append("step-6-health-check")
 
         # --- step 4 (observable half): >=1 declared operation ------------------
         if not manifest.operations:
