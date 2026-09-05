@@ -113,9 +113,18 @@ def run_pytest(key: str | None) -> tuple[int, str]:
         for e in KEY_ENVS:
             env[e] = key
     cmd = [
-        sys.executable, "-m", "pytest", *MODULES,
-        "-q", "-rA", "-p", "no:cacheprovider", "-o", "addopts=",
-        "-W", "ignore::DeprecationWarning",
+        sys.executable,
+        "-m",
+        "pytest",
+        *MODULES,
+        "-q",
+        "-rA",
+        "-p",
+        "no:cacheprovider",
+        "-o",
+        "addopts=",
+        "-W",
+        "ignore::DeprecationWarning",
     ]
     proc = subprocess.run(cmd, cwd=ROOT, env=env, capture_output=True, text=True, timeout=600)
     stderr = "\n--- stderr ---\n" + proc.stderr if proc.stderr.strip() else ""
@@ -163,8 +172,7 @@ def main() -> int:
         "expected": {"passed": EXPECTED_PASSED, "skipped": 0, "failed": 0, "error": 0},
         "PROMOTED": promoted,
         "disposition": (
-            "EVIDENCE — real upstream call succeeded through every live module; "
-            "the 7 tests count"
+            "EVIDENCE — real upstream call succeeded through every live module; the 7 tests count"
             if promoted
             else "NOT_PROMOTED — raw only; the 7 Groq tests carry no certification "
             "weight for this run"
