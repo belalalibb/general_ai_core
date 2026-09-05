@@ -7,6 +7,8 @@ app.py back — providers are testable against gateway.contracts alone.
 
 from __future__ import annotations
 
+import os
+
 from fastapi import FastAPI
 
 from gateway.config import GatewayConfig, load_config_from_env
@@ -54,6 +56,13 @@ def register_live_providers(registry: ProviderRegistry) -> None:
     registry.register("groq", GROQ_DEFINITION, "providers.groq.adapter")
     # R174: second live provider, same door. Key: GW_ASSEMBLYAI_API_KEY (platform mode).
     registry.register("assemblyai", ASSEMBLYAI_DEFINITION, "providers.assemblyai.adapter")
+    # R174 §7: HERMETIC fixture that declares a model name AssemblyAI also declares,
+    # for the routing-identity proof (route by PROVIDER, never by model name).
+    # Opt-in ONLY — a fixture answering on a production model name is never a default.
+    if os.environ.get("GW_ENABLE_FIXTURE_ECHO") == "1":
+        from providers.fixture_echo.definition import DEFINITION as FIXTURE_ECHO_DEFINITION
+
+        registry.register("fixture_echo", FIXTURE_ECHO_DEFINITION, "providers.fixture_echo.adapter")
 
 
 if __name__ == "__main__":  # pragma: no cover
