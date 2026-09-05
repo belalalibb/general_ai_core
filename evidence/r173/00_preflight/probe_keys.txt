@@ -1,0 +1,71 @@
+# R173 §1.2b — probe of GROQ_API_KEY_5 / GROQ_API_KEY_6 through the platform execute path
+# Captured: 2026-09-05 · HEAD at capture: 3b69cfd · host: Linux sandbox (see host_facts.txt)
+# Secrets referenced by NAME / LENGTH / FIRST-FOUR only. Never by value.
+
+## Method (differs from the R172 probe — recorded as a finding)
+- Harness: tests_live/r173/test_live_probe.py (new dir tests_live/r173/, outside `testpaths`;
+  never collected by the hermetic verifier; skips cleanly when no GROQ_API_KEY_* is exported).
+- Path exercised: build_runtime_profile(environ={GROQ_API_KEY, DEV_DEMO_PRINCIPAL=1,
+  PROVIDER_MAX_RETRIES=0}) -> create_app -> POST /v1/execute
+  {"ask": "Reply with exactly the word: OK", "model_policy": {"type": "auto", "allow_fallback": false}}.
+  The router (not the probe) selected the model; the composition's own GroqAdapter carried the request.
+  The R172 probe called the adapter with a hand-picked non-manifest model and bypassed the router —
+  R173 fixes this so the proof is of the platform, not of the adapter alone.
+- Provider-level truth (provider_code, retry_after_ms) is not exposed on the HTTP envelope
+  (only provider_error_category is). The probe therefore wraps the adapter object inside
+  profile.adapters (the same dict ExecutionService reads) with a pass-through observer.
+- Bounded attempts: PROVIDER_MAX_RETRIES=0 and allow_fallback=false -> exactly one provider call per key,
+  except one deliberate retry if the first attempt's category is "timeout".
+- Recorder: every record() call is asserted against EVERY present secret-shaped env value
+  (names matching KEY|TOKEN|SECRET|PASSWORD, value length >= 12) and against the prefix regexes
+  gsk_/ghp_/github_pat_. This closes the R172 blind spot where only GROQ names were checked.
+
+## Command
+  R173_PROBE_KEYS=GROQ_API_KEY_5,GROQ_API_KEY_6 python -m pytest tests_live/r173 -q -p no:cacheprovider -o addopts="" -rs
+  -> 4 passed in 2.35s
+
+## Result table (from evidence/r173/live_transport.txt)
+| name           | len | first4 | http | status    | model      | latency_ms (http / provider) | attempts |
+|----------------|-----|--------|------|-----------|------------|------------------------------|----------|
+| GROQ_API_KEY_5 | 56  | gsk_   | 200  | succeeded | allam-2-7b | 448 / 398                    | 1        |
+| GROQ_API_KEY_6 | 56  | gsk_   | 200  | succeeded | allam-2-7b | 298 / 281                    | 1        |
+
+Both keys produced a real completion (content_len 3 == "OK" + trailing punctuation/whitespace class)
+through the platform's router + execution service + GroqAdapter. Neither returned
+organization_restricted / invalid_credential.
+
+## Routing decision (§0.2 / §8)
+- GROQ_API_KEY_5 and GROQ_API_KEY_6: LIVE-OK -> designated for §8.C (key selection) and §8.D
+  (latency, >=10 samples, median/p95). §8.C/D are therefore PROVABLE, not BLOCKED.
+- GROQ_API_KEY_1 and GROQ_API_KEY_4: pending §1.3 with the same harness; expected posture from R172
+  is organization_restricted. If confirmed they become the NEGATIVE CONTROL for §8.C (a key that
+  the platform must reject with a classified category and no internal_error).
+- GROQ_API_KEY_2 / GROQ_API_KEY_3: ABSENT (directive count of "5 names" was wrong; see credential_table.txt).
+- general_ai_core refusal: kept (test_refuses_general_ai_core_repo).
+
+## Capture-surface report (where could a secret value have landed?)
+| surface                          | state                                   | check                                      |
+|----------------------------------|-----------------------------------------|--------------------------------------------|
+| ~/.bash_history                  | does not exist                          | ls -> No such file                         |
+| ~/.python_history                | does not exist                          | ls -> No such file                         |
+| .pytest_cache                    | not created                             | -p no:cacheprovider; ls -> No such file    |
+| /tmp                             | no gsk/groq/pytest-named entries        | ls /tmp | grep -iE 'gsk|groq|pytest' -> 0  |
+| tests_live/r173/__pycache__      | removed before commit; untracked anyway | rm -rf                                     |
+| evidence/r173/**                 | 0 prefix hits                           | grep -rEc 'gsk_[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{36}' -> 0 |
+| git index                        | pre-commit scanner active               | core.hooksPath=engineering/githooks        |
+| evidence/r173/live_transport.txt | NOT gitignored (name avoids raw_*/*.log) | git check-ignore -> not ignored            |
+| shell exports                    | in-process only; die on sandbox reset   | by construction                            |
+
+## Recorder coverage note
+recorder.coverage listed 9 names: ANTHROPIC_API_KEY, GENSPARK_TOKEN, GITHUB_TOKEN, GROQ_API_KEY_5,
+GROQ_API_KEY_6, GSK_API_KEY, GSK_TOKEN, OPENAI_API_KEY, R173_PROBE_KEYS.
+R173_PROBE_KEYS is a harmless false-positive (its NAME contains "KEY" and its value
+"GROQ_API_KEY_5,GROQ_API_KEY_6" is >= 12 chars). Over-inclusion is the safe direction for a redaction
+oracle; it is left as-is and noted here rather than special-cased.
+
+## Findings carried to §11
+- F-1.2b-1: R172 live probe bypassed the router and used a non-manifest model; R173 probes through /v1/execute.
+- F-1.2b-2: R172 recorder only asserted against GROQ names (blind spot for GITHUB_TOKEN / platform-injected
+  GSK_* / *_TOKEN). R173 recorder asserts against all secret-shaped names present.
+- F-1.2b-3: keys 5 and 6 are live-capable; the directive's "if Groq refused, C/D keep negative controls"
+  branch is NOT taken — C/D get positive proofs plus negative controls from keys 1/4 (pending §1.3).

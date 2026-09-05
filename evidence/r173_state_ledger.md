@@ -4,3 +4,4 @@
 |---|---|---|
 | §1.1 | host facts (Linux sandbox — directive premise refuted) + tracked pre-commit scanner + canary + OPERATIONS §14 | 3c0f357 |
 | §1.2 | credential presence table (5 directive + 5 platform names, count 10), token scope, build_runtime_profile signature + derived hermetic unset list | e875bfc |
+| §1.2b | tests_live/r173 recorder (asserts against ALL present secret names) + probe keys 5,6 via execute path | 3b69cfd |
