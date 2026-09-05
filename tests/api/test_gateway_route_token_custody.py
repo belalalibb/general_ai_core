@@ -28,8 +28,10 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import http.server
 import io
 import json
+import threading
 from collections.abc import Coroutine
 from typing import Any
 from uuid import uuid4
@@ -302,3 +304,142 @@ class TestRuntimeProfileCustody:
     def test_tokens_without_gateway_refuse_at_composition(self) -> None:
         with pytest.raises(ValueError, match="GATEWAY_ROUTE_TOKENS is set but"):
             build_runtime_profile({"GATEWAY_ROUTE_TOKENS": f"{REF}={TOKEN_A}"})
+
+
+# --- R174 F-6: §5 case E replayed end-to-end through the real composition root ----
+
+
+class _GatewayStub:
+    """The smallest honest stand-in for the gateway process (stdlib, loopback).
+
+    Answers exactly what the live gateway answered in §5 case H for a
+    ``health_supported: false`` provider: ``/v1/health`` → ``UNKNOWN`` with
+    ``checked_at: null`` (no check performed) and ``/v1/models`` → one
+    declared model. Records the headers of every request so the test can
+    prove the route token crossed the wire and nothing else leaked.
+    """
+
+    def __init__(self) -> None:
+        self.requests: list[tuple[str, dict[str, str]]] = []
+        stub = self
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *_: object) -> None:  # silence
+                return
+
+            def do_GET(self) -> None:  # noqa: N802 - stdlib name
+                stub.requests.append((self.path, {k.lower(): v for k, v in self.headers.items()}))
+                if self.path == "/v1/health":
+                    body = {"status": "UNKNOWN", "checked_at": None}
+                elif self.path == "/v1/models":
+                    body = {"models": [{"name": "stub-model-1", "context_window": 4096}]}
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                payload = json.dumps(body).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+
+        self._server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+
+    @property
+    def base_url(self) -> str:
+        return f"http://127.0.0.1:{self._server.server_address[1]}"
+
+    def __enter__(self) -> _GatewayStub:
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self._server.shutdown()
+        self._server.server_close()
+
+
+class TestSection5CaseEReplay:
+    def test_with_f3_and_f6_the_real_admin_door_returns_201(self) -> None:
+        """§5 case E, hermetic: F-3 (route token custody) + F-6 (UNKNOWN with
+        no check = UNVERIFIED, not refusal) together open the door. The
+        provider registers DISABLED with step 5 and step 6 both honestly
+        listed as unverified — nothing faked as passed."""
+        with _GatewayStub() as gateway:
+            profile = build_runtime_profile(
+                {
+                    **_GATEWAY_ENV,
+                    "GATEWAY_BASE_URL": gateway.base_url,
+                    "GATEWAY_ROUTE_TOKENS": f"{REF}={TOKEN_A}",
+                }
+            )
+            response = run(_post_onboard(profile.app, headers=_admin_session(profile)))
+        assert response.status_code == 201, response.text
+        report = response.json()
+        assert report["provider_key"] == "gw_alpha"
+        assert "step-11-register-provider" in report["steps_passed"]
+        assert "step-13-provider-kept-disabled" in report["steps_passed"]
+        assert "step-6-health-check" not in report["steps_passed"]
+        assert any(
+            u.startswith("step-6-health-check (adapter has no check") for u in report["unverified"]
+        )
+        assert any(
+            u.startswith("step-5-credential-validation (adapter has no check")
+            for u in report["unverified"]
+        )
+        assert report["registered_model_keys"] == ["gw_alpha/stub-model-1"]
+        # Registered, disabled, not routable; adapter+ref landed in the executable maps.
+        provider = profile.providers.get("gw_alpha")
+        assert provider.is_routable is False
+        # The route token crossed the wire as a header (OPEN-3) on every gateway call…
+        paths = [p for p, _ in gateway.requests]
+        assert "/v1/health" in paths and "/v1/models" in paths
+        assert all(h.get("x-route-token") == TOKEN_A for _, h in gateway.requests)
+        assert all(
+            h.get("x-gateway-secret") == _GATEWAY_ENV["GATEWAY_SECRET"] for _, h in gateway.requests
+        )
+        # …and never into the platform's response.
+        assert TOKEN_A not in response.text
+        assert _GATEWAY_ENV["GATEWAY_SECRET"] not in response.text
+
+    def test_checked_unknown_from_gateway_still_refuses_at_step_6(self) -> None:
+        """Guard the boundary of F-6: a CHECKED UNKNOWN (checked_at set) is a
+        verdict, and the real door still refuses at step 6."""
+
+        class _CheckedUnknown(_GatewayStub):
+            def __init__(self) -> None:
+                super().__init__()
+                stub = self
+                orig = self._server.RequestHandlerClass
+
+                class Handler(orig):  # type: ignore[misc,valid-type]
+                    def do_GET(self) -> None:  # noqa: N802
+                        if self.path == "/v1/health":
+                            stub.requests.append((self.path, {}))
+                            payload = json.dumps(
+                                {"status": "UNKNOWN", "checked_at": "2026-09-05T00:00:00Z"}
+                            ).encode()
+                            self.send_response(200)
+                            self.send_header("Content-Type", "application/json")
+                            self.send_header("Content-Length", str(len(payload)))
+                            self.end_headers()
+                            self.wfile.write(payload)
+                            return
+                        super().do_GET()
+
+                self._server.RequestHandlerClass = Handler
+
+        with _CheckedUnknown() as gateway:
+            profile = build_runtime_profile(
+                {
+                    **_GATEWAY_ENV,
+                    "GATEWAY_BASE_URL": gateway.base_url,
+                    "GATEWAY_ROUTE_TOKENS": f"{REF}={TOKEN_A}",
+                }
+            )
+            response = run(_post_onboard(profile.app, headers=_admin_session(profile)))
+        assert response.status_code == 409, response.text
+        assert "step-6" in response.json()["error"]["message"]
+        assert "UNAVAILABLE" in response.json()["error"]["message"]
+        assert "gw_alpha" not in profile.providers.all_keys()
