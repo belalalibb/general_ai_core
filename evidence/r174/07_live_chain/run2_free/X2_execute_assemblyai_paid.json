@@ -1,0 +1,5 @@
+{
+  "skipped": true,
+  "reason": "GW_ASSEMBLYAI_API_KEY not present in the driver environment; the paid leg is NOT simulated",
+  "paid_call": false
+}

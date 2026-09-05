@@ -1,0 +1,82 @@
+[
+  {
+    "check": "G both route tokens resolve to DIFFERENT providers at the gateway",
+    "pass": true,
+    "detail": "aai='AssemblyAI LLM Gateway' fx='Fixture Echo (hermetic, routing-identity proof)'"
+  },
+  {
+    "check": "G both slugs declare the SAME model name (collision is real)",
+    "pass": true,
+    "detail": "qwen3.5-4b-32k-fast"
+  },
+  {
+    "check": "E1 assemblyai onboarded 201 through the real door (F-3 + F-6 live)",
+    "pass": true,
+    "detail": "http 201 keys=['assemblyai/qwen3.5-4b-32k-fast', 'assemblyai/gemini-2.5-flash-lite']"
+  },
+  {
+    "check": "E1 gateway saw /v1/health and /v1/models from the platform",
+    "pass": true,
+    "detail": "INFO:     127.0.0.1:57074 - \"GET /v1/health HTTP/1.1\" 200 OK\nINFO:     127.0.0.1:57074 - \"GET /v1/models HTTP/1.1\" 200 OK"
+  },
+  {
+    "check": "E2 fixture_echo onboarded 201 with the SAME model name \u2014 distinct model_key by provider",
+    "pass": true,
+    "detail": "http 201 keys=['fixture_echo/qwen3.5-4b-32k-fast']"
+  },
+  {
+    "check": "N both providers enabled via draft\u2192validate\u2192preview\u2192publish",
+    "pass": true,
+    "detail": "{\"assemblyai\": {\"draft\": 201, \"validate\": 200, \"preview\": 200, \"publish\": 200}, \"fixture_echo\": {\"draft\": 201, \"validate\": 200, \"preview\": 200, \"publish\": 200}}"
+  },
+  {
+    "check": "N registry holds BOTH model keys side by side",
+    "pass": true,
+    "detail": "{\"models\": [{\"id\": \"30d27fad-c921-4f13-81eb-a928341acdef\", \"model_key\": \"assemblyai/gemini-2.5-flash-lite\", \"display_name\": \"gemini-2.5-flash-lite\", \"tier\": \"medium\", \"modalities\": [\"text\"], \"capabilities\": [], \"status\": \"active\"}, {\"id\": \"c67a42e4-335e-4e46-94a8-8af01b0c6ec6\", \"model_key\": \"assembl"
+  },
+  {
+    "check": "X1 execute pinned to fixture_echo/<model> \u2192 200 with the FIXTURE MARKER (routed by provider)",
+    "pass": true,
+    "detail": "http 200 content='[FIXTURE_ECHO r174 \u2014 not a live model] model=qwen3.5-4b-32k-fast echo=R174 collision probe: which provider are you?'"
+  },
+  {
+    "check": "X1 the request reached the gateway (dispatch line during the call)",
+    "pass": true,
+    "detail": "INFO:     127.0.0.1:57090 - \"POST /v1/execute HTTP/1.1\" 200 OK"
+  },
+  {
+    "check": "X2 paid leg SKIPPED (no key) \u2014 recorded, not simulated",
+    "pass": true,
+    "detail": "GW_ASSEMBLYAI_API_KEY not present in the driver environment; the paid leg is NOT simulated"
+  },
+  {
+    "check": "X3 assemblyai/<model> pinned to provider fixture_echo is REFUSED (no cross-slug bleed)",
+    "pass": true,
+    "detail": "http 503 {\"error\": {\"code\": \"model_unavailable\", \"message\": \"No eligible model candidates for this request.\", \"retryable\": false, \"details\": {\"excluded\": [{\"model_key\": \"assemblyai/qwen3.5-4b-32k-fast\", \"provider_key\": \"assemblya"
+  },
+  {
+    "check": "X3 nothing reached the gateway for the refused request",
+    "pass": true,
+    "detail": "<no lines>"
+  },
+  {
+    "check": "secret shape absent from evidence (gw secret)",
+    "pass": true,
+    "detail": "scrubbed"
+  },
+  {
+    "check": "secret shape absent from evidence (admin pw)",
+    "pass": true,
+    "detail": "scrubbed"
+  },
+  {
+    "check": "secret shape absent from evidence (route token aai)",
+    "pass": true,
+    "detail": "scrubbed"
+  },
+  {
+    "check": "secret shape absent from evidence (route token fx)",
+    "pass": true,
+    "detail": "scrubbed"
+  }
+]

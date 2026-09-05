@@ -363,7 +363,7 @@ def main() -> int:
     ck(
         "E1 assemblyai onboarded 201 through the real door (F-3 + F-6 live)",
         e1["http_status"] == 201
-        and e1["response_body"].get("registered_model_keys") == [f"assemblyai/{MODEL_NAME}"],
+        and f"assemblyai/{MODEL_NAME}" in (e1["response_body"].get("registered_model_keys") or []),
         f"http {e1['http_status']} keys={e1['response_body'].get('registered_model_keys')}",
     )
     ck(
@@ -384,7 +384,7 @@ def main() -> int:
         "N both providers enabled via draft→validate→preview→publish",
         all(
             n[p].get("publish", {}).get("http_status") == 200
-            and n[p]["publish"]["response_body"].get("status") == "published"
+            and n[p]["publish"]["response_body"].get("state") == "published"
             for p in ("assemblyai", "fixture_echo")
         ),
         json.dumps({p: {k: v["http_status"] for k, v in n[p].items()} for p in n}),
@@ -406,7 +406,7 @@ def main() -> int:
     )
     ck(
         "X1 the request reached the gateway (dispatch line during the call)",
-        any("/v1/generate" in ln or "generate_text" in ln for ln in x1["gateway_log_lines_during_call"]),
+        any("POST /v1/execute" in ln for ln in x1["gateway_log_lines_during_call"]),
         "\n".join(x1["gateway_log_lines_during_call"])[:300] or "<none>",
     )
     x2 = results["X2_execute_assemblyai_paid"]
@@ -424,10 +424,7 @@ def main() -> int:
         )
         ck(
             "X2 the request reached the gateway (dispatch line during the call)",
-            any(
-                "/v1/generate" in ln or "generate_text" in ln
-                for ln in x2["gateway_log_lines_during_call"]
-            ),
+            any("POST /v1/execute" in ln for ln in x2["gateway_log_lines_during_call"]),
             "\n".join(x2["gateway_log_lines_during_call"])[:300] or "<none>",
         )
     x3 = results["X3_cross_pin_refused"]
@@ -439,7 +436,7 @@ def main() -> int:
     )
     ck(
         "X3 nothing reached the gateway for the refused request",
-        not any("/v1/generate" in ln for ln in x3["gateway_log_lines_during_call"]),
+        not any("POST /v1/execute" in ln for ln in x3["gateway_log_lines_during_call"]),
         "\n".join(x3["gateway_log_lines_during_call"])[:200] or "<no lines>",
     )
     for s in SECRET_SHAPES:

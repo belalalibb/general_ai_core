@@ -1,0 +1,52 @@
+{
+  "http_status": 201,
+  "request_body": {
+    "provider_key": "fixture_echo",
+    "display_name": "Fixture Echo",
+    "operations": [
+      "generate_text"
+    ],
+    "capabilities": {},
+    "static_models": [
+      "qwen3.5-4b-32k-fast"
+    ],
+    "credential_ref": "cred-ref-fixture_echo-r174",
+    "route_token_ref": "route-token-ref-fixture-r174",
+    "credential_mode": "platform"
+  },
+  "response_body": {
+    "provider_id": "835ee91a-a648-48d1-b544-190d11307585",
+    "provider_key": "fixture_echo",
+    "steps_passed": [
+      "step-3-real-manifest",
+      "step-4-declared-operations",
+      "step-11-register-provider",
+      "step-13-provider-kept-disabled",
+      "step-12-register-bindings"
+    ],
+    "unverified": [
+      "step-1-provider-type-identified (human)",
+      "step-2-capabilities-documented (human)",
+      "step-7-error-normalization-authored (verified only via manifest.errors)",
+      "step-8-rate-limit-behavior (verified only via manifest.rate_limits)",
+      "step-9-contract-tests (CI evidence, not runtime)",
+      "step-10-security-checks (CI evidence, not runtime)",
+      "step-5-credential-validation (adapter has no check surface: gateway v1 exposes no credential-validation surface)",
+      "step-6-health-check (adapter has no check surface: gateway performed no health check for this provider (health_supported=false: status UNKNOWN, checked_at null))"
+    ],
+    "discovered_models": [
+      "qwen3.5-4b-32k-fast"
+    ],
+    "registered_model_keys": [
+      "fixture_echo/qwen3.5-4b-32k-fast"
+    ],
+    "enable_draft_payload": {
+      "provider_key": "fixture_echo"
+    },
+    "scope": "canonical-gateway providers only; foreign/native-API providers require their own adapter/shim and cannot be onboarded here"
+  },
+  "gateway_log_lines_during_call": [
+    "INFO:     127.0.0.1:57090 - \"GET /v1/health HTTP/1.1\" 200 OK",
+    "INFO:     127.0.0.1:57090 - \"GET /v1/models HTTP/1.1\" 200 OK"
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "assemblyai": {
+    "draft": {
+      "http_status": 201,
+      "request_body": null,
+      "response_body": {
+        "id": "80202c8c-bb8f-4e80-9d26-4fb1f9773efd",
+        "tenant_id": "322c8d4a-96b2-4043-a45e-15ca8b33f7c9",
+        "actor_id": "6bb4449b-31e4-4c8b-ac9f-741087855e38",
+        "area": "providers",
+        "action": "enable_provider",
+        "payload": {
+          "provider_key": "assemblyai"
+        },
+        "state": "draft",
+        "created_at": "2026-09-05T18:17:44.822451Z"
+      }
+    },
+    "validate": {
+      "http_status": 200,
+      "request_body": null,
+      "response_body": {
+        "id": "80202c8c-bb8f-4e80-9d26-4fb1f9773efd",
+        "tenant_id": "322c8d4a-96b2-4043-a45e-15ca8b33f7c9",
+        "actor_id": "6bb4449b-31e4-4c8b-ac9f-741087855e38",
+        "area": "providers",
+        "action": "enable_provider",
+        "payload": {
+          "provider_key": "assemblyai"
+        },
+        "state": "validated",
+        "created_at": "2026-09-05T18:17:44.822451Z",
+        "validation_result": "passed"
+      }
+    },
+    "preview": {
+      "http_status": 200,
+      "request_body": null,
+      "response_body": {
+        "id": "80202c8c-bb8f-4e80-9d26-4fb1f9773efd",
+        "tenant_id": "322c8d4a-96b2-4043-a45e-15ca8b33f7c9",
+        "actor_id": "6bb4449b-31e4-4c8b-ac9f-741087855e38",
+        "area": "providers",
+        "action": "enable_provider",
+        "payload": {
+          "provider_key": "assemblyai"
+        },
+        "state": "validated",
+        "created_at": "2026-09-05T18:17:44.822451Z",
+        "validation_result": "passed",
+        "impact_preview": "provider 'assemblyai' becomes a routing candidate"
+      }
+    },
+    "publish": {
+      "http_status": 200,
+      "request_body": null,
+      "response_body": {
+        "id": "80202c8c-bb8f-4e80-9d26-4fb1f9773efd",
+        "tenant_id": "322c8d4a-96b2-4043-a45e-15ca8b33f7c9",
+        "actor_id": "6bb4449b-31e4-4c8b-ac9f-741087855e38",
+        "area": "providers",
+        "action": "enable_provider",
+        "payload": {
+          "provider_key": "assemblyai"
+        },
+        "state": "published",
+        "created_at": "2026-09-05T18:17:44.822451Z",
+        "validation_result": "passed",
+        "impact_preview": "provider 'assemblyai' becomes a routing candidate",
+        "published_version": "providers-v1"
+      }
+    }
+  },
+  "fixture_echo": {
+    "draft": {
+      "http_status": 201,
+      "request_body": null,
+      "response_body": {
+        "id": "83995a98-d48c-4250-ac14-50cdc4306627",
+        "tenant_id": "322c8d4a-96b2-4043-a45e-15ca8b33f7c9",
+        "actor_id": "6bb4449b-31e4-4c8b-ac9f-741087855e38",
+        "area": "providers",
+        "action": "enable_provider",
+        "payload": {
+          "provider_key": "fixture_echo"
+        },
+        "state": "draft",
+        "created_at": "2026-09-05T18:17:44.845534Z"
+      }
+    },
+    "validate": {
+      "http_status": 200,
+      "request_body": null,
+      "response_body": {
+        "id": "83995a98-d48c-4250-ac14-50cdc4306627",
+        "tenant_id": "322c8d4a-96b2-4043-a45e-15ca8b33f7c9",
+        "actor_id": "6bb4449b-31e4-4c8b-ac9f-741087855e38",
+        "area": "providers",
+        "action": "enable_provider",
+        "payload": {
+          "provider_key": "fixture_echo"
+        },
+        "state": "validated",
+        "created_at": "2026-09-05T18:17:44.845534Z",
+        "validation_result": "passed"
+      }
+    },
+    "preview": {
+      "http_status": 200,
+      "request_body": null,
+      "response_body": {
+        "id": "83995a98-d48c-4250-ac14-50cdc4306627",
+        "tenant_id": "322c8d4a-96b2-4043-a45e-15ca8b33f7c9",
+        "actor_id": "6bb4449b-31e4-4c8b-ac9f-741087855e38",
+        "area": "providers",
+        "action": "enable_provider",
+        "payload": {
+          "provider_key": "fixture_echo"
+        },
+        "state": "validated",
+        "created_at": "2026-09-05T18:17:44.845534Z",
+        "validation_result": "passed",
+        "impact_preview": "provider 'fixture_echo' becomes a routing candidate"
+      }
+    },
+    "publish": {
+      "http_status": 200,
+      "request_body": null,
+      "response_body": {
+        "id": "83995a98-d48c-4250-ac14-50cdc4306627",
+        "tenant_id": "322c8d4a-96b2-4043-a45e-15ca8b33f7c9",
+        "actor_id": "6bb4449b-31e4-4c8b-ac9f-741087855e38",
+        "area": "providers",
+        "action": "enable_provider",
+        "payload": {
+          "provider_key": "fixture_echo"
+        },
+        "state": "published",
+        "created_at": "2026-09-05T18:17:44.845534Z",
+        "validation_result": "passed",
+        "impact_preview": "provider 'fixture_echo' becomes a routing candidate",
+        "published_version": "providers-v2"
+      }
+    }
+  }
+}

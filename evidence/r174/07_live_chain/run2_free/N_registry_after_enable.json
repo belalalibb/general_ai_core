@@ -1,0 +1,223 @@
+{
+  "models": {
+    "http_status": 200,
+    "request_body": null,
+    "response_body": {
+      "models": [
+        {
+          "id": "30d27fad-c921-4f13-81eb-a928341acdef",
+          "model_key": "assemblyai/gemini-2.5-flash-lite",
+          "display_name": "gemini-2.5-flash-lite",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [],
+          "status": "active"
+        },
+        {
+          "id": "c67a42e4-335e-4e46-94a8-8af01b0c6ec6",
+          "model_key": "assemblyai/qwen3.5-4b-32k-fast",
+          "display_name": "qwen3.5-4b-32k-fast",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [],
+          "status": "active"
+        },
+        {
+          "id": "36e77004-72db-43ae-abe2-1a9cdae8b197",
+          "model_key": "claude-opus-4-5",
+          "display_name": "claude-opus-4-5",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "reasoning"
+          ],
+          "quality_score": 0.8,
+          "speed_score": 0.8,
+          "cost_score": 0.8,
+          "reliability_score": 0.8,
+          "status": "active"
+        },
+        {
+          "id": "53615604-bffe-47db-8870-3590d1de83ab",
+          "model_key": "claude-sonnet-4-5",
+          "display_name": "claude-sonnet-4-5",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "reasoning"
+          ],
+          "quality_score": 0.8,
+          "speed_score": 0.8,
+          "cost_score": 0.8,
+          "reliability_score": 0.8,
+          "status": "active"
+        },
+        {
+          "id": "becb5d66-00c5-4dd2-80dd-f00255b82ecc",
+          "model_key": "deep-seek-v4-flash",
+          "display_name": "deep-seek-v4-flash",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "reasoning"
+          ],
+          "quality_score": 0.8,
+          "speed_score": 0.8,
+          "cost_score": 0.8,
+          "reliability_score": 0.8,
+          "status": "active"
+        },
+        {
+          "id": "05e26d97-bbe3-44de-a741-993de20011c9",
+          "model_key": "fixture_echo/qwen3.5-4b-32k-fast",
+          "display_name": "qwen3.5-4b-32k-fast",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [],
+          "status": "active"
+        },
+        {
+          "id": "20c13260-998c-4a82-9ec4-5d8ab8f5dc6f",
+          "model_key": "gpt-5-mini",
+          "display_name": "gpt-5-mini",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "reasoning"
+          ],
+          "quality_score": 0.8,
+          "speed_score": 0.8,
+          "cost_score": 0.8,
+          "reliability_score": 0.8,
+          "status": "active"
+        },
+        {
+          "id": "db6402bd-38f4-4eba-90e2-f018cebf057d",
+          "model_key": "gpt-5-nano",
+          "display_name": "gpt-5-nano",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "reasoning"
+          ],
+          "quality_score": 0.8,
+          "speed_score": 0.8,
+          "cost_score": 0.8,
+          "reliability_score": 0.8,
+          "status": "active"
+        },
+        {
+          "id": "cc8904fe-58e2-4350-a5f9-cdf7dcf951b2",
+          "model_key": "gpt-5.2",
+          "display_name": "gpt-5.2",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "reasoning"
+          ],
+          "quality_score": 0.8,
+          "speed_score": 0.8,
+          "cost_score": 0.8,
+          "reliability_score": 0.8,
+          "status": "active"
+        },
+        {
+          "id": "928cbe08-180e-4847-a7f0-a95781379441",
+          "model_key": "grok-4.6",
+          "display_name": "grok-4.6",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "reasoning"
+          ],
+          "quality_score": 0.8,
+          "speed_score": 0.8,
+          "cost_score": 0.8,
+          "reliability_score": 0.8,
+          "status": "active"
+        },
+        {
+          "id": "8a201c48-b748-4c7d-8765-f3d3046f5270",
+          "model_key": "kimi-k3",
+          "display_name": "kimi-k3",
+          "tier": "medium",
+          "modalities": [
+            "text"
+          ],
+          "capabilities": [
+            "reasoning"
+          ],
+          "quality_score": 0.8,
+          "speed_score": 0.8,
+          "cost_score": 0.8,
+          "reliability_score": 0.8,
+          "status": "active"
+        }
+      ]
+    }
+  },
+  "providers": {
+    "http_status": 200,
+    "request_body": null,
+    "response_body": {
+      "providers": [
+        {
+          "id": "758b4bd2-8430-4f8d-a17d-eb7be9c3a6b2",
+          "provider_key": "assemblyai",
+          "display_name": "AssemblyAI LLM Gateway",
+          "status": "active",
+          "auth_types": [
+            "custom"
+          ],
+          "supports_account_pool": false,
+          "is_template": false,
+          "is_routable": true
+        },
+        {
+          "id": "835ee91a-a648-48d1-b544-190d11307585",
+          "provider_key": "fixture_echo",
+          "display_name": "Fixture Echo",
+          "status": "active",
+          "auth_types": [
+            "custom"
+          ],
+          "supports_account_pool": false,
+          "is_template": false,
+          "is_routable": true
+        },
+        {
+          "id": "e75dbf83-b52d-4963-8633-11b208928f19",
+          "provider_key": "genspark_llm",
+          "display_name": "Genspark LLM Proxy",
+          "status": "active",
+          "auth_types": [
+            "api_key"
+          ],
+          "supports_account_pool": false,
+          "is_template": false,
+          "is_routable": true
+        }
+      ]
+    }
+  }
+}

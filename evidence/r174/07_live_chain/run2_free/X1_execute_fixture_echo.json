@@ -1,0 +1,38 @@
+{
+  "http_status": 200,
+  "request_body": {
+    "ask": "R174 collision probe: which provider are you?",
+    "model_policy": {
+      "type": "explicit_model",
+      "model_id": "fixture_echo/qwen3.5-4b-32k-fast",
+      "allow_fallback": false
+    }
+  },
+  "response_body": {
+    "execution_id": "3eb027a4-bc83-40c1-982e-2df2ce381f71",
+    "status": "succeeded",
+    "result": {
+      "type": "message",
+      "content": "[FIXTURE_ECHO r174 — not a live model] model=qwen3.5-4b-32k-fast echo=R174 collision probe: which provider are you?",
+      "artifacts": [
+        {
+          "type": "context_provenance",
+          "blocks_total": 1,
+          "memory_blocks": [],
+          "gold_blocks": 0,
+          "excluded": 0
+        }
+      ]
+    },
+    "usage": {
+      "units_reserved": 1,
+      "units_settled": 1,
+      "details": {
+        "status": "settled"
+      }
+    }
+  },
+  "gateway_log_lines_during_call": [
+    "INFO:     127.0.0.1:57090 - \"POST /v1/execute HTTP/1.1\" 200 OK"
+  ]
+}
