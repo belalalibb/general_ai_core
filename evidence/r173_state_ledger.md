@@ -8,4 +8,4 @@
 | §1.3 | probe keys 1,4 via same /v1/execute harness (expected negative posture) | b08a06d |
 | §1.4 | hermetic baseline verifier (derived unset list incl. GSK_API_KEY) + skips + guards + routes snapshot | 137d402 |
 | §1.5 | §6 seven exercises re-run + §5 denylist blast-radius (three forms) — DONE: E3–E7 PASS ×2 compositions, E1/E2 INERT (no proposal-capable provider), F-15.2 runtime reader = 13-pattern set, F-15.3 422/404 nit; blast radius A=4 B=18 C=18 of 870 | 5e43f2f |
-| §1.6 | (candidate) GROQ_API_KEY=key5/6 composition — E1/E2 through the agent path with a real completion; F-15.2 owner decision | 430ca4d |
+| §1.6 | APPROVED — Groq ladder key5→8 in order, first HTTP 200 THROUGH THE AGENT PATH wins, winner composed as GROQ_API_KEY, E1/E2 real completion (or NOT EVALUATED + 4 typed errors); F-15.2 APPROVED one-line fix `runtime.py::_source_reader` → hardened set with before/after; F-15.3 accepted nit → CLOSURE.md; R148 live E1/E2 stays NOT EVALUATED. Standing authority granted from here (record decisions in rows). | 3e935cb |
