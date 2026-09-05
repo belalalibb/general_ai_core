@@ -92,7 +92,7 @@ def agent_turn(name: str, ask: str, tools: list[str] | None) -> None:
             tj = tr.json()
             for st in tj.get("stages") or tj.get("trace") or []:
                 if isinstance(st, dict):
-                    stages.append(str(st.get("name") or st.get("stage") or st.get("kind")))
+                    stages.append(str(st.get("node_key") or st.get("name")))
         facts.update(record_http=rec.status_code, record_status=(rec.json() or {}).get("status") if rec.status_code == 200 else None,
                      trace_http=tr.status_code, stage_count=len(stages), act_stages=sum(1 for s in stages if s.startswith("act")), stages=stages[:12])
     record(name, **facts)
@@ -150,7 +150,7 @@ probes = [".env", ".git/config", "secrets.pem", "id_rsa.key", "../../etc/passwd"
 results = {}
 for p in probes:
     try:
-        reader.read(p)  # type: ignore[union-attr]
+        reader.read_file(p)  # type: ignore[union-attr]
         results[p] = "admitted"
     except Exception as e:  # noqa: BLE001
         results[p] = type(e).__name__
