@@ -8,3 +8,4 @@ Hard condition: zero AssemblyAI-specific lines in core/. Deliberate check: two p
 |---|---|---|
 | §0 | sandbox reset #4 recovered (venv rebuilt, creds restored, HEAD==origin/main c94217c); this ledger created | c94217c |
 | §1 | READ: AssemblyAI LLM gateway reference (web) + repo external-provider reference (contract, runbook, example, template, existing real provider) → reconciliation note in evidence/r174/01_read/ | c94217c |
+| §2 | Direct upstream probe (key form raw vs Bearer, error body shape, cheapest model) — 3 calls max, key only in env var, evidence with key redacted → evidence/r174/02_upstream_probe/ | 5830ed0 |
