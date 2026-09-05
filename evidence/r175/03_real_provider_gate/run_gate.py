@@ -16,11 +16,12 @@ succeeded in this very run. Concretely:
 
 Key custody:
   * Ingress is environment-only: GROQ_API_KEY (platform adapter tests) and
-    GW_GROQ_API_KEY (gateway Layer-1 resolution) — same value. The driver
-    never reads a file inside the repository and never receives the key as
-    an argument.
-  * Every artifact is passed through `_scrub` (literal key + `gsk_` shape)
-    and asserted free of both before it is written.
+    GW_GROQ_API_KEY (gateway Layer-1 resolution). They MAY differ (one key
+    per surface); each distinct key is probed independently and promotion
+    requires every probe to be OK. The driver never reads a file inside the
+    repository and never receives a key as an argument.
+  * Every artifact is passed through `_scrub` (every literal key + `gsk_`
+    shape) and asserted free of all of them before it is written.
   * The key is NOT forwarded to the subprocess environment beyond the two
     named variables; PYTHONWARNINGS etc. are inherited normally.
 
@@ -53,25 +54,25 @@ EXPECTED_PASSED = 7
 KEY_SHAPE = re.compile(r"gsk_[A-Za-z0-9]{20,}")
 
 
-def _key() -> str | None:
-    vals = {os.environ.get(e) for e in KEY_ENVS}
-    vals.discard(None)
-    vals.discard("")
-    if len(vals) > 1:
-        sys.exit("GROQ_API_KEY and GW_GROQ_API_KEY differ — refusing (single-key run only)")
-    return next(iter(vals), None)
+def _keys() -> dict[str, str]:
+    """env-name -> key for every populated KEY_ENV (empty dict = no key)."""
+    found = {e: os.environ.get(e, "") for e in KEY_ENVS}
+    found = {e: v for e, v in found.items() if v}
+    if found and len(found) != len(KEY_ENVS):
+        sys.exit(f"partial key set: {sorted(found)} — both {KEY_ENVS} are required")
+    return found
 
 
-def _scrub(text: str, key: str | None) -> str:
-    if key:
-        text = text.replace(key, "<redacted>")
+def _scrub(text: str, keys: dict[str, str]) -> str:
+    for env, key in keys.items():
+        text = text.replace(key, f"<redacted:{env}>")
     text = KEY_SHAPE.sub("<redacted-gsk-shape>", text)
     return text
 
 
-def _write(path: Path, text: str, key: str | None) -> None:
-    text = _scrub(text, key)
-    assert key is None or key not in text, "literal key survived scrub"
+def _write(path: Path, text: str, keys: dict[str, str]) -> None:
+    text = _scrub(text, keys)
+    assert all(k not in text for k in keys.values()), "literal key survived scrub"
     assert not KEY_SHAPE.search(text), "gsk_ shape survived scrub"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text if text.endswith("\n") else text + "\n")
@@ -107,11 +108,9 @@ def upstream_probe(key: str | None) -> dict:
     }
 
 
-def run_pytest(key: str | None) -> tuple[int, str]:
+def run_pytest(keys: dict[str, str]) -> tuple[int, str]:
     env = {k: v for k, v in os.environ.items() if k not in KEY_ENVS}
-    if key:
-        for e in KEY_ENVS:
-            env[e] = key
+    env.update(keys)
     cmd = [
         sys.executable,
         "-m",
@@ -141,19 +140,25 @@ def parse_summary(report: str) -> dict:
 
 
 def main() -> int:
-    key = _key()
+    keys = _keys()
     started = datetime.now(UTC).isoformat(timespec="seconds")
     head = subprocess.run(
         ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True
     ).stdout.strip()
 
-    probe = upstream_probe(key)
-    rc, report = run_pytest(key)
+    # one probe per DISTINCT key, reported under every env name that carries it
+    probe_by_key = {k: upstream_probe(k) for k in set(keys.values())}
+    probe = (
+        {env: probe_by_key[k] for env, k in keys.items()}
+        if keys
+        else {"status": "SKIPPED", "reason": "no key in env"}
+    )
+    probes_ok = bool(keys) and all(p.get("status") == "OK" for p in probe_by_key.values())
+    rc, report = run_pytest(keys)
     summary = parse_summary(report)
 
     promoted = (
-        key is not None
-        and probe.get("status") == "OK"
+        probes_ok
         and rc == 0
         and summary["passed"] == EXPECTED_PASSED
         and summary["skipped"] == 0
@@ -164,8 +169,9 @@ def main() -> int:
     verdict = {
         "run_started_utc": started,
         "head": head,
-        "key_present_in_env": key is not None,
+        "key_present_in_env": bool(keys),
         "key_env_names": list(KEY_ENVS),
+        "distinct_keys": len(set(keys.values())),
         "upstream_probe": probe,
         "pytest_exit": rc,
         "pytest_summary": summary,
@@ -182,8 +188,8 @@ def main() -> int:
             4 if promoted else "unknown (see report)"
         ),
     }
-    _write(dest / "pytest_live_report.txt", report, key)
-    _write(dest / "verdict.json", json.dumps(verdict, indent=2), key)
+    _write(dest / "pytest_live_report.txt", report, keys)
+    _write(dest / "verdict.json", json.dumps(verdict, indent=2), keys)
     shown = ("PROMOTED", "pytest_summary", "upstream_probe", "disposition")
     print(json.dumps({k: verdict[k] for k in shown}, indent=2))
     return 0 if promoted else 1
