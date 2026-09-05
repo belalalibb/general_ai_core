@@ -1,0 +1,35 @@
+# R173 §1.2 — build_runtime_profile signature + derived hermetic unset list
+
+## signature (printed via inspect)
+build_runtime_profile(environ: 'Mapping[str, str] | None' = None) -> 'RuntimeProfile'
+RuntimeProfile fields: app, worker, relay, outbox, identity, usage, providers, models,
+bindings_registry, durable, bridge, bindings, demo_principal, provider_keys, agent, adapters
+
+`environ` is injectable: passing a dict yields an independent composition (own
+InMemorySecretManager, own platform_tenant uuid, own opaque credential ref). This is the
+mechanism for N key-selection compositions in one process (§8.C) and for probing a key
+through the platform's own execute path without exporting it as GROQ_API_KEY globally.
+
+## env names read by composition (grep `_ENV_` in apps/composition/*.py)
+runtime.py   : GROQ_API_KEY, GSK_API_KEY, ADMIN_EMAILS, AGENT_MAX_STEPS, AGENT_DEADLINE_MS, AGENT_REASONING_MAX_TOKENS
+gateway.py   : GATEWAY_BASE_URL, GATEWAY_SECRET, GATEWAY_SECRET_VERSION   (trio: all-or-none; half-configured raises)
+secrets.py   : VAULT_ADDR, VAULT_TOKEN, VAULT_MOUNT
+database.py  : DATABASE_URL, DATABASE_ECHO
+storage.py   : OBJECT_STORAGE_ENDPOINT/BUCKET/ACCESS_KEY/SECRET_KEY/REGION
+engineering.py: AGENT_WORKSPACE_ROOT (ws_run; never changed in R173)
+main.py      : HOST, PORT, LOG_LEVEL (server only, not composition)
+Only `apps/cli.py:59` and `apps/main.py` pass `os.environ`; no other module reads secrets from env.
+`GW_GROQ_API_KEY` (in the R172 hermetic unset list) does NOT exist anywhere in the code — phantom name.
+
+## derived hermetic unset list (real-provider / external-binding names)
+GROQ_API_KEY GSK_API_KEY GATEWAY_BASE_URL GATEWAY_SECRET GATEWAY_SECRET_VERSION
+VAULT_ADDR VAULT_TOKEN VAULT_MOUNT DATABASE_URL OBJECT_STORAGE_BUCKET OBJECT_STORAGE_ENDPOINT
+OBJECT_STORAGE_ACCESS_KEY OBJECT_STORAGE_SECRET_KEY AGENT_WORKSPACE_ROOT ADMIN_EMAILS DEV_DEMO_PRINCIPAL
++ harness names: GROQ_API_KEY_1 GROQ_API_KEY_2 GROQ_API_KEY_3 GROQ_API_KEY_4 GROQ_API_KEY_5 GROQ_API_KEY_6 GITHUB_TOKEN
++ platform-injected: GSK_TOKEN ANTHROPIC_API_KEY OPENAI_API_KEY GENSPARK_TOKEN
+
+## FINDING: GSK_API_KEY is platform-injected in this sandbox (len 308). If not unset, a
+"hermetic" verifier would silently bind a REAL genspark_llm provider via _bind_real_providers.
+The hermetic baseline (§1.4) must unset it and prove so in the raw tail.
+
+## secret-name count for every sweep = 10 (5 directive + 5 platform-injected); see credential_table.txt
