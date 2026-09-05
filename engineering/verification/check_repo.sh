@@ -140,7 +140,7 @@ fi
 # 6. Production change budget — changes_used <= ceiling per round; log consistent (R168 §2)
 BUDGET=$(mf '
 cb = m["change_budget"]; roots = tuple(cb["counts_production_code_under"]); bad = []; parts = []
-for r in ("round_a", "round_b", "round_r169", "round_r172"):
+for r in ("round_a", "round_b", "round_r169", "round_r172", "round_r173"):
     if r not in cb: continue
     rd = cb[r]; used = rd["changes_used"]; ceil = rd["ceiling"]; log = rd["log"]
     rroots = tuple(rd.get("counts_production_code_under", roots))  # R169 §3: per-round roots

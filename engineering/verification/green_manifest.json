@@ -36,7 +36,7 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 3126
+      "min_passed": 3127
     },
     "last_measured": {
       "passed": 3126,
@@ -363,6 +363,31 @@
         }
       ],
       "note": "R172 backend closure: one coherent edit to a file under core/ apps/ = one change; tests, contracts (INV-1), docs, evidence, .gitignore are budget-free. ui/** and apps/admin_agent/** are frozen (INV-7)."
+    },
+    "round_r173": {
+      "ceiling": 1,
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 1,
+      "items": [
+        "F-15.2"
+      ],
+      "log": [
+        {
+          "item": "F-15.2",
+          "file": "apps/composition/runtime.py",
+          "loc": "+6/-1",
+          "summary": "_source_reader composes core.tools.denied_paths.DENIED_PATH_PATTERNS (64) instead of the 13-pattern SourceReader default, so the platform agent's reader denies the gate manifest, verifier, password hasher and provider accounts exactly like the dev surface (R172 C1); pin test tests/composition/test_agent_source_seam.py::test_runtime_reader_composes_hardened_denylist; before/after under evidence/r173/18_f152_fix/"
+        }
+      ],
+      "frozen_trees_zero_diff": [
+        "ui/",
+        "apps/admin_agent/",
+        "core/tools/gate.py"
+      ]
     }
   },
   "baseline": {
