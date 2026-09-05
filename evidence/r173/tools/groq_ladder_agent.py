@@ -136,7 +136,7 @@ async def _run() -> str | None:
                 "latency_ms": ms,
                 "status": payload.get("status"),
                 "stop_reason": payload.get("stop_reason"),
-                "content_len": len(((payload.get("result") or {}).get("content") or "")),
+                "content_len": len((payload.get("result") or {}).get("content") or ""),
                 "error_code": err.get("code") or None,
                 "error_message": (err.get("message") or None),
                 "category": details.get("provider_error_category"),
