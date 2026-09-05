@@ -60,3 +60,4 @@ Files touched this round (`git diff --name-only 3c0f357..HEAD | wc -l`): 38.
 
 ## Final state
 HEAD == origin/main asserted by the closure push (git ls-remote line appended below).
+git ls-remote origin refs/heads/main -> 2d95833a1a8bc4e83e6161cdecbd25a34b00156e	refs/heads/main (local HEAD before this line: 2d95833a1a8bc4e83e6161cdecbd25a34b00156e)
