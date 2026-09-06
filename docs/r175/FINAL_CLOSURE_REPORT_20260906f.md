@@ -15,7 +15,11 @@ Push dry-run initially refused non-fast-forward. Recovery-only history preserved
 and squashed; remote developer evidence integrated without execution. Its driver
 is byte-identical and AST-valid. Ledger append conflict resolved by keeping both
 remote and newer main rows; no product code change. Existing PR #13 is OPEN.
-Publication outcome will be recorded after the push, not assumed here.
+Non-force push succeeded at `6d03a08ff93424b1da83933efa03277e23b3d0e9`; PR #13 updated.
+Live remote branch == local HEAD == PR head verified; final recovery/publication
+gate PASS (five expected recovery/existing-evidence paths, no product differences,
+report/JSON integrity, ledger preservation, driver AST, whitespace, Git fsck and
+clean worktree). Final containing receipt HEAD is resolved from Git. No merge to main.
 
 Target `54f6212e` remains unavailable locally (exit 128) and via authenticated
 GitHub commit lookup (exit 1, not found/unresolvable). PR has zero comments and
@@ -24,9 +28,7 @@ not restarted. No new product tests/runtime/provider calls or deployment. Target
 repository/runtime gates BLOCKED; agreed 31-section schema unavailable. This
 qualified report remains NOT FINAL CLOSURE. Evidence: recovery_n JSON and checkpoint.
 
-**NEXT EXACT ACTION:** push reconciled pending work non-force, update/verify PR #13;
-then restore a source containing `54f6212e`, reconcile its checkpoint/approval/contract
-before product continuation. Do not repeat exhausted lookups absent changed sources.
+**NEXT EXACT ACTION:** Restore a surviving bundle/ref containing 54f6212e; verify its Git objects and reconcile checkpoint, persisted authorization, evidence and exact contract before product continuation. Recovery records are now on origin/genspark_ai_developer via PR #13; fetch them instead of recreating them. Do not repeat exhausted lookups without a new source.
 
 ### Historical recovery m addendum
 

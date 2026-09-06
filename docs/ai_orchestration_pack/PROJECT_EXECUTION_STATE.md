@@ -2,7 +2,7 @@
 
 ## CURRENT RECOVERY CHECKPOINT — 2026-09-06 / recovery n
 
-**STATE_RECOVERY; publication unblocked, target recovery still blocked.**
+**STATE_RECOVERY_BLOCKED; pending work PUBLISHED; target source unavailable.**
 Supersedes m for current execution. PART 5 NOT satisfied.
 
 - **Authorized scope / approval:** current operator explicitly requests pushing
@@ -10,8 +10,8 @@ Supersedes m for current execution. PART 5 NOT satisfied.
   commits, synchronization/PR and closure reporting. Valid, no reconfirmation.
   Missing e authorization unavailable, not revoked; no new product work inferred.
   Runtime-provisioned credentials only; no conversation credential used/stored.
-- **Current verified HEAD before receipt:** `8cea62949abd7682fd1e57f9c6af040fa6f636a2`;
-  containing HEAD: `git rev-parse HEAD`. Branch `genspark_ai_developer`, no upstream;
+- **Current verified HEAD before receipt:** `6d03a08ff93424b1da83933efa03277e23b3d0e9`;
+  containing HEAD: `git rev-parse HEAD`. Branch `genspark_ai_developer`, tracking origin;
   one worktree `/home/user/webapp`, clean before checkpoint changes.
 - **Completed recovery:** fresh main `44e15ee3` restored from verified m final bundle
   https://www.genspark.ai/api/files/s/wiq6jcr6;
@@ -28,28 +28,25 @@ Supersedes m for current execution. PART 5 NOT satisfied.
 - **Failures:** push dry-run exit 1, non-fast-forward (NOT authentication).
   Missing target `54f6212e` local lookup exit 128; authenticated commit API exit 1
   (not found/unresolvable). PR #13 OPEN, zero comments, no recovery bundle pointer.
-- **Decision / in progress:** publish pending recovery safely by preserving old
-  local history in a ref/bundle, squashing recovery-only local commits, then
-  integrating the existing remote branch without deleting its AssemblyAI driver
-  or historical ledger row. Preserve newer main ledger too. Synchronization only;
-  the remote driver is NOT authorized for execution by this publication step.
-  Push non-force and update existing PR #13; never overwrite unrelated remote work.
-- **Synchronization result:** recovery history preserved at local ref
-  `recovery-n-preserved` and incoming bundle; recovery commits consolidated at
-  `1b3084d8`. Remote ledger append conflict resolved by preserving both histories
-  in order. AssemblyAI driver retained byte-for-byte; syntax PASS, not executed.
-  This is synchronization of pre-existing remote evidence, not new product work.
-  Merge receipt pending commit/publication; containing HEAD resolved with Git.
-- **Remaining:** publication verification; target e source/approval/exact agreed
-  31-section schema; final target repository/runtime gates and actual closure.
-  No product tests/runtime/provider calls/deployment performed; target gates BLOCKED.
-- **Evidence:** recovery_m and forthcoming recovery_n in
+- **Completed publication:** recovery-only local history consolidated with backup
+  ref `recovery-n-preserved` retained. Remote ledger conflict resolved preserving
+  both historical sets; remote driver byte-identical and AST-valid, not executed.
+  Non-force push succeeded at `6d03a08ff93424b1da83933efa03277e23b3d0e9`. PR #13 updated;
+  live remote branch == local HEAD == PR head verified. Existing work not deleted.
+- **Final publication/recovery gate:** PASS at `6d03a08ff93424b1da83933efa03277e23b3d0e9`:
+  five expected recovery/existing-evidence paths only; zero product differences;
+  committed blobs, report digest, sections 1–31, credential shapes, whitespace,
+  Git fsck, ledger preservation, driver AST and clean worktree all verified.
+- **In progress:** publishing this final receipt and exporting verified bundle;
+  final receipt HEAD/publication/export verified in final tool results and PR.
+- **Remaining / blockers:** target e source, detailed authorization and exact
+  agreed 31-section schema unavailable. Final target repository/runtime gates
+  BLOCKED, not passed. No new tests/runtime/provider calls/deployment performed.
+  R175 remains COMPLETE. Publication blocker resolved; no product action executable.
+- **Evidence:** recovery_n in
   `evidence/recovery_20260906f.json`; qualified
   `docs/r175/FINAL_CLOSURE_REPORT_20260906f.md`; session tool results and bundle.
-- **NEXT EXACT ACTION:** preserve the recovery tip, squash recovery-only commits,
-  reconcile remote developer changes without executing them, push non-force and
-  update PR #13. Then restore a surviving source containing 54f6212e and inspect
-  checkpoint/authorization/contract before product continuation.
+- **NEXT EXACT ACTION:** Restore a surviving bundle/ref containing 54f6212e; verify its Git objects and reconcile checkpoint, persisted authorization, evidence and exact contract before product continuation. Recovery records are now on origin/genspark_ai_developer via PR #13; fetch them instead of recreating them. Do not repeat exhausted lookups without a new source.
 - **Stop conditions:** required target source remains unavailable (4); credential
   boundary no longer blocks publication. No final closure claim.
 
