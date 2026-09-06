@@ -1,0 +1,11 @@
+.......                                                                  [100%]
+==================================== PASSES ====================================
+=========================== short test summary info ============================
+PASSED tests/providers/test_groq_live.py::TestGroqLive::test_credential_validates_active
+PASSED tests/providers/test_groq_live.py::TestGroqLive::test_provider_health_is_healthy
+PASSED tests/providers/test_groq_live.py::TestGroqLive::test_discovery_returns_real_models
+PASSED tests/providers/test_groq_live.py::TestGroqLive::test_end_to_end_generation
+PASSED tests/providers/test_groq_live.py::TestGroqLive::test_live_key_never_in_response_artifacts
+PASSED tests/providers/test_groq_live_e2e.py::TestLiveEndToEnd::test_execute_end_to_end_through_real_groq
+PASSED tests/providers/test_gateway_groq_live_e2e.py::TestLiveGatewayEndToEnd::test_both_entry_points_through_real_gateway_and_real_groq
+7 passed in 3.83s

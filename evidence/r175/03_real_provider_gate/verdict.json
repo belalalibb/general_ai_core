@@ -1,0 +1,46 @@
+{
+  "run_started_utc": "2026-09-06T00:17:40+00:00",
+  "head": "e08c5798",
+  "key_present_in_env": true,
+  "key_env_names": [
+    "GROQ_API_KEY",
+    "GW_GROQ_API_KEY"
+  ],
+  "distinct_keys": 1,
+  "upstream_probe": {
+    "GROQ_API_KEY": {
+      "status": "OK",
+      "http_status": 200,
+      "latency_ms": 170,
+      "model_count": 14,
+      "allam-2-7b_present": true,
+      "error": null
+    },
+    "GW_GROQ_API_KEY": {
+      "status": "OK",
+      "http_status": 200,
+      "latency_ms": 170,
+      "model_count": 14,
+      "allam-2-7b_present": true,
+      "error": null
+    }
+  },
+  "pytest_exit": 0,
+  "pytest_summary": {
+    "summary_line": "7 passed in 3.83s",
+    "passed": 7,
+    "failed": 0,
+    "skipped": 0,
+    "error": 0,
+    "xfailed": 0
+  },
+  "expected": {
+    "passed": 7,
+    "skipped": 0,
+    "failed": 0,
+    "error": 0
+  },
+  "PROMOTED": true,
+  "disposition": "EVIDENCE \u2014 real upstream call succeeded through every live module; the 7 tests count",
+  "paid_calls_upper_bound": 4
+}
