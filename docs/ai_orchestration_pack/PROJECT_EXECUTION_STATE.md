@@ -34,6 +34,12 @@ Supersedes m for current execution. PART 5 NOT satisfied.
   or historical ledger row. Preserve newer main ledger too. Synchronization only;
   the remote driver is NOT authorized for execution by this publication step.
   Push non-force and update existing PR #13; never overwrite unrelated remote work.
+- **Synchronization result:** recovery history preserved at local ref
+  `recovery-n-preserved` and incoming bundle; recovery commits consolidated at
+  `1b3084d8`. Remote ledger append conflict resolved by preserving both histories
+  in order. AssemblyAI driver retained byte-for-byte; syntax PASS, not executed.
+  This is synchronization of pre-existing remote evidence, not new product work.
+  Merge receipt pending commit/publication; containing HEAD resolved with Git.
 - **Remaining:** publication verification; target e source/approval/exact agreed
   31-section schema; final target repository/runtime gates and actual closure.
   No product tests/runtime/provider calls/deployment performed; target gates BLOCKED.

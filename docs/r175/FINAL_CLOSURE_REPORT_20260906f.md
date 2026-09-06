@@ -2,7 +2,33 @@
 
 Date: 2026-09-06. **RECOVERY BLOCKED — NOT FINAL CLOSURE.**
 
-### Latest recovery m addendum
+### Latest recovery n addendum
+
+Pending-work publication is now authorized explicitly. Actual session started at
+fresh main `44e15ee3`; verified m bundle restored `8cea6294`. Bundle digest/verify,
+report digest, committed blobs, sections 1–31, credential shapes, whitespace,
+fsck and clean worktree PASS. Runtime-provisioned GitHub authentication works
+(gh auth and PR lookup exit 0); no conversation credential used or stored.
+Previous authentication blockers below are historical, no longer current.
+
+Push dry-run initially refused non-fast-forward. Recovery-only history preserved
+and squashed; remote developer evidence integrated without execution. Its driver
+is byte-identical and AST-valid. Ledger append conflict resolved by keeping both
+remote and newer main rows; no product code change. Existing PR #13 is OPEN.
+Publication outcome will be recorded after the push, not assumed here.
+
+Target `54f6212e` remains unavailable locally (exit 128) and via authenticated
+GitHub commit lookup (exit 1, not found/unresolvable). PR has zero comments and
+no recovery-source pointer. Valid approval not revoked or reconfirmed. R175
+not restarted. No new product tests/runtime/provider calls or deployment. Target
+repository/runtime gates BLOCKED; agreed 31-section schema unavailable. This
+qualified report remains NOT FINAL CLOSURE. Evidence: recovery_n JSON and checkpoint.
+
+**NEXT EXACT ACTION:** push reconciled pending work non-force, update/verify PR #13;
+then restore a source containing `54f6212e`, reconcile its checkpoint/approval/contract
+before product continuation. Do not repeat exhausted lookups absent changed sources.
+
+### Historical recovery m addendum
 
 Fresh clean main `44e15ee3` restored to verified l final receipt `9793bcce872665cf7ab1756ab37d634c4334bf55`
 from https://www.genspark.ai/api/files/s/N6k0zFwc. Bundle SHA-256
