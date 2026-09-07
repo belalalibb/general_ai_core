@@ -1,0 +1,65 @@
+### X-00 examples/minimal-platform-app/client.py exit=0
+healthz: HTTP 200 (expected 200)
+      profile: {"user_id": "4f5416c8-bfbd-4057-8927-25d5687c2657", "tenant_id": "4e8ac5cf-1522-435d-8b6b-d022bf5147dd", "email": "ex0-1788822178@r176.test", "is_admin": false}
+[OK ] create workspace: HTTP 201 (expected 201)
+      {"workspace_id": "e2921682-a2a0-4e39-bdfd-a96ca3e3b6c8", "name": "My App Workspace"}
+[OK ] create linked project: HTTP 201 (expected 201)
+      {"project_id": "db7d9b2e-3144-499e-bbd0-01314a439515", "workspace_id": "e2921682-a2a0-4e39-bdfd-a96ca3e3b6c8", "name": "My App Project", "metadata": {"app": "minimal-platform-app"}}
+[OK ] execute (sync): HTTP 200 (expected 200)
+      {"execution_id": "30c619d8-a9c3-4195-8336-8126fda80bf0", "status": "succeeded"}
+[OK ] fetch execution: HTTP 200 (expected 200)
+      {"status": "succeeded"}
+[OK ] delete workspace WITH project (refused): HTTP 409 (expected 409)
+      {"error": {"code": "validation_error", "message": "Workspace still has projects.", "retryable": false, "details": {"workspace_id": "e2921682-a2a0-4e39-bdfd-a96ca3e3b6c8"}, "trace_id": null}}
+[OK ] delete project: HTTP 204 (expected 204)
+[OK ] delete workspace: HTTP 204 (expected 204)
+
+minimal-platform-app: ALL STEPS PASSED
+
+
+### X-11 discovery: models
+{"models":[{"id":"fe147b7e-d5f9-4101-8468-4a56980f80bf","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
+
+### X-12 discovery: tools
+{"strategy":"agent","max_steps":8,"tools":[]} [200]
+
+### X-13 discovery: skills
+{"skills":[]} [200]
+
+### X-14 workspace
+{"workspace_id":"281e4b51-2c6c-4083-a7e5-32f24ca99ce2","name":"tickets"} [201]
+
+### X-15 project
+{"project_id":"da4fdfc7-a60e-4090-9d67-d66bfb344a6c","workspace_id":"281e4b51-2c6c-4083-a7e5-32f24ca99ce2","name":"q3","metadata":{}} [201]
+
+### X-16 execute (sync, project-scoped)
+{"execution_id":"10b1ad3e-54f5-4fb6-bca3-59962b08c6b5","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"Summarise: customer cannot log in after password reset.\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"Summarise: customer cannot log in after password reset.\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type" [200]
+
+### X-17 usage after 1 call
+{"plan":"local-default","task_units":{"limit":1000000.0,"used":1.0,"remaining":999999.0},"modality_limits":{}} [200]
+
+### X-18 webhook subscription
+{"id":"16266f2f-7c6c-431e-804c-bd90fb37dd84","url":"https://ticketapp.example.com/hook","events":["execution.succeeded"]} [201]
+
+### X-21 async fan-out 5 -> succeeded 5/5
+
+### X-22 conversation_id continuity (shape)
+{"error":{"code":"validation_error","message":"conversation_id must be a UUID.","retryable":false,"details":{"field":"conversation_id"},"trace_id":null}} [422]
+
+### X-23 asks for capability it does not have => loud refusal
+{"error":{"code":"validation_error","message":"unknown agent tools: git_push","retryable":false,"details":{"field":"tools.allowed","unknown":["git_push"]},"trace_id":null}} [422]
+
+### X-24 consumer #1 reads consumer #2 execution => 404
+{"error":{"code":"validation_error","message":"Unknown execution id.","retryable":false,"details":{"execution_id":"00fd0b44-8be4-4b43-a51d-948821074f66"},"trace_id":null}} [404]
+
+### X-25 consumer tries admin => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+
+### X-26 /openapi.json (machine-readable contract)
+{"openapi":"3.1.0","info":{"title":"AI Orchestration Platform","version":"0.1.0"},"paths":{"/v1/auth/register":{"post":{"summary":"Register","operationId":"register_v1_auth_register_post","requestBody [200]
+
+### X-27 /docs
+{"detail":"Not Found"} [404]
+
+### X-28 /v1/version (versioning discovery?)
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
