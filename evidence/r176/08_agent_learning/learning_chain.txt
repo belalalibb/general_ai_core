@@ -1,0 +1,55 @@
+### gskshape-01 capture
+{"id":"57c94b2e-d4cf-454a-a2df-2ea93f39d73d","source_execution_id":"511de05a-f71b-4854-a10b-523f8c9add63","tenant_id":"d148e36e-0654-4ad3-8cc7-5d1567d8b2a2","eligibility":"pending","sanitization_state":"pending","verification_level":"RAW","dataset_id":null} [201]
+
+### gskshape-02 scan
+{"clean":true,"scanned_paths":3,"findings":[]} [200]
+
+### gskshape-03 sanitize passed=True (reviewer act; must be REFUSED if scan had findings)
+{"id":"57c94b2e-d4cf-454a-a2df-2ea93f39d73d","source_execution_id":"511de05a-f71b-4854-a10b-523f8c9add63","tenant_id":"d148e36e-0654-4ad3-8cc7-5d1567d8b2a2","eligibility":"pending","sanitization_state":"passed","verification_level":"RAW","dataset_id":null} [200]
+
+### gskshape-04 evaluate
+{"evaluated":true,"sample":{"id":"57c94b2e-d4cf-454a-a2df-2ea93f39d73d","source_execution_id":"511de05a-f71b-4854-a10b-523f8c9add63","tenant_id":"d148e36e-0654-4ad3-8cc7-5d1567d8b2a2","eligibility":"pending","sanitization_state":"passed","verification_level":"VALIDATED","dataset_id":null}} [200]
+
+### gskshape-05 admit
+{"admitted":false,"reason":"sample 57c94b2e-d4cf-454a-a2df-2ea93f39d73d not eligible for training; failed: ['sensitive_data_handled', 'not_poisoned']"} [200]
+
+### gskshape-06 promote
+{"promoted":false,"reason":"sample must pass training eligibility before promotion (22 §8)"} [200]
+
+### gskshape-07 GOLD keys
+{"keys":[]} [200]
+
+### gskshape-08 learning/ask retrieval
+{"found":false,"key":"r176-gskshape","answer":null,"evidence":null} [200]
+
+### gskshape-08b secret in retrieval: False
+
+### gskshape-09 execute gold_blocks: []; secret in result: False
+
+### skshape-01 capture
+{"id":"45041fd3-b34a-416e-a4ba-907831e09989","source_execution_id":"889543c4-33ae-4296-b883-313f52339597","tenant_id":"d148e36e-0654-4ad3-8cc7-5d1567d8b2a2","eligibility":"pending","sanitization_state":"pending","verification_level":"RAW","dataset_id":null} [201]
+
+### skshape-02 scan
+{"clean":false,"scanned_paths":3,"findings":[{"path":"text","label":"opaque_provider_token","fingerprint":"a7051852a50c"}]} [200]
+
+### skshape-03 sanitize passed=True (reviewer act; must be REFUSED if scan had findings)
+{"sanitized":false,"reason":"machine scan reports findings; passed=true refused","report":{"clean":false,"scanned_paths":3,"findings":[{"path":"text","label":"opaque_provider_token","fingerprint":"a7051852a50c"}]}} [200]
+
+### skshape-04 evaluate
+{"evaluated":true,"sample":{"id":"45041fd3-b34a-416e-a4ba-907831e09989","source_execution_id":"889543c4-33ae-4296-b883-313f52339597","tenant_id":"d148e36e-0654-4ad3-8cc7-5d1567d8b2a2","eligibility":"pending","sanitization_state":"failed","verification_level":"VALIDATED","dataset_id":null}} [200]
+
+### skshape-05 admit
+{"admitted":false,"reason":"sample 45041fd3-b34a-416e-a4ba-907831e09989 not eligible for training; failed: ['sensitive_data_handled', 'sanitized', 'not_poisoned']"} [200]
+
+### skshape-06 promote
+{"promoted":false,"reason":"sample must pass training eligibility before promotion (22 §8)"} [200]
+
+### skshape-07 GOLD keys
+{"keys":[]} [200]
+
+### skshape-08 learning/ask retrieval
+{"found":false,"key":"r176-skshape","answer":null,"evidence":null} [200]
+
+### skshape-08b secret in retrieval: False
+
+### skshape-09 execute gold_blocks: []; secret in result: False
