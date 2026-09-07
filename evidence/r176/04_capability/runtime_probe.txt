@@ -1,0 +1,49 @@
+### P-01 tokenless /v1/models => expect 401
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
+### P-02 register user
+{"user_id":"2e6f970e-da7f-4974-a4c8-8ad5d2c5efc1","tenant_id":"d1b67f14-688b-4713-be8d-fb89838d4e52","email":"user@r176.test","status":"pending","verification":"sent"} [201]
+### P-03 register admin
+{"user_id":"c40f65b0-eb97-4555-830d-1442238db56f","tenant_id":"18590421-2480-414b-b82c-ae291a871620","email":"admin@r176.test","status":"pending","verification":"sent"} [201]
+### P-04 verify user
+{"user_id":"2e6f970e-da7f-4974-a4c8-8ad5d2c5efc1","email":"user@r176.test","email_verified":true,"status":"active"} [200]
+### P-05 verify admin
+{"user_id":"c40f65b0-eb97-4555-830d-1442238db56f","email":"admin@r176.test","email_verified":true,"status":"active"} [200]
+### P-06 login shapes (tokens redacted)
+{"token":"<redacted>"}
+{"token":"<redacted>"}
+### P-07 user session
+{"user_id":"2e6f970e-da7f-4974-a4c8-8ad5d2c5efc1","tenant_id":"d1b67f14-688b-4713-be8d-fb89838d4e52","email":"user@r176.test","is_admin":false} [200]
+### P-08 admin session
+{"user_id":"c40f65b0-eb97-4555-830d-1442238db56f","tenant_id":"18590421-2480-414b-b82c-ae291a871620","email":"admin@r176.test","is_admin":true} [200]
+### P-09 user GET /v1/models
+{"models":[{"id":"19fcf7a9-85f4-40ad-9faf-13fd509ecafb","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
+### P-10 user -> /v1/admin/system => expect 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+### P-11 admin -> /v1/admin/system
+{"profile":"in-memory","identity_mode":"auth","provider_keys":["local_echo"],"admin_emails_configured":1,"scope":"process"} [200]
+### P-12 sync execute (single, local_echo)
+{"execution_id":"a66ee3fe-163f-4977-a0d1-2b034bde6b55","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"say hello\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"say hello\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]},"usage":{"units_reserved":1,"units_settled":1,"details":{"status":"settled"}}} [200]
+### P-13 async execute => expect 202
+{"execution_id":"270b41cb-f21c-43d7-a667-86f00049c6a8","status":"queued","poll_url":"/v1/executions/270b41cb-f21c-43d7-a667-86f00049c6a8"} [202]
+### P-14 GET execution 270b41cb-f21c-43d7-a667-86f00049c6a8
+{"execution_id":"270b41cb-f21c-43d7-a667-86f00049c6a8","status":"succeeded","progress":{"current_stage":"single","percent":100},"result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"say hello async\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"say hello async\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]}} [200]
+### P-15 execute strategy=debate => expect refusal not 500
+{"execution_id":"1860c1f6-c91f-4ec3-9604-66f06cc25f69","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"x\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"x\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]},"usage":{"units_reserved":1,"units_settled":1,"details":{"status":"settled"}}} [200]
+### P-16 execute strategy=map_reduce
+{"execution_id":"74c92aee-a0f8-4e35-8bb4-df0fceb97839","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"x\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"x\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]},"usage":{"units_reserved":1,"units_settled":1,"details":{"status":"settled"}}} [200]
+### P-17 execute strategy=pipeline
+{"execution_id":"a8c675b0-dd46-4927-a63a-ab5d018e2c15","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"x\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"x\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]},"usage":{"units_reserved":1,"units_settled":1,"details":{"status":"settled"}}} [200]
+### P-18 execute strategy=agent with tools (hermetic, 0 tools offered)
+{"error":{"code":"validation_error","message":"unknown agent tools: source_list","retryable":false,"details":{"field":"tools.allowed","unknown":["source_list"]},"trace_id":null}} [422]
+### P-19 unknown field => expect 422
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Extra inputs are not permitted"]},"trace_id":null}} [422]
+### P-20 GET /v1/skills
+{"skills":[]} [200]
+### P-21 GET /v1/agent-tools
+{"strategy":"agent","max_steps":8,"tools":[]} [200]
+### P-22 GET /v1/usage
+{"plan":"local-default","task_units":{"limit":1000000.0,"used":5.0,"remaining":999995.0},"modality_limits":{}} [200]
+### P-23 execute strategy=nonsense_value (is the field validated at all?)
+{"execution_id":"4d7cbbce-621f-4bd3-b0cb-58db0912bce1","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"x\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"x\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]},"usage":{"units_reserved":1,"units_settled":1,"details":{"status":"settled"}}} [200]
+### P-24 execute strategy=agent no tools (hermetic local_echo => OPERATIONS says honest 502)
+{"error":{"code":"execution_failed","message":"Execution failed: agent stopped (invalid_proposal).","retryable":false,"details":{"execution_id":"f51f89db-563e-4025-9e9a-e58574458070","agent":{"stop_reason":"invalid_proposal","node":"plan-2","error":{"reason":"invalid_proposal","detail":"action must be one of ['final', 'tool_call'], got None"}}}}} [502]
