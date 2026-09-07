@@ -196,3 +196,104 @@ CURRENT (gate FAIL on committed secret)
   → FREEZE
 ```
 No fix depends on another except FIX-02 (docs last). None touches architecture or ADR scope.
+
+## 24. Exact fix plan (PROPOSED — none approved)
+Common: one defect → one focused change → failing-first regression test captured on the parent commit → fix → same test passes →
+affected suite → `apps.cli check` → one commit. Rollback for every fix = `git revert <sha>`.
+
+| FIX | WHY (finding) | PROPOSED CHANGE | FILES | RISK | TEST PLAN | EXPECTED RESULT |
+|---|---|---|---|---|---|---|
+| FIX-01 | F-R176-01 | replace the three literal values at prompt lines 132–134 with `<REDACTED>`; operator ROTATES AssemblyAI key + old GitHub tokens (history keeps them) | `docs/ai_orchestration_pack/QEVION_FINAL_CLOSURE_EXAMINATION_PROMPT.md` | none (doc) | `apps.cli check` secret scan | gate RESULT PASS |
+| FIX-02 | F-R176-03/-04, O-01 | header pointer in `PROJECT_EXECUTION_STATE.md` → per-round ledgers; one line in §52 §2; OPERATIONS §4 note "trace is admin-only"; push-rule wording | 3 doc files | none | `apps.cli check` (docs untested) | fresh agent finds the ledger |
+| FIX-03 | F-R176-05 (+F-R176-06) | `ExecutionPolicy.strategy: ExecutionStrategy \| None`; `/v1/execute` refuses strategies the composed slice cannot run with 422 `validation_error` field `execution_policy.strategy` (accept `single`, `agent`; `pipeline` only if wired); drop or validate `webhook_url` | `core/contracts/execute.py`, `apps/api/app.py`, `tests/api/test_execute_api.py` (+ `ui/app/app.js` audit for literals) | UI may send a literal → check first | failing-first: `debate`/`nonsense` → 422 on fix, 200 on parent | silent single-shot gone |
+| FIX-04 | F-R176-07 | validator on `AdminDraftRequest.payload`: any key matching `(api_key\|apikey\|secret\|token\|password\|private_key\|credential)` at any depth → 422 field `payload` | `core/contracts/admin.py` (or draft route), `tests/admin/` | admin UI onboarding form must not send raw keys — audit `ui/admin` | failing-first L-14 shape | secret never stored/echoed |
+| FIX-05 | F-R176-08 | idempotency record stores `body_sha256`; mismatch → 409 `idempotency_conflict`; durable: migration 0019 adds column | `core/runtime/worker.py`, `apps/api/app.py`, `infrastructure/db/migrations/versions/0019_*.py`, tests | migration on durable profile | failing-first R-03; durable pytest | conflict is loud |
+| FIX-06 | F-R176-09 | add `gsk_`, `sk-ant-`, `AIza`, `xox[abpr]-`, generic `api[_-]?key\s*[:=]\s*\S{16,}` to `_VALUE_PATTERNS`; make memory screen import the same table | `core/learning/sanitizer.py`, `core/memory/memory.py`, `tests/learning/test_sanitizer_r161.py` | `SECRET_LABELS` grows (UI enumerates) | failing-first `gsk_` case | scan flags Groq-shaped secret |
+| FIX-07 | F-R176-11 | in `validate_webhook_url`: if hostname matches `^[0-9a-fA-Fx.]+$` and is not a valid dotted-quad → refuse "ambiguous numeric host"; also refuse when `socket.inet_aton`-style parsing yields a non-public address | `core/events/webhooks.py`, `tests/events/` | none (stricter) | failing-first for `127.1`, `0x7f000001`, `2130706433` | 422 for all three |
+
+Dependency blast radius (every fix): direct deps = listed files; indirect = OpenAPI document changes for FIX-03/04/05 (additive
+error cases only); runtime impact = stricter refusals only; admin impact = FIX-04 payload rule; external-app impact = FIX-03/05 error
+codes (documented); provider impact = none; learning impact = FIX-06 label set; test impact = +7 regression tests; rollback = revert.
+
+Effect explanation template is satisfied per row: current behaviour (§19 "actual"), new behaviour ("expected"), what it enables
+(closure of the finding), what it does not change (architecture, ADRs, routes), what could break (RISK column), how verified (TEST
+PLAN), rollback (revert).
+
+## 25. Probe coverage
+```
+P0 executed: 8/8
+P1 executed: 44/46
+P2 executed: 0/6
+NOT PROBED: multi-instance run · config publish mid-flight · retry w/ foreign ambient tenant (wire) · skills import E2E from allowed
+            source · not_poisoned heuristic · gateway streaming · browser UI live suite · webhook delivery
+BLOCKED:    user-owned provider credential path (no key) · Groq live this round (org-restricted key — external)
+```
+
+## 26. Astra self-assessment
+| area | rating | why |
+|---|---|---|
+| repository understanding | STRONG | entrypoints, composition root, gate, 79 routes executed |
+| architecture understanding | STRONG | invariants checked by execution; ADR vs plan reconciled |
+| security reasoning | STRONG | two-tenant concurrent + falsification; one real bypass found (F-R176-11) |
+| dependency reasoning | ADEQUATE | blast radius listed; UI literal audits deferred to Phase B |
+| agent reasoning | ADEQUATE | loop behaviour from tests + honest-stop runtime; no real-model run this round |
+| learning reasoning | STRONG | poisoning chain executed end-to-end with control sample |
+| provider reasoning | STRONG | live via gateway; failure taxonomy mapped; spend bounded (1 call) |
+| external-app reasoning | STRONG | two independent consumers + repo example executed |
+| evidence discipline | STRONG | every claim labelled; one false claim (RUN.md) corrected in a fixup commit |
+| scope discipline | STRONG | zero product files touched; no fix executed |
+| resume/recovery discipline | STRONG (learned) | 10 resets recovered; drafts lost 6× before adopting commit-before-run |
+| change safety | UNVERIFIED | no change was made to verify against |
+
+## 27. Approval matrix
+| FIX ID | Status | Approved? | Implemented? | Verified? | Git action | Result |
+|---|---|---|---|---|---|---|
+| FIX-01 | PROPOSED | NO | NO | NO | none | — |
+| FIX-02 | PROPOSED | NO | NO | NO | none | — |
+| FIX-03 | PROPOSED | NO | NO | NO | none | — |
+| FIX-04 | PROPOSED | NO | NO | NO | none | — |
+| FIX-05 | PROPOSED | NO | NO | NO | none | — |
+| FIX-06 | PROPOSED | NO | NO | NO | none | — |
+| FIX-07 | PROPOSED | NO | NO | NO | none | — |
+RECOMMENDED ≠ APPROVED ≠ IMPLEMENTED ≠ VERIFIED: everything above is RECOMMENDED only.
+
+## 28. Evidence matrix
+| Area | Static | Hermetic | Real Runtime | Real Provider | Final Status |
+|---|---|---|---|---|---|
+| Auth | ✓ | ✓ (identity/security suites) | ✓ A4/A5/A12 | n/a | VERIFIED |
+| Tenant Isolation | ✓ | ✓ | ✓ concurrent 2-tenant | n/a | VERIFIED |
+| Authorization | ✓ | ✓ 385 | ✓ direct/async/tool/skill/role | R165 (agent w/ real model, prior) | VERIFIED |
+| Credential Isolation | ✓ | ✓ | ✓ 0 leaks | ✓ A9 gateway (mode-only envelope) | VERIFIED (user-owned path BLOCKED) |
+| Agent | ✓ | ✓ 585 | ✓ honest stop, tool refusal | R165/R175 prior | VERIFIED (platform) / LIVE (prior) |
+| Skills / Tools | ✓ | ✓ | ✓ gates | — | VERIFIED at gates; E2E import NOT PROBED |
+| Learning | ✓ | ✓ | ✓ poisoning chain | — | VERIFIED; pattern gap F-R176-09 |
+| Admin Control | ✓ | ✓ | ✓ lifecycle + stale-config + audit | — | VERIFIED; F-R176-07 |
+| Provider Routing | ✓ | ✓ 752+194 | ✓ 503/refusals | ✓ AssemblyAI (R176), Groq (R175) | VERIFIED |
+| External Consumer | ✓ OpenAPI | — | ✓ 3 consumers | — | VERIFIED; F-R176-10 friction |
+| Recovery / Resume | ✓ | ✓ fabric/chaos | ✓ 10 resets, bundle restores | — | VERIFIED |
+No tier is implied where it was not run: durable-DB runtime this round = R175 evidence only; browser = prior round only.
+
+## 29. Closure decision — exactly one
+**BOUNDED FIX SET.** Seven small, independent, test-guarded fixes (FIX-01..07); no architectural correction required; FREEZE is
+reachable after they are approved, implemented, verified and the gate is green. QEVION is not NOT READY; it is also not FREEZE-able
+while its own gate is red (F-R176-01).
+
+## 30. Resume command
+```bash
+GITHUB_TOKEN=<PASTE_GITHUB_TOKEN_HERE> bash -c '
+git fetch origin main && git status -sb && tail -3 evidence/r176_state_ledger.md \
+&& python3 -m venv .venv && .venv/bin/pip install -q -e ".[dev]" \
+&& env -u GSK_API_KEY -u GROQ_API_KEY -u GW_GROQ_API_KEY -u DATABASE_URL .venv/bin/python -m apps.cli check'
+```
+```
+RESUME ARTIFACT:   evidence/r176_state_ledger.md  (last row = where to continue; checklist table = what is DONE/PENDING/WAIT)
+RESUME COMMAND:    above (token goes to the git credential store only — never into the tree)
+RESUME TEST:       executed 10× this round (resets #18–#27); bundle restore path executed 2×
+RESULT:            PASS
+EVIDENCE:          evidence/r176/00_session_start/, evidence/r176/01_resume_memory_audit/, ledger rows A0/A1/A3′/A5–A12
+```
+
+## 31. Execution instruction
+No FIX may be executed now. Phase B opens only on an explicit operator message of the form `APPROVED: FIX-01, FIX-07 …`.
+Recommended order if all are approved: FIX-01 → FIX-07 → FIX-04 → FIX-06 → FIX-03 → FIX-05 → FIX-02 → final gate → FREEZE.
+Independently of approval: **rotate the AssemblyAI key and every GitHub token that appeared in chat or in the committed prompt.**
