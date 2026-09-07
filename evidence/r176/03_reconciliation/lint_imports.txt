@@ -1,0 +1,33 @@
+
+╔══╗─────────▶╔╗ ╔╗      ╔╗◀───┐
+╚╣╠╝◀─────┐  ╔╝╚╗║║────▶╔╝╚╗   │
+ ║║   ╔══╦══╦╩╗╔╝║║  ╔╦═╩╗╔╝╔═╦══╗
+ ║║╔══╣╔╗║╔╗║╔╣║ ║║ ╔╬╣╔╗║║ ║│║╔═╝
+╔╣╠╣║║║╚╝║╚╝║║║╚╗║╚═╝║║║║║╚╗║═╣║
+╚══╩╩╩╣╔═╩══╩╝╚═╝╚═══╩╩╝╚╩═╩╩═╩╝
+  └──▶║║                    ▲ 
+      ╚╝────────────────────┘
+
+
+---------
+Contracts
+---------
+
+Analyzed 320 files, 1900 dependencies.
+--------------------------------------
+
+Core is pure: core must not import apps, providers, or infrastructure KEPT
+Contracts import no implementation (41 Phase 1 rule) KEPT
+Providers must not import apps or infrastructure KEPT
+Infrastructure must not import apps or providers KEPT
+Core must not import the persistence toolchain (ADR-0002) KEPT
+Core must not import the Redis client (ADR-0003) KEPT
+Core must not import the telemetry stack (ADR-0004) KEPT
+Core and providers must not import the web framework (ADR-0001) KEPT
+Core must not import the password-hashing library (ADR-0005) KEPT
+Core must not import the S3 client (ADR-0006) KEPT
+Core must not import the Vault client (ADR-0007) KEPT
+Core must not import the HTTP client (ADR-0008) KEPT
+Admin surfaces must not import the engineering adapters (ADR-0012) KEPT
+
+Contracts: 13 kept, 0 broken.
