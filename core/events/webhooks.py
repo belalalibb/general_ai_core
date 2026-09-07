@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import re
 from collections.abc import Awaitable, Callable, Iterable
 from datetime import datetime
 from urllib.parse import urlsplit
@@ -61,6 +62,10 @@ WebhookSender = Callable[[str, WebhookPayload], Awaitable[None]]
 
 _ALLOWED_SCHEMES = frozenset({"http", "https"})
 _REFUSED_HOSTNAMES = frozenset({"localhost"})
+# R176 FIX-07 (F-R176-11): a hostname made only of [0-9a-fA-Fx.] is a numeric
+# IPv4 spelling (shorthand / hex / octal / decimal) that ``ipaddress`` cannot
+# parse but ``inet_aton``-style resolvers accept — refused as ambiguous.
+_AMBIGUOUS_NUMERIC_HOST = re.compile(r"[0-9a-fA-Fx.]+")
 
 
 class WebhookUrlRefused(Exception):
@@ -103,6 +108,14 @@ def validate_webhook_url(url: str) -> str:
     try:
         address = ipaddress.ip_address(hostname)
     except ValueError:
+        # R176 FIX-07: ``127.1``, ``0x7f000001``, ``0177.0.0.1``,
+        # ``2130706433`` are not names — many HTTP clients resolve them to
+        # 127.0.0.1. A real DNS label always contains a letter outside
+        # a-f/x or a hyphen, so an all-numeric-looking host is refused.
+        if _AMBIGUOUS_NUMERIC_HOST.fullmatch(hostname):
+            raise WebhookUrlRefused(
+                url, f"ambiguous numeric host refused: {hostname}"
+            ) from None
         # Named host: statically admissible; connect-time resolution
         # checking is the sender's recorded duty (module header).
         return url
