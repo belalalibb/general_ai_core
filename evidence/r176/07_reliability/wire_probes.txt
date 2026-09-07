@@ -1,0 +1,28 @@
+### R-01 async execute with Idempotency-Key #1
+{"execution_id":"27d9d64f-0082-41c4-9bc6-f317aba75fce","status":"queued","poll_url":"/v1/executions/27d9d64f-0082-41c4-9bc6-f317aba75fce"} [202]
+
+### R-02 same key #2 (expect same execution_id or 200/202 replay, never a second job)
+{"execution_id":"27d9d64f-0082-41c4-9bc6-f317aba75fce","status":"queued","poll_url":"/v1/executions/27d9d64f-0082-41c4-9bc6-f317aba75fce"} [202]
+
+### R-02b same execution_id on replay: True
+
+### R-03 same key, different body => expect 409/422 conflict
+{"execution_id":"27d9d64f-0082-41c4-9bc6-f317aba75fce","status":"queued","poll_url":"/v1/executions/27d9d64f-0082-41c4-9bc6-f317aba75fce"} [202]
+
+### R-04 usage after idempotent pair (+1 conflict): expect 1 or 2 units, not 3
+{"plan":"local-default","task_units":{"limit":1000000.0,"used":1.0,"remaining":999999.0},"modality_limits":{}} [200]
+
+### R-05 sync execute with key #1
+{"execution_id":"4bd85bd2-63c9-4e95-ba2b-39c350be5bb5","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"idem-sync\", \"source\": \"request\", \"type\":  [200]
+
+### R-06 sync replay #2
+{"execution_id":"4bd85bd2-63c9-4e95-ba2b-39c350be5bb5","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"idem-sync\", \"source\": \"request\", \"type\":  [200]
+
+### R-06b sync replay same execution_id: True
+
+### R-07 burst 40 async submits: status histogram {202: 40}
+
+### R-08 executions listed for tenant after burst: 42; status histogram {'succeeded': 42}
+
+### R-09 healthz scope (process-local honesty)
+{"status":"alive","scope":"process","time":"2026-09-07T22:32:32.444901+00:00"} [200]
