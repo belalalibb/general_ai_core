@@ -1,0 +1,66 @@
+EA=b74fd708-6605-4430-aac1-d0788f4efcf9 EB=35237acf-11e5-4a1f-bf45-c6e4ee87d33d
+### S-01 A reads own execution => 200
+{"execution_id":"b74fd708-6605-4430-aac1-d0788f4efcf9","status":"succeeded","progress":{"current_stage":"single","percent":100},"result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"tenant A secret payload\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"tenant A secret payload\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]}} [200]
+### S-02 B reads A's execution => expect 404 (byte-identical to missing)
+{"error":{"code":"validation_error","message":"Unknown execution id.","retryable":false,"details":{"execution_id":"b74fd708-6605-4430-aac1-d0788f4efcf9"},"trace_id":null}} [404]
+### S-03 B reads random uuid => 404 shape to compare
+{"error":{"code":"validation_error","message":"Unknown execution id.","retryable":false,"details":{"execution_id":"00000000-0000-4000-8000-000000000000"},"trace_id":null}} [404]
+### S-04 B reads A's trace => 404
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+### S-05 tokenless reads A's execution => 401
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
+### S-06 forged token => 401
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
+### S-07 A lists executions (only own?)
+{"executions":[{"execution_id":"b74fd708-6605-4430-aac1-d0788f4efcf9","status":"succeeded","initiated_by":"e7343320-45e6-4ceb-bf3a-dfa7cbe8cf07","created_at":"2026-09-07T22:15:32.742487+00:00","progress":{"current_stage":"single","percent":100}}]} [200]
+WA={"workspace_id":"7daabfd7-96e6-4913-8e94-6943270a3078","name":"ws-A"}
+### S-08 B reads A's workspace => 404
+{"error":{"code":"validation_error","message":"Unknown workspace id.","retryable":false,"details":{"workspace_id":"7daabfd7-96e6-4913-8e94-6943270a3078"},"trace_id":null}} [404]
+### S-09 B creates project inside A's workspace => 404/403
+{"error":{"code":"validation_error","message":"Unknown workspace id.","retryable":false,"details":{"workspace_id":"7daabfd7-96e6-4913-8e94-6943270a3078"},"trace_id":null}} [404]
+### S-10 A usage vs B usage (separate counters)
+{"plan":"local-default","task_units":{"limit":1000000.0,"used":1.0,"remaining":999999.0},"modality_limits":{}}
+{"plan":"local-default","task_units":{"limit":1000000.0,"used":1.0,"remaining":999999.0},"modality_limits":{}}
+### S-11 B -> GET /v1/admin/audit => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+### S-12 B -> POST /v1/admin/capabilities (policy mutation) => 403 before validation
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+### S-13 B -> GET /v1/admin/usage => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+### S-14 tokenless -> /v1/admin/system => 401 (not 403: no oracle)
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
+### S-15 A (owner) reads own agent trace
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+### S-16 admin reads A's trace (admin cross-tenant read expected by design?)
+{"error":{"code":"validation_error","message":"Unknown execution id.","retryable":false,"details":{},"trace_id":null}} [404]
+### S-17 admin GET /v1/executions/{A} (does admin bypass tenant scoping on user routes?)
+{"error":{"code":"validation_error","message":"Unknown execution id.","retryable":false,"details":{"execution_id":"b74fd708-6605-4430-aac1-d0788f4efcf9"},"trace_id":null}} [404]
+### S-18 async interleave: 10 A + 10 B concurrent; each owner fetches own -> content must echo own ask; other tenant -> 404
+A: 10 queued, 10 correct-content, 0 readable-by-B | B: 10 queued, 10 correct-content, 0 readable-by-A
+### S-19 A usage after 11 executions (attribution)
+{"plan":"local-default","task_units":{"limit":1000000.0,"used":11.0,"remaining":999989.0},"modality_limits":{}}
+### S-20 B usage after 11 executions
+{"plan":"local-default","task_units":{"limit":1000000.0,"used":11.0,"remaining":999989.0},"modality_limits":{}}
+### S-21 A list executions count
+11 {'e7343320-45e6-4ceb-bf3a-dfa7cbe8cf07'}
+
+### S-22 A -> model_policy explicit_model ghost (credential/route enumeration via error?)
+{"error":{"code":"model_unavailable","message":"No eligible model candidates for this request.","retryable":false,"details":{"excluded":[{"model_key":"ghost","reason":"explicit model not registered or not active"}]},"trace_id":null}} [503]
+### S-23 A -> role escalation attempt via role selector
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Field required","Field required","Extra inputs are not permitted"]},"trace_id":null}} [422]
+### S-24 A -> skills=[nonexistent] (skill laundering)
+{"error":{"code":"validation_error","message":"skill is not selectable: evil-skill","retryable":false,"details":{"field":"skills"},"trace_id":null}} [422]
+### S-25 A -> project_id of nonexistent/other tenant
+{"error":{"code":"validation_error","message":"Unknown project id.","retryable":false,"details":{"project_id":"00000000-0000-4000-8000-000000000000"},"trace_id":null}} [404]
+### S-26 A -> webhook_url to internal (SSRF surface, check accepted?)
+{"execution_id":"c9734b75-3015-450e-9106-7941f25dbdd6","status":"queued","poll_url":"/v1/executions/c9734b75-3015-450e-9106-7941f25dbdd6"} [202]
+### S-27 admin GET /v1/admin/audit tail (actor/tenant/outcome fields present?)
+{"events":[{"id":"6c657fd7-e731-4417-8f82-2c36c2861fd8","tenant_id":"e40cdb42-4679-4453-9c2c-a970fe8a1165","event_type":"login","actor_id":"a6af709c-5ecb-4349-9a98-30b586f349db","occurred_at":"2026-09-07T22:15:11.178312Z","details":{}}],"total_recorded":1}
+### S-28 oversized ask (100_001 chars) => 422 not 500
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["String should have at most 100000 characters"]},"trace_id":null}} [422]
+### S-26b POST /v1/webhooks with loopback url (SSRF gate on the real subscription path)
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Input should be 'execution.queued', 'execution.started', 'execution.waiting_approval', 'execution.succeeded', 'execution.failed' or 'execution.cancelled'"]},"trace_id":null}} [422]
+### S-26c POST /v1/webhooks loopback url, valid event => expect SSRF refusal
+{"error":{"code":"validation_error","message":"webhook url refused: non-public address refused: 127.0.0.1","retryable":false,"details":{"field":"url"},"trace_id":null}} [422]
+### S-26d POST /v1/webhooks public https url => accepted
+{"id":"8c50a76c-b928-450f-bce9-2fb48145052f","url":"https://example.com/hook","events":["execution.succeeded"]} [201]
