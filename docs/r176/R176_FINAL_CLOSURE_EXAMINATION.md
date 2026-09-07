@@ -144,3 +144,55 @@ Wire: idempotent replay same id; burst 40 → 40×202 all succeeded. Finding: ke
 | admin UI | prior 32/32 browser proof; not re-run here | ADEQUATE |
 | retrieval Q&A | no index | UNVERIFIED |
 Technical readiness ≠ commercial success.
+
+## 19. Defect ledger (R176)
+| id | sev | area | reproduction | expected | actual | root cause | impact | evidence | status |
+|---|---|---|---|---|---|---|---|---|---|
+| F-R176-01 | **S1** (doc/secret) | governance | `apps.cli check` at 521d885 | secret scan clean; prompt §0.6 "placeholders only" | FAIL on prompt line 132; three literal secrets committed, AssemblyAI one **live (200)** | operator committed real values in the prompt | repo gate red; live key public in history | `evidence/r176/00_session_start/` | OPEN → FIX-01 + ROTATE |
+| F-R176-02 | S4 | ops | `pip install -e gateway-service[dev]` in fresh venv | installs | build fails | no `[build-system]` in gateway pyproject; suite runs from its dir | doc only | A0, A9 | OPEN (doc) |
+| F-R176-03 | S3 | docs/resume | read `PROJECT_EXECUTION_STATE.md` | current | frozen at R168, `CURRENT_TASK: STATE_RECOVERY` | ledgers became the checkpoint | fresh agent misled | A1 | OPEN → FIX-02 |
+| F-R176-04 | S4 | docs | README/§52 push rule | matches practice | says "never push" | wording | none | A1 | OPEN (doc) |
+| F-R176-05 | S3 | contract | `execution_policy.strategy=debate` (or any string) | 422 | 200 silent single-stage | field typed `BoundedStr`; API branches only on `agent` | contract lie for SDK consumers | A4 P-15/16/17/23 | OPEN → FIX-03 |
+| F-R176-06 | S4 | contract | `webhook_url` on execute | validated or absent | accepted, never consumed | dead field | none today | A5 O-02 | OPEN (fold into FIX-03) |
+| F-R176-07 | S3 | admin/credential hygiene | `register_provider` draft with `api_key` | refused | stored 201, echoed on read-back; rejected only structurally | no credential-key deny-list at draft | secret at rest in change table (durable) | A6 L-14 | OPEN → FIX-04 |
+| F-R176-08 | S3 | idempotency | same key, different body | 409 | 202 replays old execution | no body hash in idempotency record | lost work looks like success | A7 R-03 | OPEN → FIX-05 |
+| F-R176-09 | S3 | learning/memory screen | sample with `gsk_` value | scan finding | `clean:true` | `_VALUE_PATTERNS` lacks Groq/Anthropic/Google/… shapes | bounded by eligibility gate | A8 | OPEN → FIX-06 |
+| F-R176-10 | S3 (product gap) | external consumption | headless consumer | app credential | only user sessions | FINAL-plan item not built | friction, not defect | A10 | OPEN (POST-RELEASE or FIX-08 if prioritised) |
+| F-R176-11 | **S2-latent** / S3 now | SSRF admission | webhook url `http://127.1/x`, `0x7f000001`, `2130706433` | 422 | 201 | `ipaddress.ip_address` ValueError → treated as named host | becomes S1 when a sender is composed | A12 F5 | OPEN → FIX-07 |
+Also recorded: O-01 trace route admin-only vs OPERATIONS wording (S4 doc). Prior-round open items unchanged: F-R175-04 (bare `python3` in check_repo).
+
+## 20. Unverified / not probed
+Browser UI live suite (dependency absent); webhook delivery (relay not composed); multi-instance operation; admin publish during an
+in-flight job; async retry with foreign ambient tenant on the wire; skills import from an allowed source E2E; `not_poisoned`
+heuristic characterisation; gateway streaming; user-owned provider credentials; Groq live this round; execution strategies other than
+single/agent; evaluation graders beyond unit tests; engineering workspace tools at runtime.
+
+## 21. Limitations
+Sandbox: no Postgres this round (durable profile relies on R175 D-01, 3197/0); no browser; 10 sandbox resets; GitHub token invalid for
+three turns (bundles used). Provider: Groq key org-restricted; AssemblyAI live spend capped at 1 call. Prompt/repo mismatches:
+`tests_live/` does not exist; `RUN.md` is a pointer to OPERATIONS.
+
+## 22. Closure classification
+| class | items |
+|---|---|
+| MUST FIX FOR CLOSURE | F-R176-01 (gate is red; rotate + redact) |
+| SHOULD FIX BEFORE EXTERNAL CONSUMPTION | F-R176-05, -07, -08, -09, -11, -10(product) |
+| DOCUMENTATION / CONTRACT ONLY | F-R176-02, -03, -04, -06, O-01 |
+| POST-RELEASE | multi-instance (Redis queue/limits/usage ledger), device identity, multi-AZ, SDK, webhook delivery relay |
+| RESEARCH ONLY | learned routing, automatic training promotion |
+| NOT A REAL GAP | client runtime / device trust (FUTURE), payments, `/docs` UI disabled |
+
+## 23. Dependency-aware closure map
+```
+CURRENT (gate FAIL on committed secret)
+  → FIX-01 redact + operator rotates keys            → gate PASS                       [no code]
+  → FIX-07 SSRF numeric-host refusal                 → independent                     [core/events/webhooks.py]
+  → FIX-04 credential deny-list in admin drafts      → independent                     [core/contracts/admin.py or apps/api/admin.py]
+  → FIX-06 sanitizer/memory patterns                 → independent                     [core/learning/sanitizer.py (+ memory screen)]
+  → FIX-03 execution_policy.strategy enum + 422      → check ui/app for literal strings [core/contracts/execute.py, apps/api/app.py]
+  → FIX-05 idempotency body hash → 409               → durable needs migration 0019    [core/runtime/worker.py, apps/api/app.py, infra/db]
+  → FIX-02 state-file pointer + §52 note             → after all, one doc commit
+  → VERIFY: apps.cli check (hermetic) + durable pytest + gateway suite + rerun a4/a5/a6/a7/a8/a12 probes
+  → FREEZE
+```
+No fix depends on another except FIX-02 (docs last). None touches architecture or ADR scope.
