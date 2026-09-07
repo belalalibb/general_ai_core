@@ -1,0 +1,50 @@
+### F1a B reads A's id upper-cased
+{"error":{"code":"validation_error","message":"Unknown execution id.","retryable":false,"details":{"execution_id":"44C6D6B0-D994-4F69-ACAD-8415940246BC"},"trace_id":null}} [404]
+
+### F1b trailing slash
+{"error":{"code":"validation_error","message":"Unknown execution id.","retryable":false,"details":{"execution_id":"44c6d6b0-d994-4f69-acad-8415940246bc"},"trace_id":null}} [404]
+
+### F1c list with query filter
+{"executions":[]} [200]
+
+### F1c-b A's id appears in B's list: False
+
+### F2a lowercase bearer
+{"models":[{"id":"b8bf97e9-0393-40fd-afc3-c263488be552","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability": [200]
+
+### F2b Basic scheme
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
+
+### F2c empty Bearer
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
+
+### F2d token+junk
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
+
+### F3 non-admin POST admin route with malformed JSON => still 403?
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+
+### F4 usage before failed calls 1.0 -> after one 422 + one 503: 1.0 (must be equal)
+
+### F5 webhook http://127.1/x -> [201] {"id":"0828e2f0-1b91-404d-8b4d-f6d7a288de21","url":"http://127.1/x","events":["execution.s
+
+### F5 webhook http://0x7f000001/x -> [201] {"id":"2aba5f7c-7582-4fc5-ac88-57e92cfdf02a","url":"http://0x7f000001/x","events":["execut
+
+### F5 webhook http://localhost/x -> [422] {"error":{"code":"validation_error","message":"webhook url refused: localhost target refus
+
+### F5 webhook http://[::1]/x -> [422] {"error":{"code":"validation_error","message":"webhook url refused: non-public address ref
+
+### F5 webhook http://169.254.169.254/latest -> [422] {"error":{"code":"validation_error","message":"webhook url refused: non-public address ref
+
+### F5 webhook http://10.0.0.1/x -> [422] {"error":{"code":"validation_error","message":"webhook url refused: non-public address ref
+
+### F5 webhook http://2130706433/x -> [201] {"id":"6ff33798-aa6e-4b18-93e2-cfe68ae7d7f6","url":"http://2130706433/x","events":["execut
+
+### F5 webhook http://example.com/x -> [201] {"id":"91bedcf0-0521-4053-bd91-4cbe999c5c22","url":"http://example.com/x","events":["execu
+
+### F6 nested unknown field => 422?
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Extra inputs are not permitted"]},"trace_id":null}} [422]
+
+### F7 same Idempotency-Key across tenants: same_execution=False (must be False)
+
+### F7b B's result has B's ask: True; A's ask leaked: False
