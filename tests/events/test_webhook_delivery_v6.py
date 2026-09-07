@@ -113,6 +113,27 @@ class TestSsrfValidator:
         assert reason_fragment in exc.value.reason
         assert exc.value.url == url
 
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://127.1/x",  # dotted shorthand -> 127.0.0.1 in inet_aton
+            "http://0x7f000001/x",  # hex literal
+            "http://2130706433/x",  # decimal literal
+            "http://0177.0.0.1/x",  # octal first octet
+            "http://0x7f.1/x",  # mixed hex + shorthand
+            "http://017700000001/x",  # octal whole-address
+        ],
+    )
+    def test_refuses_non_canonical_ipv4_literals(self, url: str) -> None:
+        """R176 FIX-07 (F-R176-11): non-canonical IPv4 spellings are not
+        parsed by ``ipaddress`` and fell through to the "named host" branch,
+        yet many HTTP clients resolve them to loopback. They must be refused
+        with a named reason before any I/O."""
+        with pytest.raises(WebhookUrlRefused) as exc:
+            validate_webhook_url(url)
+        assert "numeric host" in exc.value.reason or "non-public" in exc.value.reason
+        assert exc.value.url == url
+
     def test_refusal_is_a_named_exception_carrying_the_url(self) -> None:
         err = WebhookUrlRefused("http://10.0.0.1/x", "non-public address refused")
         assert str(err) == "webhook url refused: non-public address refused"
