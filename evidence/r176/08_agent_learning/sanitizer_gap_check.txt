@@ -1,0 +1,7 @@
+groq_shape             clean=True labels=[]
+in_repo_gate_fixture   clean=True labels=[]
+openai_sk              clean=False labels=['opaque_provider_token']
+ghp                    clean=False labels=['github_pat']
+bearer                 clean=False labels=['bearer_token']
+key_indicator          clean=False labels=['credential_key']
+injection              clean=True labels=[]

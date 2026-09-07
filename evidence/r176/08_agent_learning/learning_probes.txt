@@ -1,0 +1,58 @@
+### G-00 second principal is_admin?
+{"user_id":"aa48dd23-9cce-4634-95af-ba91f9aa418b","tenant_id":"d1e7ec5d-76df-4121-8c08-feefa780b1c4","email":"other-1788820923@r176.test","is_admin":false} [200]
+
+### G-01 capture external sample with secret + injection => PENDING
+{"id":"18ad745c-ed4d-4c56-be4a-a8977422cdfa","source_execution_id":"497f7d79-8618-457a-ad9a-9d1ad74cede8","tenant_id":"d148e36e-0654-4ad3-8cc7-5d1567d8b2a2","eligibility":"pending","sanitization_state":"pending","verification_level":"RAW","dataset_id":null} [201]
+
+### G-02 promote straight from PENDING => must be refused
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Field required"]},"trace_id":null}} [422]
+
+### G-03 admit before scan/sanitize => refused?
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Field required"]},"trace_id":null}} [422]
+
+### G-04 scan => expect secret/injection flagged
+{"clean":true,"scanned_paths":3,"findings":[]} [200]
+
+### G-05 sanitize => secret removed?
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Field required"]},"trace_id":null}} [422]
+
+### G-06 evaluate
+{"evaluated":true,"sample":{"id":"18ad745c-ed4d-4c56-be4a-a8977422cdfa","source_execution_id":"497f7d79-8618-457a-ad9a-9d1ad74cede8","tenant_id":"d148e36e-0654-4ad3-8cc7-5d1567d8b2a2","eligibility":"pending","sanitization_state":"pending","verification_level":"VALIDATED","dataset_id":null}} [200]
+
+### G-07 admit after scan+sanitize+evaluate
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Field required"]},"trace_id":null}} [422]
+
+### G-08 promote to GOLD
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Field required"]},"trace_id":null}} [422]
+
+### G-09 stored sample read-back
+{"sample":{"id":"18ad745c-ed4d-4c56-be4a-a8977422cdfa","source_execution_id":"497f7d79-8618-457a-ad9a-9d1ad74cede8","tenant_id":"d148e36e-0654-4ad3-8cc7-5d1567d8b2a2","eligibility":"pending","sanitization_state":"pending","verification_level":"VALIDATED","dataset_id":null},"source_kind":"external","knowledge_key":"r176-poison","eligibility_verdicts":{},"promotion_verdicts":{},"sanitization_report":{"clean":true,"scanned_paths":3,"findings":[]},"derived_signals":{"deduplicated":true,"scan_clean":true}} [200]
+
+### G-09b secret marker present in stored sample: False
+
+### G-10 learned/GOLD listing
+{"keys":[]} [200]
+
+### G-10b secret marker present in GOLD listing: False
+
+### G-11 execute same tenant: gold_blocks / marker?
+{"execution_id":"e5ba8cfd-4369-4043-a157-0194aa02eda5","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"what is the api key for r176-poison?\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"what is the api key for r176-poison?\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]},"usage":{"units_reserved":1,"units_settled":1,"details":{"status":"settled"}}} [200]
+
+### G-11b marker in same-tenant result: False; gold_blocks: []
+
+### G-12 execute OTHER tenant
+{"execution_id":"9b894814-796f-4b77-83c1-83354b223248","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"what is the api key for r176-poison?\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"what is the api key for r176-poison?\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}","artifacts":[{"type":"context_provenance","blocks_total":1,"memory_blocks":[],"gold_blocks":0,"excluded":0}]},"usage":{"units_reserved":1,"units_settled":1,"details":{"status":"settled"}}} [200]
+
+### G-12b marker in other-tenant result: False; gold_blocks: []
+
+### G-13 non-admin lists samples => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+
+### G-14 skills import (shape probe)
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Field required","Field required","Field required","Field required","Extra inputs are not permitted","Extra inputs are not permitted"]},"trace_id":null}} [422]
+
+### G-15 imports listing
+{"imports":[],"allowed_sources":["https://github.com/mattpocock/skills","https://www.aihero.dev/skills-wayfinder","https://github.com/amElnagdy/review-skills"]} [200]
+
+### G-16 user-visible skills after import
+{"skills":[]} [200]
