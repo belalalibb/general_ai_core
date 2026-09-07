@@ -48,5 +48,5 @@ docs/            OPERATIONS.md · architecture · ai_orchestration_pack (final_d
 - `DEV_DEMO_PRINCIPAL=1` → demo principal (never admin). `ADMIN_EMAILS` → admin. `AGENT_WORKSPACE_ROOT` → engineering tools.
 
 ## Deltas vs prompt assumptions
-- Prompt §1.1 lists `RUN.md`, `tests_live/` — neither exists in the tree (`tests_live` absent; live tests live in `tests/providers/test_*_live.py` and gateway tests). Not a defect; recorded as prompt/repo mismatch.
+- Prompt §1.1 lists `RUN.md` (exists — pointer doc) and `tests_live/` — the latter does NOT exist ( live tests live in `tests/providers/test_*_live.py` and gateway tests). Not a defect; recorded as prompt/repo mismatch.
 - Prompt env names (`GROQ_API_KEY`, `GW_ASSEMBLYAI_API_KEY`, `GITHUB_TOKEN`) match repo names for the two provider keys; the repo has no `GITHUB_TOKEN` consumer (engineering workspace uses the checkout's own git remote auth).
