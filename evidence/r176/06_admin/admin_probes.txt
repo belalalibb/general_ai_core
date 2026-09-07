@@ -1,0 +1,76 @@
+### M-01 providers
+{"providers":[{"id":"823c21d9-c8a2-4b4d-a98a-8e4a0034164e","provider_key":"local_echo","display_name":"Local Echo (hermetic)","status":"active","auth_types":["api_key"],"supports_account_pool":false,"is_template":false,"is_routable":true}]} [200]
+
+### M-02 models
+{"models":[{"id":"eeb62733-573e-4a2e-bb84-86de18d6e84f","model_key":"local-echo-1","display_name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"quality_score":0.8,"speed_score":0.8,"cost_score":0.8,"reliability_score":0.8,"status":"active"}]} [200]
+
+### M-03 routing/weights
+{"version":"11s6-initial","quality":0.35,"reliability":0.2,"cost":0.15,"latency":0.15,"context_fit":0.1,"policy_preference":0.05} [200]
+
+### M-04 capabilities
+{"scope":"process","capabilities":[{"id":"admin.control_plane","state":"available","evidence":"admin seam -> /v1/admin/* (T-IMPL-032)"},{"id":"auth.sessions","state":"available","evidence":"auth seam -> /v1/auth/* (AA-1 IDN-1)"},{"id":"context.composition","state":"available","evidence":"composer seam; core/context (13 §5)"},{"id":"conversations.persistence","state":"available","evidence":"conversations seam; core/memory/ports.py"},{"id":"dev.publish_modes","state":"inert","evidence":"dev_bindings seam -> GET /v1/dev/bindings/{id}/publish-modes (R169 A6 / R172 C7)"},{"id":"execute.async","state":"available","evidence":"outbox seam -> 202 path (V2); core/runtime/outbox.py"},{"id":"execute.syn [200]
+
+### M-05 learning/dashboard
+{"placeholder":true,"verified_samples":0,"gold_samples":0,"dataset_coverage":{},"task_coverage":{},"specialist_models":[],"accuracy_trends":[],"promotion_history":[],"rollback_actions":[]} [200]
+
+### M-06 changes
+{"changes":[]} [200]
+
+### M-07 PUT routing/weights (no direct mutation route expected)
+{"detail":"Method Not Allowed"} [405]
+
+### L-00 user /v1/models BEFORE
+{"models":[{"id":"eeb62733-573e-4a2e-bb84-86de18d6e84f","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
+
+### L-01 draft disable_model
+{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"draft","created_at":"2026-09-07T22:30:23.092480Z"} [201]
+
+### L-02 validate
+{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"validated","created_at":"2026-09-07T22:30:23.092480Z","validation_result":"passed"} [200]
+
+### L-03 preview
+{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"validated","created_at":"2026-09-07T22:30:23.092480Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)"} [200]
+
+### L-04 non-admin publish => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+
+### L-05 publish
+{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"published","created_at":"2026-09-07T22:30:23.092480Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","published_version":"models-v1"} [200]
+
+### L-06 user /v1/models AFTER publish (stale-config: next request)
+{"models":[]} [200]
+
+### L-07 execute AFTER disable => model_unavailable, no silent echo
+{"error":{"code":"model_unavailable","message":"No eligible model candidates for this request.","retryable":false,"details":{"excluded":[]},"trace_id":null}} [503]
+
+### L-08 rollback
+{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"rolled_back","created_at":"2026-09-07T22:30:23.092480Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","published_version":"models-v1"} [200]
+
+### L-09 user /v1/models AFTER rollback
+{"models":[{"id":"eeb62733-573e-4a2e-bb84-86de18d6e84f","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
+
+### L-10 execute AFTER rollback
+{"execution_id":"abc31f3a-86e2-4459-b8cc-3b48030698cd","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"post-rollback\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"post-rollback\", \"note\": \"hermetic local adapter \\u2014 no real model [200]
+
+### L-11 audit tail (publish/rollback attributed?)
+{"events":[{"id":"71356d6b-a93b-46aa-9cbc-cbb6b20bdc0b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","event_type":"login","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","occurred_at":"2026-09-07T22:30:22.277214Z","details":{}},{"id":"5457ab0e-3efb-4264-b8ac-f9b642291118","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","event_type":"admin_config_published","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","occurred_at":"2026-09-07T22:30:23.100502Z","details":{"change_id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","action":"disable_model"},"admin_change":{"what":"disable_model: local-echo-1","previous_version":"models-v0","new_version":"models-v1","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","rollback_target":"models-v0"}},{"id":"4a5e4068-adbf-4da2-bcbe-b26a43e93431","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","event_type":"admin_config_rolled_back","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","occurred_at":"2026-09-07T22:30:23.112801Z","details":{"change_id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","action":"disable_model"},"admin_change":{"what":"rollback disable_model: loca [200]
+
+### L-12 publish after rollback => state-machine refusal
+{"error":{"code":"validation_error","message":"invalid lifecycle transition: expected validated, found rolled_back","retryable":false,"details":{"change_id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b"},"trace_id":null}} [409]
+
+### L-13 draft set_plan empty payload
+{"id":"e8f965ec-4a6c-4c37-860f-a48ad3a465c7","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"plans","action":"set_plan","payload":{},"state":"draft","created_at":"2026-09-07T22:30:23.134450Z"} [201]
+
+### L-14 draft register_provider WITH credential in payload
+{"id":"196fe507-35ad-454e-90ac-b3e5a57b6e66","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"providers","action":"register_provider","payload":{"provider_key":"evil","api_key":"<marker>"},"state":"draft","created_at":"2026-09-07T22:30:23.138885Z"} [201]
+
+### L-14b validate
+{"id":"196fe507-35ad-454e-90ac-b3e5a57b6e66","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"providers","action":"register_provider","payload":{"provider_key":"evil","api_key":"<marker>"},"state":"rejected","created_at":"2026-09-07T22:30:23.138885Z","validation_result":"rejected: payload requires a 'provider' object (03 §4 Provider contract)"} [200]
+
+### L-14c read back
+{"id":"196fe507-35ad-454e-90ac-b3e5a57b6e66","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"providers","action":"register_provider","payload":{"provider_key":"evil","api_key":"<marker>"},"state":"rejected","created_at":"2026-09-07T22:30:23.138885Z","validation_result":"rejected: payload requires a 'provider' object (03 §4 Provider contract)"} [200]
+
+### L-14e marker string echoed in change read-back: True; present in audit: False
+
+### L-15 non-admin GET changes => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
