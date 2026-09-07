@@ -1,0 +1,5 @@
+# A9 free liveness probes (status codes only; no completion calls; 0 paid units)
+assemblyai GET /v2/transcript?limit=1 (prompt key line 134): 200
+assemblyai llm-gateway GET /v1/models (prompt key): 200
+groq GET /openai/v1/models (prompt key line 133): 400
+groq body class: "code":"organization_restricted"

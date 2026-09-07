@@ -1,0 +1,38 @@
+{
+  "name": "D_describe",
+  "http_status": 200,
+  "request_headers": {
+    "X-Gateway-Secret": "<redacted>",
+    "X-Gateway-Secret-Version": "1",
+    "X-Route-Token": "rt_aai_r174",
+    "Content-Type": "application/json"
+  },
+  "request_body": null,
+  "response_headers": {
+    "content-type": "application/json"
+  },
+  "response_body": {
+    "display_name": "AssemblyAI LLM Gateway",
+    "credential_mode": "platform",
+    "capabilities": {
+      "chat": true,
+      "reasoning": true,
+      "code": true
+    },
+    "operations": [
+      "generate_text"
+    ],
+    "models": [
+      {
+        "name": "qwen3.5-4b-32k-fast",
+        "context_window": 32768
+      },
+      {
+        "name": "gemini-2.5-flash-lite",
+        "context_window": 1048576
+      }
+    ],
+    "definition_version": "1.0.0",
+    "health_supported": false
+  }
+}
