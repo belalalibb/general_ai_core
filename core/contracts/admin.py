@@ -200,6 +200,13 @@ class AdminAction(StrEnum):
     # secret-manager flow, referenced by opaque refs only).
     REGISTER_PROVIDER = "register_provider"
     REGISTER_MODEL = "register_model"
+    # R177-FIX-03 (A05 §6.1): a composition-level capability-proposal RECORD
+    # — the §7 decision sheet plus the operator's ruling — ridden through the
+    # SAME 21 §3 lifecycle. 21 §4 row 'Tools: enable, permissions, approval
+    # rules': the ruling IS an approval rule. Publishing mutates NO registry;
+    # it appends one APPROVAL_DECISION audit row (20 §9). Approved closed-set
+    # edit (assessment §12: "admin change-kind set +1").
+    CAPABILITY_PROPOSAL = "capability_proposal"
 
 
 # Each action belongs to EXACTLY ONE area (mismatch = invalid change).
@@ -217,7 +224,50 @@ ACTION_AREA: dict[AdminAction, AdminArea] = {
     AdminAction.DISABLE_TOOL: AdminArea.TOOLS,
     AdminAction.REGISTER_PROVIDER: AdminArea.PROVIDERS,
     AdminAction.REGISTER_MODEL: AdminArea.MODELS,
+    AdminAction.CAPABILITY_PROPOSAL: AdminArea.TOOLS,
 }
+
+
+# --- Capability-proposal decision sheet (R177-FIX-03; A05 §6.1) -----------------
+
+
+class CapabilityProposalDecision(StrEnum):
+    """The operator's ruling on a proposal — closed set, a ruling or nothing.
+
+    "Deferred" is deliberately NOT a value: a deferral is the ABSENCE of a
+    ruling and is recorded documentary-side (60_DECISION_LOG register), not
+    as a published decision row.
+    """
+
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class CapabilityProposalPayload(ContractModel):
+    """Payload of a ``capability_proposal`` change — the §7 decision sheet.
+
+    Field-for-field the sheet the assessment prompt prescribes (PROPOSED
+    CAPABILITY / WHAT / DOES / WHY / REQUIRED / DEPENDENCIES / IMPACT / RISK
+    / ALTERNATIVE / ENFORCEMENT POINT / DECISION) plus the operator's
+    ``reason`` — the one field A05 §6.1 found missing ("later sessions
+    cannot know what was approved/rejected" and WHY). ``extra="forbid"`` is
+    inherited: a sheet with unknown columns is not this sheet.
+    """
+
+    proposal_id: BoundedStr
+    capability: BoundedStr
+    target: BoundedStr
+    what: BoundedStr
+    does: BoundedStr
+    why: BoundedStr
+    required: bool
+    dependencies: BoundedStr
+    impact: BoundedStr
+    risk: BoundedStr
+    alternative: BoundedStr
+    enforcement_point: BoundedStr
+    decision: CapabilityProposalDecision
+    reason: BoundedStr
 
 
 # --- The change record -----------------------------------------------------------
