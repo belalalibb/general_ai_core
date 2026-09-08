@@ -245,17 +245,20 @@ BLOCKED:    user-owned provider credential path (no key) · Groq live this round
 | resume/recovery discipline | STRONG (learned) | 10 resets recovered; drafts lost 6× before adopting commit-before-run |
 | change safety | UNVERIFIED | no change was made to verify against |
 
-## 27. Approval matrix
+## 27. Approval matrix (updated after Phase B)
+Operator approval (ledger row B0): "ابدأ من FIX-02 حتي النهايه" ⇒ `APPROVED: FIX-02..07`; FIX-01 NOT approved.
+
 | FIX ID | Status | Approved? | Implemented? | Verified? | Git action | Result |
 |---|---|---|---|---|---|---|
-| FIX-01 | PROPOSED | NO | NO | NO | none | — |
-| FIX-02 | PROPOSED | NO | NO | NO | none | — |
-| FIX-03 | PROPOSED | NO | NO | NO | none | — |
-| FIX-04 | PROPOSED | NO | NO | NO | none | — |
-| FIX-05 | PROPOSED | NO | NO | NO | none | — |
-| FIX-06 | PROPOSED | NO | NO | NO | none | — |
-| FIX-07 | PROPOSED | NO | NO | NO | none | — |
-RECOMMENDED ≠ APPROVED ≠ IMPLEMENTED ≠ VERIFIED: everything above is RECOMMENDED only.
+| FIX-01 | PROPOSED | **NO** | NO | NO | none | prompt file untouched; gate secret scan still FAIL (operator action: redact + rotate) |
+| FIX-02 | DONE | YES | YES | docs (gate header fields intact) | 1 commit, 4 doc files | state file carries a resume pointer to `evidence/rNNN_state_ledger.md`; §52/README push wording; OPERATIONS trace admin-only |
+| FIX-03 | DONE | YES | YES | YES | test eb83e77 → fix 005aa45 (+2 style) | 7 non-runnable strategies → 422 (fail-first 7/7 on parent); tests/api+events 560 passed |
+| FIX-04 | DONE | YES | YES | YES | test 323dd79/66031cb → fix ff38b07/21460f2 | admin draft payload with credential-like key → 422 (fail-first 8/13); 578 passed; live L-14 rerun 422 |
+| FIX-05 | DONE | YES | YES | YES | tests → fix (app.py + core/agent/runtime.py) | same key + different body → **409** `idempotency_conflict` (fail-first 3/3); 646 passed; live R-03 rerun 409, usage 1.0; **no migration needed** (request_hash durable since 0008) |
+| FIX-06 | DONE | YES | YES | YES | test a84b422 → fix bd4bdd9/eb44553/804048b | Groq/Anthropic/Google/GitHub shapes flagged (fail-first 9/16); 120 passed; live A8 rerun `clean:false, label groq_api_key` |
+| FIX-07 | DONE | YES | YES | YES | test 9788ff7 → fix bf5d0f9 (+ leading-digit tightening found by tests/api during FIX-03) | `127.1`/`0x7f000001`/`2130706433`/octal → 422 (fail-first 6/6); named hosts incl. bare `https://x` still 201; live F5 rerun all 422 |
+
+Final gate after all approved fixes (`evidence/r176/B_fixes/final_gate/`): `apps.cli check` → pytest **3196 passed / 0 failed / 64 skipped** (floor 3127), ruff/format/mypy/import-linter green, **RESULT FAIL solely on the secret scan of the unapproved FIX-01 line** (prompt :132). Gateway suite 194 passed. Probe reruns a6/a7/a8/a10/a12 against a hermetic server: all previously-open runtime findings now refuse loudly; isolation/401/403/usage invariants unchanged.
 
 ## 28. Evidence matrix
 | Area | Static | Hermetic | Real Runtime | Real Provider | Final Status |
@@ -274,9 +277,10 @@ RECOMMENDED ≠ APPROVED ≠ IMPLEMENTED ≠ VERIFIED: everything above is RECOM
 No tier is implied where it was not run: durable-DB runtime this round = R175 evidence only; browser = prior round only.
 
 ## 29. Closure decision — exactly one
-**BOUNDED FIX SET.** Seven small, independent, test-guarded fixes (FIX-01..07); no architectural correction required; FREEZE is
-reachable after they are approved, implemented, verified and the gate is green. QEVION is not NOT READY; it is also not FREEZE-able
-while its own gate is red (F-R176-01).
+**BOUNDED FIX SET — EXECUTED (6 of 7).** FIX-02..07 are approved, implemented, verified and on `origin/main`; every product change
+is guarded by a failing-first regression test and the full gate is green except the secret scan. **FREEZE is blocked by exactly one
+operator-owned item**: FIX-01 (redact the three literal values at prompt lines 132–134 and rotate the AssemblyAI key + GitHub tokens
+that appear in history). Once FIX-01 lands, `apps.cli check` is expected to report RESULT PASS with no further code change.
 
 ## 30. Resume command
 ```bash
