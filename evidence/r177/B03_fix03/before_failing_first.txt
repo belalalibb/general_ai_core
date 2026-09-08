@@ -1,0 +1,6 @@
+# R177 B-03 FIX-03 — before (failing-first, RED)
+HEAD: 16c5edda
+E   ImportError: cannot import name 'CapabilityProposalDecision' from 'core.contracts.admin' (/home/user/webapp/core/contracts/admin.py)
+=========================== short test summary info ============================
+ERROR tests/admin/test_capability_proposal_r177.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
