@@ -94,6 +94,7 @@ def _find_credential_key(value: object, path: str = "payload") -> str | None:
                 return found
     return None
 
+
 # --- Closed admin-module set (21 §2, verbatim) ---------------------------------
 
 
