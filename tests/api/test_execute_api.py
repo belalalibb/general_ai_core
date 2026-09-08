@@ -568,3 +568,38 @@ def test_single_strategy_is_still_accepted() -> None:
     world = World()
     response = run(_post(world.app(), {"ask": "hi", "execution_policy": {"strategy": "single"}}))
     assert response.status_code == 200, response.text
+
+
+# --- R176 FIX-05 (F-R176-08): same key + DIFFERENT body is a conflict --------
+
+
+def test_same_idempotency_key_with_different_body_is_409_conflict() -> None:
+    """A7 R-03: key reuse with another payload must NOT silently replay the
+    old execution (lost work that looks like success). 409, unified error,
+    ``details.reason == "idempotency_conflict"``, the adapter ran once, and
+    the stored execution count is unchanged."""
+    world = World(script=[{"content": "first"}, {"content": "second"}])
+    app = world.app()
+    headers = {"Idempotency-Key": "key-reused"}
+    first = run(_post(app, {"ask": "hi"}, headers))
+    assert first.status_code == 200
+    conflict = run(_post(app, {"ask": "something else"}, headers))
+    assert conflict.status_code == 409
+    payload = conflict.json()
+    _assert_unified_error(payload, "validation_error")
+    assert payload["error"]["details"]["reason"] == "idempotency_conflict"
+    assert payload["error"]["details"]["field"] == "Idempotency-Key"
+    assert payload["error"]["details"]["execution_id"] == first.json()["execution_id"]
+    assert len(world.adapter.requests) == 1
+    assert len(world.store) == 1
+
+
+def test_same_idempotency_key_same_body_still_replays_after_fix05() -> None:
+    world = World(script=[{"content": "first"}, {"content": "second"}])
+    app = world.app()
+    headers = {"Idempotency-Key": "key-same"}
+    first = run(_post(app, {"ask": "hi", "tools": []}, headers))
+    second = run(_post(app, {"tools": [], "ask": "hi"}, headers))  # key order irrelevant
+    assert first.status_code == second.status_code == 200
+    assert first.json()["execution_id"] == second.json()["execution_id"]
+    assert len(world.adapter.requests) == 1

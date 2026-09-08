@@ -166,3 +166,19 @@ def test_admission_precedes_enqueue_unknown_role_stages_nothing() -> None:
     response = run(_post(app, body))
     assert response.status_code == 422
     assert run(outbox.pending(max_records=10)) == ()
+
+
+def test_async_same_key_different_body_is_409_and_stages_nothing_new() -> None:
+    """R176 FIX-05 (F-R176-08, A7 R-03): the async ack path must refuse a
+    key reuse with a different body — 409, and the outbox still holds ONE
+    staged message (no second enqueue, no silent replay of the old id)."""
+    world = World()
+    outbox = InMemoryOutbox()
+    app = _app_with_outbox(world, outbox)
+    headers = {"Idempotency-Key": "abc-456"}
+    first = run(_post(app, {"ask": "hi", "execution_policy": {"async": True}}, headers))
+    assert first.status_code == 202
+    conflict = run(_post(app, {"ask": "bye", "execution_policy": {"async": True}}, headers))
+    assert conflict.status_code == 409
+    assert conflict.json()["error"]["details"]["reason"] == "idempotency_conflict"
+    assert len(run(outbox.pending(max_records=10))) == 1
