@@ -24,13 +24,11 @@ recompute-on-demand updates the SAME item (evidence accumulates).
 from __future__ import annotations
 
 import ast
-import contextvars
-from collections.abc import Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from apps.api.run_context import bind_run_tenant, current_run_tenant
 from core.contracts.base import JsonObject, utc_now
 from core.contracts.memory import MemoryItem, MemoryScope, MemorySensitivity
 from core.memory.ports import MemoryStorePort
@@ -46,19 +44,9 @@ REPO_MAP_KEY = "repo.map"
 #: Agent-visible tool name.
 REPO_MAP_TOOL = "repo_map"
 
-_CURRENT_TENANT: contextvars.ContextVar[UUID | None] = contextvars.ContextVar(
-    "repo_map_tenant", default=None
-)
-
-
-@contextmanager
-def bind_repo_map_tenant(tenant_id: UUID) -> Iterator[None]:
-    """Bind the ADMITTED caller's tenant for the duration of one agent run."""
-    token = _CURRENT_TENANT.set(tenant_id)
-    try:
-        yield
-    finally:
-        _CURRENT_TENANT.reset(token)
+#: Re-exported for composition/tests: the run-scoped tenant binding lives in
+#: apps.api.run_context (the layer that admits the caller).
+bind_repo_map_tenant = bind_run_tenant
 
 
 @dataclass(frozen=True)
@@ -211,7 +199,7 @@ class RepoMapper:
     # --- agent tool handler (arguments are the model's; tenant is bound) --------
 
     async def handler(self, arguments: JsonObject) -> JsonObject:
-        tenant_id = _CURRENT_TENANT.get()
+        tenant_id = current_run_tenant()
         if tenant_id is None:
             raise ValueError("repo_map: no admitted tenant bound for this run")
         raw = arguments.get("project_id")

@@ -221,7 +221,9 @@ def test_runtime_profile_composes_repo_map_over_the_same_memory_and_reader() -> 
     source = Path("apps/composition/runtime.py").read_text(encoding="utf-8")
     assert "RepoMapper(" in source
     assert "repo_map=" in source
-    assert "bind_repo_map_tenant" in Path("apps/api/app.py").read_text(encoding="utf-8")
+    assert "bind_run_tenant(caller.tenant_id)" in Path("apps/api/app.py").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_memory_type_convention_sees_the_repo_map_writer() -> None:

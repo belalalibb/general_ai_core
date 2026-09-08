@@ -34,6 +34,7 @@ from core.agent import (
     AgentRuntime,
     AgentToolSpec,
 )
+from apps.composition.repo_map import REPO_MAP_TOOL, RepoMapper
 from core.audit.ports import AuditLogPort
 from core.contracts.base import JsonObject
 from core.contracts.tools import Tool
@@ -160,6 +161,24 @@ def source_tool_specs(reader: SourceReader, registry: ToolRegistry) -> list[Agen
     return specs
 
 
+def repo_map_tool_spec(mapper: RepoMapper, registry: ToolRegistry) -> AgentToolSpec:
+    """R177-FIX-06: the ``repo_map`` tool — source.read only, no write authority."""
+    tool = _source_tool(REPO_MAP_TOOL)
+    registry.register(tool)
+    return AgentToolSpec(
+        tool=tool,
+        handler=mapper.handler,
+        permission=SOURCE_READ_PERMISSION,
+        resource=SOURCE_RESOURCE,
+        entitlement=AGENT_TOOLS_ENTITLEMENT,
+        description=(
+            "Build (or refresh) the ranked repository map of ONE project from the jailed "
+            "source root and persist it as project-scoped memory; returns the map."
+        ),
+        arguments={"project_id": "string (UUID of a project in the caller's tenant)"},
+    )
+
+
 def build_agent(
     *,
     router: SimpleScoringRouter,
@@ -169,6 +188,7 @@ def build_agent(
     usage: UsageAccountingPort,
     repo_reader: SourceReader | None,
     engineering: EngineeringBundle | None = None,
+    repo_map: RepoMapper | None = None,
     max_steps: int = DEFAULT_AGENT_MAX_STEPS,
     deadline_ms: int | None = DEFAULT_AGENT_DEADLINE_MS,
     reasoning_max_tokens: int = DEFAULT_REASONING_MAX_TOKENS,
@@ -203,6 +223,10 @@ def build_agent(
     if repo_reader is not None:
         for spec in source_tool_specs(repo_reader, tool_registry):
             catalog[spec.name] = spec
+    if repo_map is not None:
+        # R177-FIX-06: optional persisted repository model (absent => absent tool).
+        spec = repo_map_tool_spec(repo_map, tool_registry)
+        catalog[spec.name] = spec
     if engineering is not None:
         for spec in engineering_tool_specs(engineering, tool_registry):
             catalog[spec.name] = spec

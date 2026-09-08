@@ -151,6 +151,7 @@ from apps.api.errors import (
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
 from apps.api.preferences import PreferenceLearner, create_preferences_router
+from apps.api.run_context import bind_run_tenant
 from apps.api.provenance import context_provenance as _context_provenance
 from apps.api.scenarios import ScenarioService
 from apps.api.self_review import SelfReviewService
@@ -1291,25 +1292,28 @@ def create_app(
         try:
             if agent_strategy:
                 assert agent is not None and agent_tools is not None
-                outcome = await agent.runtime.run(
-                    tenant_id=caller.tenant_id,
-                    user_id=caller.user_id,
-                    task=payload,
-                    tools=list(agent_tools.tools),
-                    model_policy=(
-                        effective_policy
-                        if multi_model_policy is None and not node_decisions
-                        else None
-                    ),
-                    max_steps=policy.max_steps if policy is not None else None,
-                    deadline_ms=policy.deadline_ms if policy is not None else None,
-                    conversation_id=conversation_id,
-                    idempotency_key=idempotency_key,
-                    # R176 FIX-05: the SAME canonical request hash as every
-                    # other path, so an idempotent replay can be compared.
-                    request_hash=_request_hash(body),
-                    label={"surface": "v1.execute"},
-                )
+                # R177-FIX-06: tenant-bearing tools (repo_map) read the ADMITTED
+                # caller's tenant from this binding, never from model arguments.
+                with bind_run_tenant(caller.tenant_id):
+                    outcome = await agent.runtime.run(
+                        tenant_id=caller.tenant_id,
+                        user_id=caller.user_id,
+                        task=payload,
+                        tools=list(agent_tools.tools),
+                        model_policy=(
+                            effective_policy
+                            if multi_model_policy is None and not node_decisions
+                            else None
+                        ),
+                        max_steps=policy.max_steps if policy is not None else None,
+                        deadline_ms=policy.deadline_ms if policy is not None else None,
+                        conversation_id=conversation_id,
+                        idempotency_key=idempotency_key,
+                        # R176 FIX-05: the SAME canonical request hash as every
+                        # other path, so an idempotent replay can be compared.
+                        request_hash=_request_hash(body),
+                        label={"surface": "v1.execute"},
+                    )
                 report = outcome.execution_report
             elif node_decisions:
                 # REAL node sequence: the EXISTING pipeline orchestration —
