@@ -67,10 +67,12 @@ from apps.api.auth import AuthSurface
 from apps.api.engineering_admin import EngineeringAdminSurface
 from apps.api.preferences import PreferenceLearner
 from apps.api.skills_import import SkillReviewSurface
+from apps.api.workspaces import InMemoryProjectStore
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
 from apps.composition.admin_console import attach_admin_console
 from apps.composition.agent import ComposedAgent, build_agent, grant_agent_tenant
+from apps.composition.repo_map import RepoMapper
 from apps.composition.bridge import AsyncBridge
 from apps.composition.database import (
     DatabaseBindings,
@@ -870,6 +872,19 @@ def build_runtime_profile(
     # opt-in by AGENT_WORKSPACE_ROOT; §14 guard refuses the platform's own
     # checkout at boot. Same registry, same firewall, same audit log.
     engineering = build_engineering(env, audit=audit)
+    # R177-FIX-06: the memory substrate is created HERE (before the agent) so
+    # the repo_map tool writes into the SAME store the composer reads below.
+    memory_store = InMemoryMemoryStore()
+    # R177-FIX-06: the project store the /v1/projects surface AND the repo_map
+    # tool resolve against (R168 D-08 one store) — in-memory profile builds
+    # the same default create_app would, and hands it over explicitly.
+    if project_store is None:
+        project_store = InMemoryProjectStore()
+    repo_map = (
+        RepoMapper(reader=repo_reader, memory=memory_store, projects=project_store)
+        if repo_reader is not None
+        else None
+    )
     composed_agent = build_agent(
         router=router,
         execution_service=execution_service,
@@ -877,6 +892,7 @@ def build_runtime_profile(
         audit=audit,
         usage=usage,
         repo_reader=repo_reader,
+        repo_map=repo_map,
         engineering=engineering.bundle if engineering is not None else None,
         max_steps=_agent_cap(
             env.get(_ENV_AGENT_MAX_STEPS),
@@ -967,7 +983,6 @@ def build_runtime_profile(
 
     # --- context composition (13 §5) — same registry/store instances ---------
     conversations = InMemoryConversationStore()
-    memory_store = InMemoryMemoryStore()
     roles = RoleRegistry()
     skills = SkillRegistry()
     composer = ContextComposer(memory_store, conversations, roles)
