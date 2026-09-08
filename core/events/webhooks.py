@@ -65,7 +65,7 @@ _REFUSED_HOSTNAMES = frozenset({"localhost"})
 # R176 FIX-07 (F-R176-11): a hostname made only of [0-9a-fA-Fx.] is a numeric
 # IPv4 spelling (shorthand / hex / octal / decimal) that ``ipaddress`` cannot
 # parse but ``inet_aton``-style resolvers accept — refused as ambiguous.
-_AMBIGUOUS_NUMERIC_HOST = re.compile(r"[0-9a-fA-Fx.]+")
+_AMBIGUOUS_NUMERIC_HOST = re.compile(r"[0-9][0-9a-fA-Fx.]*")
 
 
 class WebhookUrlRefused(Exception):
