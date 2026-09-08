@@ -1,0 +1,8 @@
+tests/api/test_capability_catalog_r177.py:133: AssertionError
+=========================== short test summary info ============================
+FAILED tests/api/test_capability_catalog_r177.py::test_closed_set_is_exactly_twenty_two_and_contains_the_five_new_ids
+FAILED tests/api/test_capability_catalog_r177.py::test_minimal_admin_composition_states
+FAILED tests/api/test_capability_catalog_r177.py::test_agent_seam_flips_agent_runtime_to_available
+FAILED tests/api/test_capability_catalog_r177.py::test_skills_import_flag_flips_the_row
+FAILED tests/api/test_capability_catalog_r177.py::test_without_admin_admin_bound_rows_are_inert
+FAILED tests/api/test_capability_catalog_r177.py::test_runtime_profile_declares_skills_import_where_it_attaches_the_review_surface
