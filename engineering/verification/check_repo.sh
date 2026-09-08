@@ -137,11 +137,10 @@ else
   pass "no .env tracked"
 fi
 
-# 6. Production change budget — changes_used <= ceiling per round; log consistent (R168 §2)
+# 6. Production change budget — changes_used <= ceiling per round; log consistent (R168 §2; R177-FIX-01: all round_* keys)
 BUDGET=$(mf '
 cb = m["change_budget"]; roots = tuple(cb["counts_production_code_under"]); bad = []; parts = []
-for r in ("round_a", "round_b", "round_r169", "round_r172", "round_r173"):
-    if r not in cb: continue
+for r in sorted(k for k in cb if k.startswith("round_")):  # R177-FIX-01: every declared round, never a hardcoded tuple
     rd = cb[r]; used = rd["changes_used"]; ceil = rd["ceiling"]; log = rd["log"]
     rroots = tuple(rd.get("counts_production_code_under", roots))  # R169 §3: per-round roots
     parts.append(r + "=" + str(used) + "/" + str(ceil))

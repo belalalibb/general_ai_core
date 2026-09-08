@@ -388,6 +388,33 @@
         "apps/admin_agent/",
         "core/tools/gate.py"
       ]
+    },
+    "round_r177": {
+      "ceiling": 12,
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
+        "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
+        "R177-FIX-04 PreferenceLearningGate seam + preference routes (apps/composition/*, apps/api/app.py)",
+        "R177-FIX-06 repo_map tool -> MemoryItem scope=project source=repo.map (apps/composition/repo_map.py, apps/composition/agent.py)",
+        "R177-FIX-07 after-cursor on list_files/ws_list (core/tools/source_reader.py, core/engineering/tools.py)",
+        "R177-FIX-08 promotion evidence_refs resolver + strict flag (apps/api/admin.py, apps/composition/*)",
+        "R177-FIX-09 AdapterModelJudge composition behind 22 §10 selector (apps/composition/runtime.py, apps/composition/evaluation_policy.py)",
+        "R177-FIX-10 CSV/JSON intake -> capture_external RAW (apps/composition/intake.py, apps/api/admin.py)",
+        "R177-FIX-11 durable evaluation store + migration 0019 (infrastructure/db/*, apps/composition/database.py, apps/api/app.py)"
+      ],
+      "log": [],
+      "frozen_trees_zero_diff": [
+        "ui/",
+        "apps/admin_agent/",
+        "core/tools/gate.py"
+      ],
+      "note": "R177 Phase B (operator approval 2026-09-08: FIX-01..11 + DEC-05). FIX-01 (this entry + check_repo.sh loop) and FIX-05 (docs+tests only) are non-production and not counted. One log entry per production file touched; changes_used == len(log)."
     }
   },
   "baseline": {
