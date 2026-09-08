@@ -1,0 +1,21 @@
+# R177 B-11 FIX-11 — after (GREEN)
+HEAD before evidence: d501b1a6
+
+## tests/composition/test_durable_evaluations_r177.py
+======================== 10 passed, 1 skipped in 1.21s =========================
+
+## suites tests/{composition,api,infrastructure,admin_agent,engineering}
+989 passed, 50 skipped in 42.73s
+
+## static
+ruff check: All checks passed!
+ruff format --check (touched files): 4 files already formatted
+Success: no issues found in 200 source files
+Contracts: 13 kept, 0 broken.
+
+## budget
+round_r177 changes_used=5/12 (FIX-11 logged: 3 production files, +229/-3)
+frozen trees ui/ apps/admin_agent/ core/tools/gate.py: zero diff
+
+## decision recorded
+planned migration 0019 SUPERSEDED: evaluations table exists since 0010; last migration remains 0018_ (test-pinned).
