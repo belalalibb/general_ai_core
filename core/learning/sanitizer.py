@@ -65,8 +65,23 @@ _VALUE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("pem_private_key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
     ("aws_access_key_id", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("jwt_like_token", re.compile(r"\beyJ[A-Za-z0-9\-_]{10,}\.[A-Za-z0-9\-_]{10,}\.")),
-    ("opaque_provider_token", re.compile(r"\b(?:sk|pk|ghp|gho|xoxb)-[A-Za-z0-9\-_]{16,}\b")),
-    ("github_pat", re.compile(r"\bghp_[0-9A-Za-z]{36}\b")),
+    # R176 FIX-06 (F-R176-09): ordered so the most specific label wins first;
+    # every provider the platform routes to (or has routed to) is named.
+    ("anthropic_api_key", re.compile(r"\bsk-ant-[A-Za-z0-9\-_]{20,}")),
+    ("groq_api_key", re.compile(r"\bgsk_[A-Za-z0-9]{20,}\b")),
+    ("google_api_key", re.compile(r"\bAIza[0-9A-Za-z\-_]{30,}")),
+    ("github_pat", re.compile(r"\bghp_[0-9A-Za-z]{36}\b|\bgithub_pat_[0-9A-Za-z_]{40,}\b")),
+    (
+        "opaque_provider_token",
+        re.compile(r"\b(?:sk|pk|ghp|gho|ghs|ghr|xoxb|xoxp|xoxa|xoxr|xapp)-[A-Za-z0-9\-_]{16,}\b"),
+    ),
+    (
+        "generic_api_key_assignment",
+        re.compile(
+            r"\b(?:api[_-]?key|apikey|secret[_-]?key)\b\s*[:=]\s*['\"]?[A-Za-z0-9\-_./+]{16,}",
+            re.IGNORECASE,
+        ),
+    ),
 )
 
 #: Closed set of finding labels (data — enumerable by consumers).
