@@ -113,9 +113,7 @@ def validate_webhook_url(url: str) -> str:
         # 127.0.0.1. A real DNS label always contains a letter outside
         # a-f/x or a hyphen, so an all-numeric-looking host is refused.
         if _AMBIGUOUS_NUMERIC_HOST.fullmatch(hostname):
-            raise WebhookUrlRefused(
-                url, f"ambiguous numeric host refused: {hostname}"
-            ) from None
+            raise WebhookUrlRefused(url, f"ambiguous numeric host refused: {hostname}") from None
         # Named host: statically admissible; connect-time resolution
         # checking is the sender's recorded duty (module header).
         return url
