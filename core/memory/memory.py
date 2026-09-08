@@ -22,8 +22,8 @@ from uuid import UUID
 
 from core.contracts.base import utc_now
 from core.contracts.conversation import Conversation, ConversationStatus, Message
-from core.learning.sanitizer import _VALUE_PATTERNS as _SANITIZER_VALUE_PATTERNS
 from core.contracts.memory import MemoryItem, MemoryScope
+from core.learning.sanitizer import _VALUE_PATTERNS as _SANITIZER_VALUE_PATTERNS
 from core.memory.errors import (
     ConversationNotFound,
     EmptyMessage,
