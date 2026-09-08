@@ -540,3 +540,29 @@ def test_failed_execution_ledger_recorded_without_usage_in_error_body() -> None:
     assert set(body.keys()) == {"error"}  # unified envelope, no usage key
     summary = accounting.summary(world.principal.tenant_id)
     assert summary.task_units.remaining == 5.0  # hold released, nothing settled
+
+
+# --- R176 FIX-03 (F-R176-05): execution_policy.strategy is a closed contract -----------
+
+
+@pytest.mark.parametrize(
+    "strategy",
+    ["debate", "map_reduce", "review_judge", "hybrid", "parallel", "pipeline", "nonsense_value"],
+)
+def test_unsupported_execution_strategy_is_validation_error(strategy: str) -> None:
+    """A strategy this slice cannot run must be refused loudly (never a silent
+    single-shot — app.py's own rule for the agent seam, 02 §2 inv. 8)."""
+    world = World()
+    response = run(_post(world.app(), {"ask": "hi", "execution_policy": {"strategy": strategy}}))
+    assert response.status_code == 422, response.text
+    payload = response.json()
+    _assert_unified_error(payload, "validation_error")
+    assert payload["error"]["details"].get("field") in {"execution_policy.strategy", "execution_policy"} or any(
+        "strategy" in e for e in payload["error"]["details"].get("errors", [])
+    )
+
+
+def test_single_strategy_is_still_accepted() -> None:
+    world = World()
+    response = run(_post(world.app(), {"ask": "hi", "execution_policy": {"strategy": "single"}}))
+    assert response.status_code == 200, response.text
