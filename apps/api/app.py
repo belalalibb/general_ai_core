@@ -150,6 +150,7 @@ from apps.api.errors import (
 )
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
+from apps.api.preferences import PreferenceLearner, create_preferences_router
 from apps.api.provenance import context_provenance as _context_provenance
 from apps.api.scenarios import ScenarioService
 from apps.api.self_review import SelfReviewService
@@ -496,6 +497,7 @@ def create_app(
     dev_bindings: RepoBindingRegistry | None = None,
     skills_import: bool = False,
     strict_promotion_evidence: bool = False,
+    preferences: PreferenceLearner | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -734,6 +736,14 @@ def create_app(
     # publish-modes read surface is served behind the same principal resolver
     # (and, when auth is composed, the same /v1/* admission middleware); when it
     # is absent the route is not in the table and ``dev.publish_modes`` is INERT.
+    # --- /v1/memory/preferences (R177-FIX-04; 13 §8) — optional seam ------------
+    # The learner MUST write into the SAME memory store the composer reads
+    # (one substrate); composing it without a memory seam is a wiring error.
+    if preferences is not None:
+        if memory is None:
+            raise ValueError("preferences seam requires the memory seam (same substrate)")
+        app.include_router(create_preferences_router(preferences, resolve=_principal))
+
     if dev_bindings is not None:
         # Composition-time import: apps.agent_dev.http imports apps.api.errors,
         # whose package __init__ imports this module — a module-level import
@@ -1380,6 +1390,17 @@ def create_app(
         execution_store.put(report)
         if idempotency_key is not None:
             idempotency_index[(caller.tenant_id, idempotency_key)] = report.execution.id
+        # --- R177-FIX-04: explicit request facts are preference EVIDENCE -------
+        # (13 §6 gate decides; failed executions are not evidence; absent seam
+        # ⇒ nothing happens). Never reads model output.
+        if preferences is not None:
+            preferences.observe(
+                tenant_id=caller.tenant_id,
+                user_id=caller.user_id,
+                language=body.context.language if body.context is not None else None,
+                output_format=body.output.format if body.output is not None else None,
+                succeeded=report.execution.status is ExecutionStatus.SUCCEEDED,
+            )
         # --- persist the assistant turn (succeeded only; same content) ----------
         if (
             conversations is not None

@@ -65,6 +65,7 @@ from apps.api.admin import AdminSurface
 from apps.api.app import Principal, create_app
 from apps.api.auth import AuthSurface
 from apps.api.engineering_admin import EngineeringAdminSurface
+from apps.api.preferences import PreferenceLearner
 from apps.api.skills_import import SkillReviewSurface
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
@@ -135,6 +136,7 @@ from core.execution.service import ExecutionService
 from core.identity.ports import IdentityServicePort
 from core.identity.service import InMemoryIdentityService, Session
 from core.memory.memory import InMemoryConversationStore, InMemoryMemoryStore
+from core.memory.preferences import PreferenceLearningGate
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.roles.registry import RoleRegistry, SkillRegistry
@@ -632,6 +634,8 @@ def _source_reader(root: str) -> SourceReader | None:
 #: a 9 s Retry-After met the cap again and the run died mid-task. The run's
 #: deadline still bounds the total wait — no infinite retry (40 §4.6).
 ENV_PROVIDER_RETRIES = "PROVIDER_MAX_RETRIES"
+#: R177-FIX-04: "1" lets the 13 §6 gate admit preferences (condition 5, deny-by-default).
+ENV_PREFERENCE_LEARNING = "PREFERENCE_LEARNING_ALLOWED"
 DEFAULT_PROVIDER_RETRIES = 1
 MAX_PROVIDER_RETRIES = 8
 
@@ -967,6 +971,14 @@ def build_runtime_profile(
     roles = RoleRegistry()
     skills = SkillRegistry()
     composer = ContextComposer(memory_store, conversations, roles)
+    # R177-FIX-04: the ONE runtime writer of source="preference" items — same
+    # memory store the composer reads. Policy: learning is allowed in this
+    # profile only when the operator says so (deny-by-default, 13 §6 cond. 5).
+    preference_learner = PreferenceLearner(
+        memory=memory_store,
+        gate=PreferenceLearningGate(),
+        policy_allows_memory=env.get(ENV_PREFERENCE_LEARNING, "") == "1",
+    )
 
     # --- the app (injection only — env never crosses this line) --------------
     app = create_app(
@@ -1010,6 +1022,7 @@ def build_runtime_profile(
         skills_import=True,
         # R177-FIX-08: served profiles never accept self-asserted eval/regression passes.
         strict_promotion_evidence=True,
+        preferences=preference_learner,
     )
 
     # --- admin console (P-D follow-up): the EXISTING attach_admin_console
