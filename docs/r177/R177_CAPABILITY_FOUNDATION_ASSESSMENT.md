@@ -54,3 +54,75 @@ REQUIRE_APPROVAL is exercised by tests, not by the composed app (CSE).
 **DEC-01 verification**: memory/composer paths are governed by their own closed gates (sensitivity HIGH refused unless the *app* sets
 `allow_high_sensitivity`; scope priority 13 §4; secret boundary guard; tenant-scoped keys) — not by the firewall vocabulary. No divergence;
 no second precedence model exists. Confirmation appended to 60_DECISION_LOG (R177-DEC-01).
+
+## 5. Vocabulary mapping (A06) — `evidence/r177/A06_vocabulary/vocabulary_mapping.md`
+Explicit statement: no term below claims emotions, consciousness or a "self"; "Soul" = durable, tenant-scoped personalization context.
+Contract facts (KNOWN): **no `MemoryType` enum** — a memory's "type" is `scope` × `source` × `user_id`; the ONLY runtime writer of
+`MemoryStorePort.upsert` is GOLD promotion (`source=learning.gold`); `PreferenceLearningGate` (13 §6) is exported but **never called**
+at runtime; identity = device/session, no persona object; "Teacher" exists only in docs 21/22/41 and one unused admin field.
+
+| term | anchor | class | minimum expression (no new subsystem) |
+|---|---|---|---|
+| Identity | core/identity (devices, sessions), auth router | AC (device/session) · M (cross-device profile) | `user_id` stays the key; profile = tenant-scoped MemoryItems |
+| Preferences | core/memory/preferences.py + memory store | **PC** (gate unwired; no 13 §8 visibility routes) | wire the gate as an OPTIONAL seam; visibility = 2–3 routes over MemoryStorePort |
+| Memory (6 types) | scope/source convention | **CSE** | documented type→(scope,source) convention pinned by test; no enum unless approved |
+| Conversation / Working Context / Verified Intelligence | ConversationStorePort / composer / GOLD | **AC** | — |
+| Project / Semantic-User / Episodic | scopes exist; **no writer** | PC / PC / **M** | same optional writer seam; episodic = `source="episode"` + `expires_at` |
+| Soul / personalization | preferences + user-scoped items + composer | **new vocabulary, not a component** | docs/architecture note; NO `core/soul`, NO `SoulProfile` contract without approval (HIGH parallel-concept risk) |
+| Knowledge | GOLD items + ask_learned/learned_keys | AC (promoted) · PC (intake) | intake adapters outside core/ feeding `capture_external` |
+| Teacher | ModelJudgePort + PromotionGate.admin_approved | **PC** (role exists, name absent, 22 §10 selector absent) | judge binding + selection policy data; disabled ⇒ deterministic graders + gates + human approval still run |
+
+Findings: **F-R177-02** (S3) PreferenceLearningGate dead at runtime, no memory visibility routes; **F-R177-03** (S4) 13 §2 types have no code
+expression; **F-R177-04** (S4) Soul/Teacher absent from code, literalisation risk.
+
+## 6. Learning & knowledge lifecycle (A07) — `evidence/r177/A07_learning/learning_knowledge_lifecycle.md`
+Ladder (5, closed), TrainingEligibilityGate (8 conditions), PromotionGate (7 + approval), lifecycle service, sanitizer (FIX-06) are real
+and deny-by-default (R176 A8 probed). Gaps: **G-A07-1** PromotionSignals are caller-asserted booleans (admin.py:212-232) — the gate is a
+correct policy engine over unverified inputs (CSE/PC); **G-A07-2** `ModelJudgePort` is NOT composed (app.py:2086) ⇒ *Teacher-disabled is
+the current state*: `evaluate()` ceiling is VALIDATED, GOLD remains reachable via human-approved promotion, pipeline unbroken (answers §9);
+22 §10 selective policy has no selector; **G-A07-3** no structured intake (CSV/Excel/JSON/file/API) — MISSING, must live outside core/;
+**G-A07-4** evaluation store in-memory even in the durable profile; **G-A07-5** learning observability admin-only and split across routes.
+
+## 7. Repository discovery vs execution authority (A08) — `evidence/r177/A08_discovery/discovery_vs_authority.md`
+Separation is **structurally held**: read-only default TenantPolicy (`source.read` + `agent.tools`); write/exec are distinct permissions
+(`workspace.read/write/exec`, `git.read/write`) each needing admin grant + one-use ticket + approval_policy ALWAYS + payload binding;
+jail resolve-then-relative_to; shared reader/writer denylist (27 hardened rows); command allowlist (python3/pytest/ruff) + env allowlist;
+per-tenant remote-trust; deny-by-default tool selection (no allow-list AND no skills ⇒ NO tools). Gaps: **F-R177-05** (S3) no persisted
+repository model — discovery is transient per run; **F-R177-06** (S4) `list_files` truncates at 500 with no cursor. Large-repo scalability
+CSE (no executed probe).
+
+## 8. Capability completeness matrix (A09) — `evidence/r177/A09_matrix/capability_completeness_matrix.md`
+26 §12 items classified with the §19 set: **ALREADY COVERED 15** (context, working memory, tools, skills, execution, verification,
+testing, recovery, error handling, reasoning, policy enforcement, permission boundaries, provider abstraction, tenant isolation,
+reproducibility) · **PARTIALLY COVERED 9** (planning, decomposition, repository understanding, long-term memory, project memory,
+evaluation, learning, knowledge management, durable state) · **COVERED BUT NEEDS STRONGER EVIDENCE 1** (observability) · human approval =
+AC enforcement / M proposal record · MISSING/NOT NECESSARY/BLOCKED 0 standalone · UI **DEFERRED** (§15, frozen tree).
+Confirmed gaps admitted to research: persisted repository model; composition-level proposal record; structured intake; evidence-bound
+promotion signals.
+
+## 9. Bounded landscape findings (A10) — `evidence/r177/A10_landscape/landscape_findings.md` (Level 3/5, 2026-09-08)
+1. Repository map (aider / tree-sitter / "Codebase-Memory"): compact ranked *context-selection* artefact → QEVION minimum = MemoryItem
+   `scope=project, source="repo.map"` via the existing port; parsers/ranking outside core/.
+2. ADR pattern (Nygard / Fowler): closed status ladder, immutable once accepted → the §7 decision sheet is ADR-shaped; documentary in
+   60_DECISION_LOG now; optional admin-lifecycle kind `capability_proposal` later.
+3. Expectation-based validation + quarantine (Great Expectations): intake adapter outside core/ validates per batch, emits RAW
+   `capture_external` items, refused rows recorded as reports — trust ladder unchanged.
+4. Registry-gated promotion (MLflow/Databricks): derive eval/regression/security signals from referenced artefacts; refuse caller-asserted
+   True; `admin_approved` stays human; shadow/canary labelled UNVERIFIED until a producer exists.
+
+## 10. Consolidated finding register
+| id | sev | area | statement | class | fix |
+|---|---|---|---|---|---|
+| F-R177-01 | S3 | governance | budget tuple hardcoded; R176 B changes unguarded | — | R177-FIX-01 (DEC-05) |
+| F-R177-02 | S3 | memory | PreferenceLearningGate unwired; no memory visibility routes | PC | R177-FIX-04 |
+| F-R177-03 | S4 | contract/docs | 13 §2 six types have no code expression | CSE | R177-FIX-05 (docs+test pin) |
+| F-R177-04 | S4 | vocabulary | Soul/Teacher absent; literalisation risk | — | documentary only (this report + DEC-LOG) |
+| F-R177-05 | S3 | discovery | no persisted repository model | PC | R177-FIX-06 |
+| F-R177-06 | S4 | tools | list_files truncation without cursor | PC | R177-FIX-07 (optional) |
+| G-A07-1 | S3 | learning | promotion signals caller-asserted | CSE/PC | R177-FIX-08 |
+| G-A07-2 | S4 | evaluation | model judge not composed; no 22 §10 selector | PC | R177-FIX-09 (composition) |
+| G-A07-3 | S3 | knowledge | no structured intake | M (sub-gap) | R177-FIX-10 |
+| G-A07-4 | S4 | durability | evaluation store in-memory in durable profile | PC | R177-FIX-11 |
+| G-A07-5 | S4 | observability | learning observability split/admin-only | PC | DEFERRED |
+| A04 catalog | S4 | catalog | mounted capabilities without CAPABILITY_IDS rows | — | R177-FIX-02 |
+| A05 §6.1 | S3 | approval | no composition-level proposal record | M (sub-gap) | R177-FIX-03 |
