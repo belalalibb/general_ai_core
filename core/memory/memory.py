@@ -22,6 +22,7 @@ from uuid import UUID
 
 from core.contracts.base import utc_now
 from core.contracts.conversation import Conversation, ConversationStatus, Message
+from core.learning.sanitizer import _VALUE_PATTERNS as _SANITIZER_VALUE_PATTERNS
 from core.contracts.memory import MemoryItem, MemoryScope
 from core.memory.errors import (
     ConversationNotFound,
@@ -47,13 +48,10 @@ _SECRET_KEY_INDICATORS: tuple[str, ...] = (
 )
 
 # Value patterns that indicate credential material.
-_SECRET_VALUE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("bearer token", re.compile(r"\bBearer\s+[A-Za-z0-9\-_.~+/]{16,}", re.IGNORECASE)),
-    ("PEM block", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
-    ("AWS access key id", re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
-    ("JWT-like token", re.compile(r"\beyJ[A-Za-z0-9\-_]{10,}\.[A-Za-z0-9\-_]{10,}\.")),
-    ("long opaque token", re.compile(r"\b(?:sk|pk|ghp|gho|xoxb)-[A-Za-z0-9\-_]{16,}\b")),
-)
+# R176 FIX-06 (F-R176-09): ONE vocabulary, two enforcement points — this
+# screen consumes the learning sanitizer's table instead of keeping a copy
+# that drifted (the copy lacked Groq/Anthropic/Google/GitHub-PAT shapes).
+_SECRET_VALUE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = _SANITIZER_VALUE_PATTERNS
 
 
 def _screen_secret_like(key: str, value: object) -> None:
