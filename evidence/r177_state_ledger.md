@@ -38,7 +38,21 @@ LESSON (reset #1 of R177):  unpushed local commits DO NOT survive a sandbox rese
 | A10 | Bounded landscape research for CONFIRMED gaps only (§5) | DONE |
 | A11 | Deliverable assembly docs/r177/R177_CAPABILITY_FOUNDATION_ASSESSMENT.md + decision-log entries | DONE (§1–§10; §11–§12 added by A12) |
 | A12 | Proposal pack: decision sheets (PENDING APPROVAL) + R177-FIX-nn register | DONE |
-| A13 | STOP at §20 and report | DONE — WAITING for explicit approval |
+| A13 | STOP at §20 and report | DONE |
+| B0 | Phase B approval recorded (operator message names ids) | DONE |
+| B-01 | R177-FIX-01 budget-loop generalisation + round_r177 ceiling (DEC-05) | IN_PROGRESS |
+| B-05 | R177-FIX-05 memory-type mapping doc + convention test | PENDING |
+| B-02 | R177-FIX-02 +5 CAPABILITY_IDS (closed-set extension, test-pinned) | PENDING |
+| B-08 | R177-FIX-08 promotion evidence_refs + strict mode | PENDING |
+| B-04 | R177-FIX-04 PreferenceLearningGate seam + preference routes | PENDING |
+| B-06 | R177-FIX-06 repo_map tool → MemoryItem scope=project | PENDING |
+| B-11 | R177-FIX-11 migration 0019 + PostgresEvaluationStore | PENDING |
+| B-03 | R177-FIX-03 admin draft kind capability_proposal → APPROVAL_DECISION | PENDING |
+| B-10 | R177-FIX-10 learning intake adapter + route | PENDING |
+| B-09 | R177-FIX-09 AdapterModelJudge composition (env-gated) | PENDING |
+| B-07 | R177-FIX-07 list_files `after` cursor | PENDING |
+| B-D2 | DEC-02 redact prompt lines 132–134 values | PENDING |
+| B-G | Final gate + gateway suite + assessment status update + report | PENDING |
 
 ## Rows (task_id · phase · status · exact_next_action · evidence_location · git_head · worktree · blocker · completed_at)
 
@@ -57,3 +71,4 @@ LESSON (reset #1 of R177):  unpushed local commits DO NOT survive a sandbox rese
 | A11 | phase A · **VERIFIED+PERSISTED** · `docs/r177/R177_CAPABILITY_FOUNDATION_ASSESSMENT.md` §1–§10 (baseline, governance+F-R177-01, composition map, approval map, vocabulary, learning, discovery, completeness matrix, landscape, consolidated finding register of 13 rows). Appended to `final_docs_v3/60_DECISION_LOG.md` (v3 count still 20): **R177-DEC-01** precedence confirmed/no new model + Soul/Teacher vocabulary rulings; **R177-DEFER-01** register of 12 non-adopted ideas (REJECTED-AS-PARALLEL / DEFERRED). (Reset #5 lost part 2 once; re-appended.) next_action: A12 proposal pack — §11 decision sheets (PENDING APPROVAL) + §12 R177-FIX-nn register appended to the assessment. | 8ddfeffa |
 | A12 | phase A · **VERIFIED+PERSISTED** · assessment §11 eleven §7-format decision sheets **R177-FIX-01..11, all PENDING APPROVAL, none implemented**; §12 register (sev, evidence, minimum change, files, failing-first test, rollback, closed-set impact, budget impact; ≈20 production files if all approved ⇒ needs round_r177 ceiling ⇒ FIX-01 first); §13 DEC-01 confirmed / DEC-02..05 OPEN with recommendations; §14 stop point + UNVERIFIED list. (Reset #6 lost §12–§14 once; re-appended.) next_action: A13 stop + report. | e664d5eb |
 | A13 | phase A · **R177 PHASE A COMPLETE — STOP (§20), WAITING.** Invariants at stop: product-tree diff vs 13be858d = 0 lines (0 = untouched, incl. canonical prompt + frozen state file); v3 pack = 20; forbidden filenames present = 0; not_evaluated untouched (2/2); closed sets untouched. Deliverables on origin/main: `docs/r177/R177_CAPABILITY_FOUNDATION_ASSESSMENT.md` (§1–§14), `evidence/r177/A01…A10`, this ledger, 60_DECISION_LOG entries R177-DEC-01 + R177-DEFER-01. **Exact NEXT ACTION**: none until an explicit operator message names ids (e.g. `APPROVED: R177-FIX-01, DEC-05`); then Phase B row B0 records the approval and FIX-01 runs first through the §14 closed loop. Ambiguous replies ⇒ remain in WAIT. | e664d5eb |
+| B0 | phase B · **APPROVAL RECORDED** · operator message (verbatim ids): `APPROVED: R177-FIX-01 … R177-FIX-11, DEC-05`; `DEC-01: CONFIRMED`; `DEC-02: APPROVED — redact all three exposed credential literals and rotate externally` (rotation is operator-owned, out of repo); `DEC-03: DEFERRED`; `DEC-04: APPROVED — execute all FIX-01 through FIX-11 in the dependency-safe order defined by the assessment, starting with FIX-01 … one approved unit at a time … closed-loop verification before proceeding`. Execution order (assessment §13): FIX-01 → FIX-05 → FIX-02 → FIX-08 → FIX-04 → FIX-06 → FIX-11 → FIX-03 → FIX-10 → FIX-09 → FIX-07 → DEC-02 redaction → final gate. Rollback point = 1d0c6388 (product tree byte-identical to 13be858d). Git scope: branch main, push after every unit. (Reset #7 erased the first B0 commit before push → rewritten.) next_action: B-01 failing-first test for the budget loop. | 1d0c6388 |
