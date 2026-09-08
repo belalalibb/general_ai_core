@@ -598,8 +598,8 @@ def test_same_idempotency_key_same_body_still_replays_after_fix05() -> None:
     world = World(script=[{"content": "first"}, {"content": "second"}])
     app = world.app()
     headers = {"Idempotency-Key": "key-same"}
-    first = run(_post(app, {"ask": "hi", "tools": []}, headers))
-    second = run(_post(app, {"tools": [], "ask": "hi"}, headers))  # key order irrelevant
+    first = run(_post(app, {"ask": "hi", "mode": "chat"}, headers))
+    second = run(_post(app, {"mode": "chat", "ask": "hi"}, headers))  # key order irrelevant
     assert first.status_code == second.status_code == 200
     assert first.json()["execution_id"] == second.json()["execution_id"]
     assert len(world.adapter.requests) == 1
