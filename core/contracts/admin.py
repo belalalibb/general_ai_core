@@ -44,9 +44,55 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from core.contracts.base import BoundedStr, ContractModel, JsonObject, utc_now
+
+# R176 FIX-04 (F-R176-07): config-change payloads carry contract JSON and
+# opaque refs ONLY (20 §5). Any key that names credential MATERIAL is refused
+# at draft time — before it can be stored, echoed or audited. Opaque handles
+# (``credential_ref``, ``route_token_ref``, ``*_ref``) stay admissible; enum
+# VALUES such as ``auth_types: ["api_key"]`` are values, not keys, and pass.
+_CREDENTIAL_KEY_INDICATORS: tuple[str, ...] = (
+    "api_key",
+    "apikey",
+    "secret",
+    "token",
+    "password",
+    "passwd",
+    "private_key",
+    "privatekey",
+    "credential",
+)
+
+
+def _is_credential_key(key: str) -> bool:
+    lowered = key.lower()
+    if lowered.endswith("_ref") or lowered.endswith("ref"):
+        return False
+    return any(ind in lowered for ind in _CREDENTIAL_KEY_INDICATORS)
+
+
+def _find_credential_key(value: object, path: str = "payload") -> str | None:
+    """Return the JSON path of the first credential-shaped KEY, or None.
+
+    Never returns or inspects the VALUE (a validator that echoes the secret
+    it found is itself a leak).
+    """
+    if isinstance(value, dict):
+        for k, v in value.items():
+            here = f"{path}.{k}"
+            if _is_credential_key(str(k)):
+                return here
+            found = _find_credential_key(v, here)
+            if found is not None:
+                return found
+    elif isinstance(value, list):
+        for i, v in enumerate(value):
+            found = _find_credential_key(v, f"{path}[{i}]")
+            if found is not None:
+                return found
+    return None
 
 # --- Closed admin-module set (21 §2, verbatim) ---------------------------------
 
@@ -210,6 +256,19 @@ class AdminDraftRequest(ContractModel):
 
     action: AdminAction
     payload: JsonObject = Field(default_factory=dict)
+
+    @field_validator("payload")
+    @classmethod
+    def _refuse_credential_material(cls, payload: JsonObject) -> JsonObject:
+        # R176 FIX-04: deny-by-default for credential-shaped keys at any depth.
+        offending = _find_credential_key(payload)
+        if offending is not None:
+            msg = (
+                f"payload must not carry credential material (key at {offending}); "
+                "reference secrets by opaque *_ref handles only (20 §5)"
+            )
+            raise ValueError(msg)
+        return payload
 
 
 class LearningDashboard(ContractModel):
