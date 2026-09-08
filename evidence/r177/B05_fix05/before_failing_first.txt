@@ -1,0 +1,3 @@
+tests/memory/test_memory_type_convention_r177.py:116: AssertionError
+=========================== short test summary info ============================
+FAILED tests/memory/test_memory_type_convention_r177.py::test_mapping_doc_exists_and_matches_pinned_vocabulary
