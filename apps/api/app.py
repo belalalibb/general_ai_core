@@ -151,8 +151,8 @@ from apps.api.errors import (
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
 from apps.api.preferences import PreferenceLearner, create_preferences_router
-from apps.api.run_context import bind_run_tenant
 from apps.api.provenance import context_provenance as _context_provenance
+from apps.api.run_context import bind_run_tenant
 from apps.api.scenarios import ScenarioService
 from apps.api.self_review import SelfReviewService
 from apps.api.store import (

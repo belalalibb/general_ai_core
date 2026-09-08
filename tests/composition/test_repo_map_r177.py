@@ -139,7 +139,9 @@ class TestMapperUnit:
         memory, projects = InMemoryMemoryStore(), InMemoryProjectStore()
         project = _project()
         asyncio.run(projects.put(project))
-        mapper = RepoMapper(reader=_reader(tmp_path), memory=memory, projects=projects, max_modules=50)
+        mapper = RepoMapper(
+            reader=_reader(tmp_path), memory=memory, projects=projects, max_modules=50
+        )
         result = asyncio.run(mapper.build(tenant_id=TENANT, project_id=project.id))
         assert len(result["modules"]) == 50
         assert result["modules_omitted"] == 70

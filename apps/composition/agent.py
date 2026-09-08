@@ -27,6 +27,7 @@ from uuid import UUID, uuid4
 
 from apps.api.agent import AgentSurface
 from apps.api.store import ExecutionStorePort
+from apps.composition.repo_map import REPO_MAP_TOOL, RepoMapper
 from core.agent import (
     DEFAULT_AGENT_DEADLINE_MS,
     DEFAULT_AGENT_MAX_STEPS,
@@ -34,7 +35,6 @@ from core.agent import (
     AgentRuntime,
     AgentToolSpec,
 )
-from apps.composition.repo_map import REPO_MAP_TOOL, RepoMapper
 from core.audit.ports import AuditLogPort
 from core.contracts.base import JsonObject
 from core.contracts.tools import Tool

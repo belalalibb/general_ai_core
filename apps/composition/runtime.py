@@ -67,12 +67,11 @@ from apps.api.auth import AuthSurface
 from apps.api.engineering_admin import EngineeringAdminSurface
 from apps.api.preferences import PreferenceLearner
 from apps.api.skills_import import SkillReviewSurface
-from apps.api.workspaces import InMemoryProjectStore
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
+from apps.api.workspaces import InMemoryProjectStore
 from apps.composition.admin_console import attach_admin_console
 from apps.composition.agent import ComposedAgent, build_agent, grant_agent_tenant
-from apps.composition.repo_map import RepoMapper
 from apps.composition.bridge import AsyncBridge
 from apps.composition.database import (
     DatabaseBindings,
@@ -94,6 +93,7 @@ from apps.composition.provider_onboarding import (
     hydrate_gateway_providers,
     replay_admin_status_overrides,
 )
+from apps.composition.repo_map import RepoMapper
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
 from core.admin.service import AdminConfigService
