@@ -93,6 +93,7 @@ from apps.composition.provider_onboarding import (
     hydrate_gateway_providers,
     replay_admin_status_overrides,
 )
+from apps.composition.evaluations import build_durable_evaluation_store
 from apps.composition.repo_map import RepoMapper
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
@@ -134,6 +135,7 @@ from core.contracts.provider import (
     ProviderManifest,
 )
 from core.evaluation.memory import InMemoryEvaluationStore
+from core.evaluation.ports import EvaluationStorePort
 from core.execution.service import ExecutionService
 from core.identity.ports import IdentityServicePort
 from core.identity.service import InMemoryIdentityService, Session
@@ -714,11 +716,11 @@ def build_runtime_profile(
         _bind_echo_provider(providers, models, binding_registry, adapters, credential_refs)
         provider_keys = ["local_echo"]
 
-    # --- usage / audit / evaluations (in-memory across both profiles for the
-    # control plane; durable usage remains a later binding — honest scope) ----
+    # --- usage / audit (in-memory across both profiles for the control
+    # plane; durable usage remains a later binding — honest scope). The
+    # evaluation store is bound per profile below (R177-FIX-11). ----------
     usage = InMemoryUsageAccounting()
     audit = InMemoryAuditLog()
-    evaluations = InMemoryEvaluationStore()
 
     # --- routing + execution (the SAME instances everywhere) -----------------
     router = SimpleScoringRouter(providers, models, binding_registry)
@@ -764,6 +766,7 @@ def build_runtime_profile(
 
     store: ExecutionStorePort
     idempotency: IdempotencyPort
+    evaluations: EvaluationStorePort
     if settings is not None:
         bridge = AsyncBridge()
         bindings = build_database_bindings(settings)
@@ -807,6 +810,10 @@ def build_runtime_profile(
             usage=usage,
         )
         proposals, snapshots = build_durable_sourcechange_stores(bindings, bridge)
+        # R177-FIX-11 (G-A07-4): evaluation records are promotion EVIDENCE
+        # (FIX-08) — they persist in the existing 0010 table so a restart
+        # no longer erases the artefacts the promote gate resolves.
+        evaluations = build_durable_evaluation_store(bindings, bridge)
         # Closure GAP 1: the EXISTING V5 repositories (DatabaseBindings
         # composed them since migration 0002) reach the /v1/workspaces +
         # /v1/projects routes — bridged, same loop-affinity posture.
@@ -832,6 +839,7 @@ def build_runtime_profile(
             usage=usage,
         )
         proposals, snapshots = None, None
+        evaluations = InMemoryEvaluationStore()
         # In-memory profile: create_app's own in-memory defaults serve
         # the same /v1/workspaces + /v1/projects surface (store posture).
         workspace_store, project_store = None, None
