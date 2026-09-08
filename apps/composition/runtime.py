@@ -1006,6 +1006,8 @@ def build_runtime_profile(
         source_snapshots=snapshots,
         agent=composed_agent.surface,
         engineering_admin=engineering_admin,
+        # R177-FIX-02: this root attaches SkillReviewSurface below -> honest catalog row.
+        skills_import=True,
     )
 
     # --- admin console (P-D follow-up): the EXISTING attach_admin_console

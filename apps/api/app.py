@@ -494,6 +494,7 @@ def create_app(
     engineering_admin: EngineeringAdminSurface | None = None,
     public_paths: frozenset[str] = frozenset(),
     dev_bindings: RepoBindingRegistry | None = None,
+    skills_import: bool = False,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -1918,6 +1919,33 @@ def create_app(
             "dev.publish_modes",
             dev_bindings is not None,
             "dev_bindings seam -> GET /v1/dev/bindings/{id}/publish-modes (R169 A6 / R172 C7)",
+        ),
+        # R177-FIX-02: rows for surfaces that were mounted but never catalogued (A04).
+        _cap(
+            "agent.runtime",
+            agent is not None,
+            "agent seam -> GET /v1/agent-tools + execution_policy.strategy=agent (R160)",
+        ),
+        _cap(
+            "sourcechange.workflow",
+            admin is not None,
+            "admin seam -> /v1/admin/source-changes/* (R3 ADR-0009; authoritative_applier=None)",
+        ),
+        _cap(
+            "skills.import",
+            skills_import,
+            "skills_import flag: the composition root attaches SkillReviewSurface -> "
+            "/v1/admin/skills/import* (SKL-1, 14 §3)",
+        ),
+        _cap(
+            "workspaces.projects",
+            True,
+            "always mounted -> /v1/workspaces + /v1/projects (closure GAP 1; R168 D-08 one store)",
+        ),
+        _cap(
+            "evaluation.records",
+            admin is not None,
+            "admin seam -> GET /v1/admin/evaluations/{id} + /executions/{id}/evaluations (22 §7)",
         ),
     )
     # One derivation, two consumers (module header): the admin route below

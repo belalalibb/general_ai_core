@@ -75,6 +75,12 @@ CAPABILITY_IDS: frozenset[str] = frozenset(
         "health.liveness",
         # R172 C7: dev seam (create_app(dev_bindings=)) -> /v1/dev publish-modes.
         "dev.publish_modes",
+        # R177-FIX-02: mounted-but-uncatalogued surfaces (A04) get honest rows.
+        "agent.runtime",  # create_app(agent=) -> /v1/agent-tools + strategy=agent
+        "sourcechange.workflow",  # admin seam -> /v1/admin/source-changes/* (R3, applier=None)
+        "skills.import",  # create_app(skills_import=True) when the console attaches SKL-1
+        "workspaces.projects",  # always mounted -> /v1/workspaces + /v1/projects
+        "evaluation.records",  # admin seam -> /v1/admin/evaluations/* reads
     }
 )
 

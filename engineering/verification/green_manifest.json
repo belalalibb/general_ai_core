@@ -396,7 +396,7 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 0,
+      "changes_used": 3,
       "items": [
         "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
         "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
@@ -408,7 +408,26 @@
         "R177-FIX-10 CSV/JSON intake -> capture_external RAW (apps/composition/intake.py, apps/api/admin.py)",
         "R177-FIX-11 durable evaluation store + migration 0019 (infrastructure/db/*, apps/composition/database.py, apps/api/app.py)"
       ],
-      "log": [],
+      "log": [
+        {
+          "item": "R177-FIX-02",
+          "file": "apps/api/capabilities.py",
+          "loc": "+6/-0",
+          "summary": "CAPABILITY_IDS 17->22: agent.runtime, sourcechange.workflow, skills.import, workspaces.projects, evaluation.records (deliberate closed-set edit; pin tests/api/test_capability_catalog_r177.py)"
+        },
+        {
+          "item": "R177-FIX-02",
+          "file": "apps/api/app.py",
+          "loc": "+28/-0",
+          "summary": "create_app(skills_import: bool = False) + five honest catalog rows derived from the SAME seam variables (agent, admin, skills_import, always-mounted workspaces/projects)"
+        },
+        {
+          "item": "R177-FIX-02",
+          "file": "apps/composition/runtime.py",
+          "loc": "+2/-0",
+          "summary": "runtime profile passes skills_import=True because it attaches SkillReviewSurface (catalog row honest in the served profile)"
+        }
+      ],
       "frozen_trees_zero_diff": [
         "ui/",
         "apps/admin_agent/",
