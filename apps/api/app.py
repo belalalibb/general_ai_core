@@ -969,6 +969,28 @@ def create_app(
             replay_id = idempotency_index.get((caller.tenant_id, idempotency_key))
             if replay_id is not None:
                 replayed = execution_store.get(caller.tenant_id, replay_id)
+                # R176 FIX-05 (F-R176-08): a replay is only a replay when the
+                # BODY is the same. Same tenant + same key + different body is
+                # a client bug that used to be honoured silently (the old
+                # execution's id came back and the new work was lost while
+                # looking like success). The stored Execution.request_hash
+                # (03 §5; durable column since 0008) is the comparison truth
+                # — every path (sync/pipeline/agent/async placeholder) records
+                # the same canonical hash of the request body. Loud, never
+                # silent: 409 with the unified error shape.
+                if replayed.execution.request_hash != _request_hash(body):
+                    return error_response(
+                        ErrorCode.VALIDATION_ERROR,
+                        "Idempotency-Key was already used by this tenant with a "
+                        "different request body; reuse the key only with the "
+                        "identical request, or send a new key.",
+                        details={
+                            "reason": "idempotency_conflict",
+                            "field": "Idempotency-Key",
+                            "execution_id": str(replayed.execution.id),
+                        },
+                        http_status=409,
+                    )
                 if replayed.execution.status in (
                     ExecutionStatus.QUEUED,
                     ExecutionStatus.RUNNING,
@@ -1271,6 +1293,9 @@ def create_app(
                     deadline_ms=policy.deadline_ms if policy is not None else None,
                     conversation_id=conversation_id,
                     idempotency_key=idempotency_key,
+                    # R176 FIX-05: the SAME canonical request hash as every
+                    # other path, so an idempotent replay can be compared.
+                    request_hash=_request_hash(body),
                     label={"surface": "v1.execute"},
                 )
                 report = outcome.execution_report
