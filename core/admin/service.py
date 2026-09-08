@@ -46,6 +46,8 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
+from pydantic import ValidationError
+
 from core.admin.errors import (
     ChangeNotFound,
     InactiveAdminArea,
@@ -58,6 +60,7 @@ from core.contracts.admin import (
     MVP_ACTIVE_ADMIN_AREAS,
     AdminAction,
     AdminArea,
+    CapabilityProposalPayload,
     ConfigChange,
     ConfigLifecycleState,
 )
@@ -371,7 +374,14 @@ class AdminConfigService:
 
     def _subject(self, change: ConfigChange) -> str:
         payload = change.payload
-        for key in ("model_key", "provider_key", "target_tenant_id", "skill_id", "tool_id"):
+        for key in (
+            "model_key",
+            "provider_key",
+            "target_tenant_id",
+            "skill_id",
+            "tool_id",
+            "proposal_id",
+        ):
             value = payload.get(key)
             if isinstance(value, str):
                 return value
@@ -473,6 +483,8 @@ class AdminConfigService:
             return self._register_provider_problem(payload)
         if action is AdminAction.REGISTER_MODEL:
             return self._register_model_problem(payload)
+        if action is AdminAction.CAPABILITY_PROPOSAL:
+            return self._capability_proposal_problem(payload)
         if action is AdminAction.SET_PLAN:
             target = payload.get("target_tenant_id")
             plan = payload.get("plan")
@@ -567,6 +579,22 @@ class AdminConfigService:
         return None
 
     @staticmethod
+    def _capability_proposal_problem(payload: JsonObject) -> str | None:
+        """R177-FIX-03: the payload must BE a complete §7 decision sheet.
+
+        The contract does the checking (closed decision set, every column
+        present and bounded, no extras); this method only names the first
+        failing field so the REJECTED change explains itself (21 §3).
+        """
+        try:
+            CapabilityProposalPayload.model_validate(payload)
+        except ValidationError as exc:
+            first = exc.errors()[0]
+            location = ".".join(str(part) for part in first.get("loc", ())) or "payload"
+            return f"capability proposal sheet invalid at '{location}': {first.get('msg')}"
+        return None
+
+    @staticmethod
     def _require_uuid_payload(payload: JsonObject, field: str) -> str | None:
         value = payload.get(field)
         if not isinstance(value, str) or not value:
@@ -630,6 +658,13 @@ class AdminConfigService:
                 "imports admit only against the new list (14 §3 references, "
                 "never dereferenced)"
             )
+        if action is AdminAction.CAPABILITY_PROPOSAL:
+            sheet = CapabilityProposalPayload.model_validate(change.payload)
+            return (
+                f"records ruling '{sheet.decision.value}' on capability proposal "
+                f"{sheet.proposal_id} as one APPROVAL_DECISION audit row; no "
+                "registry, policy or firewall state changes (record, not grant)"
+            )
         return "router default scoring weights replaced (11 §6 versioned weights)"
 
     # -- snapshot / apply / restore (the registry-mutating core) ---------------------------
@@ -663,6 +698,9 @@ class AdminConfigService:
         if action is AdminAction.SET_SKILL_SOURCES:
             assert self._skill_sources is not None  # validated pre-publish
             return {"skill_sources": self._skill_sources.entries()}
+        if action is AdminAction.CAPABILITY_PROPOSAL:
+            # Nothing to restore: a ruling is evidence, not state.
+            return {"decision_recorded": True}
         return {"weights": self._routing.default_weights}
 
     def _apply(self, change: ConfigChange) -> None:
@@ -759,6 +797,29 @@ class AdminConfigService:
                 for binding in registered_bindings:
                     self._persistence.persist_binding(binding)
             return
+        if action is AdminAction.CAPABILITY_PROPOSAL:
+            # R177-FIX-03: publishing a proposal ruling APPENDS the decision
+            # row (20 §9 APPROVAL_DECISION) and touches nothing else. The
+            # ADMIN_CONFIG_PUBLISHED row (21 §8) is still emitted by publish().
+            sheet = CapabilityProposalPayload.model_validate(change.payload)
+            self._audit.append(
+                AuditEvent(
+                    tenant_id=change.tenant_id,
+                    event_type=AuditEventType.APPROVAL_DECISION,
+                    actor_id=change.actor_id,
+                    details={
+                        "surface": "capability_proposal",
+                        "change_id": str(change.id),
+                        "proposal_id": sheet.proposal_id,
+                        "capability": sheet.capability,
+                        "target": sheet.target,
+                        "decision": sheet.decision.value,
+                        "reason": sheet.reason,
+                        "enforcement_point": sheet.enforcement_point,
+                    },
+                )
+            )
+            return
         weights_payload = change.payload["weights"]
         self._routing.set_default_weights(ScoringWeights.model_validate(weights_payload))
 
@@ -830,6 +891,13 @@ class AdminConfigService:
             if self._persistence is not None:
                 self._persistence.delete_model(model.id)
             return
+        if action is AdminAction.CAPABILITY_PROPOSAL:
+            # Decisions are evidence (22 §12 posture): un-recording a ruling
+            # would rewrite history. Reversal = a NEW proposal record.
+            raise RollbackUnavailable(
+                "a recorded capability-proposal ruling is evidence and is never "
+                "un-recorded; record a new proposal to reverse it"
+            )
         weights = snapshot["weights"]
         assert isinstance(weights, ScoringWeights)
         self._routing.set_default_weights(weights)
