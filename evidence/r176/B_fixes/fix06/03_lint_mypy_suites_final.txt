@@ -1,0 +1,4 @@
+All checks passed!
+3 files already formatted
+Success: no issues found in 2 source files
+120 passed in 1.45s
