@@ -125,7 +125,7 @@ def store(bridge: AsyncBridge, repository: FakeEvaluationRepository) -> Evaluati
 
 
 class TestDurableEvaluationStore:
-    def test_full_fidelity_round_trip_through_row_encoding(self, store: EvaluationStorePort) -> None:
+    def test_full_fidelity_round_trip_through_rows(self, store: EvaluationStorePort) -> None:
         record = _record()
         assert store.record(record) == record
         assert store.get(TENANT, record.id) == record

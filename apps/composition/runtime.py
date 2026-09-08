@@ -84,6 +84,7 @@ from apps.composition.engineering import (
     grant_engineering_reads,
     grant_engineering_writes,
 )
+from apps.composition.evaluations import build_durable_evaluation_store
 from apps.composition.gateway import gateway_settings_from_env, onboarding_secrets_from_env
 from apps.composition.identity import build_durable_identity_service
 from apps.composition.provider_onboarding import (
@@ -93,7 +94,6 @@ from apps.composition.provider_onboarding import (
     hydrate_gateway_providers,
     replay_admin_status_overrides,
 )
-from apps.composition.evaluations import build_durable_evaluation_store
 from apps.composition.repo_map import RepoMapper
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
