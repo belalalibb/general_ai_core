@@ -34,10 +34,16 @@ _DENIED_PAYLOADS: list[tuple[str, dict[str, object]]] = [
 def test_draft_refuses_credential_shaped_keys(label: str, payload: dict[str, object]) -> None:
     with pytest.raises(ValidationError) as exc:
         AdminDraftRequest(action=AdminAction.REGISTER_PROVIDER, payload=payload)
-    msg = str(exc.value)
-    assert "credential material" in msg
-    # the offending VALUE must not be echoed by the validator itself
-    assert "SHOULD-NOT-BE-STORED" not in msg and "hunter2" not in msg
+    # Assert on the validator's own message — the part the API error envelope
+    # renders (details.errors = [e["msg"]]). pydantic's full repr also prints
+    # ``input_value=...`` for debugging; that never reaches the wire.
+    msgs = [e["msg"] for e in exc.value.errors()]
+    assert any("credential material" in m for m in msgs)
+    joined = " ".join(msgs)
+    # the offending VALUE must not be echoed by the validator's message
+    assert "SHOULD-NOT-BE-STORED" not in joined and "hunter2" not in joined
+    # and the offending KEY path is named (so the operator can find it)
+    assert "payload" in joined
 
 
 @pytest.mark.parametrize(
