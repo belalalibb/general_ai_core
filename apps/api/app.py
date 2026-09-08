@@ -194,6 +194,11 @@ from core.contracts.execute import (
     WebhookEventType,
 )
 from core.contracts.execution import Execution, ExecutionNodeStatus, ExecutionStrategy
+
+# R176 FIX-03 (F-R176-05): strategies POST /v1/execute can actually run here.
+_RUNNABLE_STRATEGIES: frozenset[str] = frozenset(
+    {ExecutionStrategy.SINGLE.value, ExecutionStrategy.AGENT.value}
+)
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
 from core.contracts.model_policy import (
     AgentNodeMappingPolicy,
