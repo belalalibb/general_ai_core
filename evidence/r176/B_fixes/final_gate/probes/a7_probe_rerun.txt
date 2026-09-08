@@ -7,8 +7,7 @@
 ### R-02b same execution_id on replay: True
 
 ### R-03 same key, different body => expect 409/422 conflict
-{"error":{"code":"validation_error","message":"Idempotency-Key was already used by this tenant with a different request body; reuse the key only with the identical request, or send a new key.","retryable":false,"details":{"reason":"idempotency_conflict","field":"Idempotency-Key","execution_id":"d7233fc7-3e94-4099-b568-111bed10eaf9"},"trace_id":null}} [409]
-
+{"error":{"code":"validation_error","message":"Idempotency-Key was already used by this tenant with a different request body; reuse the key only with the identical request, or send a new key.","retryable":false,"details":{"reason":"idempot
 ### R-04 usage after idempotent pair (+1 conflict): expect 1 or 2 units, not 3
 {"plan":"local-default","task_units":{"limit":1000000.0,"used":1.0,"remaining":999999.0},"modality_limits":{}} [200]
 
@@ -26,3 +25,4 @@
 
 ### R-09 healthz scope (process-local honesty)
 {"status":"alive","scope":"process","time":"2026-09-08T11:01:54.877380+00:00"} [200]
+

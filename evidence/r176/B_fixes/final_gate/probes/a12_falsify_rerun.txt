@@ -43,8 +43,8 @@
 ### F5 webhook http://example.com/x -> [201] {"id":"6c0ae5cf-3eee-408c-a9d5-7a29b81e0998","url":"http://example.com/x","events":["execu
 
 ### F6 nested unknown field => 422?
-{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Extra inputs are not permitted"]},"trace_id":null}} [422]
-
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Extra inputs are not permitted"]},"trace_id":null}} [42
 ### F7 same Idempotency-Key across tenants: same_execution=False (must be False)
 
 ### F7b B's result has B's ask: True; A's ask leaked: False
+
