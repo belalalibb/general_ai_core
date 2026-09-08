@@ -1400,3 +1400,50 @@ at `73766ab`.
 ### Ref
 - `evidence/r172/C8/{fail_first.txt,after_fix.txt,notes.md}`, `evidence/r172/live_transport.txt`;
   budget row 8/8 in `green_manifest.json`.
+
+## R177-DEC-01 — Precedence for Memory / Soul / Knowledge paths: CONFIRMED, no new model (R177 A05/A06)
+
+### Status
+CONFIRMED (verification entry, not a new design). Append-only; supersedes nothing.
+
+### Decision
+- The operator-stated precedence "Core policy > operator approval > application configuration, most-restrictive-wins" is the
+  EXISTING semantics: `core/security/firewall.py` (deny-by-default, approved-but-ungranted stays DENY), `core/tools/gate.py`
+  ("both authorities must consent", tightening only), `core/contracts/tools.py DEFAULT_APPROVAL_REQUIREMENT = ALWAYS`,
+  `core/contracts/security.py approval_state: Literal["approved"] | None`.
+- Memory / personalization / knowledge paths (`core/memory/*`, `core/context/composer.py`, `core/learning/lifecycle.py`) are governed
+  by their OWN closed gates — sensitivity (HIGH refused unless the *application* sets `allow_high_sensitivity`; never caller-settable),
+  scope priority (13 §4), confidence, the secret boundary guard, tenant-scoped keys, and the learning gates — not by the firewall
+  vocabulary. No divergence from most-restrictive-wins was found; NO second precedence model exists or is introduced.
+- "Soul" is operator vocabulary for durable, tenant-scoped personalization expressed through existing memory types + preferences +
+  composer. It is NOT a component, package, contract term, or claim of emotion/consciousness. Any literalisation requires approval.
+- "Teacher" is the evaluation/review ROLE (ModelJudgePort + PromotionGate.admin_approved), not an owner of the learning lifecycle.
+
+### Ref
+- `evidence/r177/A05_approval/approval_policy_map.md`, `evidence/r177/A06_vocabulary/vocabulary_mapping.md`,
+  `docs/r177/R177_CAPABILITY_FOUNDATION_ASSESSMENT.md` §4–§5.
+
+## R177-DEFER-01 — Ideas assessed in R177 and NOT adopted in this round (append-only register; 41 §31 / D10-D11)
+
+### Status
+RECORDED. Each item is either DEFERRED (may return as an approved R177-FIX-nn) or REJECTED-AS-PARALLEL (would duplicate an existing
+primitive). None is implemented. Legacy files ARCHITECTURE_GAPS.md / FUTURE_IMPROVEMENTS.md are NOT used (gate-forbidden).
+
+### Register
+| idea | ruling | reason / where it lives instead |
+|---|---|---|
+| `core/soul/` package or `SoulProfile` contract | REJECTED-AS-PARALLEL | duplicates MemoryItem + preferences + composer (R177-DEC-01) |
+| `MemoryType` enum in `core/contracts/memory.py` | DEFERRED (needs approval — new closed set) | convention scope×source pinned by test is the minimum (R177-FIX-05) |
+| Separate "knowledge base" store | REJECTED-AS-PARALLEL | GOLD MemoryItems + ask_learned/learned_keys already are the knowledge store |
+| `TeacherService` owning learning | REJECTED-AS-PARALLEL | inverts 22's design; Teacher = ModelJudgePort binding + selection policy (R177-FIX-09) |
+| Relationship/episodic graph subsystem | REJECTED-AS-PARALLEL | MemoryItem `source="episode"` + `expires_at` suffices |
+| tree-sitter / graph DB inside core/ | REJECTED (layering) | import-linter; any parser lives in providers/ or apps/composition/ (R177-FIX-06) |
+| New ErrorCode / VerificationLevel members (e.g. "CANDIDATE") | REJECTED | closed sets; follow FIX-05 precedent (reuse code + details.reason) |
+| Widening gate secret-scan patterns | DEFERRED (governance change; separate approval + failing-first test) | see assessment §2; not conflated with FIX-06 |
+| New `not_evaluated` items | REJECTED | ceiling 2/2 full; report UNVERIFIED in round docs instead |
+| Learning observability unified view | DEFERRED | data exists across admin routes (G-A07-5) |
+| Application-scoped credentials (F-R176-10) | DEFERRED (DEC-03 open) | separate round if authorized |
+| UI changes for any of the above | DEFERRED | §15 backend-first; ui/ frozen (r173) |
+
+### Ref
+- `docs/r177/R177_CAPABILITY_FOUNDATION_ASSESSMENT.md` §10–§12; `evidence/r177_state_ledger.md`.
