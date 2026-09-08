@@ -126,3 +126,84 @@ promotion signals.
 | G-A07-5 | S4 | observability | learning observability split/admin-only | PC | DEFERRED |
 | A04 catalog | S4 | catalog | mounted capabilities without CAPABILITY_IDS rows | — | R177-FIX-02 |
 | A05 §6.1 | S3 | approval | no composition-level proposal record | M (sub-gap) | R177-FIX-03 |
+
+## 11. Proposal pack — decision sheets (§7 format; every sheet PENDING APPROVAL; none implemented)
+
+```
+PROPOSED CAPABILITY: R177-FIX-01 — change-budget enforcement for new rounds (governance; no CAPABILITY_IDS entry)
+WHAT:                make the repo gate account every manifest round instead of a hardcoded five-round tuple
+DOES:                engineering/verification/check_repo.sh:143 iterate keys starting with "round_"; green_manifest.json add round_r177
+                     {ceiling, items, log, counts_production_code_under}; new test tests/engineering/test_budget_rounds_r177.py (fixture
+                     manifest with an unlisted over-ceiling round MUST fail the budget step)
+WHY:                 F-R177-01 — R176 Phase B production changes were outside budget enforcement; R177 Phase B would be too
+REQUIRED:            Yes for ANY R177 production change (§3.5c) — without it every other FIX below is unguarded
+DEPENDENCIES:        none (bash + python3 in the gate)
+IMPACT:              contracts: none · security: none · architecture: none · governance: stronger
+RISK:                Low — gate-only; failing-first test pins the new behaviour; rollback = revert
+ALTERNATIVE:         extend the tuple by one literal (weaker: the hole recurs next round)
+ENFORCEMENT POINT:   check_repo.sh §6 (the single verifier) + green_manifest.json
+DECISION:            APPROVE | REJECT   (= DEC-05)
+```
+```
+PROPOSED CAPABILITY: R177-FIX-02 — catalog completeness (existing seams; EXTENDS closed CAPABILITY_IDS)
+WHAT:                add honest rows for capabilities that are mounted but uncatalogued
+DOES:                apps/api/capabilities.py CAPABILITY_IDS += agent.runtime, sourcechange.workflow, skills.import, workspaces.projects,
+                     evaluation.records (5 ids; final names subject to approval); apps/api/app.py catalog builder adds state rules
+                     (agent is not None; source_proposals seam; admin+skills importer; always-in-process; admin evaluation store);
+                     tests/api catalog closed-set test updated to 22
+WHY:                 A04: 57 admin + 5 agent routes exist with no catalog row → GET /v1/admin/capabilities under-reports the platform
+REQUIRED:            No — runtime unchanged; catalog honesty only
+DEPENDENCIES:        none
+IMPACT:              contracts: closed set 17→22 (deliberate, test-pinned) · OpenAPI: additive
+RISK:                Low
+ALTERNATIVE:         leave catalog as the "frozen roadmap" view; document the gap (status quo)
+ENFORCEMENT POINT:   CAPABILITY_IDS closed-set test
+DECISION:            APPROVE | REJECT
+```
+```
+PROPOSED CAPABILITY: R177-FIX-03 — composition-level capability-proposal record (existing admin lifecycle; new draft kind)
+WHAT:                persist "Agent proposed capability X for app Y; operator APPROVED/REJECTED with reason" as an auditable record
+DOES:                core/contracts/admin.py: add draft kind `capability_proposal` (closed change-kind set → approval) whose payload IS the
+                     §7 decision sheet fields; publish ⇒ AuditEvent APPROVAL_DECISION with details={proposal_id, decision, reason};
+                     read via existing GET /v1/admin/audit and /v1/admin/changes/{id}; no new route, no new store
+WHY:                 A05 §6.1 — enforcement complete, recording MISSING; later sessions cannot know what was approved/rejected
+REQUIRED:            No (documentary path = 60_DECISION_LOG entries works today)
+DEPENDENCIES:        admin lifecycle (draft→validate→preview→publish), audit store
+IMPACT:              contracts: admin change-kind set +1 · data: audit rows · security: none (admin-only)
+RISK:                Low–Medium (touches a closed admin contract; failing-first test on kind validation + audit emission)
+ALTERNATIVE:         documentary only (append sheets + rulings to 60_DECISION_LOG) — zero code, not machine-readable
+ENFORCEMENT POINT:   admin lifecycle + AuditEvent
+DECISION:            APPROVE | REJECT
+```
+```
+PROPOSED CAPABILITY: R177-FIX-04 — wire PreferenceLearningGate + 13 §8 memory visibility (existing memory seam)
+WHAT:                learn user preferences from repeated evidence (13 §6) and let users view/delete them (13 §8)
+DOES:                apps/composition: OPTIONAL `preferences` seam → after a succeeded execution, feed observations to
+                     core/memory/preferences.PreferenceLearningGate; admitted ⇒ MemoryItem(scope=tenant, user_id, source="preference");
+                     routes GET /v1/memory/preferences, DELETE /v1/memory/preferences/{id} over MemoryStorePort filtered by source; tenant+user
+                     scoped; memory write guard (FIX-06 table) applies
+WHY:                 F-R177-02 — gate is dead code; "Soul"/personalization has no writer; 13 §8 promise unmet
+REQUIRED:            No — absent seam ⇒ no preference learning, execute unaffected (honest INERT)
+DEPENDENCIES:        memory seam; conversations optional
+IMPACT:              contracts: none new (MemoryItem reused) · data: new tenant/user-scoped items · security: sensitivity gate + secret guard
+                     already apply · privacy: users can delete (13 §8)
+RISK:                Medium — first runtime writer of non-GOLD memory; failing-first tests: gate refusal on <2 evidence, cross-tenant read 404,
+                     secret-shaped preference refused
+ALTERNATIVE:         keep memory read-only (status quo); personalization stays unavailable
+ENFORCEMENT POINT:   PreferenceLearningGate + memory write guard + tenant-scoped keys
+DECISION:            APPROVE | REJECT
+```
+```
+PROPOSED CAPABILITY: R177-FIX-05 — memory type convention pinned (docs + test; no contract change)
+WHAT:                make the six 13 §2 memory types expressible and checkable without a new enum
+DOES:                docs/architecture/MEMORY_TYPES_MAPPING.md (type → scope × source × user_id, incl. "preference", "episode", "repo.map",
+                     "learning.gold"); tests/memory/test_memory_type_convention_r177.py pins the source vocabulary used by runtime writers
+WHY:                 F-R177-03 — types are documentary only; new writers (FIX-04/06) need one vocabulary
+REQUIRED:            No; recommended before FIX-04/06
+DEPENDENCIES:        none
+IMPACT:              contracts: none · closed-set: none (a MemoryType enum is explicitly NOT proposed — see R177-DEFER-01)
+RISK:                Low
+ALTERNATIVE:         MemoryType enum (new closed set; higher blast radius) — deferred
+ENFORCEMENT POINT:   test pin
+DECISION:            APPROVE | REJECT
+```
