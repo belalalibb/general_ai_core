@@ -1,0 +1,6 @@
+All checks passed!
+445 files already formatted
+Success: no issues found in 216 source files
+
+Contracts: 13 kept, 0 broken.
+........................................................                 [100%]
