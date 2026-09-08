@@ -809,6 +809,21 @@ def create_app(
                 "Streaming is not available on this deployment slice.",
                 details={"field": "execution_policy.stream"},
             )
+        # --- R176 FIX-03 (F-R176-05): the strategy field is a CLOSED contract.
+        # This route runs exactly two strategies: ``single`` (default path)
+        # and ``agent`` (shared runtime, gated next). Other enum members
+        # need subsystems this slice does not compose; a value outside the
+        # enum is a client bug. Both were silently degraded to a single-shot
+        # before. Same rule as the agent seam: loud, never silent.
+        if policy is not None and policy.strategy is not None:
+            if policy.strategy not in _RUNNABLE_STRATEGIES:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "execution_policy.strategy is not runnable on this deployment "
+                    f"slice: {policy.strategy!r} (supported: "
+                    f"{', '.join(sorted(_RUNNABLE_STRATEGIES))})",
+                    details={"field": "execution_policy.strategy"},
+                )
         # --- agent strategy (R160): the SHARED core.agent runtime ------------
         # Absent seam ⇒ loud rejection (never a silent single-shot). Present
         # ⇒ the caller's ``tools`` allow-list is resolved against the
