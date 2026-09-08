@@ -1,0 +1,12 @@
+        m = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        cb = m["change_budget"]
+>       assert "round_r177" in cb, "R177 Phase B production changes need a declared ceiling"
+E       AssertionError: R177 Phase B production changes need a declared ceiling
+E       assert 'round_r177' in {'counts_production_code_under': ['core/', 'apps/', 'infrastructure/'], 'round_a': {'ceiling': 5, 'changes_used': 4, '...nts_production_code_under': ['core/', 'apps/', 'ui/'], 'changes_used': 5, 'items': ['A2', 'A3', 'A5', 'A6'], ...}, ...}
+
+tests/engineering/test_budget_rounds_r177.py:110: AssertionError
+=========================== short test summary info ============================
+FAILED tests/engineering/test_budget_rounds_r177.py::test_unlisted_over_ceiling_round_fails_budget_step
+FAILED tests/engineering/test_budget_rounds_r177.py::test_unlisted_round_log_count_mismatch_fails
+FAILED tests/engineering/test_budget_rounds_r177.py::test_unlisted_round_outside_roots_and_unscheduled_item_fail
+FAILED tests/engineering/test_budget_rounds_r177.py::test_real_manifest_declares_round_r177_and_is_within_budget
