@@ -1,0 +1,12 @@
+E       assert 200 == 422
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests/api/test_execute_api.py:558: AssertionError
+=========================== short test summary info ============================
+FAILED tests/api/test_execute_api.py::test_unsupported_execution_strategy_is_validation_error[debate]
+FAILED tests/api/test_execute_api.py::test_unsupported_execution_strategy_is_validation_error[map_reduce]
+FAILED tests/api/test_execute_api.py::test_unsupported_execution_strategy_is_validation_error[review_judge]
+FAILED tests/api/test_execute_api.py::test_unsupported_execution_strategy_is_validation_error[hybrid]
+FAILED tests/api/test_execute_api.py::test_unsupported_execution_strategy_is_validation_error[parallel]
+FAILED tests/api/test_execute_api.py::test_unsupported_execution_strategy_is_validation_error[pipeline]
+FAILED tests/api/test_execute_api.py::test_unsupported_execution_strategy_is_validation_error[nonsense_value]
