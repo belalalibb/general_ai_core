@@ -56,10 +56,7 @@ def _record_values(record: EvaluationRecord) -> dict[str, Any]:
         "score": record.score,
         "confidence": record.confidence,
         "evidence_ref": record.evidence_ref,
-        "graders": [
-            grader.model_dump(mode="json", exclude_none=True)
-            for grader in record.graders
-        ],
+        "graders": [grader.model_dump(mode="json", exclude_none=True) for grader in record.graders],
     }
 
 
