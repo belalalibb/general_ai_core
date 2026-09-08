@@ -558,8 +558,9 @@ def test_unsupported_execution_strategy_is_validation_error(strategy: str) -> No
     assert response.status_code == 422, response.text
     payload = response.json()
     _assert_unified_error(payload, "validation_error")
-    assert payload["error"]["details"].get("field") in {"execution_policy.strategy", "execution_policy"} or any(
-        "strategy" in e for e in payload["error"]["details"].get("errors", [])
+    details = payload["error"]["details"]
+    assert details.get("field") in {"execution_policy.strategy", "execution_policy"} or any(
+        "strategy" in e for e in details.get("errors", [])
     )
 
 
