@@ -207,3 +207,96 @@ ALTERNATIVE:         MemoryType enum (new closed set; higher blast radius) — d
 ENFORCEMENT POINT:   test pin
 DECISION:            APPROVE | REJECT
 ```
+```
+PROPOSED CAPABILITY: R177-FIX-06 — persisted repository model via memory (existing agent + memory seams; OPTIONAL tool)
+WHAT:                a bounded discovery tool that writes a compact, ranked repository map as project-scoped memory items
+DOES:                apps/composition (or providers/) `repo_map` tool: uses the existing jailed SourceReader (bounds, denylist) to list files
+                     and top-level symbols (stdlib `ast` for Python first; other languages "unknown"), ranks by import-degree, writes
+                     MemoryItem(scope=project, source="repo.map", confidence, evidence_count) via MemoryStorePort; composer already ranks
+                     project scope; permission = source.read only (no new permission); exposed through /v1/agent-tools like other tools
+WHY:                 F-R177-05 — discovery is transient per run; planner cannot cite a persisted model; §11 asks for a project map
+REQUIRED:            No — absent ⇒ agent discovers live as today
+DEPENDENCIES:        memory seam, agent seam, projects store
+IMPACT:              architecture: none in core/ (parser outside) · data: project-scoped items · security: read-only, jail applies, NO execution
+                     authority conferred · performance: bounded by reader limits
+RISK:                Medium — stale maps mislead; mitigations: confidence + last_seen on MemoryItem, recompute on demand
+ALTERNATIVE:         status quo (live discovery only); or vendor tool outside QEVION
+ENFORCEMENT POINT:   SourceReader jail/denylist + firewall source.read + tenant-scoped memory keys
+DECISION:            APPROVE | REJECT
+```
+```
+PROPOSED CAPABILITY: R177-FIX-07 — list_files continuation cursor (core/tools/source_reader.py; optional ergonomics)
+WHAT:                let bounded listing continue past max_entries deterministically
+DOES:                add `after: str | None` (last returned rel path) to `SourceReader.list_files` and `ws_list`; response carries
+                     `truncated`+`next_after`; bounds unchanged
+WHY:                 F-R177-06 — 500-entry hard truncation without a cursor on large trees
+REQUIRED:            No
+DEPENDENCIES:        none
+IMPACT:              contracts: additive tool arg · security: none (same jail)
+RISK:                Low
+ALTERNATIVE:         directory-wise recursion by the agent (works today)
+ENFORCEMENT POINT:   SourceReader
+DECISION:            APPROVE | REJECT
+```
+```
+PROPOSED CAPABILITY: R177-FIX-08 — evidence-bound promotion signals (existing learning + evaluation seams)
+WHAT:                derive offline_eval_pass / regression_pass / security_eval_pass from recorded artefacts instead of trusting booleans
+DOES:                apps/api/admin.py promote request: optional `evidence_refs {evaluation_id?, regression_run_id?, security_eval_id?}`;
+                     resolver in apps/composition reads the evaluation store / scenarios store and SETS the three signals; composition flag
+                     `strict_promotion_evidence=True` refuses caller-asserted True for those three without refs (naming the condition);
+                     shadow/canary stay caller-asserted and are labelled UNVERIFIED in the sample report; PromotionGate unchanged
+WHY:                 G-A07-1 — the gate is correct over unverified inputs; landscape: registries gate on recorded artefacts
+REQUIRED:            No (but strongly recommended before any GOLD knowledge is relied upon)
+DEPENDENCIES:        evaluation store (in-memory today → see FIX-11), scenarios store
+IMPACT:              contracts: additive request field · closed sets: none · security: stronger (no self-asserted pass)
+RISK:                Low–Medium (failing-first: asserted True without refs ⇒ refused)
+ALTERNATIVE:         status quo + operator discipline
+ENFORCEMENT POINT:   PromotionGate (unchanged) fed by resolver
+DECISION:            APPROVE | REJECT
+```
+```
+PROPOSED CAPABILITY: R177-FIX-09 — compose the model judge behind a 22 §10 selection policy ("Teacher", composition only)
+WHAT:                enable VERIFIED-level evaluation selectively; keep Teacher replaceable/disable-able
+DOES:                apps/composition: bind `AdapterModelJudge` (existing) into EvaluationPolicyService(judge=…) when env
+                     `EVAL_JUDGE_MODEL_POLICY` is set; new small policy object (composition data) selecting samples by 22 §10 criteria
+                     (uncertain = confidence below threshold, new task category, calibration set, canary); disabled ⇒ today's behaviour
+WHY:                 G-A07-2 — VERIFIED unreachable via evaluate(); Teacher role has a seam but no composition or selector
+REQUIRED:            No — disabled = current state, pipeline unbroken (A07 §2)
+DEPENDENCIES:        routing + a provider binding (cost!); evaluation store
+IMPACT:              cost: paid inference per judged sample (selective by design) · provider independence: via routing · contracts: none
+RISK:                Medium (spend; judge failures raise JudgeFailure and never fake a level)
+ALTERNATIVE:         admin `set_verification_level` override (exists) — human, not scalable
+ENFORCEMENT POINT:   EvaluationPolicyService level ladder + selection policy
+DECISION:            APPROVE | REJECT
+```
+```
+PROPOSED CAPABILITY: R177-FIX-10 — structured knowledge intake adapter (outside core/; feeds capture_external as RAW)
+WHAT:                CSV/JSON (Excel optional) batch intake validated against declared expectations, quarantined on failure
+DOES:                apps/composition/intake.py (or providers/intake): parse → validate against expectation set (composition data: required
+                     columns, types, max rows) → per admitted row `lifecycle.capture_external(knowledge_key, knowledge_value)`; refused rows
+                     + validation report recorded as a sample report; admin route POST /v1/admin/learning/intake (multipart or JSON);
+                     every item lands RAW and traverses sanitize → eligibility → evaluate → promote unchanged
+WHY:                 G-A07-3 — no bulk/structured intake; §9 asks for CSV/Excel/JSON/API paths
+REQUIRED:            No
+DEPENDENCIES:        learning seam; optional openpyxl (Excel) outside core/
+IMPACT:              data: RAW samples only · security: sanitizer + eligibility gate apply per item; upload size bounds · contracts: none
+RISK:                Medium (poisoning surface widens — bounded by RAW + gates; failing-first: secret-shaped cell refused at scan)
+ALTERNATIVE:         status quo (one item per admin call)
+ENFORCEMENT POINT:   TrainingEligibilityGate + sanitizer (unchanged)
+DECISION:            APPROVE | REJECT
+```
+```
+PROPOSED CAPABILITY: R177-FIX-11 — durable evaluation store in the durable profile (infrastructure; migration 0019)
+WHAT:                evaluation records survive restart like executions do
+DOES:                infrastructure/db: table `evaluation_records` (migration 0019) + PostgresEvaluationStore implementing
+                     EvaluationStorePort; apps/composition/database.py binding; app.py composes it when DATABASE_URL is set; in-memory
+                     stays the hermetic default
+WHY:                 G-A07-4 — evaluations are the evidence FIX-08 would rely on; today they vanish on restart
+REQUIRED:            No (hermetic profile unaffected)
+DEPENDENCIES:        durable profile; alembic
+IMPACT:              data: new table · durability envelope widens honestly · contracts: none
+RISK:                Low–Medium (migration; durable pytest slice must pass)
+ALTERNATIVE:         status quo; label evaluation evidence as process-local
+ENFORCEMENT POINT:   EvaluationStorePort
+DECISION:            APPROVE | REJECT
+```
