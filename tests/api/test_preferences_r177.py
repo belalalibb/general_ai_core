@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Coroutine
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import httpx
 from fastapi import FastAPI
@@ -49,10 +49,12 @@ def _app(
         usage=world.usage,
         sleeper=_no_sleep,
     )
+    caller = principal or world.principal
+    world.usage.configure_tenant(caller.tenant_id, plan="pro", task_units_limit=1000.0)
     return create_app(
         router=world.router,
         execution_service=service,
-        principal=principal or world.principal,
+        principal=caller,
         admin=world.surface(),
         memory=memory,
         preferences=learner,
@@ -125,12 +127,19 @@ class TestLearningThroughTheGate:
     def test_contradiction_dominating_refuses(self) -> None:
         world = World()
         memory = InMemoryMemoryStore()
-        app = _app(world, memory=memory, learner=_learner(memory))
+        learner = _learner(memory)
+        app = _app(world, memory=memory, learner=learner)
         _execute(app, language="ar")
         _execute(app, language="en")
-        _execute(app, language="ar")
-        _execute(app, language="en")
-        assert run(_get(app, PREFS)).json()["preferences"] == []
+        _execute(app, language="en")  # en 2 vs ar 1: strict majority -> learned
+        rows = run(_get(app, PREFS)).json()["preferences"]
+        assert [r["value"] for r in rows] == ["en"]
+        _execute(app, language="ar")  # ar 2 vs en 2: a tie never fabricates certainty
+        decision = learner.last_decision(world.principal.tenant_id, world.principal.user_id)
+        assert decision is not None and decision.learnable is False
+        assert decision.reason == "contradiction_dominates:2vs2"
+        rows = run(_get(app, PREFS)).json()["preferences"]
+        assert [r["value"] for r in rows] == ["en"]  # ar was NOT written
 
     def test_policy_denies_by_default(self) -> None:
         world = World()
@@ -313,7 +322,7 @@ def test_runtime_profile_composes_the_learner_over_the_same_memory_store() -> No
     assert "preferences=preference_learner," in source
 
 
-def test_memory_type_convention_recognises_the_preference_source(tenant: UUID = uuid4()) -> None:
+def test_memory_type_convention_recognises_the_preference_source() -> None:
     from tests.memory.test_memory_type_convention_r177 import (
         MEMORY_SOURCE_VOCABULARY,
         runtime_memory_item_sources,
