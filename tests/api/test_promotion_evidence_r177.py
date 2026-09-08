@@ -155,7 +155,15 @@ def _scenario_report(
             created_at=now,
             completed_at=now,
         ),
-        nodes=(NodeReport(node=node, attempts=(), response=ProviderGenerateResponse(output={"text": "ok"})),),
+        nodes=(
+            NodeReport(
+                node=node,
+                attempts=(),
+                response=ProviderGenerateResponse(
+                    request_id=uuid4(), succeeded=True, output={"text": "ok"}
+                ),
+            ),
+        ),
         status_history=(status,),
     )
 

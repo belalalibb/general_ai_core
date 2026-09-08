@@ -495,6 +495,7 @@ def create_app(
     public_paths: frozenset[str] = frozenset(),
     dev_bindings: RepoBindingRegistry | None = None,
     skills_import: bool = False,
+    strict_promotion_evidence: bool = False,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -2187,6 +2188,9 @@ def create_app(
                 source_changes=source_change_workflow,
                 memory=memory,
                 engineering=engineering_admin,
+                # R177-FIX-08: strict ⇒ offline/security/regression signals must be
+                # backed by recorded artefacts (evidence_refs); default keeps R158.
+                strict_promotion_evidence=strict_promotion_evidence,
             )
         )
 

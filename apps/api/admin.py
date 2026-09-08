@@ -84,6 +84,12 @@ from apps.api.engineering_admin import (
 from apps.api.errors import error_response
 from apps.api.exercise import ExerciseSurface
 from apps.api.learning_observability import LearningObservabilityService
+from apps.api.promotion_evidence import (
+    ARTEFACT_BACKED_CONDITIONS,
+    HUMAN_ASSERTED_CONDITIONS,
+    EvidenceVerdict,
+    PromotionEvidenceResolver,
+)
 from apps.api.provenance import gold_keys_in_report, stored_context_available
 from apps.api.scenarios import (
     ScenarioNotFound,
@@ -208,8 +214,25 @@ class LearningAdmitRequest(ContractModel):
         )
 
 
+class PromotionEvidenceRefs(ContractModel):
+    """R177-FIX-08: recorded artefacts that RESOLVE the artefact-backed signals.
+
+    Each ref is optional; a present ref overrides the caller's boolean for
+    its condition (the record decides, not the caller). Closed shape.
+    """
+
+    evaluation_id: UUID | None = None  # -> offline_eval_pass
+    security_evaluation_id: UUID | None = None  # -> security_eval_pass
+    regression_execution_id: UUID | None = None  # -> regression_pass (scenario replay)
+
+
 class LearningPromoteRequest(ContractModel):
-    """Resolved 22 §11 signals — deny-by-default mirrors PromotionSignals."""
+    """Resolved 22 §11 signals — deny-by-default mirrors PromotionSignals.
+
+    R177-FIX-08: ``evidence_refs`` binds offline / security / regression to
+    recorded artefacts; in strict compositions a bare ``True`` for those
+    three without a ref is refused, naming the condition.
+    """
 
     offline_eval_pass: bool = False
     regression_pass: bool = False
@@ -219,6 +242,7 @@ class LearningPromoteRequest(ContractModel):
     rollback_plan_exists: bool = False
     approval_required: bool = True
     admin_approved: bool = False
+    evidence_refs: PromotionEvidenceRefs | None = None
 
     def to_signals(self) -> PromotionSignals:
         return PromotionSignals(
@@ -231,6 +255,66 @@ class LearningPromoteRequest(ContractModel):
             approval_required=self.approval_required,
             admin_approved=self.admin_approved,
         )
+
+    def resolve(
+        self,
+        resolver: PromotionEvidenceResolver,
+        *,
+        tenant_id: UUID,
+        source_execution_id: UUID,
+        strict: bool,
+    ) -> tuple[PromotionSignals, JsonObject, list[str]]:
+        """Signals with artefact-backed conditions RESOLVED; evidence report; refusals.
+
+        Returns ``(signals, evidence_json, refused_unbacked)`` where
+        ``refused_unbacked`` names the conditions the caller asserted True
+        without a ref under strict mode (each is forced False — the gate then
+        refuses naming exactly those conditions).
+        """
+        refs = self.evidence_refs
+        resolved: dict[str, EvidenceVerdict] = {}
+        if refs is not None:
+            if refs.evaluation_id is not None:
+                resolved["offline_eval_pass"] = resolver.evaluation(
+                    tenant_id, source_execution_id, refs.evaluation_id
+                )
+            if refs.security_evaluation_id is not None:
+                resolved["security_eval_pass"] = resolver.security_evaluation(
+                    tenant_id, source_execution_id, refs.security_evaluation_id
+                )
+            if refs.regression_execution_id is not None:
+                resolved["regression_pass"] = resolver.regression(
+                    tenant_id, refs.regression_execution_id
+                )
+        values: dict[str, bool] = {name: getattr(self, name) for name in ARTEFACT_BACKED_CONDITIONS}
+        refused: list[str] = []
+        unverified: list[str] = [name for name in HUMAN_ASSERTED_CONDITIONS if getattr(self, name)]
+        for name in ARTEFACT_BACKED_CONDITIONS:
+            if name in resolved:
+                values[name] = resolved[name].held
+            elif values[name]:
+                if strict:
+                    values[name] = False
+                    refused.append(name)
+                else:
+                    unverified.append(name)
+        signals = PromotionSignals(
+            offline_eval_pass=values["offline_eval_pass"],
+            regression_pass=values["regression_pass"],
+            security_eval_pass=values["security_eval_pass"],
+            shadow_performance_acceptable=self.shadow_performance_acceptable,
+            canary_performance_acceptable=self.canary_performance_acceptable,
+            rollback_plan_exists=self.rollback_plan_exists,
+            approval_required=self.approval_required,
+            admin_approved=self.admin_approved,
+        )
+        evidence: JsonObject = {
+            "strict": strict,
+            "resolved": {name: v.as_json() for name, v in resolved.items()},
+            "unverified": unverified,
+            "refused_unbacked": refused,
+        }
+        return signals, evidence, refused
 
 
 #: Newest executions examined by the re-test's production-reach measurement.
@@ -305,6 +389,7 @@ def create_admin_router(
     source_changes: SourceChangeWorkflow | None = None,
     memory: MemoryStorePort | None = None,
     engineering: EngineeringAdminSurface | None = None,
+    strict_promotion_evidence: bool = False,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -607,6 +692,10 @@ def create_admin_router(
     # act tenant-scoped through the service's own (tenant, sample) keying.
     if learning_lifecycle is not None:
         lifecycle = learning_lifecycle
+        promotion_resolver = PromotionEvidenceResolver(
+            evaluations=surface.evaluations,
+            executions=execution_store if execution_store is not None else surface.executions,
+        )
 
         @router.get("/learning/samples")
         async def list_learning_samples(request: Request) -> Response:
@@ -805,10 +894,28 @@ def create_admin_router(
             if isinstance(parsed, JSONResponse):
                 return parsed
             try:
+                sample = lifecycle.get(admitted.tenant_id, parsed)
+            except SampleNotFound:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "Unknown learning sample id.",
+                    details={"sample_id": sample_id[:100]},
+                    http_status=404,
+                )
+            # R177-FIX-08: artefact-backed conditions are RESOLVED from records
+            # (same evaluation store the admin reads; same execution store);
+            # human conditions stay asserted and are labelled unverified.
+            signals, evidence, _refused = body.resolve(
+                promotion_resolver,
+                tenant_id=admitted.tenant_id,
+                source_execution_id=sample.source_execution_id,
+                strict=strict_promotion_evidence,
+            )
+            try:
                 item = lifecycle.promote_to_gold(
                     admitted.tenant_id,
                     parsed,
-                    body.to_signals(),
+                    signals,
                     actor_id=admitted.user_id,
                 )
             except SampleNotFound:
@@ -819,7 +926,7 @@ def create_admin_router(
                     http_status=404,
                 )
             except (PromotionDenied, LearningError) as exc:
-                return _json({"promoted": False, "reason": str(exc)})
+                return _json({"promoted": False, "reason": str(exc), "evidence": evidence})
             except MemoryStoreError as exc:
                 # The retrieval substrate refused the write (13 §7 secret
                 # screen or backend failure): the sample stays unpromoted.
@@ -835,6 +942,7 @@ def create_admin_router(
                     "promoted": True,
                     "memory_item_id": str(item.id),
                     "knowledge_key": item.key,
+                    "evidence": evidence,
                 }
             )
 

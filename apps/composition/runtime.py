@@ -1008,6 +1008,8 @@ def build_runtime_profile(
         engineering_admin=engineering_admin,
         # R177-FIX-02: this root attaches SkillReviewSurface below -> honest catalog row.
         skills_import=True,
+        # R177-FIX-08: served profiles never accept self-asserted eval/regression passes.
+        strict_promotion_evidence=True,
     )
 
     # --- admin console (P-D follow-up): the EXISTING attach_admin_console

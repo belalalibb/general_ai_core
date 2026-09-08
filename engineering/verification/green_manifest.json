@@ -396,7 +396,7 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 1,
+      "changes_used": 2,
       "items": [
         "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
         "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
@@ -415,6 +415,13 @@
           "loc": "+36/-0",
           "files": 3,
           "summary": "catalog completeness: CAPABILITY_IDS 17->22 (agent.runtime, sourcechange.workflow, skills.import, workspaces.projects, evaluation.records — approved closed-set edit); create_app(skills_import: bool = False) + five honest rows derived from the SAME seam variables; runtime profile passes skills_import=True beside its SkillReviewSurface attach; pin tests/api/test_capability_catalog_r177.py"
+        },
+        {
+          "item": "R177-FIX-08",
+          "file": "apps/api/promotion_evidence.py + apps/api/admin.py + apps/api/app.py + apps/composition/runtime.py",
+          "loc": "+300/-3",
+          "files": 4,
+          "summary": "evidence-bound promotion: new read-only PromotionEvidenceResolver (offline/security <- EvaluationRecord of the sample's source execution, same tenant, above RAW, checks passed; regression <- stored SUCCEEDED scenario-replay execution); LearningPromoteRequest.evidence_refs {evaluation_id, security_evaluation_id, regression_execution_id} resolves those three signals (record overrides caller); create_admin_router/create_app(strict_promotion_evidence=False) — strict refuses caller-asserted True without refs naming the condition; human signals labelled unverified; runtime profile strict=True; PromotionGate unchanged; pin tests/api/test_promotion_evidence_r177.py (12)"
         }
       ],
       "frozen_trees_zero_diff": [
