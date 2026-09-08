@@ -1,0 +1,1 @@
+RED: ModuleNotFoundError: No module named 'apps.composition.repo_map' (collection error) — recorded before implementation
