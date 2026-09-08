@@ -300,3 +300,38 @@ ALTERNATIVE:         status quo; label evaluation evidence as process-local
 ENFORCEMENT POINT:   EvaluationStorePort
 DECISION:            APPROVE | REJECT
 ```
+
+## 12. R177-FIX-nn bounded change register (all PENDING APPROVAL; Phase B order recommended = FIX-01 first, then by dependency)
+| id | sev | evidence | minimum change | affected files | failing-first test | rollback | closed-set impact | budget impact |
+|---|---|---|---|---|---|---|---|---|
+| R177-FIX-01 | S3 | check_repo.sh:143-144 | iterate `round_*` keys; add round_r177 | engineering/verification/check_repo.sh, green_manifest.json, tests/engineering/test_budget_rounds_r177.py | fixture manifest with unlisted over-ceiling round ⇒ budget FAIL | revert | none | **enables** budget for R177 (ceiling proposed: 12) |
+| R177-FIX-02 | S4 | A04 §4 | +5 CAPABILITY_IDS + state rules | apps/api/capabilities.py, apps/api/app.py, tests/api/test_capabilities*.py | catalog lists 22 ids; agent seam absent ⇒ INERT row | revert | CAPABILITY_IDS 17→22 (approved edit) | 2 files |
+| R177-FIX-03 | S3 | A05 §6.1 | draft kind `capability_proposal` → APPROVAL_DECISION audit | core/contracts/admin.py, core/admin/*, apps/api/admin.py, tests/admin/ | publish emits APPROVAL_DECISION with decision+reason; unknown kind still refused | revert | admin change-kind set +1 | 3 files |
+| R177-FIX-04 | S3 | A06 F-R177-02 | wire PreferenceLearningGate; 2 user routes | apps/composition/*.py, apps/api/app.py, tests/memory/, tests/api/ | <2 evidence ⇒ no item; cross-tenant GET 404; secret-shaped value refused | revert | none | 2–3 files |
+| R177-FIX-05 | S4 | A06 F-R177-03 | docs/architecture mapping + test pin | docs/architecture/MEMORY_TYPES_MAPPING.md, tests/memory/test_memory_type_convention_r177.py | unknown runtime `source` value ⇒ test fails | revert | none | 0 production files |
+| R177-FIX-06 | S3 | A08 F-R177-05 | `repo_map` tool → MemoryItem scope=project | apps/composition/repo_map.py (new), apps/composition/agent.py, tests/composition/ | denied path never listed; item carries confidence; no write permission needed | revert | none | 2 files |
+| R177-FIX-07 | S4 | A08 F-R177-06 | `after` cursor on list_files/ws_list | core/tools/source_reader.py, core/engineering/tools.py, tests/tools/ | 501 files ⇒ truncated+next_after; second call continues | revert | none | 2 files |
+| R177-FIX-08 | S3 | A07 G-A07-1 | evidence_refs resolver; strict flag | apps/api/admin.py, apps/composition/*.py, tests/admin/ | asserted offline_eval_pass=True without refs ⇒ refused naming condition | revert | none (additive field) | 2 files |
+| R177-FIX-09 | S4 | A07 G-A07-2 | compose AdapterModelJudge behind 22 §10 selector | apps/composition/runtime.py, apps/composition/evaluation_policy.py (new), tests/composition/ | selector picks only uncertain/new/calibration/canary; disabled ⇒ level ≤ VALIDATED | revert | none | 2 files |
+| R177-FIX-10 | S3 | A07 G-A07-3 | CSV/JSON intake → capture_external RAW | apps/composition/intake.py (new), apps/api/admin.py, tests/admin/ | secret cell ⇒ RAW sample flagged at scan, never promoted; over-limit ⇒ quarantine report | revert | none | 2 files |
+| R177-FIX-11 | S4 | A07 G-A07-4 | durable evaluation store + migration 0019 | infrastructure/db/{tables,migrations/versions/0019_*,repositories/evaluations}.py, apps/composition/database.py, apps/api/app.py, tests/infrastructure/ | durable slice: record survives new session | alembic downgrade + revert | none | 4–5 files |
+
+Total proposed production files if ALL approved ≈ 20 → requires a `round_r177` ceiling; FIX-01 must land first (§3.5c).
+
+## 13. Open operator decisions (rulings go to 60_DECISION_LOG as new entries)
+- **DEC-01** — CONFIRMED by evidence (R177-DEC-01 appended): precedence already most-restrictive-wins; memory paths use their own closed
+  gates; no divergence; no new model. Nothing to approve.
+- **DEC-02** — FIX-01 (R176): redact ALL THREE literals at canonical prompt lines 132–134 (only 132 is gate-detected) and ROTATE the
+  AssemblyAI key, the Groq key, and every GitHub token in history. Repository is public; urgent; operator-owned. OPEN.
+- **DEC-03** — F-R176-10 application-scoped credentials: recommendation DEFER. OPEN.
+- **DEC-04** — which R177-FIX-nn enter Phase B and in what order. Recommended: FIX-01 → FIX-05 → FIX-02 → FIX-08 → FIX-04 → FIX-06 →
+  FIX-11 → FIX-03 → FIX-10 → FIX-09 → FIX-07. OPEN.
+- **DEC-05** — approve governance fix R177-FIX-01. OPEN. Prerequisite for any Phase B.
+
+## 14. Stop point (§20)
+R177 Phase A is complete at A13. No production file changed; canonical prompt untouched; v3 pack 20 files; state file frozen;
+not_evaluated 2/2; closed sets closed. **Next bounded action** = Phase B FIX-01 (only after `APPROVED: R177-FIX-01, DEC-05`), then
+approved FIX ids one at a time through the §14 closed loop. Ledger: `evidence/r177_state_ledger.md`. Evidence: `evidence/r177/A01_baseline
+… A10_landscape`. UNVERIFIED in this round (reasons): R177 baseline gate re-run (lost to sandbox resets; product tree byte-identical to
+13be858d so the R176 artefact stands); large-repository discovery scalability (no fixture); observability export (no probe); skills import
+E2E from an allowed source (carried from R176).
