@@ -185,9 +185,9 @@ class TestThroughTheRuntime:
                     tools=[spec],
                 )
             )
-        observation = outcome.report.evidence[0]
-        assert observation["status"] == "ok", observation
-        assert observation["result"]["modules"][0]["path"] == "pkg/core.py"
+        step = outcome.report.steps[0].observation
+        assert step["status"] == "succeeded", step
+        assert outcome.report.evidence[0]["result"]["modules"][0]["path"] == "pkg/core.py"
         items = memory.query(TENANT, scope=MemoryScope.PROJECT)
         assert len(items) == 1 and items[0].source == REPO_MAP_SOURCE
 
