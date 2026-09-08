@@ -69,7 +69,7 @@ from apps.api.preferences import PreferenceLearner
 from apps.api.skills_import import SkillReviewSurface
 from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
 from apps.api.worker import ExecutionMessageHandler
-from apps.api.workspaces import InMemoryProjectStore
+from apps.api.workspaces import InMemoryProjectStore, ProjectStorePort
 from apps.composition.admin_console import attach_admin_console
 from apps.composition.agent import ComposedAgent, build_agent, grant_agent_tenant
 from apps.composition.bridge import AsyncBridge
@@ -878,10 +878,11 @@ def build_runtime_profile(
     # R177-FIX-06: the project store the /v1/projects surface AND the repo_map
     # tool resolve against (R168 D-08 one store) — in-memory profile builds
     # the same default create_app would, and hands it over explicitly.
-    if project_store is None:
-        project_store = InMemoryProjectStore()
+    projects_port: ProjectStorePort = (
+        project_store if project_store is not None else InMemoryProjectStore()
+    )
     repo_map = (
-        RepoMapper(reader=repo_reader, memory=memory_store, projects=project_store)
+        RepoMapper(reader=repo_reader, memory=memory_store, projects=projects_port)
         if repo_reader is not None
         else None
     )
@@ -1029,7 +1030,7 @@ def build_runtime_profile(
         sse=True,
         source_proposals=proposals,
         workspaces=workspace_store,
-        projects=project_store,
+        projects=projects_port,  # R177-FIX-06: the SAME store the repo_map tool resolves against
         source_snapshots=snapshots,
         agent=composed_agent.surface,
         engineering_admin=engineering_admin,
