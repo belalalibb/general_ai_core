@@ -396,7 +396,7 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 2,
+      "changes_used": 3,
       "items": [
         "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
         "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
@@ -422,6 +422,13 @@
           "loc": "+300/-3",
           "files": 4,
           "summary": "evidence-bound promotion: new read-only PromotionEvidenceResolver (offline/security <- EvaluationRecord of the sample's source execution, same tenant, above RAW, checks passed; regression <- stored SUCCEEDED scenario-replay execution); LearningPromoteRequest.evidence_refs {evaluation_id, security_evaluation_id, regression_execution_id} resolves those three signals (record overrides caller); create_admin_router/create_app(strict_promotion_evidence=False) — strict refuses caller-asserted True without refs naming the condition; human signals labelled unverified; runtime profile strict=True; PromotionGate unchanged; pin tests/api/test_promotion_evidence_r177.py (12)"
+        },
+        {
+          "item": "R177-FIX-04",
+          "file": "apps/api/preferences.py + apps/api/app.py + apps/composition/runtime.py",
+          "loc": "+290/-0",
+          "files": 3,
+          "summary": "wire PreferenceLearningGate (13 §6) + memory visibility (13 §8): NEW apps/api/preferences.py PreferenceLearner (explicit request facts only — context.language / output.format — on SUCCEEDED execute; bounded per-user window; gate decides; policy_allows_memory deny-by-default; admitted => MemoryItem scope=tenant user_id source=preference via the existing store, secret guard applies) + router GET /v1/memory/preferences, DELETE /v1/memory/preferences/{id} (owner-only; foreign/other-user/non-preference => same 404); create_app(preferences: PreferenceLearner | None) — raises without memory seam; observe hook after execution_store.put; runtime composes the learner over the composer's memory_store, PREFERENCE_LEARNING_ALLOWED=1 enables cond. 5; pin tests/api/test_preferences_r177.py (14)"
         }
       ],
       "frozen_trees_zero_diff": [
