@@ -68,9 +68,7 @@ def record(name: str, resp: httpx.Response, body_sent: dict | None) -> dict:
         },
         "request_body": body_sent,
         "response_headers": {
-            k: v
-            for k, v in resp.headers.items()
-            if k.lower() in ("content-type", "retry-after")
+            k: v for k, v in resp.headers.items() if k.lower() in ("content-type", "retry-after")
         },
         "response_body": parsed,
     }
