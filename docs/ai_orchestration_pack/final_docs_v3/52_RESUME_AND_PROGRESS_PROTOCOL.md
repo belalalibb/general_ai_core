@@ -43,6 +43,8 @@ README.md
 
 PROJECT_EXECUTION_STATE.md
 = where the project is, current phase, current task, and next authorized task
+  (frozen at R168; since then the per-round evidence/rNNN_state_ledger.md is
+  the live checkpoint a resuming Agent reads FIRST — R176 FIX-02)
 
 52_RESUME_AND_PROGRESS_PROTOCOL.md (this document)
 = how to resume safely
@@ -113,7 +115,10 @@ review git diff
 create a local commit
 ```
 
-The Agent must not:
+The Agent must not, unless the operator explicitly instructs it (the
+long-horizon rounds since R168 DO instruct commit+push after every item so a
+sandbox reset loses nothing — that explicit instruction wins; R176 FIX-02,
+F-R176-04):
 
 ```text
 git push

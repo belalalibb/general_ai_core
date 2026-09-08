@@ -1,5 +1,13 @@
 # PROJECT EXECUTION STATE
 
+> **Resume pointer (R176 FIX-02, F-R176-03).** Since R168 the live, per-round
+> checkpoint is `evidence/rNNN_state_ledger.md` (highest `NNN` = current round;
+> it carries the round checklist and one row per completed item, each row
+> naming the commit that proves it). This file is the frozen phase/task
+> control record as of R168 and is NOT updated per round. A fresh agent
+> resumes from the newest ledger first, then Git, then this file — see
+> `docs/OPERATIONS.md` §12 and `final_docs_v3/52_RESUME_AND_PROGRESS_PROTOCOL.md` §2.
+
 This file is the single project-level control point for documentation rewrite and later implementation phases.
 
 It is not a replacement for Git. Git + verified filesystem reality remain the factual source of truth.

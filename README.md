@@ -133,6 +133,7 @@ buildability, correctness, safety, recoverability, extensibility, and token-effi
 - Do not add frameworks.
 - Do not invent speculative features.
 - Do not push to remote unless explicitly instructed; the platform may handle upload automatically.
+  (When the operator's round protocol instructs commit+push after every item — the practice since R168 — that instruction is the explicit one and wins.)
 - Never spend context on push mechanics unless the user explicitly asks for push.
 
 ## SOURCE MATERIALS

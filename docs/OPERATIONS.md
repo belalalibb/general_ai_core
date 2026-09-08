@@ -123,7 +123,8 @@ Request bodies are closed shapes (`extra=forbid`): unknown fields ⇒ 422.
 
 - **API** — `/v1/*` (see `apps.cli routes`). Core entry: `POST /v1/execute`
   (sync or `{"execution_policy":{"async":true}}` ⇒ 202 → `GET /v1/executions/{id}`),
-  `GET /v1/agent/executions/{id}/trace` (agent runs), `GET /v1/agent-tools`, `GET /v1/models`.
+  `GET /v1/agent/executions/{id}/trace` (agent runs; **admin-only** — a non-admin session gets 403, R176 O-01),
+  `GET /v1/agent-tools`, `GET /v1/models`.
 - **End-user web UI** — `/app/` (static, talks to the same API).
 - **Admin console** — `/admin/` (static; every panel reads REAL routes;
   `GET /v1/admin/system`, `/v1/admin/usage`, learning, skills import,
