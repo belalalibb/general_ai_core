@@ -1,0 +1,4 @@
+E   ModuleNotFoundError: No module named 'apps.api.preferences'
+=========================== short test summary info ============================
+ERROR tests/api/test_preferences_r177.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
