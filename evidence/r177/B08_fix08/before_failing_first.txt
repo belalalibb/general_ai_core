@@ -1,0 +1,4 @@
+E   ModuleNotFoundError: No module named 'apps.api.promotion_evidence'
+=========================== short test summary info ============================
+ERROR tests/api/test_promotion_evidence_r177.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
