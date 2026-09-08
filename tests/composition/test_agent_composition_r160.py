@@ -64,12 +64,13 @@ class TestCatalog:
         assert profile.agent.surface.offered() == []
         assert profile.agent.tool_registry.list_all() == []
 
-    def test_source_root_offers_three_read_only_tools(self, tmp_path: Path) -> None:
+    def test_source_root_offers_read_only_tools(self, tmp_path: Path) -> None:
         (tmp_path / "a.py").write_text("x = 1\n")
         profile = _profile(AGENT_SOURCE_ROOT=str(tmp_path))
         assert profile.agent is not None
         names = [entry["name"] for entry in profile.agent.surface.offered()]
-        assert names == ["source_list", "source_read", "source_search"]
+        # R177-FIX-06 added ``repo_map`` (source.read only) beside the three R160 tools.
+        assert names == ["repo_map", "source_list", "source_read", "source_search"]
         assert all(
             e["permission"] == SOURCE_READ_PERMISSION for e in profile.agent.surface.offered()
         )

@@ -396,7 +396,7 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 3,
+      "changes_used": 4,
       "items": [
         "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
         "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
@@ -429,6 +429,13 @@
           "loc": "+290/-0",
           "files": 3,
           "summary": "wire PreferenceLearningGate (13 §6) + memory visibility (13 §8): NEW apps/api/preferences.py PreferenceLearner (explicit request facts only — context.language / output.format — on SUCCEEDED execute; bounded per-user window; gate decides; policy_allows_memory deny-by-default; admitted => MemoryItem scope=tenant user_id source=preference via the existing store, secret guard applies) + router GET /v1/memory/preferences, DELETE /v1/memory/preferences/{id} (owner-only; foreign/other-user/non-preference => same 404); create_app(preferences: PreferenceLearner | None) — raises without memory seam; observe hook after execution_store.put; runtime composes the learner over the composer's memory_store, PREFERENCE_LEARNING_ALLOWED=1 enables cond. 5; pin tests/api/test_preferences_r177.py (14)"
+        },
+        {
+          "item": "R177-FIX-06",
+          "file": "apps/composition/repo_map.py + apps/api/run_context.py + apps/composition/agent.py + apps/api/app.py + apps/composition/runtime.py",
+          "loc": "+330/-6",
+          "files": 5,
+          "summary": "persisted repository model: NEW RepoMapper (jailed SourceReader list+read; denied paths never listed; stdlib ast symbols; import-degree ranking; bounded modules/symbols; confidence lowered on truncation/omission) writes ONE MemoryItem(scope=project, user_id=None, source=repo.map, key=repo.map:<project>) per project through the existing MemoryStorePort (recompute updates in place); project must resolve in the ADMITTED tenant (absent==foreign); NEW apps/api/run_context bind_run_tenant/current_run_tenant (contextvars; tenant never taken from model arguments); agent.py repo_map_tool_spec (source.read only, no write authority) + build_agent(repo_map=); app.py binds the run tenant around agent.runtime.run; runtime composes RepoMapper over the composer's memory_store + reader + the ONE project store (projects_port shared with create_app); pins tests/composition/test_repo_map_r177.py (10), R160 catalog pin updated (+repo_map)"
         }
       ],
       "frozen_trees_zero_diff": [
