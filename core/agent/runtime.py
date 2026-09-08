@@ -360,9 +360,16 @@ class AgentRuntime:
         actor: ActorKind = ActorKind.USER,
         conversation_id: UUID | None = None,
         idempotency_key: str | None = None,
+        request_hash: str | None = None,
         label: JsonObject | None = None,
     ) -> AgentRunOutcome:
-        """One bounded agent run. Never raises for model/tool outcomes."""
+        """One bounded agent run. Never raises for model/tool outcomes.
+
+        ``request_hash`` (R176 FIX-05): the caller's canonical hash of the
+        ORIGINAL request when this run is one path of a wider surface
+        (``POST /v1/execute``), so an idempotent replay comparison sees one
+        vocabulary across paths. Absent ⇒ the historical hash of ``task``.
+        """
         specs = self.admit_tools(tools)
         steps = self._max_steps if max_steps is None else max_steps
         if not (1 <= steps <= self._max_steps):
@@ -429,9 +436,10 @@ class AgentRuntime:
             max_repeated_failures=self._max_repeated_failures,
             deadline_ms=deadline,
         )
-        request_hash = hashlib.sha256(
-            json.dumps(task, sort_keys=True, default=str).encode("utf-8")
-        ).hexdigest()
+        if request_hash is None:
+            request_hash = hashlib.sha256(
+                json.dumps(task, sort_keys=True, default=str).encode("utf-8")
+            ).hexdigest()
         report = await loop.execute(
             tenant_id=tenant_id,
             user_id=user_id,
