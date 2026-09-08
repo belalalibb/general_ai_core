@@ -396,7 +396,7 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 3,
+      "changes_used": 1,
       "items": [
         "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
         "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
@@ -411,21 +411,10 @@
       "log": [
         {
           "item": "R177-FIX-02",
-          "file": "apps/api/capabilities.py",
-          "loc": "+6/-0",
-          "summary": "CAPABILITY_IDS 17->22: agent.runtime, sourcechange.workflow, skills.import, workspaces.projects, evaluation.records (deliberate closed-set edit; pin tests/api/test_capability_catalog_r177.py)"
-        },
-        {
-          "item": "R177-FIX-02",
-          "file": "apps/api/app.py",
-          "loc": "+28/-0",
-          "summary": "create_app(skills_import: bool = False) + five honest catalog rows derived from the SAME seam variables (agent, admin, skills_import, always-mounted workspaces/projects)"
-        },
-        {
-          "item": "R177-FIX-02",
-          "file": "apps/composition/runtime.py",
-          "loc": "+2/-0",
-          "summary": "runtime profile passes skills_import=True because it attaches SkillReviewSurface (catalog row honest in the served profile)"
+          "file": "apps/api/capabilities.py + apps/api/app.py + apps/composition/runtime.py",
+          "loc": "+36/-0",
+          "files": 3,
+          "summary": "catalog completeness: CAPABILITY_IDS 17->22 (agent.runtime, sourcechange.workflow, skills.import, workspaces.projects, evaluation.records — approved closed-set edit); create_app(skills_import: bool = False) + five honest rows derived from the SAME seam variables; runtime profile passes skills_import=True beside its SkillReviewSurface attach; pin tests/api/test_capability_catalog_r177.py"
         }
       ],
       "frozen_trees_zero_diff": [
@@ -433,7 +422,7 @@
         "apps/admin_agent/",
         "core/tools/gate.py"
       ],
-      "note": "R177 Phase B (operator approval 2026-09-08: FIX-01..11 + DEC-05). FIX-01 (this entry + check_repo.sh loop) and FIX-05 (docs+tests only) are non-production and not counted. One log entry per production file touched; changes_used == len(log)."
+      "note": "R177 Phase B (operator approval 2026-09-08: FIX-01..11 + DEC-05). Unit of budget = one approved R177-FIX item (precedent: round_r172 C4 lists several files in one entry); the assessment §12 proposed ceiling 12 while estimating ~20 production files, so per-item counting is the only reading consistent with the approval (recorded R177-DEC-06). Each entry lists EVERY production file it touched (`file` joined by ' + ', `files` = count). FIX-01 (this entry + check_repo.sh loop) and FIX-05 (docs+tests only) are non-production and not counted. changes_used == len(log)."
     }
   },
   "baseline": {

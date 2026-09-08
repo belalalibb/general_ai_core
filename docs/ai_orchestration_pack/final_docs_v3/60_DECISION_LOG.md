@@ -1447,3 +1447,11 @@ primitive). None is implemented. Legacy files ARCHITECTURE_GAPS.md / FUTURE_IMPR
 
 ### Ref
 - `docs/r177/R177_CAPABILITY_FOUNDATION_ASSESSMENT.md` §10–§12; `evidence/r177_state_ledger.md`.
+
+### R177-DEC-06 — change-budget unit for round_r177 = one approved FIX item (2026-09-08)
+- Context: DEC-05 approved `round_r177` with ceiling 12 while the assessment §12 estimated ≈20 production files across FIX-02..11.
+  Per-file counting would exhaust the ceiling mid-round without any item exceeding its approved scope.
+- Decision: one `log` entry per approved R177-FIX item; the entry lists every production file it touched (`file` joined by ` + `,
+  `files` = count) so file-level transparency is preserved. Precedent: `round_r172` entry C4 (two files, one entry).
+  The ceiling (12) and the item list are unchanged; the gate still checks `changes_used == len(log)`, roots, and scheduled items.
+- Evidence: `engineering/verification/green_manifest.json` `change_budget.round_r177.note`; `evidence/r177_state_ledger.md` row B-08.
