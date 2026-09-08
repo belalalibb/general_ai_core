@@ -1,8 +1,8 @@
 ### M-01 providers
-{"providers":[{"id":"823c21d9-c8a2-4b4d-a98a-8e4a0034164e","provider_key":"local_echo","display_name":"Local Echo (hermetic)","status":"active","auth_types":["api_key"],"supports_account_pool":false,"is_template":false,"is_routable":true}]} [200]
+{"providers":[{"id":"e6f0ab55-71fb-4931-8d26-b3de303a5738","provider_key":"local_echo","display_name":"Local Echo (hermetic)","status":"active","auth_types":["api_key"],"supports_account_pool":false,"is_template":false,"is_routable":true}]} [200]
 
 ### M-02 models
-{"models":[{"id":"eeb62733-573e-4a2e-bb84-86de18d6e84f","model_key":"local-echo-1","display_name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"quality_score":0.8,"speed_score":0.8,"cost_score":0.8,"reliability_score":0.8,"status":"active"}]} [200]
+{"models":[{"id":"8fbedf59-823b-43aa-89ea-e8ddf1bf03ae","model_key":"local-echo-1","display_name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"quality_score":0.8,"speed_score":0.8,"cost_score":0.8,"reliability_score":0.8,"status":"active"}]} [200]
 
 ### M-03 routing/weights
 {"version":"11s6-initial","quality":0.35,"reliability":0.2,"cost":0.15,"latency":0.15,"context_fit":0.1,"policy_preference":0.05} [200]
@@ -20,22 +20,22 @@
 {"detail":"Method Not Allowed"} [405]
 
 ### L-00 user /v1/models BEFORE
-{"models":[{"id":"eeb62733-573e-4a2e-bb84-86de18d6e84f","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
+{"models":[{"id":"8fbedf59-823b-43aa-89ea-e8ddf1bf03ae","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
 
 ### L-01 draft disable_model
-{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"draft","created_at":"2026-09-07T22:30:23.092480Z"} [201]
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"draft","created_at":"2026-09-08T11:02:20.507566Z"} [201]
 
 ### L-02 validate
-{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"validated","created_at":"2026-09-07T22:30:23.092480Z","validation_result":"passed"} [200]
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"validated","created_at":"2026-09-08T11:02:20.507566Z","validation_result":"passed"} [200]
 
 ### L-03 preview
-{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"validated","created_at":"2026-09-07T22:30:23.092480Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)"} [200]
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"validated","created_at":"2026-09-08T11:02:20.507566Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)"} [200]
 
 ### L-04 non-admin publish => 403
 {"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
 
 ### L-05 publish
-{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"published","created_at":"2026-09-07T22:30:23.092480Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","published_version":"models-v1"} [200]
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"published","created_at":"2026-09-08T11:02:20.507566Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","published_version":"models-v1"} [200]
 
 ### L-06 user /v1/models AFTER publish (stale-config: next request)
 {"models":[]} [200]
@@ -44,33 +44,25 @@
 {"error":{"code":"model_unavailable","message":"No eligible model candidates for this request.","retryable":false,"details":{"excluded":[]},"trace_id":null}} [503]
 
 ### L-08 rollback
-{"id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"rolled_back","created_at":"2026-09-07T22:30:23.092480Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","published_version":"models-v1"} [200]
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"rolled_back","created_at":"2026-09-08T11:02:20.507566Z","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","published_version":"models-v1"} [200]
 
 ### L-09 user /v1/models AFTER rollback
-{"models":[{"id":"eeb62733-573e-4a2e-bb84-86de18d6e84f","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
+{"models":[{"id":"8fbedf59-823b-43aa-89ea-e8ddf1bf03ae","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
 
 ### L-10 execute AFTER rollback
-{"execution_id":"abc31f3a-86e2-4459-b8cc-3b48030698cd","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"post-rollback\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"post-rollback\", \"note\": \"hermetic local adapter \\u2014 no real model [200]
+{"execution_id":"eb7ab41a-e741-4012-aba2-d174979b1f0c","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"post-rollback\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"post-rollback\", \"note\": \"hermetic local adapter \\u2014 no real model [200]
 
 ### L-11 audit tail (publish/rollback attributed?)
-{"events":[{"id":"71356d6b-a93b-46aa-9cbc-cbb6b20bdc0b","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","event_type":"login","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","occurred_at":"2026-09-07T22:30:22.277214Z","details":{}},{"id":"5457ab0e-3efb-4264-b8ac-f9b642291118","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","event_type":"admin_config_published","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","occurred_at":"2026-09-07T22:30:23.100502Z","details":{"change_id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","action":"disable_model"},"admin_change":{"what":"disable_model: local-echo-1","previous_version":"models-v0","new_version":"models-v1","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","rollback_target":"models-v0"}},{"id":"4a5e4068-adbf-4da2-bcbe-b26a43e93431","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","event_type":"admin_config_rolled_back","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","occurred_at":"2026-09-07T22:30:23.112801Z","details":{"change_id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b","action":"disable_model"},"admin_change":{"what":"rollback disable_model: loca [200]
+{"events":[{"id":"e05d4b35-734e-4b03-877b-ce43acc15b03","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","event_type":"login","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","occurred_at":"2026-09-08T11:02:19.723447Z","details":{}},{"id":"9f990898-2f59-49e0-98e3-c5e73ed4d8a5","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","event_type":"admin_config_published","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","occurred_at":"2026-09-08T11:02:20.515123Z","details":{"change_id":"72021580-3a1c-4ec9-887c-4915ec6c2881","action":"disable_model"},"admin_change":{"what":"disable_model: local-echo-1","previous_version":"models-v0","new_version":"models-v1","validation_result":"passed","impact_preview":"model 'local-echo-1' leaves the routing pool (03 §4: only ACTIVE models are candidates)","rollback_target":"models-v0"}},{"id":"42ffe67c-193a-40ce-93c6-5de76b68f9e4","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","event_type":"admin_config_rolled_back","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","occurred_at":"2026-09-08T11:02:20.520930Z","details":{"change_id":"72021580-3a1c-4ec9-887c-4915ec6c2881","action":"disable_model"},"admin_change":{"what":"rollback disable_model: loca [200]
 
 ### L-12 publish after rollback => state-machine refusal
-{"error":{"code":"validation_error","message":"invalid lifecycle transition: expected validated, found rolled_back","retryable":false,"details":{"change_id":"2f0156bc-6a2e-4fc4-8feb-d3d963cd852b"},"trace_id":null}} [409]
+{"error":{"code":"validation_error","message":"invalid lifecycle transition: expected validated, found rolled_back","retryable":false,"details":{"change_id":"72021580-3a1c-4ec9-887c-4915ec6c2881"},"trace_id":null}} [409]
 
 ### L-13 draft set_plan empty payload
-{"id":"e8f965ec-4a6c-4c37-860f-a48ad3a465c7","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"plans","action":"set_plan","payload":{},"state":"draft","created_at":"2026-09-07T22:30:23.134450Z"} [201]
+{"id":"36511dbd-1408-417a-af2d-e74c1776d430","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"plans","action":"set_plan","payload":{},"state":"draft","created_at":"2026-09-08T11:02:20.531954Z"} [201]
 
 ### L-14 draft register_provider WITH credential in payload
-{"id":"196fe507-35ad-454e-90ac-b3e5a57b6e66","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"providers","action":"register_provider","payload":{"provider_key":"evil","api_key":"<marker>"},"state":"draft","created_at":"2026-09-07T22:30:23.138885Z"} [201]
-
-### L-14b validate
-{"id":"196fe507-35ad-454e-90ac-b3e5a57b6e66","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"providers","action":"register_provider","payload":{"provider_key":"evil","api_key":"<marker>"},"state":"rejected","created_at":"2026-09-07T22:30:23.138885Z","validation_result":"rejected: payload requires a 'provider' object (03 §4 Provider contract)"} [200]
-
-### L-14c read back
-{"id":"196fe507-35ad-454e-90ac-b3e5a57b6e66","tenant_id":"b74d265e-ed8a-4ebe-9afb-c00c0984c934","actor_id":"84421395-2feb-4bc4-b01d-2122fcea7cc9","area":"providers","action":"register_provider","payload":{"provider_key":"evil","api_key":"<marker>"},"state":"rejected","created_at":"2026-09-07T22:30:23.138885Z","validation_result":"rejected: payload requires a 'provider' object (03 §4 Provider contract)"} [200]
-
-### L-14e marker string echoed in change read-back: True; present in audit: False
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Value error, payload must not carry credential material (key at payload.api_key); reference secrets by opaque *_ref handles only (20 §5)"]},"trace_id":null}} [422]
 
 ### L-15 non-admin GET changes => 403
 {"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]

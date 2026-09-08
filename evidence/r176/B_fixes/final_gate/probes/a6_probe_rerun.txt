@@ -1,0 +1,56 @@
+### M-01 providers
+{"providers":[{"id":"e6f0ab55-71fb-4931-8d26-b3de303a5738","provider_key":"local_echo","display_name":"Local Echo (hermetic)","status":"active","auth_types":["api_key"],"supports_account_pool":false,"is_template":false,"is_routable":true}]} 
+### M-02 models
+{"models":[{"id":"8fbedf59-823b-43aa-89ea-e8ddf1bf03ae","model_key":"local-echo-1","display_name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"quality_score":0.8,"speed_score":0.8,"cost_score":0.8,"reliabil
+### M-03 routing/weights
+{"version":"11s6-initial","quality":0.35,"reliability":0.2,"cost":0.15,"latency":0.15,"context_fit":0.1,"policy_preference":0.05} [200]
+
+### M-04 capabilities
+{"scope":"process","capabilities":[{"id":"admin.control_plane","state":"available","evidence":"admin seam -> /v1/admin/* (T-IMPL-032)"},{"id":"auth.sessions","state":"available","evidence":"auth seam -> /v1/auth/* (AA-1 IDN-1)"},{"id":"co
+### M-05 learning/dashboard
+{"placeholder":true,"verified_samples":0,"gold_samples":0,"dataset_coverage":{},"task_coverage":{},"specialist_models":[],"accuracy_trends":[],"promotion_history":[],"rollback_actions":[]} [200]
+
+### M-06 changes
+{"changes":[]} [200]
+
+### M-07 PUT routing/weights (no direct mutation route expected)
+{"detail":"Method Not Allowed"} [405]
+
+### L-00 user /v1/models BEFORE
+{"models":[{"id":"8fbedf59-823b-43aa-89ea-e8ddf1bf03ae","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
+
+### L-01 draft disable_model
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"stat
+### L-02 validate
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"validat
+### L-03 preview
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"validate
+### L-04 non-admin publish => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+
+### L-05 publish
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"publishe
+### L-06 user /v1/models AFTER publish (stale-config: next request)
+{"models":[]} [200]
+
+### L-07 execute AFTER disable => model_unavailable, no silent echo
+{"error":{"code":"model_unavailable","message":"No eligible model candidates for this request.","retryable":false,"details":{"excluded":[]},"trace_id":null}} [503]
+
+### L-08 rollback
+{"id":"72021580-3a1c-4ec9-887c-4915ec6c2881","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"models","action":"disable_model","payload":{"model_key":"local-echo-1"},"state":"rolled_
+### L-09 user /v1/models AFTER rollback
+{"models":[{"id":"8fbedf59-823b-43aa-89ea-e8ddf1bf03ae","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]} [200]
+
+### L-10 execute AFTER rollback
+{"execution_id":"eb7ab41a-e741-4012-aba2-d174979b1f0c","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"post-rollback\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"p
+### L-11 audit tail (publish/rollback attributed?)
+{"events":[{"id":"e05d4b35-734e-4b03-877b-ce43acc15b03","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","event_type":"login","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","occurred_at":"2026-09-08T11:02
+### L-12 publish after rollback => state-machine refusal
+{"error":{"code":"validation_error","message":"invalid lifecycle transition: expected validated, found rolled_back","retryable":false,"details":{"change_id":"72021580-3a1c-4ec9-887c-4915ec6c2881"},"trace
+### L-13 draft set_plan empty payload
+{"id":"36511dbd-1408-417a-af2d-e74c1776d430","tenant_id":"33800770-efc1-4f40-8399-89c35b7f90df","actor_id":"2eeec3e7-c68f-4938-a9c2-30f6c49d577a","area":"plans","action":"set_plan","payload":{},"state":"draft","created_at"
+### L-14 draft register_provider WITH credential in payload
+{"error":{"code":"validation_error","message":"Request body failed contract validation.","retryable":false,"details":{"errors":["Value error, payload must not carry credential material (key at payload
+### L-15 non-admin GET changes => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+

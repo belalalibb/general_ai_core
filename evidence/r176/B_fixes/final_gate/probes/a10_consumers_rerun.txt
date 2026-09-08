@@ -1,0 +1,44 @@
+### X-00 examples/minimal-platform-app/client.py exit=0
+healthz: HTTP 200 (expected 200)
+      profile: {"user_id": "35cfa7bd-6b65-4da7-aba5-cb22031402a5", "tenant_id": "e0f9c886-2124-4b7c-8f73-333013
+### X-11 discovery: models
+{"models":[{"id":"8fbedf59-823b-43aa-89ea-e8ddf1bf03ae","name":"local-echo-1","tier":"medium","modalities":["text"],"capabilities":["reasoning"],"availability":"available"}]
+### X-12 discovery: tools
+{"strategy":"agent","max_steps":8,"tools":[]} [200]
+
+### X-13 discovery: skills
+{"skills":[]} [200]
+
+### X-14 workspace
+{"workspace_id":"341cb26e-0b48-4c57-a743-8a1b7a7c48bb","name":"tickets"} [201]
+
+### X-15 project
+{"project_id":"06b5a37b-6675-4cf6-9503-71a10a72c407","workspace_id":"341cb26e-0b48-4c57-a743-8a1b7a7c48bb","name":"q3","metadata":{}} [201]
+
+### X-16 execute (sync, project-scoped)
+{"execution_id":"fe1d88da-5269-4271-be35-225e3b586fa8","status":"succeeded","result":{"type":"message","content":"{\"context_blocks\": [{\"content\": \"Summaris
+### X-17 usage after 1 call
+{"plan":"local-default","task_units":{"limit":1000000.0,"used":1.0,"remaining":999999.0},"modality_limits":{}} [200]
+
+### X-18 webhook subscription
+{"id":"c4b33f7b-d3ef-43a6-82b9-2f426d7916d1","url":"https://ticketapp.example.com/hook","events":["execution.succeeded"]} [201]
+
+### X-21 async fan-out 5 -> succeeded 5/5
+
+### X-22 conversation_id continuity (shape)
+{"error":{"code":"validation_error","message":"conversation_id must be a UUID.","retryable":false,"details":{"field":"conversation_id"},"trace_id":null}} [4
+### X-23 asks for capability it does not have => loud refusal
+{"error":{"code":"validation_error","message":"unknown agent tools: git_push","retryable":false,"details":{"field":"tools.allowed","unknow
+### X-24 consumer #1 reads consumer #2 execution => 404
+{"error":{"code":"validation_error","message":"Unknown execution id.","retryable":false,"details":{"execution_id":"4008e2fd-5e57-4a4d-b3b3-76ddc
+### X-25 consumer tries admin => 403
+{"error":{"code":"unauthorized","message":"Admin access required.","retryable":false,"details":{},"trace_id":null}} [403]
+
+### X-26 /openapi.json (machine-readable contract)
+{"openapi":"3.1.0","info":{"title":"AI Orchestration Platform","version":"0.1.0"},"paths":{"/v1/auth/register":{"post":{"summary":"Register","operati
+### X-27 /docs
+{"detail":"Not Found"} [404]
+
+### X-28 /v1/version (versioning discovery?)
+{"error":{"code":"unauthenticated","message":"Authentication failed.","retryable":false,"details":{},"trace_id":null}} [401]
+
