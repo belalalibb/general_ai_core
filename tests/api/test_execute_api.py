@@ -27,6 +27,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import httpx
+import pytest
 from fastapi import FastAPI
 
 from apps.api import InMemoryExecutionStore, Principal, create_app
