@@ -21,6 +21,7 @@ from typing import Any
 import pytest
 
 from core.agent import AgentToolSpec
+from core.audit.memory import InMemoryAuditLog
 from core.engineering import (
     AuthorizationLedger,
     CommandPolicy,
@@ -128,7 +129,7 @@ class TestToolsCarryTheCursor:
             command_policy=CommandPolicy(),
             runner=FakeRunner(),
             git=FakeGit(),
-            ledger=AuthorizationLedger(None),
+            ledger=AuthorizationLedger(InMemoryAuditLog()),
         )
         specs = {s.tool.name: s for s in engineering_tool_specs(bundle, registry)}
         ws_list: AgentToolSpec = specs["ws_list"]

@@ -1,0 +1,3 @@
+# R177 B-07 FIX-07 — before (failing-first, RED)
+HEAD: ae4f3138
+FAILED tests/tools/test_list_files_cursor_r177.py::TestToolsCarryTheCursor::test_source_list_spec_advertises_after
