@@ -23,6 +23,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+
 from apps.composition.evaluation_policy import (
     ENV_JUDGE_POLICY,
     JudgeSelectionPolicy,
@@ -30,7 +31,6 @@ from apps.composition.evaluation_policy import (
     build_selective_judge,
     parse_judge_policy,
 )
-
 from core.contracts.base import JsonObject
 from core.contracts.domain import (
     BindingAvailability,
