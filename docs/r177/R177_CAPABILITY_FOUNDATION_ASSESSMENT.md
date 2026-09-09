@@ -127,7 +127,7 @@ promotion signals.
 | A04 catalog | S4 | catalog | mounted capabilities without CAPABILITY_IDS rows | — | R177-FIX-02 |
 | A05 §6.1 | S3 | approval | no composition-level proposal record | M (sub-gap) | R177-FIX-03 |
 
-## 11. Proposal pack — decision sheets (§7 format; every sheet PENDING APPROVAL; none implemented)
+## 11. Proposal pack — decision sheets (§7 format; written PENDING APPROVAL in Phase A — **all eleven APPROVED by the operator and IMPLEMENTED in Phase B; per-item status in §15**)
 
 ```
 PROPOSED CAPABILITY: R177-FIX-01 — change-budget enforcement for new rounds (governance; no CAPABILITY_IDS entry)
@@ -301,7 +301,7 @@ ENFORCEMENT POINT:   EvaluationStorePort
 DECISION:            APPROVE | REJECT
 ```
 
-## 12. R177-FIX-nn bounded change register (all PENDING APPROVAL; Phase B order recommended = FIX-01 first, then by dependency)
+## 12. R177-FIX-nn bounded change register (Phase A: all PENDING APPROVAL — **Phase B: all eleven DONE; see §15 for the verified row per item**)
 | id | sev | evidence | minimum change | affected files | failing-first test | rollback | closed-set impact | budget impact |
 |---|---|---|---|---|---|---|---|---|
 | R177-FIX-01 | S3 | check_repo.sh:143-144 | iterate `round_*` keys; add round_r177 | engineering/verification/check_repo.sh, green_manifest.json, tests/engineering/test_budget_rounds_r177.py | fixture manifest with unlisted over-ceiling round ⇒ budget FAIL | revert | none | **enables** budget for R177 (ceiling proposed: 12) |
@@ -335,3 +335,44 @@ approved FIX ids one at a time through the §14 closed loop. Ledger: `evidence/r
 … A10_landscape`. UNVERIFIED in this round (reasons): R177 baseline gate re-run (lost to sandbox resets; product tree byte-identical to
 13be858d so the R176 artefact stands); large-repository discovery scalability (no fixture); observability export (no probe); skills import
 E2E from an allowed source (carried from R176).
+
+## 15. Phase B closure (appended at B-G; Phase A sections above are left as written — history is not rewritten)
+
+Operator approval (verbatim ids, ledger row B0): `APPROVED: R177-FIX-01 … R177-FIX-11, DEC-05`; `DEC-01: CONFIRMED`; `DEC-02: APPROVED`;
+`DEC-03: DEFERRED`; `DEC-04: APPROVED` (order FIX-01 → 05 → 02 → 08 → 04 → 06 → 11 → 03 → 10 → 09 → 07 → DEC-02 → final gate).
+Every unit went through the §14 closed loop (failing-first RED → fix → suites → ruff/format/mypy/import-linter → budget log → ledger row →
+push). Ledger: `evidence/r177_state_ledger.md`; per-unit evidence: `evidence/r177/B*/`.
+
+| item | status | production files | budget | pinned by | notes |
+|---|---|---|---|---|---|
+| R177-FIX-01 | **DONE** (00990960) | 0 (gate only) | — | tests/engineering/test_budget_rounds_r177.py (6) | `round_*` loop; `round_r177` ceiling 12 |
+| R177-FIX-05 | **DONE** (2f15b0a0) | 0 (docs + test) | — | tests/memory/test_memory_type_convention_r177.py (8) | MEMORY_TYPES_MAPPING; closed source vocabulary |
+| R177-FIX-02 | **DONE** (1cf84b32) | 3 | 1/12 | tests/api/test_capability_catalog_r177.py (7) | CAPABILITY_IDS 17→22 (approved) |
+| R177-FIX-08 | **DONE** (17dd4f5e) | 4 | 2/12 | tests/api/test_promotion_evidence_r177.py (12) | evidence-bound promotion; strict in runtime |
+| R177-FIX-04 | **DONE** (28e6764d) | 3 | 3/12 | tests/api/test_preferences_r177.py (14) | PreferenceLearner; 2 user routes |
+| R177-FIX-06 | **DONE** (c2cb6ba0) | 5 | 4/12 | tests/composition/test_repo_map_r177.py (10) | repo_map tool → MemoryItem scope=project |
+| R177-FIX-11 | **DONE** (16c5edda) | 3 | 5/12 | tests/composition/test_durable_evaluations_r177.py (10) + tests_live/r177 (1, env-gated) | **0019 SUPERSEDED**: 0010 `evaluations` table reused; ordering-by-id limitation recorded |
+| R177-FIX-03 | **DONE** (a9d187e1) | 3 | 6/12 | tests/admin/test_capability_proposal_r177.py (12) | `capability_proposal` kind (+1 closed set, approved); R177-DEC-07 (ui/ frozen ⇒ backend-only); runtime now FINAL_ACTIVE_ADMIN_AREAS |
+| R177-FIX-10 | **DONE** (196cb0f4) | 2 | 7/12 | tests/api/test_learning_intake_r177.py (18) | CSV/JSON intake → capture_external RAW + recorded scan; Excel deferred |
+| R177-FIX-09 | **DONE** (7bc34bb8) | 3 | 8/12 | tests/composition/test_evaluation_policy_r177.py (16) | 22 §10 selector; `EVAL_JUDGE_MODEL_POLICY`; disabled = today |
+| R177-FIX-07 | **DONE** (349d148f) | 3 | 9/12 | tests/tools/test_list_files_cursor_r177.py (9) | `after` cursor + `next_after`; jail/denylist unchanged |
+| DEC-02 | **DONE** (28989b04) | canonical prompt lines 132–134 → `<REDACTED>` | — | gate secret scan PASS | **rotation remains operator-owned and is NOT verified from the repo** |
+| DEC-03 | DEFERRED (operator) | — | — | — | unchanged |
+
+Final gate (`evidence/r177/BG_final/gate_run2.txt`, HEAD 586165bb): **RESULT: PASS** — pytest passed=3318 (floor 3127) failed=0 errors=0
+skipped=64 (ceiling 64); mypy --strict clean; ruff clean; import-linter 13/13; secret scan clean (5/5 declared exceptions); budget
+`round_r177=9/12`; not_evaluated 2/2 (unchanged). Gateway suite: 194 passed (`gateway_suite.txt`). Gate run 1 (before moving the FIX-11
+live probe to `tests_live/r177`) failed ONLY on skipped=65 > 64 — recorded in `gate_run1_after_dec02.txt`; the move follows the R173
+precedent (env-gated live tests live outside the verifier).
+
+Invariants at closure: v3 pack = 20 files (R177-DEC-06, DEC-07 appended to 60_DECISION_LOG); PROJECT_EXECUTION_STATE.md untouched;
+forbidden state filenames = 0; frozen trees `ui/`, `apps/admin_agent/`, `core/tools/gate.py` zero diff for the whole round; closed sets
+changed ONLY by approved, test-pinned edits (CAPABILITY_IDS +5; AdminAction +1).
+
+Deferred / open after R177 (register, not a plan): UI exposure of `capability_proposal` (ui/ thaw); Excel intake (optional dependency);
+evaluation `list_for_execution` recording-order column (future migration); DEC-03; the two not_evaluated items; credential ROTATION for the
+three redacted literals (operator).
+
+**Freeze recommendation:** R177 Phase B is complete and the gate is green at 586165bb. Recommend FREEZE of the product tree at this head
+pending the operator's confirmation of external credential rotation (DEC-02, second half). Next round, if any, opens only on an explicit
+operator message.
