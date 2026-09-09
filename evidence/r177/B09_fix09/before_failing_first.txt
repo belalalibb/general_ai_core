@@ -1,0 +1,5 @@
+# R177 B-09 FIX-09 — before (failing-first, RED)
+HEAD: 196cb0f4
+=========================== short test summary info ============================
+ERROR tests/composition/test_evaluation_policy_r177.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
