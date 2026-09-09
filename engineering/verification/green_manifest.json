@@ -396,7 +396,7 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 6,
+      "changes_used": 7,
       "items": [
         "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
         "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
@@ -450,6 +450,13 @@
           "loc": "+127/-1",
           "files": 3,
           "summary": "composition-level capability-proposal RECORD (A05 §6.1) through the EXISTING 21 §3 admin lifecycle: AdminAction.CAPABILITY_PROPOSAL (approved closed-set edit +1; area TOOLS = 21 §4 'approval rules'), CapabilityProposalDecision {approved, rejected} (deferral is absence of a ruling — documentary), CapabilityProposalPayload = the §7 decision sheet + operator reason (extra=forbid, bounded); service: validate names the first invalid sheet field (REJECTED with reason), preview states 'record, not grant', publish APPENDS one APPROVAL_DECISION audit row {surface, change_id, proposal_id, capability, target, decision, reason, enforcement_point} and mutates NO registry (ADMIN_CONFIG_PUBLISHED row still emitted), rollback REFUSED (RollbackUnavailable → existing 409 mapping: rulings are evidence); runtime passes FINAL_ACTIVE_ADMIN_AREAS (T-IMPL-068 recorded intent; before this the shipped profile refused every SKILLS/TOOLS kind at the door); no new route, no new store — reads via GET /v1/admin/audit?event_type=approval_decision and GET /v1/admin/changes/{id}; ui/ frozen ⇒ R177-DEC-07: console does not offer the kind, UI pin asserts enum − {capability_proposal}; pins tests/admin/test_capability_proposal_r177.py (12)"
+        },
+        {
+          "item": "R177-FIX-10",
+          "file": "apps/api/intake.py + apps/api/admin.py",
+          "loc": "+298/-0",
+          "files": 2,
+          "summary": "structured knowledge intake (G-A07-3), OUTSIDE core/: NEW apps/api/intake.py — closed INTAKE_FORMATS {csv, json} (Excel deferred: optional dependency), parse_intake_rows (CSV header+records / JSON array of flat objects; named ValueError otherwise), IntakeExpectations (required_columns, key_column ∈ required, max_rows ≤ 1000), IntakeRequest (content ≤ 256 KiB), IntakeAdapter.ingest: batch faults (unparseable / wrong shape / over max_rows / oversized) ⇒ QUARANTINED report, nothing captured; row faults (blank/missing required column) ⇒ REFUSED with 1-based row + reason; admitted rows enter through the EXISTING capture_external (RAW/PENDING) and get the deterministic 22 §12 scan RECORDED at intake (findings = path/label/fingerprint only, never cell content) — a secret-shaped cell is flagged and the EXISTING mark_sanitized(passed=True) refusal keeps it from ever passing review (enforcement points unchanged: sanitizer + TrainingEligibilityGate); apps/api/admin.py: POST /v1/admin/learning/intake behind the learning seam (admin-only; 422 validation_error with the report on quarantine, 201 with the intake report), reads ride existing GET /learning/samples{,/{id}}; pins tests/api/test_learning_intake_r177.py (18)"
         }
       ],
       "frozen_trees_zero_diff": [

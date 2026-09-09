@@ -1,0 +1,2 @@
+# R177 B-10 FIX-10 — before (failing-first, RED)
+HEAD: 8d4c94e8 — tests/api/test_learning_intake_r177.py: ImportError (apps/api/intake.py absent); collection error

@@ -1,0 +1,22 @@
+# R177 B-10 FIX-10 — after (GREEN)
+HEAD before evidence: a2ffac62
+
+## tests/api/test_learning_intake_r177.py
+18 passed in 1.00s
+
+## suites tests/{api,admin,admin_agent,composition,learning,security,ui,engineering}
+1192 passed, 5 skipped in 47.82s
+
+## static
+ruff check: All checks passed!
+ruff format --check (touched files): 3 files already formatted
+Success: no issues found in 201 source files
+Contracts: 13 kept, 0 broken.
+
+## budget
+round_r177 changes_used=7/12 (FIX-10: 2 production files, +298/-0)
+frozen trees diff since a9d187e1:
+(empty = zero diff)
+
+## secret-boundary evidence
+test_secret_shaped_cell_is_flagged_at_intake_and_never_passes_sanitization: fake ghp_ (36 base62) cell ⇒ finding label github_pat; content absent from report JSON; mark_sanitized(passed=True) ⇒ SanitizationRefused; state=failed.
