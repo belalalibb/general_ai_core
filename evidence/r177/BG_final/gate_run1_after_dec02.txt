@@ -1,0 +1,25 @@
+# R177 B-G — full gate, run 1 (HEAD 28989b04, after DEC-02 redaction)
+# Command: PATH=.venv/bin:$PATH env -u GSK_API_KEY -u GROQ_API_KEY -u GW_GROQ_API_KEY -u DATABASE_URL python -m apps.cli check
+# (Original stdout file was erased by sandbox reset #24 before commit; lines below are the verbatim summary captured in-session.)
+pytest slice api: passed=555 failed=0 errors=0 skipped=0
+pytest slice contract-providers: passed=639 failed=0 errors=0 skipped=15
+pytest slice execution-composition-infra: passed=417 failed=0 errors=0 skipped=50
+pytest slice admin-security-evaluation: passed=442 failed=0 errors=0 skipped=0
+pytest slice rest: passed=1265 failed=0 errors=0 skipped=0
+pytest coverage: slices ran = 5; passed=3318 failed=0 errors=0 skipped=65
+FAIL: pytest gate: passed=3318 (floor 3127) failed=0 errors=0 skipped=65 (ceiling 64)
+PASS: mypy --strict (scope: pyproject.toml [tool.mypy].packages): clean
+PASS: ruff: clean
+PASS: import-linter: architecture boundaries kept (40 §6.2)
+PASS: secret scan clean (declared exceptions: 5/5)        <-- DEC-02 closed the prompt:132 finding
+PASS: no .env tracked
+PASS: change budget within ceilings: round_a=4/5; round_b=4/5; round_r169=5/6; round_r172=8/8; round_r173=1/1; round_r177=9/12
+NOT EVALUATED: live-suite: browser automation against the real server and real UI — missing dependency
+NOT EVALUATED: real two-account provider round-trip (D-03 Class-A failover against live providers) — credential unavailable
+SUMMARY: not_evaluated=2 (counted separately; never green, never FAIL)
+RESULT: FAIL
+EXIT=1
+
+# Sole FAIL: skipped=65 vs ceiling 64. Cause: R177-FIX-11 added ONE env-gated live-Postgres test
+# (tests/composition/test_durable_evaluations_r177.py::TestLiveEvaluationDurability) that skips without DATABASE_URL.
+# Resolution path (next commit): see ledger row B-G.
