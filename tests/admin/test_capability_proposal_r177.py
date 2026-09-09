@@ -93,12 +93,21 @@ def _sheet(**overrides: Any) -> dict[str, Any]:
 
 
 def _manifest(provider_key: str) -> ProviderManifest:
-    return ProviderManifest(
-        provider_key=provider_key,
-        display_name=provider_key,
-        auth_types=["api_key"],
-        supported_modalities=["text"],
-        supported_operations=["text.generate"],
+    return ProviderManifest.model_validate(
+        {
+            "id": provider_key,
+            "name": provider_key,
+            "version": "1.0.0",
+            "status": "active",
+            "auth": {"types": ["api_key"], "supports_refresh": False},
+            "account_pool": {"supported": False},
+            "capabilities": {"chat": True},
+            "operations": ["generate_text"],
+            "models": {"discovery": "static", "static_models": []},
+            "rate_limits": {"strategy": "provider_defined"},
+            "health": {"checks": ["ping"]},
+            "errors": {"mapping": "error_map.json"},
+        }
     )
 
 
@@ -124,12 +133,26 @@ class World:
             active_areas=active_areas,
         )
         self.principal = Principal(tenant_id=TENANT, user_id=ACTOR, is_admin=is_admin)
-        provider = Provider(provider_key="prov_a", display_name="A", status=ProviderStatus.ACTIVE)
+        provider = Provider(
+            id=uuid4(),
+            provider_key="prov_a",
+            display_name="A",
+            status=ProviderStatus.ACTIVE,
+            auth_types=["api_key"],
+            supports_account_pool=False,
+        )
         self.providers.register(provider, _manifest("prov_a"))
         self.model = Model(
+            id=uuid4(),
             model_key="model-a",
             display_name="A",
             tier=ModelTier.MEDIUM,
+            modalities=["text"],
+            capabilities=["reasoning"],
+            quality_score=0.5,
+            reliability_score=0.5,
+            cost_score=0.5,
+            speed_score=0.5,
             status=ModelStatus.ACTIVE,
         )
         self.models.register(self.model)
