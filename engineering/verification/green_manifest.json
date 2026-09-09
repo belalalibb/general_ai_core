@@ -396,7 +396,7 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 5,
+      "changes_used": 6,
       "items": [
         "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
         "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
@@ -443,6 +443,13 @@
           "loc": "+229/-3",
           "files": 3,
           "summary": "durable evaluation store (G-A07-4): NEW PostgresEvaluationRepository over the EXISTING evaluations table (migration 0010 — planned 0019 SUPERSEDED, no new schema; last migration stays 0018_ and is test-pinned): record = plain INSERT (pkey collision -> named DuplicateEvaluation; no upsert/update/delete — evidence is append-only 22 §12), tenant-filtered get (absent==foreign EvaluationNotFound), list_for_execution (empty for unknown/foreign; ordered by id — honest limitation recorded in module docstring: 0010 has no sequence column), rows re-validated through EvaluationRecord.model_validate; NEW apps/composition/evaluations.py DurableEvaluationStore (sync EvaluationStorePort surface, AsyncBridge inside, failures propagate loudly) + build_durable_evaluation_store(bindings, bridge); runtime binds the durable store ONLY in the DATABASE_URL branch, in-memory profile keeps InMemoryEvaluationStore() byte-identical; pins tests/composition/test_durable_evaluations_r177.py (10 hermetic over the same row encoders + 1 env-gated live Postgres round-trip)"
+        },
+        {
+          "item": "R177-FIX-03",
+          "file": "core/contracts/admin.py + core/admin/service.py + apps/composition/runtime.py",
+          "loc": "+127/-1",
+          "files": 3,
+          "summary": "composition-level capability-proposal RECORD (A05 §6.1) through the EXISTING 21 §3 admin lifecycle: AdminAction.CAPABILITY_PROPOSAL (approved closed-set edit +1; area TOOLS = 21 §4 'approval rules'), CapabilityProposalDecision {approved, rejected} (deferral is absence of a ruling — documentary), CapabilityProposalPayload = the §7 decision sheet + operator reason (extra=forbid, bounded); service: validate names the first invalid sheet field (REJECTED with reason), preview states 'record, not grant', publish APPENDS one APPROVAL_DECISION audit row {surface, change_id, proposal_id, capability, target, decision, reason, enforcement_point} and mutates NO registry (ADMIN_CONFIG_PUBLISHED row still emitted), rollback REFUSED (RollbackUnavailable → existing 409 mapping: rulings are evidence); runtime passes FINAL_ACTIVE_ADMIN_AREAS (T-IMPL-068 recorded intent; before this the shipped profile refused every SKILLS/TOOLS kind at the door); no new route, no new store — reads via GET /v1/admin/audit?event_type=approval_decision and GET /v1/admin/changes/{id}; ui/ frozen ⇒ R177-DEC-07: console does not offer the kind, UI pin asserts enum − {capability_proposal}; pins tests/admin/test_capability_proposal_r177.py (12)"
         }
       ],
       "frozen_trees_zero_diff": [

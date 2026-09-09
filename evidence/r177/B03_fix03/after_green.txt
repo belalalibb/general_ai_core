@@ -1,0 +1,23 @@
+# R177 B-03 FIX-03 — after (GREEN)
+HEAD before evidence: 46f580d7
+
+## tests/admin/test_capability_proposal_r177.py
+12 passed in 0.87s
+
+## suites tests/{admin,admin_agent,api,composition,security,ui,engineering}
+1109 passed, 5 skipped in 44.47s
+
+## static
+ruff check: All checks passed!
+ruff format --check (touched files): clean
+Success: no issues found in 200 source files
+Contracts: 13 kept, 0 broken.
+
+## budget
+round_r177 changes_used=6/12 (FIX-03: 3 production files, +127/-1)
+frozen trees ui/ apps/admin_agent/ core/tools/gate.py diff since 16c5edda:
+(empty = zero diff)
+
+## decisions recorded
+R177-DEC-07 (60_DECISION_LOG; v3 pack still 20 files): backend-only kind, UI pin exception, FINAL_ACTIVE_ADMIN_AREAS in runtime.
+Rollback of a published ruling: RollbackUnavailable -> existing 409 mapping (not 422 — test pin corrected, product unchanged).
