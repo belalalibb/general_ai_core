@@ -187,11 +187,8 @@ class TestEnvComposition:
         assert parse_judge_policy({ENV_JUDGE_POLICY: ""}) is None
 
     def test_policy_grammar(self) -> None:
-        spec = parse_judge_policy(
-            {
-                ENV_JUDGE_POLICY: "judge-model;uncertain_below=0.5;new=legal.contracts,tax;calibration=c1;canary=0"
-            }
-        )
+        raw = "judge-model;uncertain_below=0.5;new=legal.contracts,tax;calibration=c1;canary=0"
+        spec = parse_judge_policy({ENV_JUDGE_POLICY: raw})
         assert spec is not None
         assert spec.model_key == "judge-model"
         assert spec.policy.uncertain_below == 0.5
