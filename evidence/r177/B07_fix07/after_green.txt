@@ -1,0 +1,21 @@
+# R177 B-07 FIX-07 — after (GREEN)
+HEAD (product): 84fa4136
+
+## tests/tools/test_list_files_cursor_r177.py
+9 passed in 3.56s
+
+## suites tests/{tools,engineering,agent,composition,api,admin_agent,ui,security}
+1303 passed, 5 skipped, 1 xfailed in 53.50s
+
+## static
+ruff check: All checks passed!
+ruff format --check (touched files): 3 files already formatted
+mypy: Success: no issues found in 202 source files
+import-linter: Contracts: 13 kept, 0 broken.
+
+## budget
+round_r177 changes_used=9/12 (FIX-07: 3 production files, +41/-7)
+frozen trees diff since 7bc34bb8:
+(empty = zero diff)
+
+(Recorded from the run at 84fa4136; the closure commit was lost to sandbox reset #23 and re-applied — numbers verbatim. Budget test re-run below after venv rebuild.)
