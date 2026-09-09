@@ -55,8 +55,9 @@ __all__ = [
     "parse_judge_policy",
 ]
 
-#: Operator switch (assessment §11 FIX-09). Grammar:
-#: ``<model_key>[;uncertain_below=<0..1>][;new=<cat,cat>][;calibration=<k,k>][;canary=0|1][;high_value=0|1]``
+#: Operator switch (assessment §11 FIX-09). Grammar (``;``-separated):
+#: ``<model_key>`` then optional ``uncertain_below=<0..1>``, ``new=<cat,cat>``,
+#: ``calibration=<key,key>``, ``canary=0|1``, ``high_value=0|1``.
 ENV_JUDGE_POLICY = "EVAL_JUDGE_MODEL_POLICY"
 
 

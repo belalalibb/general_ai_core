@@ -91,7 +91,7 @@ def _policy(**overrides: Any) -> JudgeSelectionPolicy:
     return JudgeSelectionPolicy(**values)
 
 
-GOOD = {"content": "answer", "error": None}
+GOOD = {"content": "answer"}
 
 
 # --- selection (22 §10 list, verbatim categories) ------------------------------------------
