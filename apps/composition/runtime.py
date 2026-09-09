@@ -98,7 +98,6 @@ from apps.composition.repo_map import RepoMapper
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
 from core.admin.service import AdminConfigService
-from core.contracts.admin import FINAL_ACTIVE_ADMIN_AREAS
 from core.agent import (
     DEFAULT_AGENT_DEADLINE_MS,
     DEFAULT_AGENT_MAX_STEPS,
@@ -109,6 +108,7 @@ from core.agent import (
 )
 from core.audit.memory import InMemoryAuditLog
 from core.context.composer import ContextComposer
+from core.contracts.admin import FINAL_ACTIVE_ADMIN_AREAS
 from core.contracts.domain import (
     AuthType,
     BindingAvailability,
