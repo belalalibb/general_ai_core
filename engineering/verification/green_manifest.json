@@ -396,7 +396,7 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 7,
+      "changes_used": 8,
       "items": [
         "R177-FIX-02 catalog completeness: +5 CAPABILITY_IDS + state rules (apps/api/capabilities.py, apps/api/app.py)",
         "R177-FIX-03 admin draft kind capability_proposal -> APPROVAL_DECISION audit (core/contracts/admin.py, core/admin/*, apps/api/admin.py)",
@@ -457,6 +457,13 @@
           "loc": "+298/-0",
           "files": 2,
           "summary": "structured knowledge intake (G-A07-3), OUTSIDE core/: NEW apps/api/intake.py — closed INTAKE_FORMATS {csv, json} (Excel deferred: optional dependency), parse_intake_rows (CSV header+records / JSON array of flat objects; named ValueError otherwise), IntakeExpectations (required_columns, key_column ∈ required, max_rows ≤ 1000), IntakeRequest (content ≤ 256 KiB), IntakeAdapter.ingest: batch faults (unparseable / wrong shape / over max_rows / oversized) ⇒ QUARANTINED report, nothing captured; row faults (blank/missing required column) ⇒ REFUSED with 1-based row + reason; admitted rows enter through the EXISTING capture_external (RAW/PENDING) and get the deterministic 22 §12 scan RECORDED at intake (findings = path/label/fingerprint only, never cell content) — a secret-shaped cell is flagged and the EXISTING mark_sanitized(passed=True) refusal keeps it from ever passing review (enforcement points unchanged: sanitizer + TrainingEligibilityGate); apps/api/admin.py: POST /v1/admin/learning/intake behind the learning seam (admin-only; 422 validation_error with the report on quarantine, 201 with the intake report), reads ride existing GET /learning/samples{,/{id}}; pins tests/api/test_learning_intake_r177.py (18)"
+        },
+        {
+          "item": "R177-FIX-09",
+          "file": "apps/composition/evaluation_policy.py + apps/api/app.py + apps/composition/runtime.py",
+          "loc": "+244/-2",
+          "files": 3,
+          "summary": "selective model judge (G-A07-2; 22 §10 'Teacher Model Policy' verbatim): NEW apps/composition/evaluation_policy.py — JudgeSelectionPolicy (closed REASONS = high_value / uncertain / new_task_category / calibration_set / canary; selection is DATA read from the execution output: confidence < uncertain_below, task_category ∈ declared set, calibration_set ∈ declared set, canary/high_value flags; undeclared ⇒ not selected), SelectiveModelJudge (ModelJudgePort; NOT selected ⇒ raises JudgeFailure so the EXISTING single containment point degrades to deterministic-only — never a fabricated row or level; counters judged/skipped/last_reason), ENV_JUDGE_MODEL_POLICY grammar '<model_key>;uncertain_below=;new=;calibration=;canary=;high_value=' (malformed ⇒ ValueError), build_selective_judge over the EXISTING ModelRegistry/BindingRegistry/adapters/credential_refs (registered model → AVAILABLE binding → bound adapter + opaque credential ref → EXISTING AdapterModelJudge; unset env ⇒ None = today's behaviour; unknown model / no bound adapter ⇒ loud ValueError); apps/api/app.py create_app(evaluation_judge: ModelJudgePort | None) → EvaluationPolicyService(judge=); runtime composes the judge over the same adapters the ExecutionService uses; no contract change; pins tests/composition/test_evaluation_policy_r177.py (16: not-selected ⇒ VALIDATED cap; selected ⇒ VERIFIED; low-confidence judgment ⇒ VALIDATED; composition over registries)"
         }
       ],
       "frozen_trees_zero_diff": [

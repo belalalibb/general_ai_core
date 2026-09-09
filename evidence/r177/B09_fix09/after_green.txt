@@ -1,0 +1,22 @@
+# R177 B-09 FIX-09 — after (GREEN)
+HEAD before evidence: 6c02fee8
+
+## tests/composition/test_evaluation_policy_r177.py
+16 passed in 1.16s
+
+## suites tests/{api,admin,admin_agent,composition,learning,evaluation,security,ui,engineering}
+1306 passed, 5 skipped in 48.81s
+
+## static
+ruff check: All checks passed! (after import-order fix in the test)
+ruff format --check (touched files): 4 files already formatted
+Success: no issues found in 202 source files
+Contracts: 13 kept, 0 broken.
+
+## budget
+round_r177 changes_used=8/12 (FIX-09: 3 production files, +244/-2)
+frozen trees diff since 196cb0f4:
+(empty = zero diff)
+
+## behaviour pins
+disabled (env unset) ⇒ judge None ⇒ level ≤ VALIDATED (byte-identical); selected canary + confident judgment ⇒ VERIFIED; not-selected ⇒ JudgeFailure('not selected') contained ⇒ deterministic-only; judgment confidence 0.4 ⇒ VALIDATED (bar 0.75 unchanged).
