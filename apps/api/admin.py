@@ -83,6 +83,7 @@ from apps.api.engineering_admin import (
 )
 from apps.api.errors import error_response
 from apps.api.exercise import ExerciseSurface
+from apps.api.intake import IntakeAdapter, IntakeRequest
 from apps.api.learning_observability import LearningObservabilityService
 from apps.api.promotion_evidence import (
     ARTEFACT_BACKED_CONDITIONS,
@@ -696,6 +697,35 @@ def create_admin_router(
             evaluations=surface.evaluations,
             executions=execution_store if execution_store is not None else surface.executions,
         )
+        intake_adapter = IntakeAdapter(lifecycle=lifecycle)
+
+        @router.post("/learning/intake")
+        async def intake_learning_batch(request: Request, body: IntakeRequest) -> Response:
+            """POST .../learning/intake: CSV/JSON batch → RAW samples (R177-FIX-10).
+
+            Every admitted row enters through the SAME ``capture_external``
+            the single-item route uses and gets its 22 §12 scan recorded at
+            once. A quarantined batch (unparseable / wrong shape / over
+            ``max_rows``) captured NOTHING and answers 422 naming the reason;
+            a 201 carries the full intake report (admitted + refused rows,
+            findings by path/label only).
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            report = intake_adapter.ingest(
+                admitted.tenant_id,
+                expectations=body.expectations,
+                format=body.format,
+                content=body.content,
+            )
+            if report.quarantined:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    f"Intake batch quarantined: {report.quarantine_reason}",
+                    details={"field": "content", "report": report.as_json()},
+                )
+            return _json(report.as_json(), status=201)
 
         @router.get("/learning/samples")
         async def list_learning_samples(request: Request) -> Response:
