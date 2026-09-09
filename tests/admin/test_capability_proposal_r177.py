@@ -359,9 +359,12 @@ class TestExistingRoutesCarryTheRecord:
         assert change.json()["payload"]["decision"] == "approved"
         assert change.json()["action"] == "capability_proposal"
 
+        # RollbackUnavailable -> validation_error body, HTTP 409 (the recorded
+        # state-conflict mapping in apps/api/admin.py — unchanged here).
         rollback = run(_post(app, f"/v1/admin/changes/{change_id}/rollback"))
-        assert rollback.status_code == 422
+        assert rollback.status_code == 409
         assert rollback.json()["error"]["code"] == "validation_error"
+        assert "never un-recorded" in rollback.json()["error"]["message"]
 
     def test_non_admin_cannot_record(self) -> None:
         app = World(is_admin=False).app()
