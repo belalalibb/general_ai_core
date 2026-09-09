@@ -98,6 +98,7 @@ from apps.composition.repo_map import RepoMapper
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
 from core.admin.service import AdminConfigService
+from core.contracts.admin import FINAL_ACTIVE_ADMIN_AREAS
 from core.agent import (
     DEFAULT_AGENT_DEADLINE_MS,
     DEFAULT_AGENT_MAX_STEPS,
@@ -953,6 +954,13 @@ def build_runtime_profile(
         usage=usage,
         routing=router,
         audit_log=audit,
+        # R177-FIX-03 / T-IMPL-068 recorded decision: "the FINAL composition
+        # passes FINAL_ACTIVE_ADMIN_AREAS". Until now the shipped profile kept
+        # the MVP default, so every SKILLS/TOOLS-area kind (incl. the
+        # capability_proposal record) was refused at the door. Absent seams
+        # (skills/tools registries not bound here) still FAIL VALIDATION
+        # loudly with a named reason — nothing pretends to publish.
+        active_areas=FINAL_ACTIVE_ADMIN_AREAS,
         # REGISTER_MODEL binding seam — the SAME BindingRegistry the Router
         # and ExecutionService read (instance-agreement duty).
         bindings=binding_registry,
