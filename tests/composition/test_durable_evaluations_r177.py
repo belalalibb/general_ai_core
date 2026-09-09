@@ -15,7 +15,6 @@ decoder — the live Postgres round-trip is env-gated (41 §49).
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -203,29 +202,8 @@ def test_no_new_migration_needed_the_0010_table_is_reused() -> None:
     assert versions[-1].startswith("0018_"), versions[-1]
 
 
-# --- live Postgres round-trip (env-gated, 41 §49) ---------------------------------
-
-requires_live_postgres = pytest.mark.skipif(
-    not os.environ.get("DATABASE_URL"),
-    reason="DATABASE_URL not set — live Postgres tests run manually only (41 §49)",
-)
-
-
-@requires_live_postgres
-class TestLiveEvaluationDurability:
-    def test_record_survives_a_new_session(self) -> None:
-        from apps.composition.database import build_database_bindings, database_settings_from_env
-        from apps.composition.evaluations import build_durable_evaluation_store
-
-        settings = database_settings_from_env(os.environ)
-        assert settings is not None
-        bindings = build_database_bindings(settings)
-        bridge = AsyncBridge()
-        try:
-            store = build_durable_evaluation_store(bindings, bridge)
-            record = _record()
-            store.record(record)
-            again = build_durable_evaluation_store(bindings, bridge)
-            assert again.get(record.tenant_id, record.id) == record
-        finally:
-            bridge.close()
+# --- live Postgres round-trip -----------------------------------------------------
+# Moved to ``tests_live/r177/test_live_durable_evaluations.py`` at B-G (env-gated
+# tests live OUTSIDE the hermetic verifier so the R168 skip ceiling of 64 holds —
+# the recorded R173 precedent). Nothing about the store's hermetic coverage above
+# changed.
