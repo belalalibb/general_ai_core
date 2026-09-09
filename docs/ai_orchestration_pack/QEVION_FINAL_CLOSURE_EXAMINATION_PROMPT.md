@@ -129,9 +129,9 @@ The following are `[INFERRED]` at most until behavior is actually verified:
 Use these runtime environment variables:
 
 ```text
-GITHUB_TOKEN=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
-GROQ_API_KEY=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
-GW_ASSEMBLYAI_API_KEY=512fc605f43647409ce1212d46bdf923
+GITHUB_TOKEN=<REDACTED>
+GROQ_API_KEY=<REDACTED>
+GW_ASSEMBLYAI_API_KEY=<REDACTED>
 GITHUB_REPOSITORY=belalalibb/general_ai_core
 GITHUB_BRANCH=main
 ```
