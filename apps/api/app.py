@@ -214,7 +214,7 @@ from core.contracts.webhooks import (
     WebhookSubscriptionResponse,
 )
 from core.evaluation import InMemoryEvaluationStore
-from core.evaluation.policy import EvaluationPolicyService
+from core.evaluation.policy import EvaluationPolicyService, ModelJudgePort
 from core.events import (
     WebhookUrlRefused,
     stage_execution_event,
@@ -499,6 +499,7 @@ def create_app(
     skills_import: bool = False,
     strict_promotion_evidence: bool = False,
     preferences: PreferenceLearner | None = None,
+    evaluation_judge: ModelJudgePort | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -2136,8 +2137,12 @@ def create_app(
     # EXISTING evaluation store.
     learning_lifecycle_service: LearningLifecycleService | None = None
     if admin is not None and memory is not None:
+        # R177-FIX-09: the OPTIONAL model judge (22 §10 selective teacher) is
+        # composition data — absent ⇒ deterministic-only, level ≤ VALIDATED.
         learning_lifecycle_service = LearningLifecycleService(
-            evaluation=EvaluationPolicyService(store=InMemoryEvaluationStore()),
+            evaluation=EvaluationPolicyService(
+                store=InMemoryEvaluationStore(), judge=evaluation_judge
+            ),
             knowledge=memory,
             audit=admin.audit,
             eligibility_gate=TrainingEligibilityGate(minimum_level=VerificationLevel.RAW),

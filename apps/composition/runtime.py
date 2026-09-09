@@ -84,6 +84,7 @@ from apps.composition.engineering import (
     grant_engineering_reads,
     grant_engineering_writes,
 )
+from apps.composition.evaluation_policy import build_selective_judge
 from apps.composition.evaluations import build_durable_evaluation_store
 from apps.composition.gateway import gateway_settings_from_env, onboarding_secrets_from_env
 from apps.composition.identity import build_durable_identity_service
@@ -1011,6 +1012,19 @@ def build_runtime_profile(
         gate=PreferenceLearningGate(),
         policy_allows_memory=env.get(ENV_PREFERENCE_LEARNING, "") == "1",
     )
+    # R177-FIX-09 (G-A07-2): the 22 §10 selective teacher judge over the SAME
+    # adapters/bindings the ExecutionService uses (paid inference — hence
+    # selective and operator-named). Unset EVAL_JUDGE_MODEL_POLICY ⇒ None ⇒
+    # deterministic-only evaluation, byte-identical to before; a malformed
+    # or unresolvable policy fails composition LOUDLY (never a silent None).
+    evaluation_judge = build_selective_judge(
+        env,
+        providers=providers,
+        models=models,
+        bindings=binding_registry,
+        adapters=adapters,
+        credential_refs=credential_refs,
+    )
 
     # --- the app (injection only — env never crosses this line) --------------
     app = create_app(
@@ -1055,6 +1069,7 @@ def build_runtime_profile(
         # R177-FIX-08: served profiles never accept self-asserted eval/regression passes.
         strict_promotion_evidence=True,
         preferences=preference_learner,
+        evaluation_judge=evaluation_judge,
     )
 
     # --- admin console (P-D follow-up): the EXISTING attach_admin_console
