@@ -970,7 +970,16 @@ class TestUIHonestyChecklist:
     def test_admin_actions_equal_the_admin_action_enum(self) -> None:
         from core.contracts.admin import AdminAction
 
-        assert self._js_string_array("ADMIN_ACTIONS") == {a.value for a in AdminAction}
+        # R177-DEC-07: ui/ is a frozen tree this round (R177-DEFER-01 "UI
+        # changes DEFERRED"), so the ONE backend-only kind added by R177-FIX-03
+        # is a recorded, bounded exception — pinned here so it cannot grow
+        # silently. The console must not OFFER it (the server would accept it,
+        # but the operator path for it is the API / admin agent, backend-first).
+        ui_deferred = {"capability_proposal"}
+        offered = self._js_string_array("ADMIN_ACTIONS")
+        assert ui_deferred <= {a.value for a in AdminAction}
+        assert offered.isdisjoint(ui_deferred)
+        assert offered == {a.value for a in AdminAction} - ui_deferred
 
     def test_scenario_check_names_equal_the_closed_check_set(self) -> None:
         from apps.api.scenarios import SCENARIO_CHECKS
