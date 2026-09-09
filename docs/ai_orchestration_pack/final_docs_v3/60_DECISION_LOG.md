@@ -1455,3 +1455,16 @@ primitive). None is implemented. Legacy files ARCHITECTURE_GAPS.md / FUTURE_IMPR
   `files` = count) so file-level transparency is preserved. Precedent: `round_r172` entry C4 (two files, one entry).
   The ceiling (12) and the item list are unchanged; the gate still checks `changes_used == len(log)`, roots, and scheduled items.
 - Evidence: `engineering/verification/green_manifest.json` `change_budget.round_r177.note`; `evidence/r177_state_ledger.md` row B-08.
+
+### R177-DEC-07 — capability_proposal is a backend-only admin change kind this round (2026-09-09)
+- Context: R177-FIX-03 (approved) adds `AdminAction.CAPABILITY_PROPOSAL` (area TOOLS, 21 §4 "approval rules"). The admin console
+  (`ui/admin/app.js` `ADMIN_ACTIONS`) is pinned to equal the enum, but `ui/` is a frozen tree in R177 (R177-DEFER-01: "UI changes
+  DEFERRED — §15 backend-first"). Editing the UI would break the freeze; leaving the pin unchanged would fail the gate.
+- Decision: the console does NOT offer `capability_proposal`; the operator path is the existing API (`POST /v1/admin/changes` →
+  validate → preview → publish) and the admin agent. The UI pin (`tests/admin_agent/test_aa2_admin_agent.py`) now asserts
+  `offered == enum − {"capability_proposal"}` — a bounded, named exception that cannot grow silently. Rulings are evidence:
+  rollback of a published proposal record is refused (`RollbackUnavailable` → 409, existing mapping); reversal = a new record.
+  Also recorded: the shipped runtime now passes `FINAL_ACTIVE_ADMIN_AREAS` (the T-IMPL-068 recorded intent), so SKILLS/TOOLS
+  kinds are reachable; absent seams still fail validation with a named reason.
+- Follow-up (DEFERRED, ui/ thaw required): add the kind to the console select and a §7 sheet form.
+- Evidence: `evidence/r177_state_ledger.md` row B-03; `evidence/r177/B03_fix03/`.
