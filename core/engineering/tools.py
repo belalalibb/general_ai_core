@@ -155,7 +155,11 @@ def engineering_tool_specs(
         return ws.reader.read_file(_str(args, "path"))
 
     async def ws_list(args: JsonObject) -> JsonObject:
-        return ws.reader.list_files(_str(args, "path"), _str(args, "glob", "**/*"))
+        return ws.reader.list_files(
+            _str(args, "path"),
+            _str(args, "glob", "**/*"),
+            after=_str(args, "after") or None,
+        )
 
     async def ws_search(args: JsonObject) -> JsonObject:
         return ws.reader.search(
@@ -277,7 +281,11 @@ def engineering_tool_specs(
             WORKSPACE_READ,
             "low",
             "List workspace files under a directory matching a glob.",
-            {"path": "string (relative dir, default root)", "glob": "string (default '**/*')"},
+            {
+                "path": "string (relative dir, default root)",
+                "glob": "string (default '**/*')",
+                "after": "string (last path already received, optional)",
+            },
             ws_list,
             None,
         ),

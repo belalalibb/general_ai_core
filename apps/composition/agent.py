@@ -110,7 +110,12 @@ def source_tool_specs(reader: SourceReader, registry: ToolRegistry) -> list[Agen
         return reader.read_file(str(args.get("path", "")))
 
     def _list(args: JsonObject) -> dict[str, object]:
-        return reader.list_files(str(args.get("path", "")), str(args.get("glob", "**/*")))
+        after = args.get("after")
+        return reader.list_files(
+            str(args.get("path", "")),
+            str(args.get("glob", "**/*")),
+            after=after if isinstance(after, str) and after else None,
+        )
 
     def _search(args: JsonObject) -> dict[str, object]:
         return reader.search(
@@ -129,7 +134,11 @@ def source_tool_specs(reader: SourceReader, registry: ToolRegistry) -> list[Agen
         (
             "source_list",
             "List files under a relative path matching a glob (entry-capped).",
-            {"path": "string (relative dir, optional)", "glob": "string (default **/*)"},
+            {
+                "path": "string (relative dir, optional)",
+                "glob": "string (default **/*)",
+                "after": "string (last path already received, optional)",
+            },
             _list,
         ),
         (

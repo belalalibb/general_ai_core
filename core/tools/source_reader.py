@@ -153,24 +153,41 @@ class SourceReader:
             "content": blob.decode("utf-8", errors="replace"),
         }
 
-    def list_files(self, rel_path: str = "", glob: str = "**/*") -> dict[str, object]:
-        """List files under ``rel_path`` matching ``glob`` — entry-capped."""
+    def list_files(
+        self, rel_path: str = "", glob: str = "**/*", after: str | None = None
+    ) -> dict[str, object]:
+        """List files under ``rel_path`` matching ``glob`` — entry-capped.
+
+        R177-FIX-07 continuation cursor: ``after`` is the last root-relative
+        path the caller already received; the SAME sorted, jailed,
+        denylist-filtered walk resumes strictly after it. ``next_after`` is
+        the last path returned when ``truncated`` (pass it back to continue),
+        else None. The cursor is an ORDERING KEY only — it is never admitted,
+        resolved or read, so it can widen neither the jail nor the denylist.
+        """
         base = self._admit(rel_path) if rel_path else self.root
         if not base.is_dir():
             raise SourceReadRefused(f"not a directory: {rel_path}")
+        cursor = after or None
         entries: list[str] = []
         truncated = False
         for candidate in sorted(base.glob(glob)):
             if not candidate.is_file():
                 continue
             rel_posix = candidate.relative_to(self.root).as_posix()
+            if cursor is not None and rel_posix <= cursor:
+                continue
             if self._denied(rel_posix):
                 continue
             if len(entries) >= self.max_entries:
                 truncated = True
                 break
             entries.append(rel_posix)
-        return {"files": entries, "truncated": truncated}
+        return {
+            "files": entries,
+            "truncated": truncated,
+            "next_after": entries[-1] if truncated and entries else None,
+        }
 
     def search(self, text: str, rel_path: str = "", glob: str = "**/*.py") -> dict[str, object]:
         """Literal substring search (no regex) — match- and byte-capped."""
