@@ -389,6 +389,35 @@
         "core/tools/gate.py"
       ]
     },
+    "round_r178_dec01": {
+      "ceiling": 5,
+      "counts_production_code_under": ["apps/"],
+      "changes_used": 5,
+      "items": ["R178-DEC-01 immutable promotion evidence"],
+      "log": [
+        {"item": "R178-DEC-01", "file": "apps/api/regression_evidence.py", "summary": "Versioned provenance codec and deterministic per-run evaluation identity"},
+        {"item": "R178-DEC-01", "file": "apps/api/scenarios.py", "summary": "Append actual required-check verdicts after real execution persistence"},
+        {"item": "R178-DEC-01", "file": "apps/api/promotion_evidence.py", "summary": "Require stored evidence and reject legacy, mismatched or failed verification"},
+        {"item": "R178-DEC-01", "file": "apps/api/app.py", "summary": "Share admin evaluation store with replay producer"},
+        {"item": "R178-DEC-01", "file": "apps/api/admin.py", "summary": "Compatibility flags cannot bypass required artifact-backed verification"}
+      ],
+      "note": "Explicit operator approval R178-DEC-01 option B. Independent five-production-file cap; DEC-02 design only. No schema, closed-set or historical-budget changes."
+    },
+    "round_r178": {
+      "ceiling": 1,
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 1,
+      "items": ["R178-FIX-01 evaluation duplicate exception contract"],
+      "log": [
+        {
+          "item": "R178-FIX-01",
+          "file": "infrastructure/db/repositories/evaluations.py",
+          "loc": "+2/-1",
+          "summary": "Match the actual metadata/migration primary-key constraint for DuplicateEvaluation; preserve unrelated integrity errors. Failing-first injected-error evidence: evidence/r178/duplicate_before.txt. No schema or security-policy change."
+        }
+      ],
+      "note": "New post-R177 mission authorizes routine reversible contract-preserving corrections. Independent first correction: one production file, cap 1; no historical budget headroom reused. See evidence/r178_state_ledger.md."
+    },
     "round_r177": {
       "ceiling": 12,
       "counts_production_code_under": [

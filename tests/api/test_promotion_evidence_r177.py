@@ -128,6 +128,31 @@ def _evaluation(
     return world.evaluations.record(record)
 
 
+def _backed_promotion(app: FastAPI, world: World, sample_id: str) -> dict[str, object]:
+    """R178: positive paths require recorded checks and a real replay."""
+    sample = app.state.learning_lifecycle_service.get(world.principal.tenant_id, UUID(sample_id))
+    offline = _evaluation(world, sample.source_execution_id)
+    security = _evaluation(world, sample.source_execution_id, grader=GraderType.SECURITY)
+    world.usage.configure_tenant(world.principal.tenant_id, plan="pro", task_units_limit=100.0)
+    service = app.state.scenario_service
+    scenario = service.save(
+        world.principal.tenant_id,
+        name="verification",
+        ask="probe",
+        checks=("output_present", "error_free_output"),
+    )
+    replay = run(service.replay(world.principal.tenant_id, world.principal.user_id, scenario.id))
+    assert replay["passed"] is True and replay["evaluation_id"] is not None
+    return {
+        **HUMAN_SIGNALS,
+        "evidence_refs": {
+            "evaluation_id": str(offline.id),
+            "security_evaluation_id": str(security.id),
+            "regression_execution_id": replay["execution_id"],
+        },
+    }
+
+
 def _scenario_report(
     world: World, *, status: ExecutionStatus = ExecutionStatus.SUCCEEDED, labelled: bool = True
 ) -> ExecutionReport:
@@ -199,18 +224,7 @@ class TestStrictMode:
         app = _app(world, strict=True, store=store)
         source = uuid4()
         sid = _eligible_sample(app, world, "k.backed", source)
-        offline = _evaluation(world, source)
-        security = _evaluation(world, source, grader=GraderType.SECURITY)
-        regression = _scenario_report(world)
-        store.put(regression)
-        body = {
-            **HUMAN_SIGNALS,
-            "evidence_refs": {
-                "evaluation_id": str(offline.id),
-                "security_evaluation_id": str(security.id),
-                "regression_execution_id": str(regression.execution.id),
-            },
-        }
+        body = _backed_promotion(app, world, sid)
         response = run(_post(app, f"{SAMPLES}/{sid}/promote", body))
         payload = response.json()
         assert payload["promoted"] is True, payload
@@ -299,7 +313,7 @@ class TestStrictMode:
 
 
 class TestCompatibleMode:
-    def test_non_strict_keeps_asserted_booleans_but_labels_them(self) -> None:
+    def test_non_strict_legacy_booleans_are_refused_after_dec01(self) -> None:
         world = World()
         app = _app(world, strict=False)
         sid = _eligible_sample(app, world, "k.compat", uuid4())
@@ -310,9 +324,10 @@ class TestCompatibleMode:
             "security_eval_pass": True,
         }
         payload = run(_post(app, f"{SAMPLES}/{sid}/promote", body)).json()
-        assert payload["promoted"] is True
+        assert payload["promoted"] is False
         assert payload["evidence"]["strict"] is False
-        assert "offline_eval_pass" in payload["evidence"]["unverified"]
+        assert payload["evidence"]["artifact_evidence_required"] is True
+        assert "offline_eval_pass" in payload["evidence"]["refused_unbacked"]
 
     def test_refs_override_asserted_booleans_even_when_not_strict(self) -> None:
         world = World()

@@ -95,7 +95,8 @@ class PostgresEvaluationRepository:
                 async with session.begin():
                     await session.execute(stmt)
             except IntegrityError as exc:
-                if "evaluations_pkey" in str(exc.orig):
+                constraint = f'violates unique constraint "{evaluations.primary_key.name}"'
+                if constraint in str(exc.orig):
                     raise DuplicateEvaluation(evaluation.id) from exc
                 raise
 

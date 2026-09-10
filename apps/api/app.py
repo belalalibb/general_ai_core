@@ -2100,6 +2100,7 @@ def create_app(
         router=router,
         execution_service=execution_service,
         execution_store=execution_store,
+        evaluations=admin.evaluations if admin is not None else None,
     )
     app.state.scenario_service = scenario_service
 
