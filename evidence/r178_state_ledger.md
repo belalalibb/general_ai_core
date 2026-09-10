@@ -432,3 +432,37 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   revoke_policy alone as that guarantee. Preserve both original restart assertions.
 - Backend Closure, R178 completion and UI readiness remain OPEN; DEC03 APPROVED.
   Publication remains separate: no authenticated push or PR update claimed.
+
+## Adapter verified recovery checkpoint — e0472cf9 restored
+
+- VERIFIED / CAPTURED: recovered e0472cf9 from the confirmed Git bundle after a
+  reset to clean main 369cf37c. Bundle SHA256:
+  fc0cd927ce39f82c98ab6f9fdda628d8025edbcb8b5d46d20099e23e7c631c7a.
+  No codec, receipt or adapter implementation repeated. Main/mission refs fetched.
+- VERIFIED / TEST: dec03_adapter_full_gate.txt at 0a369e69, saved e26d17b4:
+  3447 passed, 0 failed/errors, 64 skipped; mypy/ruff/import-linter/secret scan and
+  budgets PASS; not_evaluated=2; process_exit=0. Do not rerun this completed gate
+  without a product change or new evidence. DEC03 usage remains 6/11.
+- VERIFIED / LIVE + TEST: six real PostgreSQL adapter acceptance cases retained
+  in tests_live/r178/test_external_ingestion_postgres.py (72e0a63a, 72c6aa3e).
+  dec03_adapter_live.txt saved e0472cf9: 6 passed, 24 deselected, exit 0;
+  PostgreSQL 17.11, private disposable socket, fsync on, real session factory and
+  AsyncBridge. Clean/quarantined fresh reads/retries, changed-content conflict,
+  tenant isolation, removed-config denial, CAS/revocation, injected response loss
+  AFTER actual commit, and four concurrent callers with one committed identity.
+  This is NOT actual HTTP runtime/process-crash or durable policy-registry proof.
+- VERIFIED / TEST: dec03_adapter_gateway.txt 194 passed, exit 0 (b5587e37);
+  dec03_adapter_adversarial.txt original unchanged P01/P03 harness exit 0
+  (ba3cb392). These artifacts are retained in the recovered bundle.
+- UNVERIFIED / CAPTURED: later full-live output/commit 93a643ee was observed before
+  reset but not included in a confirmed uploaded bundle. Do not reconstruct its
+  output from chat. Repeat only this missing complete-live run and retain it.
+- NEXT EXACT ACTION: retain complete-live output and reconcile assessment/DEC03
+  packet, then tests-first execution-born capture and actual lifecycle/runtime/API
+  binding. Preserve original restart assertions; add policy/rights/idempotency
+  admission, unavailable-content guards, durable CAS state, expiry/revocation,
+  derived-copy reconciliation and true runtime crash/recovery proof.
+- BLOCKED / CAPTURED: environment GitHub credentials absent; push dry-run refuses
+  authentication. Chat credential not copied or tested. No PR #14 update, merge
+  or deployment claimed. Preserve confirmed bundles while publication is blocked.
+  Backend Closure, R178 completion and UI readiness remain OPEN; DEC03 APPROVED.
