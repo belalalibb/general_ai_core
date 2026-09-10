@@ -19,8 +19,11 @@ def parse(env):
 
 
 def entry(policy):
-    return dict(tenant_id=str(policy.tenant_id), policy_id=str(policy.policy_id),
-                retention_seconds=policy.retention_seconds)
+    return dict(
+        tenant_id=str(policy.tenant_id),
+        policy_id=str(policy.policy_id),
+        retention_seconds=policy.retention_seconds,
+    )
 
 
 def test_config_no_ambient_or_default_policy(monkeypatch):
@@ -34,7 +37,8 @@ def test_config_preserves_explicit_tenant_identity_and_duration():
     _, first = custody_row()
     second = RetentionPolicy(uuid4(), first.policy_id, 73)
     assert parse({"LEARNING_STORAGE_POLICIES": json.dumps([entry(first), entry(second)])}) == (
-        first, second,
+        first,
+        second,
     )
 
 
@@ -44,11 +48,19 @@ def test_config_refuses_malformed_values(raw):
         parse({"LEARNING_STORAGE_POLICIES": raw})
 
 
-@pytest.mark.parametrize("field,value", [
-    ("retention_seconds", True), ("retention_seconds", 0), ("retention_seconds", -1),
-    ("retention_seconds", "3600"), ("retention_seconds", 1.5),
-    ("tenant_id", "private-marker"), ("policy_id", None), ("raw-secret-field", "private-marker"),
-])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("retention_seconds", True),
+        ("retention_seconds", 0),
+        ("retention_seconds", -1),
+        ("retention_seconds", "3600"),
+        ("retention_seconds", 1.5),
+        ("tenant_id", "private-marker"),
+        ("policy_id", None),
+        ("raw-secret-field", "private-marker"),
+    ],
+)
 def test_config_is_closed_strict_and_does_not_echo_input(field, value):
     _, policy = custody_row()
     data = entry(policy)
@@ -62,9 +74,13 @@ def test_config_is_closed_strict_and_does_not_echo_input(field, value):
 def test_config_rejects_duplicate_identities_and_json_fields():
     _, policy = custody_row()
     data = entry(policy)
-    for raw in (json.dumps([data, data]), json.dumps([data]).replace(
-        '"retention_seconds": 3600', '"retention_seconds": 1, "retention_seconds": 3600',
-    )):
+    for raw in (
+        json.dumps([data, data]),
+        json.dumps([data]).replace(
+            '"retention_seconds": 3600',
+            '"retention_seconds": 1, "retention_seconds": 3600',
+        ),
+    ):
         with pytest.raises(LearningStorageError):
             parse({"LEARNING_STORAGE_POLICIES": raw})
 
@@ -97,16 +113,26 @@ class ObservedRepository:
 def adapter(repo, bridge, policies):
     from apps.composition.learning import DurableLearningCustody
 
-    return DurableLearningCustody(repository=repo, bridge=bridge, policies=policies, clock=lambda: NOW)
+    return DurableLearningCustody(
+        repository=repo, bridge=bridge, policies=policies, clock=lambda: NOW
+    )
 
 
 def args(row):
-    return dict(tenant_id=row["tenant_id"], actor_id=uuid4(), policy_id=row["policy_id"],
-                rights_ref=row["rights_ref"], idempotency_key=row["idempotency_key"],
-                knowledge_key="fact", knowledge_value={"nested": ["benign"]})
+    return dict(
+        tenant_id=row["tenant_id"],
+        actor_id=uuid4(),
+        policy_id=row["policy_id"],
+        rights_ref=row["rights_ref"],
+        idempotency_key=row["idempotency_key"],
+        knowledge_key="fact",
+        knowledge_value={"nested": ["benign"]},
+    )
 
 
-@pytest.mark.parametrize("missing", ["policy", "foreign_policy", "actor_id", "rights_ref", "idempotency_key"])
+@pytest.mark.parametrize(
+    "missing", ["policy", "foreign_policy", "actor_id", "rights_ref", "idempotency_key"]
+)
 def test_admission_denies_before_any_io(missing):
     row, policy = custody_row()
     repo, request, policies = ObservedRepository(row), args(row), (policy,)
@@ -166,7 +192,9 @@ def test_write_failure_never_acknowledged_or_cached():
     assert [c[0] for c in repo.calls] == ["capture"]
 
 
-@pytest.mark.parametrize("mode", ["clean", "absent_policy", "changed_policy", "expired", "corrupt", "foreign"])
+@pytest.mark.parametrize(
+    "mode", ["clean", "absent_policy", "changed_policy", "expired", "corrupt", "foreign"]
+)
 def test_reads_always_decode_without_caching_raw_rows(mode):
     row, policy = custody_row()
     policies = (policy,)
@@ -183,8 +211,10 @@ def test_reads_always_decode_without_caching_raw_rows(mode):
     repo = ObservedRepository(row)
     with AsyncBridge() as bridge:
         store = adapter(repo, bridge, policies)
-        for read in (lambda: store.get(policy.tenant_id, row["sample_id"]),
-                     lambda: store.list(policy.tenant_id)[0]):
+        for read in (
+            lambda: store.get(policy.tenant_id, row["sample_id"]),
+            lambda: store.list(policy.tenant_id)[0],
+        ):
             if mode in {"corrupt", "foreign"}:
                 with pytest.raises(LearningStorageError):
                     read()
