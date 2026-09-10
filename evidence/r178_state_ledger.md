@@ -217,3 +217,11 @@ Independent implementation budget `round_r178_dec03`, cap 11 production files:
 No earlier budget reused. Tests first; record actual results per bounded unit.
 Policy has no implicit tenant, rights grant or retention duration. Scan is not
 privacy/rights verification. Keep immutable redacted evidence on expiry/rollback.
+
+
+DEC03 recovery at `a9b5100b`: policy primitive published and verified 13/13; the
+interrupted custody tests/scope update/output are absent. Recreate only those.
+Metadata discovery: replace unused reserved migration env.py slot with existing
+`infrastructure/db/tables.py` (cap stays 11) to keep one metadata authority.
+Existing LearningSample columns unchanged; composite unique/FK linkage may be
+added to enforce companion tenant/source identity. No additional approval needed.

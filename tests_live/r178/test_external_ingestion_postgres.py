@@ -54,6 +54,8 @@ def database():
     engine = create_async_engine(url, connect_args={"server_settings": {"search_path": schema}})
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     names = {"executions", "execution_nodes", "evaluations", "learning_samples"}
+    if "learning_sample_custody" in metadata.tables:
+        names.add("learning_sample_custody")
     while True:
         parents = {f.column.table.name for n in names for f in metadata.tables[n].foreign_keys}
         if parents <= names:
@@ -309,3 +311,116 @@ def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_databas
             run(profile.release_adapters())
             profile.bridge.run(profile.bindings.engine.dispose())
             profile.bridge.close()
+
+
+def custody_candidate(world, *, key=None, value=None, policy=None, rights=None):
+    from apps.api.ingestion import ExternalIngestionRecorder
+    from apps.api.store import InMemoryExecutionStore
+    from core.contracts.learning import LearningSample
+    from core.learning.storage import RetentionPolicy, prepare_capture
+
+    tenant, actor, sample_id = world.principal.tenant_id, world.principal.user_id, uuid4()
+    value = {"answer": "fact"} if value is None else value
+    policy = policy or RetentionPolicy(tenant, uuid4(), 3600)
+    rights = rights or uuid4()
+    prepared = prepare_capture(
+        policy=policy,
+        tenant_id=tenant,
+        policy_id=policy.policy_id,
+        rights_ref=rights,
+        knowledge_key="fact",
+        knowledge_value=value,
+        now=utc_now(),
+    )
+    memory = InMemoryExecutionStore()
+    execution_id = ExternalIngestionRecorder(memory).record(tenant, sample_id, actor, "fact", value)
+    report = memory.get(tenant, execution_id)
+    return dict(
+        sample=LearningSample(id=sample_id, tenant_id=tenant, source_execution_id=execution_id),
+        execution=report.execution,
+        nodes=tuple(n.node for n in report.nodes),
+        prepared=prepared,
+        policy=policy,
+        rights_ref=rights,
+        idempotency_key=key or uuid4(),
+        source_kind="external",
+    )
+
+
+def test_custody_atomic_roundtrip_and_same_key_retry(database):
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    first = database[0].run(repo.capture(**args))
+    second = database[0].run(
+        repo.capture(
+            **custody_candidate(
+                world, key=args["idempotency_key"], policy=args["policy"], rights=args["rights_ref"]
+            )
+        )
+    )
+    assert first["sample_id"] == second["sample_id"]
+    assert first["source_execution_id"] == second["source_execution_id"]
+    assert count(database, learning_samples) == count(database, executions) == 1
+    loaded = database[0].run(repo.get(world.principal.tenant_id, first["sample_id"]))
+    assert loaded["payload"] == args["prepared"].payload
+
+
+def test_custody_changed_content_conflicts(database):
+    from core.learning.storage import LearningStorageConflict
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    first = database[0].run(repo.capture(**args))
+    with pytest.raises(LearningStorageConflict):
+        database[0].run(
+            repo.capture(
+                **custody_candidate(
+                    world,
+                    key=args["idempotency_key"],
+                    value={"answer": "changed"},
+                    policy=args["policy"],
+                    rights=args["rights_ref"],
+                )
+            )
+        )
+    assert (
+        database[0].run(repo.get(world.principal.tenant_id, first["sample_id"]))["payload"]
+        == args["prepared"].payload
+    )
+
+
+def test_custody_quarantine_never_writes_raw_secret(database):
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_sample_custody
+
+    world, _, _ = composed(database)
+    marker = "ghp_" + "X" * 36
+    record = database[0].run(
+        LearningCustodyRepository(database[1]).capture(
+            **custody_candidate(world, value={marker: "private"})
+        )
+    )
+    assert record["payload"] is None and record["quarantined"] is True
+
+    async def rows():
+        async with database[1]() as session:
+            return (await session.execute(select(learning_sample_custody))).mappings().all()
+
+    assert marker not in str(database[0].run(rows()))
+
+
+def test_custody_foreign_equals_missing(database):
+    from core.learning.storage import LearningStorageError
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    record = database[0].run(repo.capture(**custody_candidate(world)))
+    for tenant, sample in ((uuid4(), record["sample_id"]), (world.principal.tenant_id, uuid4())):
+        with pytest.raises(LearningStorageError, match="unknown learning sample"):
+            database[0].run(repo.get(tenant, sample))
