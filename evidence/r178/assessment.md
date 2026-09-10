@@ -1,8 +1,51 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current receipt seam A–K checkpoint — Backend Closure OPEN
+## Current adapter A–K checkpoint — Backend Closure OPEN
 
-This section supersedes the historical codec/foundation assessments below.
+This section supersedes the historical assessments below.
+
+- **A / State — VERIFIED, CAPTURED:** restored confirmed 4edf9e87 checkpoint;
+  full gate and six live adapter cases retained. Main 369cf37c / mission remote
+  84563ab9; R177 closed. No product implementation repeated.
+- **B / Regression — VERIFIED, TEST:** dec03_adapter_full_gate.txt at 0a369e69:
+  **3447 passed, 0 failed/errors, 64 skipped**, static/governance checks PASS,
+  process_exit=0. Later changes are live tests/evidence, not product changes.
+- **C / Gap — FAILED, LIVE + TEST:** both original sample restart assertions
+  remain open; receipt-stage retained evidence records 22 passed / 2 failed.
+  A newer full-live run must be retained before claiming its totals.
+- **D / Change — VERIFIED, TEST:** dec03_adapter_before/after.txt record
+  **38 failed -> 38 passed**, strict mypy/ruff success. Explicit closed policy
+  parser, atomic external custody capture, decoded get/list and guarded CAS save.
+- **E / Trust — VERIFIED within TEST + LIVE scope:** no default policy/rights/
+  retention, metadata-only quarantine, tenant-safe reads, conflicting retry and
+  stale-save refusal. Policy removal suppresses content and denies new capture;
+  policy snapshots are NOT durable revocation registries or automatic erasure.
+- **F / Models — UNVERIFIED beyond existing tests:** no new external-provider,
+  training, weights or model-promotion proof. Core routing unchanged.
+- **G / Learning — INFERRED, STATIC (partial):** lifecycle/runtime/API remain
+  unbound. Memory is not training data; receipt success is not verified learning.
+- **H / Recovery — VERIFIED within adapter LIVE + TEST scope:**
+  dec03_adapter_live.txt: **6 passed, 24 deselected**, PostgreSQL 17.11, real
+  session factory/AsyncBridge. Fresh clean/quarantined reads and retry identity,
+  policy-removal denial, CAS/revocation, response loss AFTER actual commit and
+  four concurrent callers/one identity. Not HTTP binding or process-crash proof.
+- **I / Decisions:** DEC03 B APPROVED, accounting **6/11**, not_evaluated=2;
+  remaining files: lifecycle, API app/admin/intake and runtime. Gates unchanged.
+- **J / Other checks — VERIFIED, TEST:** dec03_adapter_gateway.txt **194 passed**;
+  original dec03_adapter_adversarial.txt exit 0. Publication BLOCKED by absent
+  environment GitHub authentication; no chat credential copied or tested, no
+  PR #14 update, merge or deployment. Confirmed bundles preserve local progress.
+- **K / Next:** retain complete-live output; tests-first execution-born custody
+  using actual source records, Core-facing lifecycle port and durable CAS state;
+  runtime/API/intake policy/rights/idempotency admission, expiry/revocation and
+  derived-copy reconciliation. Prove actual restart/crash before Backend Closure.
+
+**Backend Closure, R178 completion and UI readiness remain OPEN. Do not repeat
+completed receipt/codec/adapter units or request DEC03 approval again.**
+
+## Historical receipt seam A–K checkpoint — Backend Closure OPEN
+
+This section superseded the codec/foundation assessments at that checkpoint.
 
 - **A / State — VERIFIED, CAPTURED:** recovered bundle `fd4afd5c`, unchanged
   tested product at that snapshot; retained verification through `a38ed08a`.
