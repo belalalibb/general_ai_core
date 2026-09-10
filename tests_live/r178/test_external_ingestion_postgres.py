@@ -428,6 +428,7 @@ def test_custody_foreign_equals_missing(database):
 
 def test_custody_concurrent_retry_has_one_committed_subject(database):
     import asyncio
+
     from infrastructure.db.learning import LearningCustodyRepository
 
     world, _, _ = composed(database)
@@ -450,6 +451,7 @@ def test_custody_concurrent_retry_has_one_committed_subject(database):
 
 def test_custody_late_write_failure_rolls_back_subject_and_sample(database):
     from sqlalchemy.exc import DBAPIError
+
     from infrastructure.db.learning import LearningCustodyRepository
 
     world, _, _ = composed(database)
@@ -458,12 +460,14 @@ def test_custody_late_write_failure_rolls_back_subject_and_sample(database):
         async with database[1].begin() as session:
             await session.execute(
                 text(
-                    "CREATE FUNCTION fail_custody() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'custody write failed'; END; $$"
+                    "CREATE FUNCTION fail_custody() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                    "BEGIN RAISE EXCEPTION 'custody write failed'; END; $$"
                 )
             )
             await session.execute(
                 text(
-                    "CREATE TRIGGER fail_custody_insert BEFORE INSERT ON learning_sample_custody FOR EACH ROW EXECUTE FUNCTION fail_custody()"
+                    "CREATE TRIGGER fail_custody_insert BEFORE INSERT ON learning_sample_custody "
+                    "FOR EACH ROW EXECUTE FUNCTION fail_custody()"
                 )
             )
 
@@ -475,6 +479,7 @@ def test_custody_late_write_failure_rolls_back_subject_and_sample(database):
 
 def test_custody_expiry_discards_payload_but_preserves_lineage(database):
     from datetime import timedelta
+
     from infrastructure.db.learning import LearningCustodyRepository
 
     world, _, _ = composed(database)
@@ -536,4 +541,96 @@ def test_custody_database_rejects_cross_tenant_lineage_update(database):
     assert (
         database[0].run(repo.get(world.principal.tenant_id, first["sample_id"]))["tenant_id"]
         == world.principal.tenant_id
+    )
+
+
+def test_custody_revocation_keeps_lineage_and_denies_further_mutation(database):
+    from core.learning.storage import LearningStorageConflict
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    first = database[0].run(repo.capture(**args))
+    assert (
+        database[0].run(repo.revoke_policy(world.principal.tenant_id, args["policy"].policy_id))
+        == 1
+    )
+    again = database[0].run(repo.capture(**args))
+    assert again["sample_id"] == first["sample_id"]
+    assert again["payload"] is None and again["revoked"]
+    with pytest.raises(LearningStorageConflict):
+        database[0].run(repo.save(args["sample"], {"version": 1}, expected_revision=1))
+    assert count(database, executions) == count(database, learning_samples) == 1
+
+
+def test_custody_state_refuses_arbitrary_content_and_unknown_version(database):
+    from core.learning.storage import LearningStorageError
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    database[0].run(repo.capture(**args))
+    for state in (
+        {"version": 2},
+        {"version": True},
+        {"version": 1, "raw": "forbidden"},
+        {"version": 1, "promotion_verdicts": {"unexpected": True}},
+        {"version": 1, "eligibility_verdicts": {"not_poisoned": "true"}},
+    ):
+        with pytest.raises(LearningStorageError):
+            database[0].run(repo.save(args["sample"], state, expected_revision=0))
+    assert database[0].run(repo.get(world.principal.tenant_id, args["sample"].id))["revision"] == 0
+
+
+def custody_migration(connection, direction):
+    import importlib.util
+    from pathlib import Path
+
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+
+    path = (
+        Path(__file__).resolve().parents[2]
+        / "infrastructure/db/migrations/versions/0019_learning_custody.py"
+    )
+    spec = importlib.util.spec_from_file_location("custody_migration", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with Operations.context(MigrationContext.configure(connection)):
+        getattr(module, direction)()
+
+
+def test_custody_migration_roundtrip_empty_and_refuses_populated_downgrade(database):
+    from sqlalchemy import inspect
+
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_sample_custody
+
+    async def roundtrip():
+        async with database[1].begin() as session:
+            connection = await session.connection()
+            await connection.run_sync(lambda c: custody_migration(c, "downgrade"))
+            await connection.run_sync(lambda c: custody_migration(c, "upgrade"))
+            columns = await connection.run_sync(
+                lambda c: inspect(c).get_columns("learning_sample_custody")
+            )
+            assert {c["name"] for c in columns} == set(learning_sample_custody.c.keys())
+
+    database[0].run(roundtrip())
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    row = database[0].run(repo.capture(**custody_candidate(world)))
+
+    async def unsafe_downgrade():
+        async with database[1].begin() as session:
+            connection = await session.connection()
+            await connection.run_sync(lambda c: custody_migration(c, "downgrade"))
+
+    with pytest.raises(RuntimeError, match="preserve evidence"):
+        database[0].run(unsafe_downgrade())
+    assert (
+        database[0].run(repo.get(world.principal.tenant_id, row["sample_id"]))["payload"]
+        is not None
     )
