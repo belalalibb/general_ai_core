@@ -61,6 +61,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -259,6 +260,7 @@ class LearningLifecycleService:
         Uncomposed domain fixtures retain their in-memory identity only. That
         fallback is not durable execution provenance or verified learning.
         """
+        knowledge_value = deepcopy(knowledge_value)
         sample_id = uuid4()
         source_id = (
             self._external_capture.record(
@@ -295,7 +297,7 @@ class LearningLifecycleService:
             sample=sample,
             source_kind=kind,
             knowledge_key=knowledge_key,
-            knowledge_value=knowledge_value,
+            knowledge_value=deepcopy(knowledge_value),
         )
         return sample
 

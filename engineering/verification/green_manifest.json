@@ -542,6 +542,20 @@
           "summary": "Genuine per-row validator subject, admitted actor propagation and shared evaluation binding; durable sample closure remains OPEN."
         }
       ]
+    },
+    "round_r178_p01_codec": {
+      "ceiling": 1,
+      "changes_used": 1,
+      "items": [
+        "R178-P01-CODEC"
+      ],
+      "log": [
+        {
+          "item": "R178-P01-CODEC",
+          "file": "apps/composition/durability.py",
+          "summary": "Only MODEL_CALL nodes reconstruct provider responses; validator receipts remain node evidence."
+        }
+      ]
     }
   },
   "baseline": {
