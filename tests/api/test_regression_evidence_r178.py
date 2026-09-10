@@ -173,6 +173,30 @@ def test_unbacked_legacy_booleans_cannot_promote_even_with_compatibility_flag(st
     }
 
 
+@pytest.mark.parametrize("checks", [[], ["output_present", "output_present"]])
+def test_invalid_required_checks_are_named_http_validation_errors(checks):
+    world = World()
+    app = _app(world, strict=True)
+    result = run(
+        _post(
+            app,
+            "/v1/admin/scenarios",
+            {
+                "name": "invalid checks",
+                "ask": "probe",
+                "checks": checks,
+            },
+        )
+    )
+    assert result.status_code == 422
+
+
+def test_foreign_execution_and_evaluation_never_establish_regression_evidence():
+    world, store, _, execution_id, _ = replay()
+    resolver = PromotionEvidenceResolver(evaluations=world.evaluations, executions=store)
+    assert resolver.regression(uuid4(), execution_id).held is False
+
+
 def test_judgment_without_explicit_passing_checks_is_not_a_verification_pass():
     world = World()
     source = uuid4()

@@ -1,0 +1,93 @@
+................F..                                                      [100%]
+=================================== FAILURES ===================================
+____ test_invalid_required_checks_are_named_http_validation_errors[checks1] ____
+tests/api/test_regression_evidence_r178.py:180: in test_invalid_required_checks_are_named_http_validation_errors
+    result = run(
+tests/api/test_promotion_evidence_r177.py:61: in run
+    return asyncio.run(coro)
+           ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:196: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:119: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+tests/api/test_promotion_evidence_r177.py:87: in _post
+    return await c.post(path, json=body)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1859: in post
+    return await self.request(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1629: in send
+    response = await self._send_handling_auth(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+.venv/lib/python3.13/site-packages/httpx/_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/applications.py:1163: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/applications.py:96: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.13/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/routing.py:670: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:2734: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:1780: in handle
+    await self.original_router.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:2789: in handle
+    await included_router._handle_selected(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:1800: in _handle_selected
+    await original_route.handle(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:1279: in handle
+    await app(scope, receive, send)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:158: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.13/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.13/site-packages/fastapi/routing.py:144: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/fastapi/routing.py:706: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.13/site-packages/fastapi/routing.py:352: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+apps/api/admin.py:1242: in save_scenario
+    scenario = scenario_service.save(
+apps/api/scenarios.py:143: in save
+    scenario = Scenario(
+<string>:9: in __init__
+    ???
+apps/api/scenarios.py:107: in __post_init__
+    raise ValueError("scenario requires nonempty, unique checks")
+E   ValueError: scenario requires nonempty, unique checks
+=========================== short test summary info ============================
+FAILED tests/api/test_regression_evidence_r178.py::test_invalid_required_checks_are_named_http_validation_errors[checks1]
+1 failed, 18 passed in 2.09s
+
+PROCESS_EXIT=1
