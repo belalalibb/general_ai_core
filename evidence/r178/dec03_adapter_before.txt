@@ -1,0 +1,292 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                                   [100%]
+=================================== FAILURES ===================================
+___________________ test_config_no_ambient_or_default_policy ___________________
+tests/composition/test_learning_custody_r178.py:29: in test_config_no_ambient_or_default_policy
+    assert parse({}) == ()
+           ^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_________ test_config_preserves_explicit_tenant_identity_and_duration __________
+tests/composition/test_learning_custody_r178.py:36: in test_config_preserves_explicit_tenant_identity_and_duration
+    assert parse({"LEARNING_STORAGE_POLICIES": json.dumps([entry(first), entry(second)])}) == (
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+____________________ test_config_refuses_malformed_values[] ____________________
+tests/composition/test_learning_custody_r178.py:44: in test_config_refuses_malformed_values
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+___________________ test_config_refuses_malformed_values[ ] ____________________
+tests/composition/test_learning_custody_r178.py:44: in test_config_refuses_malformed_values
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__________________ test_config_refuses_malformed_values[null] __________________
+tests/composition/test_learning_custody_r178.py:44: in test_config_refuses_malformed_values
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+___________________ test_config_refuses_malformed_values[{}] ___________________
+tests/composition/test_learning_custody_r178.py:44: in test_config_refuses_malformed_values
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__________________ test_config_refuses_malformed_values[true] __________________
+tests/composition/test_learning_custody_r178.py:44: in test_config_refuses_malformed_values
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__________________ test_config_refuses_malformed_values[[1]] ___________________
+tests/composition/test_learning_custody_r178.py:44: in test_config_refuses_malformed_values
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__________________ test_config_refuses_malformed_values[[{}]] __________________
+tests/composition/test_learning_custody_r178.py:44: in test_config_refuses_malformed_values
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+________________ test_config_refuses_malformed_values[not-json] ________________
+tests/composition/test_learning_custody_r178.py:44: in test_config_refuses_malformed_values
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_ test_config_is_closed_strict_and_does_not_echo_input[retention_seconds-True] _
+tests/composition/test_learning_custody_r178.py:57: in test_config_is_closed_strict_and_does_not_echo_input
+    parse({"LEARNING_STORAGE_POLICIES": json.dumps([data])})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__ test_config_is_closed_strict_and_does_not_echo_input[retention_seconds-0] ___
+tests/composition/test_learning_custody_r178.py:57: in test_config_is_closed_strict_and_does_not_echo_input
+    parse({"LEARNING_STORAGE_POLICIES": json.dumps([data])})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__ test_config_is_closed_strict_and_does_not_echo_input[retention_seconds--1] __
+tests/composition/test_learning_custody_r178.py:57: in test_config_is_closed_strict_and_does_not_echo_input
+    parse({"LEARNING_STORAGE_POLICIES": json.dumps([data])})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_ test_config_is_closed_strict_and_does_not_echo_input[retention_seconds-3600] _
+tests/composition/test_learning_custody_r178.py:57: in test_config_is_closed_strict_and_does_not_echo_input
+    parse({"LEARNING_STORAGE_POLICIES": json.dumps([data])})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_ test_config_is_closed_strict_and_does_not_echo_input[retention_seconds-1.5] __
+tests/composition/test_learning_custody_r178.py:57: in test_config_is_closed_strict_and_does_not_echo_input
+    parse({"LEARNING_STORAGE_POLICIES": json.dumps([data])})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_ test_config_is_closed_strict_and_does_not_echo_input[tenant_id-private-marker] _
+tests/composition/test_learning_custody_r178.py:57: in test_config_is_closed_strict_and_does_not_echo_input
+    parse({"LEARNING_STORAGE_POLICIES": json.dumps([data])})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_____ test_config_is_closed_strict_and_does_not_echo_input[policy_id-None] _____
+tests/composition/test_learning_custody_r178.py:57: in test_config_is_closed_strict_and_does_not_echo_input
+    parse({"LEARNING_STORAGE_POLICIES": json.dumps([data])})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_ test_config_is_closed_strict_and_does_not_echo_input[raw-secret-field-private-marker] _
+tests/composition/test_learning_custody_r178.py:57: in test_config_is_closed_strict_and_does_not_echo_input
+    parse({"LEARNING_STORAGE_POLICIES": json.dumps([data])})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+___________ test_config_rejects_duplicate_identities_and_json_fields ___________
+tests/composition/test_learning_custody_r178.py:69: in test_config_rejects_duplicate_identities_and_json_fields
+    parse({"LEARNING_STORAGE_POLICIES": raw})
+tests/composition/test_learning_custody_r178.py:16: in parse
+    from apps.composition.learning import learning_storage_policies_from_env
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_________________ test_admission_denies_before_any_io[policy] __________________
+tests/composition/test_learning_custody_r178.py:121: in test_admission_denies_before_any_io
+    adapter(repo, bridge, policies).capture_external(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_____________ test_admission_denies_before_any_io[foreign_policy] ______________
+tests/composition/test_learning_custody_r178.py:121: in test_admission_denies_before_any_io
+    adapter(repo, bridge, policies).capture_external(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+________________ test_admission_denies_before_any_io[actor_id] _________________
+tests/composition/test_learning_custody_r178.py:121: in test_admission_denies_before_any_io
+    adapter(repo, bridge, policies).capture_external(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_______________ test_admission_denies_before_any_io[rights_ref] ________________
+tests/composition/test_learning_custody_r178.py:121: in test_admission_denies_before_any_io
+    adapter(repo, bridge, policies).capture_external(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_____________ test_admission_denies_before_any_io[idempotency_key] _____________
+tests/composition/test_learning_custody_r178.py:121: in test_admission_denies_before_any_io
+    adapter(repo, bridge, policies).capture_external(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__________ test_capture_one_atomic_call_returns_stored_retry_identity __________
+tests/composition/test_learning_custody_r178.py:129: in test_capture_one_atomic_call_returns_stored_retry_identity
+    restored = adapter(repo, bridge, (policy,)).capture_external(**request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+___________ test_secret_capture_offers_no_raw_content_to_repository ____________
+tests/composition/test_learning_custody_r178.py:152: in test_secret_capture_offers_no_raw_content_to_repository
+    restored = adapter(repo, bridge, (policy,)).capture_external(**request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_______________ test_write_failure_never_acknowledged_or_cached ________________
+tests/composition/test_learning_custody_r178.py:165: in test_write_failure_never_acknowledged_or_cached
+    adapter(repo, bridge, (policy,)).capture_external(**args(row))
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+___________ test_reads_always_decode_without_caching_raw_rows[clean] ___________
+tests/composition/test_learning_custody_r178.py:185: in test_reads_always_decode_without_caching_raw_rows
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_______ test_reads_always_decode_without_caching_raw_rows[absent_policy] _______
+tests/composition/test_learning_custody_r178.py:185: in test_reads_always_decode_without_caching_raw_rows
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+______ test_reads_always_decode_without_caching_raw_rows[changed_policy] _______
+tests/composition/test_learning_custody_r178.py:185: in test_reads_always_decode_without_caching_raw_rows
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__________ test_reads_always_decode_without_caching_raw_rows[expired] __________
+tests/composition/test_learning_custody_r178.py:185: in test_reads_always_decode_without_caching_raw_rows
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__________ test_reads_always_decode_without_caching_raw_rows[corrupt] __________
+tests/composition/test_learning_custody_r178.py:185: in test_reads_always_decode_without_caching_raw_rows
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+__________ test_reads_always_decode_without_caching_raw_rows[foreign] __________
+tests/composition/test_learning_custody_r178.py:185: in test_reads_always_decode_without_caching_raw_rows
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_________ test_save_checks_current_policy_payload_and_revision[clean] __________
+tests/composition/test_learning_custody_r178.py:211: in test_save_checks_current_policy_payload_and_revision
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_________ test_save_checks_current_policy_payload_and_revision[stale] __________
+tests/composition/test_learning_custody_r178.py:211: in test_save_checks_current_policy_payload_and_revision
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_____ test_save_checks_current_policy_payload_and_revision[missing_policy] _____
+tests/composition/test_learning_custody_r178.py:211: in test_save_checks_current_policy_payload_and_revision
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+______ test_save_checks_current_policy_payload_and_revision[quarantined] _______
+tests/composition/test_learning_custody_r178.py:211: in test_save_checks_current_policy_payload_and_revision
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+_______ test_save_checks_current_policy_payload_and_revision[db_failure] _______
+tests/composition/test_learning_custody_r178.py:211: in test_save_checks_current_policy_payload_and_revision
+    store = adapter(repo, bridge, policies)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:98: in adapter
+    from apps.composition.learning import DurableLearningCustody
+E   ModuleNotFoundError: No module named 'apps.composition.learning'
+=========================== short test summary info ============================
+FAILED tests/composition/test_learning_custody_r178.py::test_config_no_ambient_or_default_policy
+FAILED tests/composition/test_learning_custody_r178.py::test_config_preserves_explicit_tenant_identity_and_duration
+FAILED tests/composition/test_learning_custody_r178.py::test_config_refuses_malformed_values[]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_refuses_malformed_values[ ]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_refuses_malformed_values[null]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_refuses_malformed_values[{}]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_refuses_malformed_values[true]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_refuses_malformed_values[[1]]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_refuses_malformed_values[[{}]]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_refuses_malformed_values[not-json]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_is_closed_strict_and_does_not_echo_input[retention_seconds-True]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_is_closed_strict_and_does_not_echo_input[retention_seconds-0]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_is_closed_strict_and_does_not_echo_input[retention_seconds--1]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_is_closed_strict_and_does_not_echo_input[retention_seconds-3600]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_is_closed_strict_and_does_not_echo_input[retention_seconds-1.5]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_is_closed_strict_and_does_not_echo_input[tenant_id-private-marker]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_is_closed_strict_and_does_not_echo_input[policy_id-None]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_is_closed_strict_and_does_not_echo_input[raw-secret-field-private-marker]
+FAILED tests/composition/test_learning_custody_r178.py::test_config_rejects_duplicate_identities_and_json_fields
+FAILED tests/composition/test_learning_custody_r178.py::test_admission_denies_before_any_io[policy]
+FAILED tests/composition/test_learning_custody_r178.py::test_admission_denies_before_any_io[foreign_policy]
+FAILED tests/composition/test_learning_custody_r178.py::test_admission_denies_before_any_io[actor_id]
+FAILED tests/composition/test_learning_custody_r178.py::test_admission_denies_before_any_io[rights_ref]
+FAILED tests/composition/test_learning_custody_r178.py::test_admission_denies_before_any_io[idempotency_key]
+FAILED tests/composition/test_learning_custody_r178.py::test_capture_one_atomic_call_returns_stored_retry_identity
+FAILED tests/composition/test_learning_custody_r178.py::test_secret_capture_offers_no_raw_content_to_repository
+FAILED tests/composition/test_learning_custody_r178.py::test_write_failure_never_acknowledged_or_cached
+FAILED tests/composition/test_learning_custody_r178.py::test_reads_always_decode_without_caching_raw_rows[clean]
+FAILED tests/composition/test_learning_custody_r178.py::test_reads_always_decode_without_caching_raw_rows[absent_policy]
+FAILED tests/composition/test_learning_custody_r178.py::test_reads_always_decode_without_caching_raw_rows[changed_policy]
+FAILED tests/composition/test_learning_custody_r178.py::test_reads_always_decode_without_caching_raw_rows[expired]
+FAILED tests/composition/test_learning_custody_r178.py::test_reads_always_decode_without_caching_raw_rows[corrupt]
+FAILED tests/composition/test_learning_custody_r178.py::test_reads_always_decode_without_caching_raw_rows[foreign]
+FAILED tests/composition/test_learning_custody_r178.py::test_save_checks_current_policy_payload_and_revision[clean]
+FAILED tests/composition/test_learning_custody_r178.py::test_save_checks_current_policy_payload_and_revision[stale]
+FAILED tests/composition/test_learning_custody_r178.py::test_save_checks_current_policy_payload_and_revision[missing_policy]
+FAILED tests/composition/test_learning_custody_r178.py::test_save_checks_current_policy_payload_and_revision[quarantined]
+FAILED tests/composition/test_learning_custody_r178.py::test_save_checks_current_policy_payload_and_revision[db_failure]
+38 failed in 2.41s
+process_exit=1
