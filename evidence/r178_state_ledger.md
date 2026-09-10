@@ -91,6 +91,32 @@ records and persistence failures. DEC-02 adds only a reviewed lifecycle/transact
 proposal and evidence, NOT storage rewiring or data migration. Rollback preserves
 stored evidence; never recommend restoring permissive legacy promotion semantics.
 
+## P01 implementation authorization and closure gate (2026-09-10)
+
+Operator now authorizes the next tests-first P01 IMPLEMENTATION, not design-only:
+close external-evidence gap end-to-end; full regression, gateway and adversarial
+checks; reconcile state; do not declare R178 complete without Backend Closure.
+Recovered clean published `aff12c0c`; main remains `369cf37c`; authenticated repo
+identity/push verified. Existing approved DEC01 semantics and closed R177 remain.
+
+No distinct machine-readable `Backend Closure` predicate was found in current
+R178 artifacts; do not invent a weaker DONE condition. Conservative P01 acceptance:
+real admitted per-row validator/ingestion subjects (no fake model executions),
+shared tenant-scoped append-only evaluation evidence, durable sample/receipt and
+subject binding with retry/restart/failure behavior, no cross-row/tenant trust,
+no provenance/rights inference, unchanged integrity/security constraints, original
+P01/P03 probes satisfied, full gate + gateway/integration PASS. Live local DB proof
+is required before claiming database/restart closure; hermetic tests alone are
+not that evidence. Broader live/provider/UI limitations must remain explicit.
+
+Discovery: existing `learning_samples` table (migration-era metadata) has no
+production repository callers; it carries FK-bound sample states but not knowledge
+payload/provenance. Existing ExecutionStore and EvaluationStore use separate writes,
+so do not call a sequence atomic. Investigate reuse before proposing schema changes.
+Initial subunit: failing-first API/recovery tests plus workspace-local PostgreSQL
+setup, production changes 0; implementation scope/accounting recorded before edits.
+No ambient provider credentials, production DB, training or data migration used.
+
 ## Rows (append before each unit; completion needs Git + actual evidence)
 
 | Task | State / evidence | Exact next action |
