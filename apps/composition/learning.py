@@ -36,6 +36,8 @@ from core.learning.storage import (
     validate_custody_state,
 )
 from infrastructure.db.learning import LearningCustodyRepository
+from infrastructure.db.repositories.errors import ExecutionNotFound
+from infrastructure.db.repositories.executions import ExecutionRecord, PostgresExecutionRepository
 
 
 def _closed_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -124,6 +126,12 @@ class CustodyRepositoryPort(Protocol):
     ) -> int: ...
 
 
+class ExecutionSourcePort(Protocol):
+    """Read existing tenant-scoped provenance; no execution writer is exposed."""
+
+    async def get(self, tenant_id: UUID, execution_id: UUID) -> ExecutionRecord: ...
+
+
 class DurableLearningCustody:
     def __init__(
         self,
@@ -131,6 +139,7 @@ class DurableLearningCustody:
         repository: CustodyRepositoryPort,
         bridge: AsyncBridge,
         policies: tuple[RetentionPolicy, ...],
+        sources: ExecutionSourcePort | None = None,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         try:
@@ -138,6 +147,7 @@ class DurableLearningCustody:
         except (ValueError, TypeError, AttributeError):
             raise LearningStorageError("invalid learning storage policies") from None
         self._repository = repository
+        self._sources = sources
         self._bridge = bridge
         self._clock = clock
 
@@ -206,6 +216,76 @@ class DurableLearningCustody:
         # Stored identity owns retries/response loss, not the new candidate identity.
         return self._decode(row, tenant_id)
 
+    def capture_from_execution(
+        self,
+        tenant_id: UUID,
+        source_execution_id: UUID,
+        *,
+        policy_id: UUID | None,
+        rights_ref: UUID | None,
+        idempotency_key: UUID | None,
+        knowledge_key: str,
+        knowledge_value: JsonObject,
+    ) -> RecoveredCapture:
+        """Capture against real provenance, never synthesize or rewrite its source.
+
+        Caller authentication/authorization remains the lifecycle/API's duty.
+        The stored actor is source provenance, NOT a substitute requesting actor.
+        Failed executions may supply RAW learning candidates; no status grants
+        learning trust. Source read and custody write are separate transactions;
+        capture rechecks source existence in-tenant and the database owns FKs.
+        """
+        if not all(
+            isinstance(v, UUID)
+            for v in (tenant_id, source_execution_id, policy_id, rights_ref, idempotency_key)
+        ):
+            raise LearningStorageError("explicit custody references required")
+        if policy_id is None or rights_ref is None or idempotency_key is None:
+            raise LearningStorageError("explicit custody references required")
+        policy = self._policies.get((tenant_id, policy_id))
+        if policy is None:
+            raise LearningStorageError("storage policy unavailable")
+        if self._sources is None:
+            raise LearningStorageError("source unavailable")
+        prepared = prepare_capture(
+            policy=policy,
+            tenant_id=tenant_id,
+            policy_id=policy_id,
+            rights_ref=rights_ref,
+            knowledge_key=knowledge_key,
+            knowledge_value=deepcopy(knowledge_value),
+            now=self._clock(),
+        )
+        try:
+            source = self._bridge.run(self._sources.get(tenant_id, source_execution_id))
+        except ExecutionNotFound:
+            raise LearningStorageError("source unavailable") from None
+        execution = source.execution
+        if execution.tenant_id != tenant_id or execution.id != source_execution_id:
+            raise LearningStorageError("source unavailable")
+        sample = LearningSample(
+            id=uuid4(), tenant_id=tenant_id, source_execution_id=source_execution_id
+        )
+        row = self._bridge.run(
+            self._repository.capture(
+                sample=sample,
+                execution=execution,
+                nodes=(),
+                prepared=prepared,
+                policy=policy,
+                rights_ref=rights_ref,
+                idempotency_key=idempotency_key,
+                source_kind="execution",
+            )
+        )
+        restored = self._decode(row, tenant_id)
+        if (
+            restored.source_kind != "execution"
+            or restored.sample.source_execution_id != source_execution_id
+        ):
+            raise LearningStorageError("invalid source binding")
+        return restored
+
     def get(self, tenant_id: UUID, sample_id: UUID) -> RecoveredCapture:
         return self._decode(self._bridge.run(self._repository.get(tenant_id, sample_id)), tenant_id)
 
@@ -240,6 +320,7 @@ def build_durable_learning_custody(
 ) -> DurableLearningCustody:
     return DurableLearningCustody(
         repository=LearningCustodyRepository(bindings.session_factory),
+        sources=PostgresExecutionRepository(bindings.session_factory),
         bridge=bridge,
         policies=policies,
     )
