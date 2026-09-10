@@ -466,3 +466,29 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   authentication. Chat credential not copied or tested. No PR #14 update, merge
   or deployment claimed. Preserve confirmed bundles while publication is blocked.
   Backend Closure, R178 completion and UI readiness remain OPEN; DEC03 APPROVED.
+
+## Adapter verification reconciled — retained complete live output
+
+- VERIFIED / CAPTURED: restored 4edf9e87 after another reset. Did not repeat the
+  completed 3447/0/0/64 full gate, Gateway 194 or six adapter acceptance cases.
+  Only the missing complete-live artifact was regenerated and committed bce9cb79;
+  it is now in confirmed uploaded bundle r178_adapter_live_complete.bundle.
+- FAILED / LIVE + TEST: dec03_adapter_runtime_open.txt at d0ba8032, PostgreSQL
+  17.11: 28 passed, 2 failed, process_exit=1. Original restart assertions at
+  lines 193 and 307 still return 404 rather than 200, unchanged. All 26 custody
+  cases pass as part of that run; this is not Backend Closure.
+- VERIFIED / CAPTURED: current A-K assessment reconciled (d0ba8032, 8b4bde47),
+  DEC03 packet/accounting reconciled (fa4c1171). Usage remains 6/11. Product
+  equality against full-gate snapshot 0a369e69 checked across apps/core/
+  infrastructure/providers/tests/engineering/ui; only live tests/evidence/docs
+  changed afterward. No frozen edits, threshold/exception changes or gate weakening.
+- NEXT EXACT ACTION: tests-first execution-born custody capture using actual
+  tenant-scoped stored sources, then Core-facing lifecycle custody port/read/CAS
+  state binding. Runtime/API/intake must supply explicit policy/rights/idempotency
+  references, fail closed without policy and refuse unavailable-content operations.
+  Expiry/revocation and derived-copy reconciliation, true process restart/crash,
+  both original restart cases and final integrated verification remain required.
+- No further DEC03 approval needed. R177 and verified R178 units stay closed.
+  Backend Closure, R178 completion and UI readiness remain OPEN. Publication is
+  separately blocked by absent GitHub environment authentication; no chat token
+  copied/tested, no PR #14 update, merge or production deployment claimed.
