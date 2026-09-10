@@ -165,7 +165,8 @@ not claimed. DEC-01 implementation and its green gate do not close DEC-02 runtim
 
 ## 8. R178-DEC-03 — durable payload custody, quarantine and retention
 
-**Status: BLOCKED / STATIC + LIVE + TEST for the protected choice below only.**
+**Historical pre-approval status: BLOCKED / STATIC + LIVE + TEST.**
+**Current decision: option B APPROVED; implementation is partial.**
 P01 IMPLEMENTATION is already authorized. This is NOT another request to approve
 DEC-02 implementation or reopen DEC-01. The choice now required is what raw data
 may become durable and its retention/revocation policy. Section 6 explicitly
@@ -287,3 +288,22 @@ original restart failures. DEC03 accounting is 5/11, with the approved ingestion
 file added; six remaining production surfaces are lifecycle, composition/learning,
 API app/admin/intake and composition/runtime. Next is explicit policy/atomic
 adapter composition and lifecycle binding, not another approval or receipt rewrite.
+
+Current adapter checkpoint: `apps/composition/learning.py` is implemented with
+closed explicit policy configuration, atomic external capture, safe decoded
+reads/list and guarded CAS saves. Tests-first evidence is 38 failed -> 38 passed.
+Retained post-adapter gate: 3447 passed, 0 failed/errors, 64 skipped, all checks
+PASS, not_evaluated=2. Gateway 194 passed; original adversarial harness exit 0.
+Six actual PostgreSQL adapter cases pass (24 deselected), including fresh retry
+identity, quarantine, removed-policy denial, CAS/revocation, response loss after
+real commit and concurrent callers. Complete live suite at d0ba8032, saved
+bce9cb79: 28 passed / 2 original restart failures, exit 1. This is adapter proof,
+not actual runtime/process-crash closure.
+
+Current accounting **6/11**; five approved production files remain: lifecycle,
+API app/admin/intake and runtime. Next: execution-born capture using actual
+stored source records, Core-facing lifecycle custody binding and durable CAS
+state, explicit runtime/API policy/rights/idempotency admission. Policy snapshots
+are not durable revocation registries or automatic purge; repository revoke_policy
+alone cannot deny new capture by stale configured processes. Expiry/revocation
+and derived-copy reconciliation remain mandatory. No Backend Closure/UI claim.
