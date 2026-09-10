@@ -7,9 +7,9 @@ module turns the three artefact-backed conditions into *resolved* verdicts:
 - ``offline_eval_pass``   ← an :class:`EvaluationRecord` of the sample's source
   execution (same tenant), level above RAW, every check-style grader passed.
 - ``security_eval_pass``  ← the same, but at least one grader is ``security``.
-- ``regression_pass``     ← a stored, SUCCEEDED execution that carries the
-  scenario replay label (``apps.api.scenarios.SCENARIO_LABEL_KEY``) — the
-  Regression Center's own artefact.
+- ``regression_pass``     ← immutable per-run verification evidence bound to
+  tenant/execution/scenario/input/output/check-version. Status and a replay
+  label alone are never proof (R178-DEC-01).
 
 Everything else (shadow / canary / rollback plan / admin approval) remains a
 human act and is reported as ``unverified`` — never inferred. The
@@ -24,6 +24,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from apps.api.regression_evidence import evaluation_id as regression_evaluation_id
+from apps.api.regression_evidence import supports_pass
 from core.contracts.base import JsonObject
 from core.contracts.evaluation import EvaluationRecord, GraderType, VerificationLevel
 from core.contracts.execute import ExecutionStatus
@@ -116,7 +118,9 @@ class PromotionEvidenceResolver:
             return EvidenceVerdict(
                 condition, False, evaluation_id, "record is RAW (not evaluated)", record.level
             )
-        if require_grader is not None and not any(g.type is require_grader for g in record.graders):
+        if require_grader is not None and not any(
+            g.type is require_grader and g.passed is True for g in record.graders
+        ):
             return EvidenceVerdict(
                 condition,
                 False,
@@ -125,7 +129,11 @@ class PromotionEvidenceResolver:
                 record.level,
             )
         checks = [g for g in record.graders if g.passed is not None]
-        if checks and not all(g.passed for g in checks):
+        if not checks:
+            return EvidenceVerdict(
+                condition, False, evaluation_id, "no recorded passing checks", record.level
+            )
+        if not all(g.passed for g in checks):
             return EvidenceVerdict(
                 condition, False, evaluation_id, "a recorded check failed", record.level
             )
@@ -167,7 +175,16 @@ class PromotionEvidenceResolver:
             return EvidenceVerdict(
                 condition, False, execution_id, "scenario replay did not succeed"
             )
-        return EvidenceVerdict(condition, True, execution_id, "recorded scenario replay")
+        record = self._record(tenant_id, regression_evaluation_id(tenant_id, execution_id))
+        if record is None:
+            return EvidenceVerdict(
+                condition, False, execution_id, "missing stored regression verification evidence"
+            )
+        if not supports_pass(report, record):
+            return EvidenceVerdict(
+                condition, False, execution_id, "invalid or failed stored regression evidence"
+            )
+        return EvidenceVerdict(condition, True, execution_id, "recorded verified scenario replay")
 
 
 def report_input_ref(report: object) -> object:

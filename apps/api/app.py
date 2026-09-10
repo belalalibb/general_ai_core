@@ -149,6 +149,7 @@ from apps.api.errors import (
     execution_failure_detail,
 )
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
+from apps.api.ingestion import ExternalIngestionRecorder
 from apps.api.learning_observability import LearningObservabilityService
 from apps.api.preferences import PreferenceLearner, create_preferences_router
 from apps.api.provenance import context_provenance as _context_provenance
@@ -213,7 +214,6 @@ from core.contracts.webhooks import (
     WebhookSubscriptionRequest,
     WebhookSubscriptionResponse,
 )
-from core.evaluation import InMemoryEvaluationStore
 from core.evaluation.policy import EvaluationPolicyService, ModelJudgePort
 from core.events import (
     WebhookUrlRefused,
@@ -2100,6 +2100,7 @@ def create_app(
         router=router,
         execution_service=execution_service,
         execution_store=execution_store,
+        evaluations=admin.evaluations if admin is not None else None,
     )
     app.state.scenario_service = scenario_service
 
@@ -2140,10 +2141,14 @@ def create_app(
         # R177-FIX-09: the OPTIONAL model judge (22 §10 selective teacher) is
         # composition data — absent ⇒ deterministic-only, level ≤ VALIDATED.
         learning_lifecycle_service = LearningLifecycleService(
-            evaluation=EvaluationPolicyService(
-                store=InMemoryEvaluationStore(), judge=evaluation_judge
-            ),
+            evaluation=EvaluationPolicyService(store=admin.evaluations, judge=evaluation_judge),
             knowledge=memory,
+            external_capture=ExternalIngestionRecorder(
+                execution_store,
+                default_actor=(
+                    (principal.tenant_id, principal.user_id) if principal is not None else None
+                ),
+            ),
             audit=admin.audit,
             eligibility_gate=TrainingEligibilityGate(minimum_level=VerificationLevel.RAW),
         )

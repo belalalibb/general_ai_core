@@ -1,0 +1,38 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+____ test_capture_records_real_validator_subject_without_provider_inference ____
+tests/api/test_external_evidence_p01_r178.py:47: in test_capture_records_real_validator_subject_without_provider_inference
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+___ test_external_evaluation_visible_in_shared_store_and_bound_to_exact_row ____
+tests/api/test_external_evidence_p01_r178.py:66: in test_external_evaluation_visible_in_shared_store_and_bound_to_exact_row
+    assert listing.status_code == 200 and len(listing.json()["evaluations"]) == 1
+E   assert (200 == 200 and 0 == 1)
+E    +  where 200 = <Response [200 OK]>.status_code
+E    +  and   0 = len([])
+_____________ test_subject_write_failure_never_acknowledges_sample _____________
+tests/api/test_external_evidence_p01_r178.py:81: in test_subject_write_failure_never_acknowledges_sample
+    with pytest.raises(ConnectionError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ConnectionError
+___________ test_evidence_write_failure_cannot_advance_verification ____________
+tests/api/test_external_evidence_p01_r178.py:95: in test_evidence_write_failure_cannot_advance_verification
+    with pytest.raises(ConnectionError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ConnectionError
+_______________ test_foreign_tenant_cannot_read_external_subject _______________
+tests/api/test_external_evidence_p01_r178.py:107: in test_foreign_tenant_cannot_read_external_subject
+    store.get(world.principal.tenant_id, UUID(sample["source_execution_id"]))
+apps/api/store.py:91: in get
+    raise ExecutionNotFound(execution_id)
+E   apps.api.store.ExecutionNotFound: '5e4508e1-6d79-442e-ba40-5c8d0e79c41e'
+=========================== short test summary info ============================
+FAILED tests/api/test_external_evidence_p01_r178.py::test_capture_records_real_validator_subject_without_provider_inference
+FAILED tests/api/test_external_evidence_p01_r178.py::test_external_evaluation_visible_in_shared_store_and_bound_to_exact_row
+FAILED tests/api/test_external_evidence_p01_r178.py::test_subject_write_failure_never_acknowledges_sample
+FAILED tests/api/test_external_evidence_p01_r178.py::test_evidence_write_failure_cannot_advance_verification
+FAILED tests/api/test_external_evidence_p01_r178.py::test_foreign_tenant_cannot_read_external_subject
+5 failed in 1.57s
+
+PROCESS_EXIT=1

@@ -1,0 +1,15 @@
+.........FF                                                              [100%]
+=================================== FAILURES ===================================
+__ test_caller_mutation_cannot_change_admitted_content_under_existing_receipt __
+tests/api/test_external_evidence_p01_r178.py:228: in test_caller_mutation_cannot_change_admitted_content_under_existing_receipt
+    assert service.derived_signals(world.principal.tenant_id, first.id)["deduplicated"] is False
+E   assert True is False
+___ test_validator_receipt_reconstruction_does_not_invent_provider_response ____
+tests/api/test_external_evidence_p01_r178.py:243: in test_validator_receipt_reconstruction_does_not_invent_provider_response
+    assert recovered.nodes[0].response is None
+E   AssertionError: assert ProviderGenerateResponse(request_id=UUID('2b8f9cf9-ee76-4f96-89ff-536581fea2c3'), succeeded=True, output={'scan_comple...: 0, 'scanned_paths': 3, 'verification_level': 'RAW', 'eligibility': 'pending'}, usage={}, error=None, latency_ms=None) is None
+E    +  where ProviderGenerateResponse(request_id=UUID('2b8f9cf9-ee76-4f96-89ff-536581fea2c3'), succeeded=True, output={'scan_comple...: 0, 'scanned_paths': 3, 'verification_level': 'RAW', 'eligibility': 'pending'}, usage={}, error=None, latency_ms=None) = NodeReport(node=ExecutionNode(id=UUID('2b8f9cf9-ee76-4f96-89ff-536581fea2c3'), execution_id=UUID('8095055a-c432-49d8-b... 0, 'scanned_paths': 3, 'verification_level': 'RAW', 'eligibility': 'pending'}, usage={}, error=None, latency_ms=None)).response
+=========================== short test summary info ============================
+FAILED tests/api/test_external_evidence_p01_r178.py::test_caller_mutation_cannot_change_admitted_content_under_existing_receipt
+FAILED tests/api/test_external_evidence_p01_r178.py::test_validator_receipt_reconstruction_does_not_invent_provider_response
+2 failed, 9 passed in 2.54s

@@ -389,6 +389,35 @@
         "core/tools/gate.py"
       ]
     },
+    "round_r178_dec01": {
+      "ceiling": 5,
+      "counts_production_code_under": ["apps/"],
+      "changes_used": 5,
+      "items": ["R178-DEC-01 immutable promotion evidence"],
+      "log": [
+        {"item": "R178-DEC-01", "file": "apps/api/regression_evidence.py", "summary": "Versioned provenance codec and deterministic per-run evaluation identity"},
+        {"item": "R178-DEC-01", "file": "apps/api/scenarios.py", "summary": "Append actual required-check verdicts after real execution persistence"},
+        {"item": "R178-DEC-01", "file": "apps/api/promotion_evidence.py", "summary": "Require stored evidence and reject legacy, mismatched or failed verification"},
+        {"item": "R178-DEC-01", "file": "apps/api/app.py", "summary": "Share admin evaluation store with replay producer"},
+        {"item": "R178-DEC-01", "file": "apps/api/admin.py", "summary": "Compatibility flags cannot bypass required artifact-backed verification"}
+      ],
+      "note": "Explicit operator approval R178-DEC-01 option B. Independent five-production-file cap; DEC-02 design only. No schema, closed-set or historical-budget changes."
+    },
+    "round_r178": {
+      "ceiling": 1,
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 1,
+      "items": ["R178-FIX-01 evaluation duplicate exception contract"],
+      "log": [
+        {
+          "item": "R178-FIX-01",
+          "file": "infrastructure/db/repositories/evaluations.py",
+          "loc": "+2/-1",
+          "summary": "Match the actual metadata/migration primary-key constraint for DuplicateEvaluation; preserve unrelated integrity errors. Failing-first injected-error evidence: evidence/r178/duplicate_before.txt. No schema or security-policy change."
+        }
+      ],
+      "note": "New post-R177 mission authorizes routine reversible contract-preserving corrections. Independent first correction: one production file, cap 1; no historical budget headroom reused. See evidence/r178_state_ledger.md."
+    },
     "round_r177": {
       "ceiling": 12,
       "counts_production_code_under": [
@@ -479,6 +508,54 @@
         "core/tools/gate.py"
       ],
       "note": "R177 Phase B (operator approval 2026-09-08: FIX-01..11 + DEC-05). Unit of budget = one approved R177-FIX item (precedent: round_r172 C4 lists several files in one entry); the assessment §12 proposed ceiling 12 while estimating ~20 production files, so per-item counting is the only reading consistent with the approval (recorded R177-DEC-06). Each entry lists EVERY production file it touched (`file` joined by ' + ', `files` = count). FIX-01 (this entry + check_repo.sh loop) and FIX-05 (docs+tests only) are non-production and not counted. changes_used == len(log)."
+    },
+    "round_r178_p01_subject": {
+      "ceiling": 5,
+      "changes_used": 5,
+      "items": [
+        "R178-P01-SUBJECT"
+      ],
+      "log": [
+        {
+          "item": "R178-P01-SUBJECT",
+          "file": "core/learning/lifecycle.py",
+          "summary": "Genuine per-row validator subject, admitted actor propagation and shared evaluation binding; durable sample closure remains OPEN."
+        },
+        {
+          "item": "R178-P01-SUBJECT",
+          "file": "apps/api/ingestion.py",
+          "summary": "Genuine per-row validator subject, admitted actor propagation and shared evaluation binding; durable sample closure remains OPEN."
+        },
+        {
+          "item": "R178-P01-SUBJECT",
+          "file": "apps/api/intake.py",
+          "summary": "Genuine per-row validator subject, admitted actor propagation and shared evaluation binding; durable sample closure remains OPEN."
+        },
+        {
+          "item": "R178-P01-SUBJECT",
+          "file": "apps/api/admin.py",
+          "summary": "Genuine per-row validator subject, admitted actor propagation and shared evaluation binding; durable sample closure remains OPEN."
+        },
+        {
+          "item": "R178-P01-SUBJECT",
+          "file": "apps/api/app.py",
+          "summary": "Genuine per-row validator subject, admitted actor propagation and shared evaluation binding; durable sample closure remains OPEN."
+        }
+      ]
+    },
+    "round_r178_p01_codec": {
+      "ceiling": 1,
+      "changes_used": 1,
+      "items": [
+        "R178-P01-CODEC"
+      ],
+      "log": [
+        {
+          "item": "R178-P01-CODEC",
+          "file": "apps/composition/durability.py",
+          "summary": "Only MODEL_CALL nodes reconstruct provider responses; validator receipts remain node evidence."
+        }
+      ]
     }
   },
   "baseline": {

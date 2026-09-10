@@ -64,6 +64,7 @@ from core.contracts.execution import (
     Execution,
     ExecutionNode,
     ExecutionNodeStatus,
+    ExecutionNodeType,
 )
 from core.contracts.provider import ProviderGenerateResponse
 from core.execution.service import ExecutionReport, NodeReport
@@ -113,7 +114,12 @@ def report_from_record(record: ExecutionRecord) -> ExecutionReport:
     node_reports = []
     for node in record.nodes:
         response: ProviderGenerateResponse | None = None
-        if node.status is ExecutionNodeStatus.SUCCEEDED and isinstance(node.output_ref, dict):
+        if (
+            node.type is ExecutionNodeType.MODEL_CALL
+            and node.status is ExecutionNodeStatus.SUCCEEDED
+            and isinstance(node.output_ref, dict)
+        ):
+            # Validator/tool receipts are not provider inference responses.
             # The service stored ``run.response.output`` as output_ref
             # (core/execution/service.py) — reconstructing the response
             # restores ``final_output`` for the GET route.  request_id
