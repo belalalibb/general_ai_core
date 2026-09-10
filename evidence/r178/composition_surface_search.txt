@@ -1,0 +1,63 @@
+apps/api/app.py:26:- Persistence is the process-local InMemoryExecutionStore (slice decision
+apps/api/app.py:161:    InMemoryExecutionStore,
+apps/api/app.py:165:    InMemoryProjectStore,
+apps/api/app.py:166:    InMemoryWorkspaceStore,
+apps/api/app.py:216:from core.evaluation import InMemoryEvaluationStore
+apps/api/app.py:217:from core.evaluation.policy import EvaluationPolicyService, ModelJudgePort
+apps/api/app.py:256:    InMemoryProposalStore,
+apps/api/app.py:257:    InMemorySnapshotStore,
+apps/api/app.py:500:    strict_promotion_evidence: bool = False,
+apps/api/app.py:502:    evaluation_judge: ModelJudgePort | None = None,
+apps/api/app.py:544:      persistence posture as InMemoryExecutionStore (repository binding
+apps/api/app.py:606:    execution_store = store if store is not None else InMemoryExecutionStore()
+apps/api/app.py:726:    project_store: ProjectStorePort = projects if projects is not None else InMemoryProjectStore()
+apps/api/app.py:729:            workspaces=(workspaces if workspaces is not None else InMemoryWorkspaceStore()),
+apps/api/app.py:2143:            evaluation=EvaluationPolicyService(
+apps/api/app.py:2144:                store=InMemoryEvaluationStore(), judge=evaluation_judge
+apps/api/app.py:2171:                source_proposals if source_proposals is not None else InMemoryProposalStore()
+apps/api/app.py:2174:                source_snapshots if source_snapshots is not None else InMemorySnapshotStore()
+apps/api/app.py:2223:                strict_promotion_evidence=strict_promotion_evidence,
+apps/composition/runtime.py:17:  ``InMemorySecretManager`` → opaque credential_ref → adapter-side
+apps/composition/runtime.py:70:from apps.api.store import ExecutionStorePort, InMemoryExecutionStore
+apps/composition/runtime.py:72:from apps.api.workspaces import InMemoryProjectStore, ProjectStorePort
+apps/composition/runtime.py:81:from apps.composition.durability import build_durable_execution_store
+apps/composition/runtime.py:88:from apps.composition.evaluations import build_durable_evaluation_store
+apps/composition/runtime.py:90:from apps.composition.identity import build_durable_identity_service
+apps/composition/runtime.py:99:from apps.composition.sourcechange import build_durable_sourcechange_stores
+apps/composition/runtime.py:100:from apps.composition.workspaces import build_durable_workspace_stores
+apps/composition/runtime.py:110:from core.audit.memory import InMemoryAuditLog
+apps/composition/runtime.py:139:from core.evaluation.memory import InMemoryEvaluationStore
+apps/composition/runtime.py:143:from core.identity.service import InMemoryIdentityService, Session
+apps/composition/runtime.py:144:from core.memory.memory import InMemoryConversationStore, InMemoryMemoryStore
+apps/composition/runtime.py:150:from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
+apps/composition/runtime.py:151:from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
+apps/composition/runtime.py:152:from core.runtime.worker import IdempotencyPort, InMemoryIdempotencyStore, Worker
+apps/composition/runtime.py:153:from core.secrets.memory import InMemorySecretManager
+apps/composition/runtime.py:157:from core.usage.memory import InMemoryUsageAccounting
+apps/composition/runtime.py:310:    usage: InMemoryUsageAccounting
+apps/composition/runtime.py:470:    usage: InMemoryUsageAccounting
+apps/composition/runtime.py:535:    Keys → InMemorySecretManager → opaque ref → adapter-side resolver.
+apps/composition/runtime.py:542:    secrets = InMemorySecretManager()
+apps/composition/runtime.py:724:    usage = InMemoryUsageAccounting()
+apps/composition/runtime.py:725:    audit = InMemoryAuditLog()
+apps/composition/runtime.py:754:    # (20 §4 — optional seam, nothing to probe). The InMemorySecretManager is
+apps/composition/runtime.py:766:        inner=InMemorySecretManager(),
+apps/composition/runtime.py:803:        store = build_durable_execution_store(bindings, bridge)
+apps/composition/runtime.py:805:            inner=build_durable_identity_service(
+apps/composition/runtime.py:814:        proposals, snapshots = build_durable_sourcechange_stores(bindings, bridge)
+apps/composition/runtime.py:818:        evaluations = build_durable_evaluation_store(bindings, bridge)
+apps/composition/runtime.py:822:        workspace_store, project_store = build_durable_workspace_stores(bindings, bridge)
+apps/composition/runtime.py:828:        store = InMemoryExecutionStore()
+apps/composition/runtime.py:836:            inner=InMemoryIdentityService(
+apps/composition/runtime.py:844:        evaluations = InMemoryEvaluationStore()
+apps/composition/runtime.py:848:        outbox = InMemoryOutbox()
+apps/composition/runtime.py:849:        idempotency = InMemoryIdempotencyStore()
+apps/composition/runtime.py:864:        rate_limits=InMemoryRateLimiter(),
+apps/composition/runtime.py:887:    memory_store = InMemoryMemoryStore()
+apps/composition/runtime.py:892:        project_store if project_store is not None else InMemoryProjectStore()
+apps/composition/runtime.py:1003:    conversations = InMemoryConversationStore()
+apps/composition/runtime.py:1020:    evaluation_judge = build_selective_judge(
+apps/composition/runtime.py:1055:        rate_limits=InMemoryRateLimiter(),
+apps/composition/runtime.py:1070:        strict_promotion_evidence=True,
+apps/composition/runtime.py:1072:        evaluation_judge=evaluation_judge,
+apps/composition/runtime.py:1147:    queue = InMemoryQueue()
