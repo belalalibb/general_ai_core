@@ -197,6 +197,30 @@ def test_foreign_execution_and_evaluation_never_establish_regression_evidence():
     assert resolver.regression(uuid4(), execution_id).held is False
 
 
+@pytest.mark.parametrize("failed", [False, True])
+def test_actual_durable_reconstruction_preserves_verification_binding(failed):
+    # Hermetic real codecs, not a live PostgreSQL/restart claim.
+    from types import SimpleNamespace
+
+    from apps.composition.durability import report_from_record
+    from infrastructure.db.repositories.evaluations import _record_values, _row_to_record
+    from infrastructure.db.repositories.executions import ExecutionRecord
+
+    world, store, _, execution_id, _ = replay(failed=failed)
+    report = store.get(world.principal.tenant_id, execution_id)
+    record = world.evaluations.list_for_execution(world.principal.tenant_id, execution_id)[0]
+    restored = report_from_record(
+        ExecutionRecord(
+            execution=report.execution, nodes=tuple(entry.node for entry in report.nodes)
+        )
+    )
+    restored_store = InMemoryExecutionStore()
+    restored_store.put(restored)
+    restored_evaluations = InMemoryEvaluationStore()
+    restored_evaluations.record(_row_to_record(SimpleNamespace(**_record_values(record))))
+    assert resolve(world, restored_store, execution_id, restored_evaluations).held is not failed
+
+
 def test_judgment_without_explicit_passing_checks_is_not_a_verification_pass():
     world = World()
     source = uuid4()
