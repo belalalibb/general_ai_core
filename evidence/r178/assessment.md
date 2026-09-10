@@ -1,19 +1,119 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current P01 A–K checkpoint — Backend Closure OPEN
+## Current receipt seam A–K checkpoint — Backend Closure OPEN
 
-This section supersedes the earlier DEC-only checkpoint and historical findings.
-P01 IMPLEMENTATION was authorized and acted on; it was not left design-only.
+This section supersedes the historical codec/foundation assessments below.
 
-**A — State (VERIFIED / CAPTURED):** Published `89e01dd3` recovered after another
-reset. Main remains `369cf37c`; R177 closed; PR #14 OPEN, not merged/deployed.
-Interrupted reconciliation was absent and recreated, not assumed published.
+- **A / State — VERIFIED, CAPTURED:** recovered bundle `fd4afd5c`, unchanged
+  tested product at that snapshot; retained verification through `a38ed08a`.
+  Main remains `369cf37c`, mission remote `84563ab9`; R177 remains closed.
+- **B / Regression — VERIFIED, TEST:** `dec03_receipt_full_gate.txt`: **3409 passed,
+  0 failed/errors, 64 skipped**, all static/governance checks PASS, exit 0.
+  Identical committed clone, hermetic environment, sibling TMPDIR under .venv.
+- **C / Gap — FAILED, LIVE + TEST:** `dec03_receipt_runtime_open.txt`: **22 passed,
+  2 failed**. Original sample recomposition/runtime-restart assertions still
+  return 404, not 200. No assertion relaxation, skip or invented recovery.
+- **D / Change — VERIFIED, TEST:** `dec03_receipt_before.txt`: **7 failed,
+  11 passed** before builder; `dec03_receipt_after.txt`: **18 passed** after.
+  Genuine metadata-only scan report construction is now independent of storage.
+  Legacy recorder delegates and retains its single write and actor fallback.
+- **E / Trust — VERIFIED within TEST envelope:** builder tests cover secret-bearing
+  keys/field names/values, content detachment, missing actor refusal before scan,
+  scan failure propagation and no fabricated provider response. No storage-policy,
+  rights, sanitization or learning authorization is granted by building a receipt.
+- **F / Models — UNVERIFIED beyond existing tests:** no new external provider,
+  training, weights or model-promotion evidence. Core routing remains unchanged.
+- **G / Learning — INFERRED, STATIC (partial):** lifecycle/runtime remains unbound;
+  memory is not training data and successful execution is not verified learning.
+- **H / Recovery — VERIFIED within LIVE + TEST repository envelope:**
+  `dec03_receipt_live.txt`: **20 passed, 4 deselected**, PostgreSQL 17.11. Live
+  candidates use the builder directly, not an intermediate recorder. New test
+  checks zero rows before custody, one atomic capture and fresh-row recovery;
+  existing concurrency, late-write rollback, quarantine and codec checks pass.
+  This is not runtime/process-crash closure; C remains failed.
+- **I / Decisions:** DEC03 B APPROVED; usage **5/11** with apps/api/ingestion.py
+  added to the four existing files. Historical budgets, frozen surfaces and
+  thresholds unchanged; not_evaluated=2. No new approval needed.
+- **J / Additional verification — VERIFIED, TEST:** `dec03_receipt_gateway.txt`
+  **194 passed**; `dec03_receipt_adversarial.txt` original P01/P03 harness exit 0.
+  These files are retained now. Secure Git publication remains BLOCKED: no token
+  injected into Git environment; push dry-run refuses. Supplied chat credential
+  was not tested or copied to files/logged commands. No PR update/merge/deploy.
+- **K / Next:** tests-first explicit policy configuration and atomic adapter in
+  apps/composition/learning.py, then durable lifecycle reads/CAS mutations,
+  unavailable-payload guards, runtime/API/intake policy/rights/idempotency admission,
+  expiry/revocation and derived-copy reconciliation. Prove real runtime retry,
+  restart/crash/concurrency and all final checks before Backend Closure.
+
+**Receipt construction unit is verified; Backend Closure, R178 completion and UI
+readiness remain OPEN. Do not repeat the codec or receipt implementation.**
+
+## Historical codec A–K checkpoint — Backend Closure OPEN
+
+This section superseded the foundation-only assessment at the codec checkpoint.
+
+- **A / State — VERIFIED, CAPTURED:** recovered committed `96d0e5d6` from the
+  validated recovery bundle. Product codec is `414d7389`. Remote mission remains
+  `84563ab9`; main remains `369cf37c`; R177 closed. No push/PR update/merge claimed.
+- **B / Regression — VERIFIED, TEST:** `dec03_codec_full_gate.txt`: **3402 passed,
+  0 failed/errors, 64 skipped**, all governance/static checks PASS, exit 0.
+- **C / Gap — FAILED, LIVE + TEST:** `dec03_codec_runtime_open.txt`: **21 passed,
+  2 failed**, exit 1. Original recomposition/runtime-restart samples still return
+  404. No assertion or skip changes hide this gap.
+- **D / Change — VERIFIED, TEST:** recovery codec tests-first **36 failed + 13
+  passed → 49 passed**. Tenant/UUID identity, clocks, retention, revision, enums,
+  closed metadata version/verdicts and content/descriptor digests are validated.
+  Repository writes share the same descriptor/state codec. Mutable data detached.
+- **E / Trust — VERIFIED, TEST:** rescanning rejects secret-bearing payloads;
+  absent/changed/foreign policy, expiry, quarantine and revocation cannot restore
+  content as clean data. None is not an empty payload. No rights or trust grant.
+- **F / Models — UNVERIFIED beyond existing tests:** no new live inference,
+  trained-model promotion or weights claimed; ordinary Core routing preserved.
+- **G / Learning — partial:** memory is not training data; successful execution
+  is not verified learning. Safe decoding is not durable lifecycle composition.
+- **H / Recovery — VERIFIED within repository scope, LIVE + TEST:**
+  `dec03_codec_live.txt`: **19 passed, 4 deselected**, PostgreSQL 17.11; includes
+  fresh-repository decoding, unavailable-content handling and stored JSON
+  corruption refusal. Runtime closure still FAILED as in C; no crash proof.
+- **I / Decisions:** DEC03 B APPROVED; budget **4/11** unchanged, no frozen surface
+  or threshold changes. not_evaluated remains **2**. Do not request approval again.
+- **J / Verification boundary:** later Gateway/adversarial output was not in the
+  saved bundle and is not claimed as retained current proof. Existing published
+  Gateway/adversarial results remain historical pending final integrated checks.
+- **K / Next:** explicit policy configuration and side-effect-free genuine receipt
+  construction, atomic custody/lifecycle/runtime/API binding, admission fields,
+  durable reads/CAS mutations, expiry/revocation and derived-copy reconciliation.
+  Then prove actual restart/crash/idempotency/concurrency and all final checks.
+  Preserve committed bundles while secure Git publication remains unavailable.
+
+**Backend Closure, P01 runtime closure, R178 completion and UI readiness remain
+OPEN. Do not reimplement the verified codec or repeat its gate without cause.**
+
+## Historical foundation-only P01 A–K checkpoint
+
+The following assessment predates the recovered codec implementation and tests.
+
+**A — State (VERIFIED / CAPTURED):** Published `84563ab9` recovered after another
+reset. Main remains `369cf37c`; R177 closed. Existing mission PR is #14; this
+session has not merged, deployed or updated it. The attempted codec commits from
+the preceding sandbox are absent locally and remotely, not recovered progress.
+Remote reads succeed; authenticated publication is BLOCKED: push dry-run fails
+for missing Git credentials, and GH_TOKEN/GITHUB_TOKEN are not injected. A token
+in conversation must not be copied into logged commands or repository files.
 
 **B — Strengths (VERIFIED / TEST):** `p01_subject_full_gate.txt`, snapshot `b9d9f55b`:
 **3353 passed / 0 failed/errors / 64 skipped**, all governance/static gates PASS.
 Gateway **194 passed** (`p01_subject_gateway.txt`). Focused review **114 passed /
 1 existing skip** (`p01_subject_review_green.txt`). No test threshold, security
-exception, frozen surface or old budget weakened. No newer production changes.
+exception, frozen surface or old budget weakened. Those results predate DEC-03
+production changes; they are not full-gate proof of the custody foundation.
+
+Current foundation verification at `84563ab9`: `dec03_foundation_gate.txt` records
+**3366 passed / 0 failed/errors / 64 skipped**, all governance/static gates PASS,
+process exit 0. Explicit strict mypy on the repository/policy modules and full
+ruff are clean (`dec03_foundation_static.txt`). This is foundation regression
+proof, not durable runtime closure. Gateway and adversarial results above remain
+historical; no fresh post-integration result is claimed.
 
 **C — Gap (FAILED / LIVE + TEST):** Original P01 shared-evaluation visibility and
 original P03 now pass (`p01_subject_adversarial.txt`, exit 0). Durable P01 does NOT:
@@ -27,12 +127,14 @@ write-failure containment. Review fixed caller payload aliasing and durable code
 fabrication of provider responses for validator nodes. Positive learning/reach
 fixtures retain their assertions with explicit actors and honest receipt counts.
 
-**E — Protected boundary (BLOCKED / STATIC + LIVE):** Full recovery needs raw
-payload/provenance/verdict custody; learning_samples only carries identity/states.
-Blind snapshots persist flagged data. New focused **R178-DEC-03 B** packet in
-`dec02_ingestion_design.md` §8 requests governed custody, metadata-only quarantine,
-explicit retention/revocation and fail-closed admission. P01 implementation
-permission itself is NOT pending again. No schema/raw-data store/purge introduced.
+**E — Protected boundary (INFERRED / STATIC; foundation VERIFIED / TEST + LIVE):**
+**R178-DEC-03 option B is APPROVED.** Explicit policy preparation, metadata-only
+quarantine, additive custody schema/migration, atomic repository capture,
+idempotency, CAS metadata saves, expiration and revocation are implemented at
+`84563ab9`. Published `dec03_custody_migration.txt` records 12 passing focused live
+tests. These repository operations are not yet bound to lifecycle/runtime/API.
+Blind snapshots remain forbidden; there is no implicit retention or rights grant.
+No production migration or purge was performed.
 
 **F — AI/model readiness (UNVERIFIED / STATIC beyond existing tests):** Routing
 remains hermetically covered, not new live inference or model training proof.
@@ -49,24 +151,32 @@ execution != verified learning.
 **H — Recovery (VERIFIED / LIVE + TEST within limits):** Local PostgreSQL 17.11
 proves actual subject/evaluation persistence, fresh-store reads, real FK/duplicate
 refusal, tenant isolation, durable identity and actual-runtime sample-loss failure.
-ASGI transport and metadata-created tables only; no HTTP-network/process-kill,
-Alembic rehearsal, pgvector, production concurrency or provider-live proof claimed.
+ASGI transport and dependency-closed metadata tables were used. The focused
+custody tests also rehearse migration 0019 empty downgrade/upgrade and populated
+rollback refusal. No full historical migration-chain deployment, HTTP-network/
+process-kill, pgvector, production concurrency or provider-live proof is claimed.
 The two unchanged not_evaluated entries remain separate from PASS.
 
 **I — Decisions:** DEC-01 implemented; DEC-02 design and subsequent P01 implementation
-authority honored. DEC-03 is a new, narrower data-governance choice left unselected
-by the prior review (which reserved retention separately), not a repeated general
-implementation approval request. Full options/risks/acceptance/rollback in §8.
+authority honored. The operator explicitly approved DEC-03 option B, including
+policy-gated persistence, metadata-only quarantine and operator-defined retention.
+No further DEC-03 approval is pending. The approved packet and rollback boundaries
+remain in `dec02_ingestion_design.md` §8; implementation budget remains 4/11.
 
-**J — Safe continuation:** Keep the real restart RED. Re-run via
+**J — Safe continuation:** Keep the real restart acceptance assertions intact;
+turn them green only through production runtime binding. Re-run via
 `bash tests_live/r178/run_local_postgres.sh`; binary bootstrap instructions are in
 that runner. No ambient DB/provider credentials, raw secrets in receipts, fake
 historical executions, FK removal, default rights grant, training or promotion.
 
-**K — Exact next action:** DEC-03 B decision → independent production scope →
-policy/quarantine/idempotency/failure acceptance → governed transactional sample/
-payload/recovery binding → actual runtime restart + full gate/gateway/adversarial/
-live checks. **P01 durable closure and R178 remain OPEN until all pass.**
+**K — Exact next action:** The interrupted foundation full gate is now complete
+and its actual output retained locally. Restore secure publication via an injected
+Git credential, then implement tests-first policy configuration, safe recovery codec and atomic
+capture composition in the already-approved scope. Bind lifecycle reads/mutations,
+API/intake admission, expiry/revocation and derived-copy reconciliation. Finally
+prove runtime/process restart, recovery/idempotency and full regression + Gateway
++ original adversarial + live checks. **P01 durable closure, Backend Closure,
+R178 completion and UI readiness remain OPEN until all conditions are evidenced.**
 
 ---
 

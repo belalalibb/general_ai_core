@@ -243,3 +243,102 @@ def test_validator_receipt_reconstruction_does_not_invent_provider_response():
     assert recovered.nodes[0].response is None
     assert recovered.nodes[0].node == original.nodes[0].node
     assert recovered.final_output == original.final_output
+
+
+@pytest.mark.parametrize("secret_location", [None, "key", "field", "value"])
+def test_receipt_builder_is_write_free_and_content_safe(secret_location, monkeypatch):
+    import hashlib
+
+    from apps.api import ingestion
+    from core.contracts.execute import ExecutionStatus
+
+    marker = "ghp_" + "X" * 36
+    key = marker if secret_location == "key" else "fact"
+    field = marker if secret_location == "field" else "answer"
+    value = {field: marker if secret_location == "value" else "bounded fact"}
+    tenant, actor, sample = uuid4(), uuid4(), uuid4()
+    scans = []
+    scan = ingestion.sanitize_knowledge
+
+    def observed_scan(knowledge_key, knowledge_value):
+        scans.append((knowledge_key, knowledge_value))
+        return scan(knowledge_key, knowledge_value)
+
+    def refuse_write(*args):
+        pytest.fail("building a receipt must not write an execution")
+
+    monkeypatch.setattr(ingestion, "sanitize_knowledge", observed_scan)
+    monkeypatch.setattr(InMemoryExecutionStore, "put", refuse_write)
+    report = ingestion.build_external_ingestion_report(tenant, sample, actor, key, value)
+    digest = hashlib.sha256(
+        json.dumps({"key": key, "value": value}, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    assert scans == [(key, value)]
+    assert report.execution.tenant_id == tenant and report.execution.user_id == actor
+    assert report.execution.request_hash == "sha256:" + digest
+    assert report.execution.status is ExecutionStatus.SUCCEEDED
+    assert report.execution.completed_at >= report.execution.created_at
+    assert len(report.nodes) == 1
+    node = report.nodes[0]
+    assert node.attempts == () and node.response is None
+    assert node.node.type is ExecutionNodeType.VALIDATOR
+    assert node.node.execution_id == report.execution.id
+    assert node.node.input_ref["sample_id"] == str(sample)
+    assert node.node.input_ref["content_sha256"] == digest
+    assert node.node.output_ref["scan_clean"] is (secret_location is None)
+    assert node.node.output_ref["verification_level"] == "RAW"
+    assert node.node.output_ref["eligibility"] == "pending"
+    encoded = report.execution.model_dump_json() + node.node.model_dump_json()
+    assert marker not in encoded and "bounded fact" not in encoded
+    assert "findings" not in node.node.output_ref
+    value[field] = "changed after construction"
+    assert report.execution.model_dump_json() + node.node.model_dump_json() == encoded
+
+
+def test_receipt_builder_requires_actor_before_scanning(monkeypatch):
+    from apps.api import ingestion
+    from core.learning.errors import LearningError
+
+    def refuse_scan(*args):
+        pytest.fail("missing actor must refuse before inspecting content")
+
+    monkeypatch.setattr(ingestion, "sanitize_knowledge", refuse_scan)
+    with pytest.raises(LearningError, match="admitted actor"):
+        ingestion.build_external_ingestion_report(uuid4(), uuid4(), None, "fact", {})
+
+
+def test_receipt_builder_scan_failure_cannot_manufacture_completion(monkeypatch):
+    from apps.api import ingestion
+
+    def broken_scan(*args):
+        raise RuntimeError("scan unavailable")
+
+    monkeypatch.setattr(ingestion, "sanitize_knowledge", broken_scan)
+    with pytest.raises(RuntimeError, match="scan unavailable"):
+        ingestion.build_external_ingestion_report(uuid4(), uuid4(), uuid4(), "fact", {})
+
+
+def test_legacy_recorder_delegates_to_builder_and_writes_exactly_once(monkeypatch):
+    from apps.api import ingestion
+
+    tenant, actor, sample = uuid4(), uuid4(), uuid4()
+    report = ingestion.build_external_ingestion_report(tenant, sample, actor, "fact", {})
+    calls, writes = [], []
+
+    def build(*args):
+        calls.append(args)
+        return report
+
+    class ObservedStore(InMemoryExecutionStore):
+        def put(self, candidate):
+            writes.append(candidate)
+            super().put(candidate)
+
+    monkeypatch.setattr(ingestion, "build_external_ingestion_report", build)
+    store = ObservedStore()
+    recorder = ingestion.ExternalIngestionRecorder(store, default_actor=(tenant, actor))
+    execution_id = recorder.record(tenant, sample, None, "fact", {})
+    assert calls == [(tenant, sample, actor, "fact", {})]
+    assert writes == [report]
+    assert execution_id == report.execution.id
+    assert store.get(tenant, execution_id) is report

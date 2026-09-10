@@ -1,0 +1,252 @@
+.............FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                        [100%]
+=================================== FAILURES ===================================
+_______ test_recovery_roundtrip_preserves_raw_state_and_detaches_content _______
+tests/learning/test_storage_policy_r178.py:134: in test_recovery_roundtrip_preserves_raw_state_and_detaches_content
+    restored = recover(row, policy)
+               ^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[state-value0] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[state-value1] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[state-value2] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[state-value3] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[state-value4] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[state-value5] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[revision-True] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[revision--1] __
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+__ test_recovery_refuses_malformed_record_without_echoing_content[revision-1] __
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[quarantined-0] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[revoked-false] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[source_kind-invented] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[content_digest-0000000000000000000000000000000000000000000000000000000000000000] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[descriptor_digest-0000000000000000000000000000000000000000000000000000000000000000] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[retention_seconds-True] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[expires_at-value15] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[created_at-value16] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[expires_at-value17] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[sample_id-not-a-uuid] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[rights_ref-None] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[eligibility-invented] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[verification_level-invented] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[payload-value22] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_refuses_malformed_record_without_echoing_content[payload-value23] _
+tests/learning/test_storage_policy_r178.py:168: in test_recovery_refuses_malformed_record_without_echoing_content
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+________ test_recovery_missing_and_foreign_tenant_are_indistinguishable ________
+tests/learning/test_storage_policy_r178.py:179: in test_recovery_missing_and_foreign_tenant_are_indistinguishable
+    recover(data, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+__ test_recovery_unavailable_content_is_never_an_empty_clean_payload[expired] __
+tests/learning/test_storage_policy_r178.py:186: in test_recovery_unavailable_content_is_never_an_empty_clean_payload
+    from core.learning.storage import RetentionPolicy, recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_unavailable_content_is_never_an_empty_clean_payload[policy_absent] _
+tests/learning/test_storage_policy_r178.py:186: in test_recovery_unavailable_content_is_never_an_empty_clean_payload
+    from core.learning.storage import RetentionPolicy, recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_unavailable_content_is_never_an_empty_clean_payload[policy_changed] _
+tests/learning/test_storage_policy_r178.py:186: in test_recovery_unavailable_content_is_never_an_empty_clean_payload
+    from core.learning.storage import RetentionPolicy, recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_unavailable_content_is_never_an_empty_clean_payload[policy_foreign] _
+tests/learning/test_storage_policy_r178.py:186: in test_recovery_unavailable_content_is_never_an_empty_clean_payload
+    from core.learning.storage import RetentionPolicy, recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_redacted_lineage_survives_without_rescanning_empty_content[quarantined] _
+tests/learning/test_storage_policy_r178.py:211: in test_recovery_redacted_lineage_survives_without_rescanning_empty_content
+    recover(row, policy)  # invalid raw payload on a redacted row
+    ^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_redacted_lineage_survives_without_rescanning_empty_content[revoked] _
+tests/learning/test_storage_policy_r178.py:211: in test_recovery_redacted_lineage_survives_without_rescanning_empty_content
+    recover(row, policy)  # invalid raw payload on a redacted row
+    ^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+_ test_recovery_unexplained_payload_loss_refuses_instead_of_manufacturing_clean_data _
+tests/learning/test_storage_policy_r178.py:224: in test_recovery_unexplained_payload_loss_refuses_instead_of_manufacturing_clean_data
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+____ test_recovery_rescans_secret_payload_even_with_matching_content_digest ____
+tests/learning/test_storage_policy_r178.py:243: in test_recovery_rescans_secret_payload_even_with_matching_content_digest
+    recover(row, policy)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+____________ test_recovery_requires_aware_non_backward_clock[now0] _____________
+tests/learning/test_storage_policy_r178.py:253: in test_recovery_requires_aware_non_backward_clock
+    recover(row, policy, now=now)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+____________ test_recovery_requires_aware_non_backward_clock[now1] _____________
+tests/learning/test_storage_policy_r178.py:253: in test_recovery_requires_aware_non_backward_clock
+    recover(row, policy, now=now)
+tests/learning/test_storage_policy_r178.py:125: in recover
+    from core.learning.storage import recover_capture
+E   ImportError: cannot import name 'recover_capture' from 'core.learning.storage' (/home/user/webapp/core/learning/storage.py)
+=========================== short test summary info ============================
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_roundtrip_preserves_raw_state_and_detaches_content
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[state-value0]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[state-value1]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[state-value2]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[state-value3]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[state-value4]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[state-value5]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[revision-True]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[revision--1]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[revision-1]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[quarantined-0]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[revoked-false]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[source_kind-invented]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[content_digest-0000000000000000000000000000000000000000000000000000000000000000]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[descriptor_digest-0000000000000000000000000000000000000000000000000000000000000000]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[retention_seconds-True]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[expires_at-value15]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[created_at-value16]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[expires_at-value17]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[sample_id-not-a-uuid]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[rights_ref-None]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[eligibility-invented]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[verification_level-invented]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[payload-value22]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_refuses_malformed_record_without_echoing_content[payload-value23]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_missing_and_foreign_tenant_are_indistinguishable
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_unavailable_content_is_never_an_empty_clean_payload[expired]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_unavailable_content_is_never_an_empty_clean_payload[policy_absent]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_unavailable_content_is_never_an_empty_clean_payload[policy_changed]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_unavailable_content_is_never_an_empty_clean_payload[policy_foreign]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_redacted_lineage_survives_without_rescanning_empty_content[quarantined]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_redacted_lineage_survives_without_rescanning_empty_content[revoked]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_unexplained_payload_loss_refuses_instead_of_manufacturing_clean_data
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_rescans_secret_payload_even_with_matching_content_digest
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_requires_aware_non_backward_clock[now0]
+FAILED tests/learning/test_storage_policy_r178.py::test_recovery_requires_aware_non_backward_clock[now1]
+36 failed, 13 passed in 0.69s
+process_exit=1

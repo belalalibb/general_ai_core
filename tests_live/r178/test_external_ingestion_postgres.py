@@ -314,8 +314,7 @@ def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_databas
 
 
 def custody_candidate(world, *, key=None, value=None, policy=None, rights=None):
-    from apps.api.ingestion import ExternalIngestionRecorder
-    from apps.api.store import InMemoryExecutionStore
+    from apps.api.ingestion import build_external_ingestion_report
     from core.contracts.learning import LearningSample
     from core.learning.storage import RetentionPolicy, prepare_capture
 
@@ -332,9 +331,8 @@ def custody_candidate(world, *, key=None, value=None, policy=None, rights=None):
         knowledge_value=value,
         now=utc_now(),
     )
-    memory = InMemoryExecutionStore()
-    execution_id = ExternalIngestionRecorder(memory).record(tenant, sample_id, actor, "fact", value)
-    report = memory.get(tenant, execution_id)
+    report = build_external_ingestion_report(tenant, sample_id, actor, "fact", value)
+    execution_id = report.execution.id
     return dict(
         sample=LearningSample(id=sample_id, tenant_id=tenant, source_execution_id=execution_id),
         execution=report.execution,
@@ -345,6 +343,33 @@ def custody_candidate(world, *, key=None, value=None, policy=None, rights=None):
         idempotency_key=key or uuid4(),
         source_kind="external",
     )
+
+
+def test_custody_receipt_builder_never_uses_standalone_subject_write(database, monkeypatch):
+    from apps.api.ingestion import ExternalIngestionRecorder
+    from core.learning.storage import recover_capture
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+
+    def refuse_record(*args, **kwargs):
+        pytest.fail("atomic capture must not use the standalone recorder")
+
+    monkeypatch.setattr(ExternalIngestionRecorder, "record", refuse_record)
+    args = custody_candidate(world)
+    assert count(database, executions) == count(database, learning_samples) == 0
+    assert args["nodes"][0].input_ref["content_sha256"] == args["prepared"].content_digest
+    assert args["nodes"][0].output_ref == args["prepared"].receipt
+    first = database[0].run(LearningCustodyRepository(database[1]).capture(**args))
+    assert count(database, executions) == count(database, learning_samples) == 1
+    row = database[0].run(
+        LearningCustodyRepository(database[1]).get(world.principal.tenant_id, first["sample_id"])
+    )
+    restored = recover_capture(
+        row, tenant_id=world.principal.tenant_id, policy=args["policy"], now=utc_now()
+    )
+    assert restored.sample.source_execution_id == args["execution"].id
+    assert restored.payload == args["prepared"].payload
 
 
 def test_custody_atomic_roundtrip_and_same_key_retry(database):
@@ -634,3 +659,76 @@ def test_custody_migration_roundtrip_empty_and_refuses_populated_downgrade(datab
         database[0].run(repo.get(world.principal.tenant_id, row["sample_id"]))["payload"]
         is not None
     )
+
+
+@pytest.mark.parametrize("mode", ["clean", "quarantined", "expired", "revoked", "no_policy"])
+def test_custody_codec_recovers_real_rows_without_restoring_unavailable_payload(database, mode):
+    from core.contracts.learning import LearningEligibility
+    from core.learning.storage import recover_capture
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    tenant = world.principal.tenant_id
+    args = custody_candidate(
+        world, value={"password": "private"} if mode == "quarantined" else None
+    )
+    first = database[0].run(repo.capture(**args))
+    if mode == "expired":
+        database[0].run(repo.expire(tenant, args["prepared"].expires_at))
+    elif mode == "revoked":
+        database[0].run(repo.revoke_policy(tenant, args["policy"].policy_id))
+    elif mode == "clean":
+        sample = args["sample"].model_copy(update={"eligibility": LearningEligibility.INELIGIBLE})
+        database[0].run(repo.save(sample, {"version": 1}, expected_revision=0))
+    # A new repository instance, not the capture return value or an in-process cache.
+    loaded = database[0].run(LearningCustodyRepository(database[1]).get(tenant, first["sample_id"]))
+    restored = recover_capture(
+        loaded, tenant_id=tenant, policy=None if mode == "no_policy" else args["policy"],
+        now=utc_now(),
+    )
+    assert restored.sample.id == first["sample_id"]
+    assert restored.sample.source_execution_id == first["source_execution_id"]
+    assert restored.sample.verification_level.value == "RAW"
+    if mode == "clean":
+        assert restored.payload == args["prepared"].payload
+        assert restored.revision == 1 and restored.sample.eligibility.value == "ineligible"
+        restored.payload["knowledge_value"]["answer"] = "local mutation"
+        assert (
+            database[0].run(repo.get(tenant, first["sample_id"]))["payload"]
+            == args["prepared"].payload
+        )
+    else:
+        assert restored.payload is None
+    assert count(database, executions) == count(database, learning_samples) == 1
+
+
+@pytest.mark.parametrize("field,value", [
+    ("state", {"version": 999}),
+    ("payload", {"knowledge_key": "fact", "knowledge_value": {"answer": "corrupt-marker"}}),
+])
+def test_custody_codec_refuses_corrupt_persisted_json(database, field, value):
+    from core.learning.storage import LearningStorageError, recover_capture
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_sample_custody
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    first = database[0].run(repo.capture(**args))
+
+    async def corrupt():
+        async with database[1].begin() as session:
+            await session.execute(
+                learning_sample_custody.update()
+                .where(learning_sample_custody.c.sample_id == first["sample_id"])
+                .values(**{field: value})
+            )
+
+    database[0].run(corrupt())
+    row = database[0].run(repo.get(world.principal.tenant_id, first["sample_id"]))
+    with pytest.raises(LearningStorageError, match="invalid custody record") as exc:
+        recover_capture(
+            row, tenant_id=world.principal.tenant_id, policy=args["policy"], now=utc_now()
+        )
+    assert "corrupt-marker" not in str(exc.value)

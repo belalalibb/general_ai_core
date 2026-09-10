@@ -225,3 +225,179 @@ Metadata discovery: replace unused reserved migration env.py slot with existing
 `infrastructure/db/tables.py` (cap stays 11) to keep one metadata authority.
 Existing LearningSample columns unchanged; composite unique/FK linkage may be
 added to enforce companion tenant/source identity. No additional approval needed.
+
+## 2026-09-10 recovery — foundation gate complete; runtime closure still open
+
+- **VERIFIED / CAPTURED:** After the latest sandbox reset, local main was
+  `369cf37c`, worktree clean, no virtualenv or interrupted live output. Fetched
+  `origin/genspark_ai_developer_r178` at `84563ab9` and restored the local
+  `genspark_ai_developer` branch. Remote main is unchanged. R177 remains closed.
+- **UNVERIFIED / CAPTURED:** Earlier local-only codec commits `31da5415`,
+  `edfc5032`, `8a756dd8` are absent from this Git object database and the mission
+  branch. Their tests/codec changes and interrupted PostgreSQL run did not survive;
+  no current codec/runtime implementation or live-codec pass is claimed.
+- **VERIFIED / TEST:** Completed the missing foundation verification on an
+  identical committed clone of `84563ab9` under `.venv/r178_dec03_foundation`,
+  with sibling TMPDIR `.venv/r178_tmp` and hermetic `env -i`.
+  `dec03_foundation_gate.txt`: **3366 passed, 0 failed/errors, 64 skipped**;
+  mypy/ruff/import-linter/secret scan/governance/budgets PASS; not_evaluated=2;
+  process_exit=0. No threshold, exception, historical budget or frozen file changed.
+  `dec03_foundation_static.txt`: explicit strict mypy on
+  `infrastructure/db/learning.py core/learning/storage.py`, plus full ruff, exit 0.
+- **VERIFIED / historical LIVE evidence:** Published
+  `dec03_custody_migration.txt` at `84563ab9` records 12 passed, 4 deselected.
+  This includes local migration 0019 empty downgrade/upgrade and populated
+  rollback refusal, not production rollout or a full migration-chain deployment.
+- **BLOCKED / CAPTURED (publication only):** Public fetch/read succeeds; push
+  dry-run fails because no Git credential is configured. GH_TOKEN/GITHUB_TOKEN
+  are absent. Do not print or persist the credential supplied in conversation.
+  Authentication is NOT verified in this reset. No remote push, PR update, merge
+  or deployment is claimed. Inject the credential through the secure environment
+  before publishing the local reconciliation/evidence commits to mission PR #14.
+- Current A–K assessment and DEC03 packet reconciled: option B is APPROVED,
+  not awaiting a decision. No product code changed in this recovery checkpoint;
+  DEC03 usage remains 4/11. The tested product tree is still `84563ab9`.
+- **NEXT EXACT ACTION:** Restore secure publication; publish this checkpoint;
+  add tests-first safe recovery codec and explicit policy configuration, then
+  atomic genuine receipt/custody composition, lifecycle reads/mutations and API/
+  intake admission. Enforce expiry/revocation and derived-copy reconciliation.
+  Prove runtime/process restart, response-loss retry, concurrency, rollback and
+  recovery; then full regression, Gateway, original P01/P03 and complete local
+  PostgreSQL verification. Do not replace the two real sample-restart assertions.
+- **Backend Closure NOT satisfied. P01 durable/runtime closure, R178 completion
+  and UI readiness remain OPEN.** No new DEC03 approval is required.
+
+## Current codec checkpoint — recovered 96d0e5d6; Backend Closure OPEN
+
+This section supersedes the foundation-only NEXT EXACT ACTION above.
+
+- **VERIFIED / CAPTURED:** Recovered Git bundle at `96d0e5d6`, including committed
+  codec `414d7389`, tests-first `f8a3c19c` and implementation `811a7c9a`.
+  Remote mission branch still `84563ab9`, main `369cf37c`; R177 remains closed.
+  Recovery bundles preserve local commits; they are NOT GitHub publication.
+- **VERIFIED / TEST:** `core/learning/storage.py` now provides RecoveredCapture,
+  recover_capture, validate_custody_state and custody_descriptor_digest. Recovery
+  validates tenant/UUID identities, aware clocks, retention bounds, revision,
+  enum fields, closed metadata version/verdicts, descriptor and payload digests.
+  Content is rescanned and detached; validation errors do not echo raw values.
+  Missing/changed/foreign policy, expiry, quarantine and revocation cannot expose
+  payload as clean data. Missing payload is never replaced with an empty object.
+- Repository capture/save reuse the same descriptor/state codec, preserving
+  idempotency hashes and CAS semantics. Only two already-budgeted production files
+  changed: storage.py and infrastructure/db/learning.py. DEC03 remains **4/11**.
+  No new contract/schema change, default retention, rights grant or trust upgrade.
+- Failing-first proof: `dec03_codec_before.txt` **36 failed, 13 passed** before
+  the recovery function; `dec03_codec_after.txt` **49 passed** after.
+- **VERIFIED / TEST:** `dec03_codec_full_gate.txt`, committed product `414d7389`:
+  **3402 passed, 0 failed/errors, 64 skipped**, governance/static checks PASS,
+  process_exit=0; not_evaluated=2. Clone `.venv/r178_codec_verify`, sibling TMPDIR
+  `.venv/r178_tmp`, hermetic env. Current product matches that tested snapshot;
+  later changes are live tests/evidence only. Do NOT rerun this completed unit
+  absent new executable evidence or production changes.
+- **VERIFIED / LIVE + TEST:** `dec03_codec_live.txt` **19 passed, 4 deselected**,
+  PostgreSQL 17.11, exit 0. Seven added cases cover fresh-repository decoding,
+  persisted state, unavailable-policy/quarantine/expiry/revocation content and
+  actual stored JSON corruption. Twelve existing custody tests remain intact.
+- **FAILED / LIVE + TEST:** `dec03_codec_runtime_open.txt` **21 passed, 2 failed**,
+  process_exit=1. Both original sample-recomposition/runtime-restart assertions
+  still get 404 rather than 200. No xfail/skip or assertion weakening. Codec
+  success does NOT satisfy Backend Closure or prove process-crash recovery.
+- Later Gateway/adversarial/static output from the interrupted sandbox was not
+  included in the saved bundle. Do not claim it as retained evidence. Published
+  historical Gateway/adversarial results remain historical; final integrated
+  verification must include fresh retained results.
+- **NEXT EXACT ACTION:** Within the already-approved remaining file scope,
+  construct genuine ingestion reports WITHOUT the recorder's separate store.put;
+  compose explicit policy configuration and atomic custody capture into learning
+  lifecycle/runtime/API. Add policy/rights/idempotency admission; durable reads,
+  revision-checked mutations and unavailable-payload guards; invoke expiry and
+  revocation and reconcile derived copies. Turn the TWO original restart tests
+  green through the actual runtime, add process/crash/response-loss/concurrency
+  proof, then run full regression + Gateway + adversarial + complete live suite.
+- Git publication remains blocked pending secure environment authentication.
+  Preserve the next committed bundle before interruption; publish only to
+  `genspark_ai_developer_r178` / PR #14 after syncing origin/main. Do not overwrite
+  the unrelated remote `genspark_ai_developer` branch or merge without approval.
+- **DEC03 is APPROVED. P01 runtime closure, Backend Closure, R178 completion and
+  UI readiness remain OPEN. Do not ask for DEC03 approval again.**
+
+## 2026-09-10 receipt seam recovery — bounded unit preserved before full gate
+
+- VERIFIED / CAPTURED: another reset returned clean main `369cf37c`; prior
+  unbundled receipt work through `b7ecaa5d` and the interrupted full gate were
+  absent. Restored `d96286c5` from the checksum-verified codec bundle. Recreated
+  only missing receipt work; no completed codec/foundation implementation redone.
+- VERIFIED / TEST: tests-first `1d584345`, implementation `7ab251d5`.
+  `dec03_receipt_before.txt`: 7 failed, 11 passed (builder absent).
+  `dec03_receipt_after.txt`: 18 passed; strict mypy and ruff clean, exit 0.
+  `build_external_ingestion_report` performs the real scan, requires an actor,
+  contains metadata only and has no store dependency/write. Legacy recorder
+  resolves same-tenant fallback and delegates, then writes once as before.
+  Actor/rights/policy authorization is still the caller's responsibility.
+- VERIFIED / LIVE + TEST: `dec03_receipt_live.txt`: 20 passed, 4 deselected,
+  PostgreSQL 17.11. Live custody candidates now use the builder directly rather
+  than an intermediate in-memory recorder. The new test forbids record(), checks
+  zero rows before custody, then atomic capture and fresh-repository recovery.
+  Existing rollback/concurrency/quarantine/CAS/recovery assertions remain intact.
+- DEC03 production accounting is now 5/11: adds approved apps/api/ingestion.py;
+  prior four files and historical budgets unchanged. No threshold/frozen changes.
+- UNVERIFIED / CAPTURED: post-receipt full gate, Gateway, original adversarial
+  harness and full live results from the interrupted environment were not saved.
+  Do not claim their output files or gate completion. Codec gate remains historical.
+- BLOCKED / CAPTURED: public fetch succeeds; push dry-run still fails for missing
+  Git credentials. No credential copied into commands/files; no authenticated
+  publication, PR #14 update, merge or deployment is claimed. Preserve a bundle
+  before the next long verification. Remote mission remains `84563ab9`.
+- NEXT EXACT ACTION: run and retain missing post-receipt full gate, Gateway,
+  original P01/P03 harness and full live suite, reconcile A–K and preserve bundle.
+  Then tests-first explicit policy configuration / atomic custody adapter in
+  apps/composition/learning.py, lifecycle reads/CAS mutations/unavailable guards,
+  runtime/API/intake admission and expiry/revocation/derived-copy reconciliation.
+  The two original runtime restart acceptance failures are not fixed by this seam.
+  Backend Closure, R178 completion and UI readiness remain OPEN; DEC03 APPROVED.
+
+## Current verified receipt checkpoint — full verification retained, runtime OPEN
+
+This section supersedes the missing-verification NEXT EXACT ACTION above.
+
+- VERIFIED / CAPTURED: reset again to clean main `369cf37c`; restored saved
+  `fd4afd5c` bundle, SHA-256
+  `21b6df6337bf152ff19faa55edc83b16dca3666bbda2b0136302fe5b0aab0ae9`.
+  Receipt code/tests/live focused evidence survived; none reimplemented here.
+- VERIFIED / TEST: completed missing canonical gate at identical committed
+  product `fd4afd5c`; `dec03_receipt_full_gate.txt` records **3409 passed,
+  0 failed/errors, 64 skipped**, all static/governance checks PASS, exit 0.
+  Isolated clone `.venv/r178_receipt_verify`, sibling `.venv/r178_tmp`, hermetic
+  env -i; same check_repo.sh and manifest thresholds. No gate weakening.
+- VERIFIED / TEST: `dec03_receipt_gateway.txt` **194 passed**, exit 0, independent
+  gateway-service pytest config; `dec03_receipt_adversarial.txt` original P01/P03
+  harness, exit 0. Unlike interrupted earlier runs these files are committed.
+- FAILED / LIVE + TEST: `dec03_receipt_runtime_open.txt` **22 passed, 2 failed**,
+  exit 1, PostgreSQL 17.11 disposable private socket. Both original restart tests
+  still get 404 instead of 200. No test changed to mask this runtime gap.
+  Focused receipt/custody 20 passed remains retained from the recovered bundle.
+- Product equality fd4afd5c..a38ed08a checked across apps/core/infrastructure/
+  providers/tests/engineering/tests_live/ui. Later edits reconcile evidence/docs
+  only. Full regression is valid for this product, NOT Backend Closure evidence.
+- Current assessment and DEC03 packet reconciled. Approved accounting **5/11**;
+  no frozen/UI/schema/contract changes in receipt unit; not_evaluated remains 2.
+  Rollback point for this receipt unit is d96286c5 (no migration/data operation).
+- BLOCKED / CAPTURED: fetched main/mission remote; main already integrated.
+  GH_TOKEN/GITHUB_TOKEN absent; push dry-run fails without credential. Chat token
+  not copied or tested. No authenticated push or PR #14 update/merge/deployment
+  claimed. Bundle preservation is recovery, not GitHub publication. Publish only
+  to genspark_ai_developer_r178 after secure authentication; unrelated remote
+  genspark_ai_developer must not be overwritten. Preserve original unit history
+  alongside any final delivery squash so tested commits remain recoverable.
+- NEXT EXACT ACTION: tests-first explicit operator policy configuration and atomic
+  custody adapter in approved apps/composition/learning.py, consuming the existing
+  build_external_ingestion_report, prepare_capture and recover_capture. No dummy
+  store.put, default policy/retention or blind _SampleRecord serialization.
+  Then bind lifecycle reads/CAS mutations/unavailable-payload guards; runtime and
+  API/admin/intake policy/rights/idempotency admission; expiry/revocation and
+  derived-copy reconciliation. Prove real runtime response-loss/concurrency and
+  process restart/crash; turn the original two restart assertions green before
+  final full regression, Gateway, adversarial and full live Backend Closure.
+- DEC03 B remains APPROVED. Receipt and codec units are verified; do not redo
+  them without new executable evidence. P01 runtime closure, Backend Closure,
+  R178 completion and UI readiness remain OPEN.

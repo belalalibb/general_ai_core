@@ -90,3 +90,164 @@ def test_nonfinite_or_oversized_content_is_refused():
     for value in ({"n": float("nan")}, {"value": "x" * (256 * 1024)}):
         with pytest.raises(LearningStorageError):
             prepare(value)
+
+
+def custody_row():
+    """Repository-shaped fixture with independently computed descriptor."""
+    import hashlib
+
+    from core.learning.storage import RetentionPolicy, prepare_capture
+
+    tenant, policy_id, rights = uuid4(), uuid4(), uuid4()
+    policy = RetentionPolicy(tenant, policy_id, 3600)
+    prepared = prepare_capture(
+        policy=policy, tenant_id=tenant, policy_id=policy_id, rights_ref=rights,
+        knowledge_key="fact", knowledge_value={"nested": ["benign"]}, now=NOW,
+    )
+    row = dict(
+        sample_id=uuid4(), tenant_id=tenant, source_execution_id=uuid4(),
+        idempotency_key=uuid4(), policy_id=policy_id, rights_ref=rights,
+        retention_seconds=3600, created_at=NOW, expires_at=prepared.expires_at,
+        content_digest=prepared.content_digest, source_kind="external",
+        payload=prepared.payload, quarantined=False, revoked=False, revision=0,
+        state={"version": 1}, eligibility="pending", sanitization_state="pending",
+        verification_level="RAW", dataset_id=None,
+    )
+    row["descriptor_digest"] = hashlib.sha256(json.dumps({
+        "tenant": str(tenant), "policy": str(policy_id), "rights": str(rights),
+        "retention": 3600, "source_kind": "external", "source": None,
+        "content": prepared.content_digest,
+    }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return row, policy
+
+
+def recover(row, policy, **kwargs):
+    from core.learning.storage import recover_capture
+
+    args = dict(tenant_id=policy.tenant_id, policy=policy, now=NOW)
+    args.update(kwargs)
+    return recover_capture(row, **args)
+
+
+def test_recovery_roundtrip_preserves_raw_state_and_detaches_content():
+    row, policy = custody_row()
+    restored = recover(row, policy)
+    assert restored.sample.id == row["sample_id"]
+    assert restored.sample.source_execution_id == row["source_execution_id"]
+    assert restored.sample.verification_level.value == "RAW"
+    assert restored.sample.eligibility.value == "pending"
+    assert restored.revision == 0 and restored.source_kind == "external"
+    row["payload"]["knowledge_value"]["nested"].append("caller mutation")
+    row["state"]["version"] = 2
+    assert restored.payload["knowledge_value"]["nested"] == ["benign"]
+    assert restored.state == {"version": 1}
+
+
+@pytest.mark.parametrize("field,value", [
+    ("state", {"version": 2}), ("state", {"version": True}),
+    ("state", {"version": 1, "raw_findings": ["private"]}),
+    ("state", {"version": 1, "eligibility_verdicts": {"unknown": True}}),
+    ("state", {"version": 1, "evaluation_id": "not-a-uuid"}),
+    ("state", {"version": 1, "eligibility_verdicts": {"deduplicated": 1}}),
+    ("revision", True), ("revision", -1), ("revision", "1"),
+    ("quarantined", 0), ("revoked", "false"),
+    ("source_kind", "invented"), ("content_digest", "0" * 64),
+    ("descriptor_digest", "0" * 64), ("retention_seconds", True),
+    ("expires_at", NOW), ("created_at", NOW.replace(tzinfo=None)),
+    ("expires_at", NOW + timedelta(hours=2)), ("sample_id", "not-a-uuid"),
+    ("rights_ref", None), ("eligibility", "invented"),
+    ("verification_level", "invented"), ("payload", {}),
+    ("payload", {"knowledge_key": "fact", "knowledge_value": {}, "extra": "private"}),
+])
+def test_recovery_refuses_malformed_record_without_echoing_content(field, value):
+    from core.learning.storage import LearningStorageError
+
+    row, policy = custody_row()
+    row[field] = value
+    with pytest.raises(LearningStorageError) as exc:
+        recover(row, policy)
+    assert "private" not in str(exc.value) and "benign" not in str(exc.value)
+
+
+def test_recovery_missing_and_foreign_tenant_are_indistinguishable():
+    from core.learning.storage import LearningStorageError
+
+    row, policy = custody_row()
+    messages = []
+    for data in (None, {**row, "tenant_id": uuid4()}):
+        with pytest.raises(LearningStorageError) as exc:
+            recover(data, policy)
+        messages.append(str(exc.value))
+    assert messages[0] == messages[1] == "unknown learning sample"
+
+
+@pytest.mark.parametrize("reason", ["expired", "policy_absent", "policy_changed", "policy_foreign"])
+def test_recovery_unavailable_content_is_never_an_empty_clean_payload(reason):
+    from core.learning.storage import RetentionPolicy, recover_capture
+
+    row, policy = custody_row()
+    active, now = policy, NOW
+    if reason == "expired":
+        now = row["expires_at"]
+    elif reason == "policy_absent":
+        active = None
+    elif reason == "policy_changed":
+        active = RetentionPolicy(policy.tenant_id, policy.policy_id, 7200)
+    else:
+        active = RetentionPolicy(uuid4(), policy.policy_id, 3600)
+    restored = recover_capture(row, tenant_id=policy.tenant_id, policy=active, now=now)
+    assert restored.payload is None
+    assert restored.sample.id == row["sample_id"]
+    assert restored.sample.eligibility.value == "pending"  # no invented evidence
+
+
+@pytest.mark.parametrize("flag", ["quarantined", "revoked"])
+def test_recovery_redacted_lineage_survives_without_rescanning_empty_content(flag):
+    from core.learning.storage import LearningStorageError
+
+    row, policy = custody_row()
+    row[flag] = True
+    with pytest.raises(LearningStorageError):
+        recover(row, policy)  # invalid raw payload on a redacted row
+    row["payload"] = None
+    restored = recover(row, policy)
+    assert restored.payload is None
+    assert restored.sample.source_execution_id == row["source_execution_id"]
+
+
+def test_recovery_unexplained_payload_loss_refuses_instead_of_manufacturing_clean_data():
+    from core.learning.storage import LearningStorageError
+
+    row, policy = custody_row()
+    row["payload"] = None
+    with pytest.raises(LearningStorageError):
+        recover(row, policy)
+
+
+def test_recovery_rescans_secret_payload_even_with_matching_content_digest():
+    import hashlib
+
+    from core.learning.storage import LearningStorageError
+
+    row, policy = custody_row()
+    row["payload"]["knowledge_value"] = {"password": "private-marker"}
+    row["content_digest"] = hashlib.sha256(json.dumps({
+        "key": "fact", "value": row["payload"]["knowledge_value"],
+    }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    row["descriptor_digest"] = hashlib.sha256(json.dumps({
+        "tenant": str(policy.tenant_id), "policy": str(policy.policy_id),
+        "rights": str(row["rights_ref"]), "retention": 3600,
+        "source_kind": "external", "source": None, "content": row["content_digest"],
+    }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    with pytest.raises(LearningStorageError) as exc:
+        recover(row, policy)
+    assert "private-marker" not in str(exc.value)
+
+
+@pytest.mark.parametrize("now", [NOW.replace(tzinfo=None), NOW - timedelta(seconds=1)])
+def test_recovery_requires_aware_non_backward_clock(now):
+    from core.learning.storage import LearningStorageError
+
+    row, policy = custody_row()
+    with pytest.raises(LearningStorageError):
+        recover(row, policy, now=now)

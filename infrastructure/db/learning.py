@@ -7,8 +7,6 @@ Payloads are immutable, scan-clean only; quarantine and redacted evidence persis
 
 from __future__ import annotations
 
-import hashlib
-import json
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -21,13 +19,14 @@ from core.contracts.base import JsonObject, utc_now
 from core.contracts.execute import ExecutionStatus
 from core.contracts.execution import Execution, ExecutionNode, ExecutionNodeType
 from core.contracts.learning import LearningSample
-from core.learning.gates import PROMOTION_CONDITIONS, TRAINING_ELIGIBILITY_CONDITIONS
 from core.learning.storage import (
     LearningStorageConflict,
     LearningStorageError,
     PreparedCapture,
     RetentionPolicy,
+    custody_descriptor_digest,
     prepare_capture,
+    validate_custody_state,
 )
 from infrastructure.db.repositories.executions import _execution_values, _node_values
 from infrastructure.db.tables import (
@@ -98,21 +97,11 @@ class LearningCustodyRepository:
             )
             if checked.quarantined or checked.content_digest != prepared.content_digest:
                 raise LearningStorageError("payload integrity mismatch")
-        descriptor = hashlib.sha256(
-            json.dumps(
-                {
-                    "tenant": str(tenant),
-                    "policy": str(policy.policy_id),
-                    "rights": str(rights_ref),
-                    "retention": policy.retention_seconds,
-                    "source_kind": source_kind,
-                    "source": str(execution.id) if source_kind == "execution" else None,
-                    "content": prepared.content_digest,
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode()
-        ).hexdigest()
+        descriptor = custody_descriptor_digest(
+            tenant_id=tenant, policy_id=policy.policy_id, rights_ref=rights_ref,
+            retention_seconds=policy.retention_seconds, source_kind=source_kind,
+            source_execution_id=execution.id, content_digest=prepared.content_digest,
+        )
         async with self._sessions.begin() as session:
             # Locks are transaction scoped and serialize the same tenant/key across processes.
             await session.execute(
@@ -239,34 +228,7 @@ class LearningCustodyRepository:
     ) -> int:
         """CAS the lifecycle metadata, never payload/identity/policy. No secret snapshots."""
         sample = LearningSample.model_validate(sample.model_dump())
-        allowed = {
-            "version",
-            "eligibility_verdicts",
-            "promotion_verdicts",
-            "evaluation_id",
-            "memory_id",
-        }
-        if set(state) - allowed or type(state.get("version")) is not int or state["version"] != 1:
-            raise LearningStorageError("unsupported custody state")
-        for field, names in (
-            ("eligibility_verdicts", TRAINING_ELIGIBILITY_CONDITIONS),
-            ("promotion_verdicts", PROMOTION_CONDITIONS),
-        ):
-            verdicts = state.get(field, {})
-            if (
-                not isinstance(verdicts, dict)
-                or set(verdicts) - set(names)
-                or any(type(v) is not bool for v in verdicts.values())
-            ):
-                raise LearningStorageError("invalid custody verdicts")
-        for field in ("evaluation_id", "memory_id"):
-            value = state.get(field)
-            if value is not None:
-                try:
-                    if not isinstance(value, str) or str(UUID(value)) != value:
-                        raise ValueError
-                except ValueError as exc:
-                    raise LearningStorageError("invalid custody reference") from exc
+        state = validate_custody_state(state)
         async with self._sessions.begin() as session:
             row = (
                 await session.execute(

@@ -198,7 +198,7 @@ also reserves major data-governance decisions to the operator.
 | B — recommended | Explicit policy-governed durable payload companion, metadata-only quarantine, finite retention/revocation | Can support safe recovery and exact lineage | Additive schema, policy admission and coordinated lifecycle writes; missing policy must refuse durable payload admission. |
 | C — rejected | Unconditionally serialize raw sample/scan state to JSONB or execution metadata | Smallest patch | Unbounded flagged/secret-data persistence and missing rights/retention authority; not safe. |
 
-### Exact option B envelope requiring authorization
+### Exact option B envelope — APPROVED by the operator (R178-DEC-03)
 
 1. Preserve learning_samples, all existing FKs/CHECKs, append-only evaluations and
    frozen LearningSample fields. Add ONE infrastructure-owned payload/provenance/
@@ -233,7 +233,7 @@ also reserves major data-governance decisions to the operator.
 
 ### Implementation dependency plan and accounting
 
-After approval: policy/codec failing tests → additive schema/repository → genuine
+Approved execution order: policy/codec failing tests → additive schema/repository → genuine
 transactional coordinator → lifecycle read/write/recovery binding → actual runtime
 and API/intake composition → live retry/concurrency/crash probes → full validation.
 Record a new independent production-file list/cap BEFORE editing. Expected areas:
@@ -256,8 +256,34 @@ budgets stay closed. Do not introduce a second state journal or evaluation store
 - Full unchanged hermetic gate, gateway, original P01/P03 and live DB suite pass
   together. Browser/two-account provider and trained-model limitations stay explicit.
 
-**Decision requested:** approve R178-DEC-03 option B's custody/quarantine/retention
-and fail-closed admission envelope for tests-first implementation; retention values
-remain explicit operator configuration. Option A keeps Backend Closure OPEN;
-option C is rejected. Only this protected data-governance write path is paused;
-read-only analysis, acceptance tests and repository reconciliation remain allowed.
+**Decision: APPROVED.** The operator approved R178-DEC-03 option B's custody,
+quarantine, retention and fail-closed admission envelope for tests-first
+implementation. Retention values remain explicit operator configuration. Do not
+request approval again or treat older pending-decision text as current authority.
+
+At published `84563ab9`, the policy primitive, additive custody schema/migration,
+atomic repository, idempotency, CAS state writes, expiry and revocation operations
+exist. `dec03_custody_migration.txt` records 12 passing focused live tests, including
+local empty migration rollback/upgrade and populated rollback refusal. This is
+not a production rollout or a full historical migration-chain proof.
+
+The safe recovery codec is now implemented and verified in recovered product
+`414d7389` (tests and retained live/gate evidence included through `96d0e5d6`).
+It validates identity, metadata versions, digests and payloads without restoring
+unavailable content as clean data. Actual lifecycle/runtime/API policy admission,
+automatic expiry/revocation and derived-copy reconciliation are still unbound.
+The original two sample-restart acceptance failures remain open. Backend Closure
+and UI readiness must not be declared from repository-only tests.
+
+At receipt checkpoint `fd4afd5c`, `build_external_ingestion_report` separates the
+real scan/metadata-only report construction from ExternalIngestionRecorder's
+legacy store.put. Atomic custody callers can now pass execution/nodes directly;
+this is not yet the actual lifecycle/runtime binding. Live custody fixtures use
+this path without an intermediate store; focused evidence is 20 passed, 4
+deselected. Post-receipt full gate is 3409 passed, 0 failed/errors, 64 skipped;
+Gateway 194 passed and original adversarial harness exit 0 are retained in
+`dec03_receipt_*` evidence files. Full live suite still has 22 passed and the two
+original restart failures. DEC03 accounting is 5/11, with the approved ingestion
+file added; six remaining production surfaces are lifecycle, composition/learning,
+API app/admin/intake and composition/runtime. Next is explicit policy/atomic
+adapter composition and lifecycle binding, not another approval or receipt rewrite.

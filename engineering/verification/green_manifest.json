@@ -559,7 +559,7 @@
     },
     "round_r178_dec03": {
       "ceiling": 11,
-      "changes_used": 4,
+      "changes_used": 5,
       "items": [
         "R178-DEC03"
       ],
@@ -583,6 +583,11 @@
           "item": "R178-DEC03",
           "file": "infrastructure/db/migrations/versions/0019_learning_custody.py",
           "summary": "Governed atomic custody companion with tenant/source integrity, idempotency and evidence-preserving downgrade."
+        },
+        {
+          "item": "R178-DEC03",
+          "file": "apps/api/ingestion.py",
+          "summary": "Write-free genuine validator receipt builder for atomic custody composition; legacy recorder delegates with unchanged persistence behavior. Runtime binding remains open."
         }
       ]
     }
