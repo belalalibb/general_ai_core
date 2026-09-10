@@ -204,7 +204,9 @@ def test_authenticated_capture_records_resolved_actor_not_demo_identity():
     response = run(request())
     assert response.status_code == 201
     session = profile.identity.resolve_session(headers["Authorization"].split(" ", 1)[1])
-    receipt = profile.store.get(tenant, UUID(response.json()["source_execution_id"]))
+    receipt = profile.app.state.scenario_service.execution_store.get(
+        tenant, UUID(response.json()["source_execution_id"])
+    )
     assert receipt.execution.user_id == session.user_id
     assert receipt.execution.tenant_id == session.tenant_id
 
