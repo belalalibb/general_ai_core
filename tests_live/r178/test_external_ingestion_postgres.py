@@ -91,7 +91,7 @@ def composed(database):
 
     async def seed():
         async with sessions.begin() as session:
-            await session.execute(plans.insert().values(id=plan, name="r178-test-plan"))
+            await session.execute(plans.insert().values(id=plan, name=f"r178-test-plan-{plan}"))
             await session.execute(
                 tenants.insert().values(
                     id=tenant,
