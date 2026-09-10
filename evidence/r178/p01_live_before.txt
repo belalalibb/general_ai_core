@@ -1,0 +1,15 @@
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+..F                                                                      [100%]
+=================================== FAILURES ===================================
+______________ test_backend_closure_sample_survives_recomposition ______________
+tests_live/r178/test_external_ingestion_postgres.py:191: in test_backend_closure_sample_survives_recomposition
+    assert response.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = <Response [404 Not Found]>.status_code
+=========================== short test summary info ============================
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_backend_closure_sample_survives_recomposition
+1 failed, 2 passed in 2.42s
+process_exit=1

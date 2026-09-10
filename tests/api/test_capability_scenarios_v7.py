@@ -220,7 +220,12 @@ class TestScenarioRoutes:
         assert isinstance(context, dict)
         metadata = context["metadata"]
         assert isinstance(metadata, dict)
-        assert metadata[SCENARIO_LABEL_KEY] == {"scenario_id": scenario_id}
+        assert metadata[SCENARIO_LABEL_KEY] == {
+            "scenario_id": scenario_id,
+            "evidence_version": 1,
+            "policy_revision": "mvp-deterministic-v1",
+            "checks": ["error_free_output", "output_present"],
+        }
 
     def test_no_entitlement_replay_is_honest(self) -> None:
         world = World()  # no budget configured

@@ -243,7 +243,8 @@ class TestPromotionIsTheKnowledgeWrite:
         from core.contracts.memory import MemoryItem
         from core.memory.errors import MemoryStoreError
         from tests.api.test_admin_api import World
-        from tests.api.test_learning_lifecycle_routes import ALL_PROMOTE, SAMPLES, _app, _post
+        from tests.api.test_learning_lifecycle_routes import SAMPLES, _app, _post
+        from tests.api.test_promotion_evidence_r177 import _backed_promotion
 
         world = World()
         app = _app(world)
@@ -255,7 +256,11 @@ class TestPromotionIsTheKnowledgeWrite:
             raise MemoryStoreError("backend unavailable")
 
         service._knowledge.upsert = refuse  # type: ignore[method-assign]
-        response = run(_post(app, f"{SAMPLES}/{sample.id}/promote", ALL_PROMOTE))
+        response = run(
+            _post(
+                app, f"{SAMPLES}/{sample.id}/promote", _backed_promotion(app, world, str(sample.id))
+            )
+        )
         assert response.status_code == 200
         body = response.json()
         assert body["promoted"] is False

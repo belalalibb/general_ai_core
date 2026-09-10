@@ -35,6 +35,7 @@ from core.contracts.execution import Execution, ExecutionStrategy
 from core.execution.service import ExecutionReport, ExecutionService
 from core.memory.memory import InMemoryMemoryStore
 from tests.api.test_admin_api import World, _no_sleep
+from tests.api.test_promotion_evidence_r177 import _backed_promotion
 
 SAMPLES = "/v1/admin/learning/samples"
 LEARNED = "/v1/admin/learning/learned"
@@ -135,7 +136,9 @@ class TestLifecycleOverHttp:
         assert admitted.json()["sample"]["eligibility"] == "eligible"
 
         # promote through the 22 §11 gate → GOLD + knowledge
-        promoted = run(_post(app, f"{SAMPLES}/{sample_id}/promote", ALL_PROMOTE))
+        promoted = run(
+            _post(app, f"{SAMPLES}/{sample_id}/promote", _backed_promotion(app, world, sample_id))
+        )
         assert promoted.status_code == 200
         assert promoted.json()["promoted"] is True
         assert promoted.json()["knowledge_key"] == "ops.rollback"
@@ -315,7 +318,9 @@ class TestMeasurableCapabilityRetest:
         sample_id = _capture(app, world, "ops.rollback")
         run(_post(app, f"{SAMPLES}/{sample_id}/sanitize", {"passed": True}))
         assert run(_post(app, f"{SAMPLES}/{sample_id}/admit", ALL_ADMIT)).json()["admitted"]
-        assert run(_post(app, f"{SAMPLES}/{sample_id}/promote", ALL_PROMOTE)).json()["promoted"]
+        assert run(
+            _post(app, f"{SAMPLES}/{sample_id}/promote", _backed_promotion(app, world, sample_id))
+        ).json()["promoted"]
         # AFTER: same probes, baseline supplied → measured delta.
         after = run(_post(app, RETEST, {"probes": probes, "baseline": baseline}))
         assert after.status_code == 200, after.text

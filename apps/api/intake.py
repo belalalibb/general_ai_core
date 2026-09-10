@@ -204,6 +204,7 @@ class IntakeAdapter:
         expectations: IntakeExpectations,
         format: str,
         content: str,
+        actor_id: UUID | None = None,
     ) -> IntakeReport:
         if len(content.encode("utf-8")) > MAX_CONTENT_BYTES:
             return IntakeReport(
@@ -246,7 +247,10 @@ class IntakeAdapter:
                 column: value for column, value in row.items() if column != expectations.key_column
             }
             sample = self._lifecycle.capture_external(
-                tenant_id, knowledge_key=knowledge_key, knowledge_value=knowledge_value
+                tenant_id,
+                actor_id=actor_id,
+                knowledge_key=knowledge_key,
+                knowledge_value=knowledge_value,
             )
             # Record the deterministic scan NOW (pure report; state untouched).
             report = self._lifecycle.sanitize(tenant_id, sample.id)

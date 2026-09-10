@@ -294,11 +294,9 @@ class LearningPromoteRequest(ContractModel):
             if name in resolved:
                 values[name] = resolved[name].held
             elif values[name]:
-                if strict:
-                    values[name] = False
-                    refused.append(name)
-                else:
-                    unverified.append(name)
+                # R178-DEC-01: compatibility never bypasses required evidence.
+                values[name] = False
+                refused.append(name)
         signals = PromotionSignals(
             offline_eval_pass=values["offline_eval_pass"],
             regression_pass=values["regression_pass"],
@@ -310,7 +308,8 @@ class LearningPromoteRequest(ContractModel):
             admin_approved=self.admin_approved,
         )
         evidence: JsonObject = {
-            "strict": strict,
+            "strict": strict,  # legacy flag, not an authorization bypass
+            "artifact_evidence_required": True,
             "resolved": {name: v.as_json() for name, v in resolved.items()},
             "unverified": unverified,
             "refused_unbacked": refused,
@@ -718,6 +717,7 @@ def create_admin_router(
                 expectations=body.expectations,
                 format=body.format,
                 content=body.content,
+                actor_id=admitted.user_id,
             )
             if report.quarantined:
                 return error_response(
@@ -753,6 +753,7 @@ def create_admin_router(
             if body.source_execution_id is None:
                 sample = lifecycle.capture_external(
                     admitted.tenant_id,
+                    actor_id=admitted.user_id,
                     knowledge_key=body.knowledge_key,
                     knowledge_value=body.knowledge_value,
                 )

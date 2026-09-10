@@ -1,0 +1,5 @@
+DESIGN ASSUMPTIONS VERIFIED / TEST (metadata/contract only, no live DB)
+Existing validator node supported; execution status and actor required.
+Execution/tenant foreign keys retain RESTRICT.
+Learning lifecycle, execution/learning contracts, tables and migrations unchanged.
+P01 runtime gap remains; no ingestion persistence implementation claimed.

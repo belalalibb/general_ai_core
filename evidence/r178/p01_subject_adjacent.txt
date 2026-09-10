@@ -1,0 +1,73 @@
+........................................................................ [  8%]
+........................................................................ [ 17%]
+........................................................................ [ 25%]
+........................................................................ [ 34%]
+........................................................................ [ 43%]
+........................................................................ [ 51%]
+..................................FF.................................... [ 60%]
+........................................................................ [ 69%]
+........................................................................ [ 77%]
+........................................................................ [ 86%]
+..s.....................s............s..................F.F............. [ 95%]
+...........................s...........                                  [100%]
+=================================== FAILURES ===================================
+_ TestEvolutionSection.test_knowledge_lane_counts_move_with_the_real_lifecycle _
+tests/api/test_self_evolution_r161.py:135: in test_knowledge_lane_counts_move_with_the_real_lifecycle
+    _promote(profile, tenant, "ops.rollback")
+tests/api/test_self_evolution_r161.py:71: in _promote
+    sample = service.capture_external(tenant_id, knowledge_key=key, knowledge_value={"v": key})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+core/learning/lifecycle.py:264: in capture_external
+    self._external_capture.record(
+apps/api/ingestion.py:50: in record
+    raise LearningError("external ingestion requires an admitted actor")
+E   core.learning.errors.LearningError: external ingestion requires an admitted actor
+_____________ TestEvolutionSection.test_other_tenant_is_invisible ______________
+tests/api/test_self_evolution_r161.py:147: in test_other_tenant_is_invisible
+    _promote(profile, uuid4(), "foreign.k")
+tests/api/test_self_evolution_r161.py:71: in _promote
+    sample = service.capture_external(tenant_id, knowledge_key=key, knowledge_value={"v": key})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+core/learning/lifecycle.py:264: in capture_external
+    self._external_capture.record(
+apps/api/ingestion.py:50: in record
+    raise LearningError("external ingestion requires an admitted actor")
+E   core.learning.errors.LearningError: external ingestion requires an admitted actor
+___ TestGoldReachesProductionMeasurably.test_other_tenants_gold_is_invisible ___
+tests/composition/test_gold_reaches_production_r161.py:155: in test_other_tenants_gold_is_invisible
+    _promote(profile, foreign, "k", {"v": "foreign"})
+tests/composition/test_gold_reaches_production_r161.py:95: in _promote
+    sample = service.capture_external(tenant_id, knowledge_key=key, knowledge_value=value)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+core/learning/lifecycle.py:264: in capture_external
+    self._external_capture.record(
+apps/api/ingestion.py:50: in record
+    raise LearningError("external ingestion requires an admitted actor")
+E   core.learning.errors.LearningError: external ingestion requires an admitted actor
+_ TestRetestMeasuresProductionReach.test_production_section_moves_with_real_executions _
+tests/composition/test_gold_reaches_production_r161.py:221: in test_production_section_moves_with_real_executions
+    _promote(profile, tenant, "ops.rollback", {"answer": "drain then flip"})
+tests/composition/test_gold_reaches_production_r161.py:95: in _promote
+    sample = service.capture_external(tenant_id, knowledge_key=key, knowledge_value=value)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+core/learning/lifecycle.py:264: in capture_external
+    self._external_capture.record(
+apps/api/ingestion.py:50: in record
+    raise LearningError("external ingestion requires an admitted actor")
+E   core.learning.errors.LearningError: external ingestion requires an admitted actor
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/user/webapp/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+.venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /home/user/webapp/.venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/api/test_self_evolution_r161.py::TestEvolutionSection::test_knowledge_lane_counts_move_with_the_real_lifecycle
+FAILED tests/api/test_self_evolution_r161.py::TestEvolutionSection::test_other_tenant_is_invisible
+FAILED tests/composition/test_gold_reaches_production_r161.py::TestGoldReachesProductionMeasurably::test_other_tenants_gold_is_invisible
+FAILED tests/composition/test_gold_reaches_production_r161.py::TestRetestMeasuresProductionReach::test_production_section_moves_with_real_executions
+4 failed, 823 passed, 4 skipped, 2 warnings in 38.44s
