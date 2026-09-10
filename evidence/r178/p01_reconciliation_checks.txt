@@ -1,0 +1,8 @@
+Snapshot: 6cf45cf2813eab60454a82d158018f8dd2f217ab
+PASS: all historical budgets, thresholds, skips, secret exceptions unchanged; new budgets consistent
+PASS: frozen surfaces unchanged and v3=20
+PASS: production code, hermetic tests and verifier byte-identical to 3353-pass snapshot b9d9f55b
+PASS: tracked-file secret scan uses unchanged manifest patterns/exact line exceptions; no secret values printed
+PASS: changed Python AST, local runner shell syntax, diff whitespace
+LIMITATION: these reconciliation checks are not a new full gate or live restart pass
+Backend Closure OPEN: committed real PostgreSQL suite remains 2 passed / 2 failed
