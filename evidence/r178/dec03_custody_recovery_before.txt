@@ -1,0 +1,21 @@
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+......FF.                                                                [100%]
+=================================== FAILURES ===================================
+__________ test_custody_expiry_discards_payload_but_preserves_lineage __________
+tests_live/r178/test_external_ingestion_postgres.py:486: in test_custody_expiry_discards_payload_but_preserves_lineage
+    repo.expire(
+    ^^^^^^^^^^^
+E   AttributeError: 'LearningCustodyRepository' object has no attribute 'expire'
+________________ test_custody_stale_writer_cannot_advance_state ________________
+tests_live/r178/test_external_ingestion_postgres.py:509: in test_custody_stale_writer_cannot_advance_state
+    database[0].run(repo.save(sample, {"version": 1}, expected_revision=0))
+                    ^^^^^^^^^
+E   AttributeError: 'LearningCustodyRepository' object has no attribute 'save'
+=========================== short test summary info ============================
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_custody_expiry_discards_payload_but_preserves_lineage
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_custody_stale_writer_cannot_advance_state
+2 failed, 7 passed, 4 deselected in 5.02s
+process_exit=1

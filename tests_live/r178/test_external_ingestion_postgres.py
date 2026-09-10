@@ -424,3 +424,116 @@ def test_custody_foreign_equals_missing(database):
     for tenant, sample in ((uuid4(), record["sample_id"]), (world.principal.tenant_id, uuid4())):
         with pytest.raises(LearningStorageError, match="unknown learning sample"):
             database[0].run(repo.get(tenant, sample))
+
+
+def test_custody_concurrent_retry_has_one_committed_subject(database):
+    import asyncio
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    others = [
+        custody_candidate(
+            world, key=args["idempotency_key"], policy=args["policy"], rights=args["rights_ref"]
+        )
+        for _ in range(4)
+    ]
+
+    async def concurrent():
+        return await asyncio.gather(*(repo.capture(**a) for a in [args, *others]))
+
+    rows = database[0].run(concurrent())
+    assert len({r["sample_id"] for r in rows}) == 1
+    assert count(database, executions) == count(database, learning_samples) == 1
+
+
+def test_custody_late_write_failure_rolls_back_subject_and_sample(database):
+    from sqlalchemy.exc import DBAPIError
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+
+    async def fail_write():
+        async with database[1].begin() as session:
+            await session.execute(
+                text(
+                    "CREATE FUNCTION fail_custody() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'custody write failed'; END; $$"
+                )
+            )
+            await session.execute(
+                text(
+                    "CREATE TRIGGER fail_custody_insert BEFORE INSERT ON learning_sample_custody FOR EACH ROW EXECUTE FUNCTION fail_custody()"
+                )
+            )
+
+    database[0].run(fail_write())
+    with pytest.raises(DBAPIError):
+        database[0].run(LearningCustodyRepository(database[1]).capture(**custody_candidate(world)))
+    assert count(database, executions) == count(database, learning_samples) == 0
+
+
+def test_custody_expiry_discards_payload_but_preserves_lineage(database):
+    from datetime import timedelta
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    first = database[0].run(repo.capture(**args))
+    assert (
+        database[0].run(
+            repo.expire(
+                world.principal.tenant_id, args["prepared"].expires_at + timedelta(seconds=1)
+            )
+        )
+        == 1
+    )
+    row = database[0].run(repo.get(world.principal.tenant_id, first["sample_id"]))
+    assert row["payload"] is None and row["revoked"] is True
+    assert row["eligibility"] == "ineligible"
+    assert row["source_execution_id"] == first["source_execution_id"]
+    assert count(database, executions) == count(database, learning_samples) == 1
+
+
+def test_custody_stale_writer_cannot_advance_state(database):
+    from core.contracts.learning import LearningEligibility
+    from core.learning.storage import LearningStorageConflict
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    database[0].run(repo.capture(**args))
+    sample = args["sample"].model_copy(update={"eligibility": LearningEligibility.INELIGIBLE})
+    database[0].run(repo.save(sample, {"version": 1}, expected_revision=0))
+    with pytest.raises(LearningStorageConflict):
+        database[0].run(repo.save(args["sample"], {"version": 1}, expected_revision=0))
+    assert (
+        database[0].run(repo.get(world.principal.tenant_id, sample.id))["eligibility"]
+        == "ineligible"
+    )
+
+
+def test_custody_database_rejects_cross_tenant_lineage_update(database):
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_sample_custody
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    first = database[0].run(repo.capture(**custody_candidate(world)))
+
+    async def tamper():
+        async with database[1].begin() as session:
+            await session.execute(
+                learning_sample_custody.update()
+                .where(learning_sample_custody.c.sample_id == first["sample_id"])
+                .values(tenant_id=uuid4())
+            )
+
+    with pytest.raises(IntegrityError):
+        database[0].run(tamper())
+    assert (
+        database[0].run(repo.get(world.principal.tenant_id, first["sample_id"]))["tenant_id"]
+        == world.principal.tenant_id
+    )
