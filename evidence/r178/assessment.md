@@ -10,9 +10,9 @@ This section supersedes the historical assessments below.
 - **B / Regression — VERIFIED, TEST:** dec03_adapter_full_gate.txt at 0a369e69:
   **3447 passed, 0 failed/errors, 64 skipped**, static/governance checks PASS,
   process_exit=0. Later changes are live tests/evidence, not product changes.
-- **C / Gap — FAILED, LIVE + TEST:** both original sample restart assertions
-  remain open; receipt-stage retained evidence records 22 passed / 2 failed.
-  A newer full-live run must be retained before claiming its totals.
+- **C / Gap — FAILED, LIVE + TEST:** dec03_adapter_runtime_open.txt at d0ba8032,
+  saved bce9cb79: **28 passed / 2 failed**, process_exit=1. Both original sample
+  restart assertions still return 404 rather than 200; no assertion changed.
 - **D / Change — VERIFIED, TEST:** dec03_adapter_before/after.txt record
   **38 failed -> 38 passed**, strict mypy/ruff success. Explicit closed policy
   parser, atomic external custody capture, decoded get/list and guarded CAS save.
