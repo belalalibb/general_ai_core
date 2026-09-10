@@ -120,6 +120,19 @@ class SampleSource(StrEnum):
     EXTERNAL = "external"
 
 
+class ExternalCapturePort(Protocol):
+    """Persist a genuine per-row ingestion subject before sample admission."""
+
+    def record(
+        self,
+        tenant_id: UUID,
+        sample_id: UUID,
+        actor_id: UUID | None,
+        knowledge_key: str,
+        knowledge_value: JsonObject,
+    ) -> UUID: ...
+
+
 class EvaluationRunner(Protocol):
     """The EXISTING evaluation seam this service delegates to (P2).
 
@@ -204,7 +217,9 @@ class LearningLifecycleService:
         audit: AuditPort | None = None,
         eligibility_gate: TrainingEligibilityGate | None = None,
         promotion_gate: PromotionGate | None = None,
+        external_capture: ExternalCapturePort | None = None,
     ) -> None:
+        self._external_capture = external_capture
         self._evaluation = evaluation
         self._knowledge = knowledge
         self._audit = audit
@@ -237,18 +252,28 @@ class LearningLifecycleService:
         *,
         knowledge_key: str,
         knowledge_value: JsonObject,
+        actor_id: UUID | None = None,
     ) -> LearningSample:
-        """External data enters the SAME pipeline — never trusted on entry.
+        """Capture RAW data; composed ingestion persists a real scan subject first.
 
-        The synthetic source_execution_id marks the ingestion act itself;
-        provenance kind EXTERNAL rides service metadata (recorded above).
+        Uncomposed domain fixtures retain their in-memory identity only. That
+        fallback is not durable execution provenance or verified learning.
         """
+        sample_id = uuid4()
+        source_id = (
+            self._external_capture.record(
+                tenant_id, sample_id, actor_id, knowledge_key, knowledge_value
+            )
+            if self._external_capture is not None
+            else uuid4()
+        )
         return self._capture(
             tenant_id,
-            uuid4(),
+            source_id,
             SampleSource.EXTERNAL,
             knowledge_key,
             knowledge_value,
+            sample_id=sample_id,
         )
 
     def _capture(
@@ -258,9 +283,11 @@ class LearningLifecycleService:
         kind: SampleSource,
         knowledge_key: str,
         knowledge_value: JsonObject,
+        *,
+        sample_id: UUID | None = None,
     ) -> LearningSample:
         sample = LearningSample(
-            id=uuid4(),
+            id=sample_id if sample_id is not None else uuid4(),
             source_execution_id=source_execution_id,
             tenant_id=tenant_id,
         )  # contract defaults: PENDING / PENDING / RAW / no dataset

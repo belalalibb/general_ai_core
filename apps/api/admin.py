@@ -717,6 +717,7 @@ def create_admin_router(
                 expectations=body.expectations,
                 format=body.format,
                 content=body.content,
+                actor_id=admitted.user_id,
             )
             if report.quarantined:
                 return error_response(
@@ -752,6 +753,7 @@ def create_admin_router(
             if body.source_execution_id is None:
                 sample = lifecycle.capture_external(
                     admitted.tenant_id,
+                    actor_id=admitted.user_id,
                     knowledge_key=body.knowledge_key,
                     knowledge_value=body.knowledge_value,
                 )
