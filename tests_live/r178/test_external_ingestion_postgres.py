@@ -911,3 +911,111 @@ def test_custody_adapter_concurrent_same_key_uses_one_transactional_identity(dat
     assert count(database, executions) == count(database, learning_samples) == 1
     assert count(database, execution_nodes) == count(database, learning_sample_custody) == 1
     assert custody_adapter(database, policy).list(policy.tenant_id) == (results[0],)
+
+
+def execution_source(database, world, app):
+    """Actual API/service execution with the test provider, not live inference."""
+    world.usage.configure_tenant(world.principal.tenant_id, plan="pro", task_units_limit=100.0)
+    response = run(_post(app, "/v1/execute", {"ask": "bounded source probe"}))
+    assert response.status_code == 200
+    source_id = UUID(response.json()["execution_id"])
+    return database[0].run(
+        PostgresExecutionRepository(database[1]).get(world.principal.tenant_id, source_id)
+    )
+
+
+@pytest.mark.parametrize("quarantined", [False, True])
+def test_execution_custody_adapter_reuses_real_source_and_retry_identity(database, quarantined):
+    from core.learning.storage import LearningStorageConflict, RetentionPolicy
+    from infrastructure.db.tables import execution_nodes, learning_sample_custody
+
+    world, _, app = composed(database)
+    source = execution_source(database, world, app)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(world, policy)
+    args.pop("actor_id")
+    args["source_execution_id"] = source.execution.id
+    marker = "ghp_" + "X" * 36
+    if quarantined:
+        args["knowledge_value"] = {marker: marker}
+    before_nodes = count(database, execution_nodes)
+    first = custody_adapter(database, policy).capture_from_execution(**args)
+    fresh = custody_adapter(database, policy)
+    assert fresh.capture_from_execution(**args) == first
+    assert fresh.get(policy.tenant_id, first.sample.id) == first
+    assert first.source_kind == "execution"
+    assert first.sample.source_execution_id == source.execution.id
+    assert first.sample.verification_level.value == "RAW"
+    assert first.sample.eligibility.value == "pending"
+    assert (first.payload is None) == quarantined
+    assert count(database, executions) == 1
+    assert count(database, execution_nodes) == before_nodes
+    assert count(database, learning_samples) == count(database, learning_sample_custody) == 1
+    assert database[0].run(
+        PostgresExecutionRepository(database[1]).get(policy.tenant_id, source.execution.id)
+    ) == source
+    with pytest.raises(LearningStorageConflict):
+        fresh.capture_from_execution(**{**args, "knowledge_value": {"changed": True}})
+    other = execution_source(database, world, app)
+    with pytest.raises(LearningStorageConflict):
+        fresh.capture_from_execution(**{**args, "source_execution_id": other.execution.id})
+
+    async def rows():
+        async with database[1]() as session:
+            return (await session.execute(select(learning_sample_custody))).mappings().all()
+
+    assert marker not in str(database[0].run(rows()))
+    assert count(database, learning_samples) == 1
+
+
+def test_execution_custody_adapter_missing_and_foreign_source_refuse(database):
+    from core.learning.storage import LearningStorageError, RetentionPolicy
+
+    world, _, app = composed(database)
+    source = execution_source(database, world, app)
+    foreign, _, _ = composed(database)
+    policy = RetentionPolicy(foreign.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(foreign, policy)
+    args.pop("actor_id")
+    errors = []
+    for source_id in (source.execution.id, uuid4()):
+        with pytest.raises(LearningStorageError) as exc:
+            custody_adapter(database, policy).capture_from_execution(
+                **args, source_execution_id=source_id
+            )
+        errors.append(str(exc.value))
+    assert errors == ["source unavailable", "source unavailable"]
+    assert count(database, learning_samples) == 0 and count(database, executions) == 1
+
+
+def test_execution_custody_adapter_late_failure_keeps_source_without_sample(database):
+    from sqlalchemy.exc import DBAPIError
+
+    from core.learning.storage import RetentionPolicy
+
+    world, _, app = composed(database)
+    source = execution_source(database, world, app)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(world, policy)
+    args.pop("actor_id")
+
+    async def fail_write():
+        async with database[1].begin() as session:
+            await session.execute(text(
+                "CREATE FUNCTION fail_custody() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                "BEGIN RAISE EXCEPTION 'custody write failed'; END; $$"
+            ))
+            await session.execute(text(
+                "CREATE TRIGGER fail_custody_insert BEFORE INSERT ON learning_sample_custody "
+                "FOR EACH ROW EXECUTE FUNCTION fail_custody()"
+            ))
+
+    database[0].run(fail_write())
+    with pytest.raises(DBAPIError):
+        custody_adapter(database, policy).capture_from_execution(
+            **args, source_execution_id=source.execution.id
+        )
+    assert count(database, learning_samples) == 0 and count(database, executions) == 1
+    assert database[0].run(
+        PostgresExecutionRepository(database[1]).get(policy.tenant_id, source.execution.id)
+    ) == source
