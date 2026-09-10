@@ -732,3 +732,180 @@ def test_custody_codec_refuses_corrupt_persisted_json(database, field, value):
             row, tenant_id=world.principal.tenant_id, policy=args["policy"], now=utc_now()
         )
     assert "corrupt-marker" not in str(exc.value)
+
+
+# Adapter acceptance over real PostgreSQL; not HTTP binding or process-crash proof.
+def custody_adapter(database, policy, *, configured=True, repository=None):
+    import json
+    from types import SimpleNamespace
+
+    from apps.composition.learning import (
+        DurableLearningCustody,
+        build_durable_learning_custody,
+        learning_storage_policies_from_env,
+    )
+
+    env = {}
+    if configured:
+        env["LEARNING_STORAGE_POLICIES"] = json.dumps([{
+            "tenant_id": str(policy.tenant_id),
+            "policy_id": str(policy.policy_id),
+            "retention_seconds": policy.retention_seconds,
+        }])
+    policies = learning_storage_policies_from_env(env)
+    if repository is not None:
+        return DurableLearningCustody(
+            repository=repository, bridge=database[0], policies=policies
+        )
+    return build_durable_learning_custody(
+        SimpleNamespace(session_factory=database[1]), database[0], policies=policies
+    )
+
+
+def custody_adapter_request(world, policy):
+    return dict(
+        tenant_id=policy.tenant_id,
+        actor_id=world.principal.user_id,
+        policy_id=policy.policy_id,
+        rights_ref=uuid4(),
+        idempotency_key=uuid4(),
+        knowledge_key="adapter.fact",
+        knowledge_value={"answer": "bounded fact"},
+    )
+
+
+@pytest.mark.parametrize("quarantined", [False, True])
+def test_custody_adapter_capture_retry_and_fresh_recovery(database, quarantined):
+    from core.learning.storage import LearningStorageConflict, LearningStorageError, RetentionPolicy
+    from infrastructure.db.tables import execution_nodes, learning_sample_custody
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(world, policy)
+    marker = "ghp_" + "X" * 36
+    if quarantined:
+        args["knowledge_value"] = {marker: "private"}
+    first = custody_adapter(database, policy).capture_external(**args)
+    fresh = custody_adapter(database, policy)
+    assert fresh.get(policy.tenant_id, first.sample.id) == first
+    assert fresh.list(policy.tenant_id) == (first,)
+    assert fresh.capture_external(**args) == first
+    assert first.sample.verification_level.value == "RAW"
+    assert first.sample.eligibility.value == "pending"
+    assert first.payload == (None if quarantined else {
+        "knowledge_key": args["knowledge_key"], "knowledge_value": args["knowledge_value"]
+    })
+    with pytest.raises(LearningStorageConflict):
+        fresh.capture_external(**{**args, "knowledge_value": {"answer": "changed"}})
+    with pytest.raises(LearningStorageError, match="unknown learning sample"):
+        fresh.get(uuid4(), first.sample.id)
+    assert fresh.list(uuid4()) == ()
+
+    async def stored_rows():
+        async with database[1]() as session:
+            return [
+                (await session.execute(select(table))).mappings().all()
+                for table in (executions, execution_nodes, learning_samples, learning_sample_custody)
+            ]
+
+    assert marker not in str(database[0].run(stored_rows()))
+    assert count(database, executions) == count(database, learning_samples) == 1
+    assert count(database, execution_nodes) == count(database, learning_sample_custody) == 1
+
+
+def test_custody_adapter_policy_removal_denies_capture_and_save(database):
+    from core.learning.storage import LearningStorageConflict, LearningStorageError, RetentionPolicy
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(world, policy)
+    first = custody_adapter(database, policy).capture_external(**args)
+    removed = custody_adapter(database, policy, configured=False)
+    assert removed.get(policy.tenant_id, first.sample.id).payload is None
+    assert removed.list(policy.tenant_id)[0].payload is None
+    with pytest.raises(LearningStorageError, match="storage policy unavailable"):
+        removed.capture_external(**{**args, "idempotency_key": uuid4()})
+    with pytest.raises(LearningStorageConflict):
+        removed.save(first.sample, first.state, expected_revision=first.revision)
+    # Suppression is not erasure/revocation: unchanged configured readers still see it.
+    assert custody_adapter(database, policy).get(policy.tenant_id, first.sample.id) == first
+    assert count(database, executions) == count(database, learning_samples) == 1
+
+
+def test_custody_adapter_cas_and_repository_revocation(database):
+    from core.contracts.learning import LearningEligibility
+    from core.learning.storage import LearningStorageConflict, RetentionPolicy
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(world, policy)
+    adapter = custody_adapter(database, policy)
+    first = adapter.capture_external(**args)
+    changed = first.sample.model_copy(update={"eligibility": LearningEligibility.INELIGIBLE})
+    assert adapter.save(changed, first.state, expected_revision=0) == 1
+    fresh = custody_adapter(database, policy)
+    loaded = fresh.get(policy.tenant_id, first.sample.id)
+    assert loaded.sample == changed and loaded.revision == 1
+    with pytest.raises(LearningStorageConflict):
+        adapter.save(first.sample, first.state, expected_revision=0)
+    assert database[0].run(
+        LearningCustodyRepository(database[1]).revoke_policy(policy.tenant_id, policy.policy_id)
+    ) == 1
+    revoked = fresh.get(policy.tenant_id, first.sample.id)
+    assert revoked.payload is None and revoked.revision == 2
+    assert revoked.sample.source_execution_id == first.sample.source_execution_id
+    assert fresh.capture_external(**args) == revoked
+    with pytest.raises(LearningStorageConflict):
+        fresh.save(revoked.sample, revoked.state, expected_revision=2)
+    # This proves existing-custody revocation, NOT a durable new-admission registry.
+    assert count(database, executions) == count(database, learning_samples) == 1
+
+
+def test_custody_adapter_response_loss_retries_committed_identity(database):
+    from core.learning.storage import RetentionPolicy
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    class LostResponseRepository(LearningCustodyRepository):
+        async def capture(self, **kwargs):
+            await super().capture(**kwargs)
+            raise ConnectionError("injected response loss after commit")
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(world, policy)
+    adapter = custody_adapter(database, policy, repository=LostResponseRepository(database[1]))
+    with pytest.raises(ConnectionError, match="injected response loss after commit"):
+        adapter.capture_external(**args)
+    stored = database[0].run(LearningCustodyRepository(database[1]).list(policy.tenant_id))
+    assert len(stored) == 1
+    recovered = custody_adapter(database, policy).capture_external(**args)
+    assert recovered.sample.id == stored[0]["sample_id"]
+    assert recovered.sample.source_execution_id == stored[0]["source_execution_id"]
+    assert recovered.payload == stored[0]["payload"]
+    assert count(database, executions) == count(database, learning_samples) == 1
+
+
+def test_custody_adapter_concurrent_same_key_uses_one_transactional_identity(database):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from core.learning.storage import RetentionPolicy
+    from infrastructure.db.tables import execution_nodes, learning_sample_custody
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(world, policy)
+    ready = Barrier(4)
+
+    def capture_one(_):
+        adapter = custody_adapter(database, policy)
+        ready.wait(timeout=10)
+        return adapter.capture_external(**args)
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(capture_one, range(4)))
+    assert all(result == results[0] for result in results)
+    assert count(database, executions) == count(database, learning_samples) == 1
+    assert count(database, execution_nodes) == count(database, learning_sample_custody) == 1
+    assert custody_adapter(database, policy).list(policy.tenant_id) == (results[0],)
