@@ -401,3 +401,34 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
 - DEC03 B remains APPROVED. Receipt and codec units are verified; do not redo
   them without new executable evidence. P01 runtime closure, Backend Closure,
   R178 completion and UI readiness remain OPEN.
+
+## Adapter recovery checkpoint — unit verified; integration verification pending
+
+- VERIFIED / CAPTURED: restored saved bundle 787e8185 after reset to clean main
+  369cf37c. Retained implementation a1b54115 / formatting 84ea2c75; tests-first
+  34e5f40f and red evidence d8da5299. No codec/receipt work repeated.
+- VERIFIED / TEST: dec03_adapter_before.txt records 38 failures before module
+  existence; dec03_adapter_after.txt records 38 passing tests and strict mypy /
+  ruff success. apps/composition/learning.py now provides closed explicit
+  LEARNING_STORAGE_POLICIES parsing, a detached policy snapshot, atomic external
+  custody capture through AsyncBridge, safe decoded get/list and availability /
+  revision-checked save with the existing repository CAS as final authority.
+- Config has no default grant/tenant/retention and reads only the supplied mapping.
+  Duplicate identities/JSON fields, unknown fields and malformed values refuse.
+  Missing policy/actor/rights/idempotency refuses before persistence. Stored retry
+  identity is authoritative. No raw secret content offered to the repository.
+- DEC03 accounting reconciled to 6/11, adding approved apps/composition/learning.py.
+  Historical budgets and frozen surfaces are unchanged. No runtime binding yet.
+- UNVERIFIED / CAPTURED: interrupted six-case live adapter test attempts and their
+  uploads have no confirmed recovery URL; current bundle does not contain them.
+  Do not claim actual adapter PostgreSQL/response-loss/concurrency verification.
+  Receipt/custody historical live evidence is not proof of this adapter binding.
+- NEXT EXACT ACTION: finish post-adapter full gate and preserve its output, then
+  add/retain real adapter PostgreSQL capture/recovery/retry/policy-removal/CAS/
+  response-loss/concurrency tests. Continue actual lifecycle/runtime/API binding,
+  execution-born capture, expiry/revocation sweeps and derived-copy reconciliation.
+  Policy snapshots are not a durable revocation registry or automatic data purge.
+  Runtime must deny new admission under removed policy; do not advertise repository
+  revoke_policy alone as that guarantee. Preserve both original restart assertions.
+- Backend Closure, R178 completion and UI readiness remain OPEN; DEC03 APPROVED.
+  Publication remains separate: no authenticated push or PR update claimed.
