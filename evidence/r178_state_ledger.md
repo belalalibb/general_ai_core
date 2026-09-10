@@ -56,6 +56,20 @@ Keep canonical prompt, frozen state, `ui/`, `apps/admin_agent/`,
 thresholds (passed >=3127, failed/errors=0, skipped <=64). No legacy state files.
 External credential rotation remains operator-owned/unverified.
 
+## Bounded correction under current mission authority
+
+R178-FIX-01 restores the existing DuplicateEvaluation exception contract for the
+actual `pk_evaluations` constraint (migration 0010 and shared metadata). Current
+failing-first evidence `duplicate_before.txt`, commit `91890137`: one failed,
+two passed. The previous interrupted correction was NOT saved; recovered code
+still matches `evaluations_pkey`. Only production file authorized for this unit:
+`infrastructure/db/repositories/evaluations.py`. Independent budget: one file,
+cap 1 in a new manifest round; no historical budget or threshold changes.
+Routine reversible binding fix, no schema/security-policy change. FK and CHECK
+errors must still propagate unchanged. Injected-error tests do not prove live DB
+persistence. Rollback: revert this one-file fix; preserve tests/evidence.
+The initial zero-production measurement unit is complete; this is the next unit.
+
 ## Rows (append before each unit; completion needs Git + actual evidence)
 
 | Task | State / evidence | Exact next action |
