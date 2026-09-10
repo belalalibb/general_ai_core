@@ -191,3 +191,121 @@ def test_backend_closure_sample_survives_recomposition(database):
     assert response.status_code == 200
     assert response.json()["sample"]["id"] == sample["id"]
     assert count(database, learning_samples) == 1
+
+
+@pytest.fixture
+def runtime_database(database):
+    """A fresh database for the actual build_runtime_profile, not test rewiring.
+
+    All runtime metadata except the unrelated pgvector embedding table is created.
+    No vector query/migration/extension behavior is claimed. The parent fixture
+    already proved this connection targets the private workspace-only cluster.
+    """
+    from apps.composition.runtime import build_runtime_profile  # noqa: F401
+
+    bridge, _ = database
+    raw = make_url(os.environ["R178_TEST_DATABASE_URL"])
+    name = "r178_runtime_" + uuid4().hex
+    catalog = create_async_engine(raw, isolation_level="AUTOCOMMIT")
+    url = raw.set(database=name)
+    engine = create_async_engine(url)
+
+    async def setup():
+        async with catalog.connect() as connection:
+            await connection.execute(text(f'CREATE DATABASE "{name}"'))
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda c: metadata.create_all(
+                    c, tables=[t for n, t in metadata.tables.items() if n != "memory_embeddings"]
+                )
+            )
+
+    async def cleanup():
+        await engine.dispose()
+        try:
+            async with catalog.connect() as connection:
+                await connection.execute(text(f'DROP DATABASE "{name}" WITH (FORCE)'))
+        finally:
+            await catalog.dispose()
+
+    try:
+        bridge.run(setup())
+        yield url.render_as_string(hide_password=False)
+    finally:
+        bridge.run(cleanup())
+
+
+def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_database):
+    import httpx
+
+    from apps.composition.runtime import build_runtime_profile
+    from tests.api.test_self_evolution_r161 import _admin
+    from tests.composition.test_admin_console_runtime import ADMIN_EMAIL
+
+    env = {"DATABASE_URL": runtime_database, "ADMIN_EMAILS": ADMIN_EMAIL}
+    profiles = []
+
+    async def request(profile, headers, method, path, body=None):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=profile.app), base_url="http://test"
+        ) as client:
+            return await client.request(method, path, headers=headers, json=body)
+
+    try:
+        first = build_runtime_profile(environ=env)
+        profiles.append(first)
+        assert first.durable and first.demo_principal is None
+        headers, _ = _admin(first)
+        captured = run(
+            request(
+                first,
+                headers,
+                "POST",
+                SAMPLES,
+                {
+                    "knowledge_key": "runtime.restart",
+                    "knowledge_value": {"answer": "fact"},
+                },
+            )
+        )
+        assert captured.status_code == 201
+        sample = captured.json()
+        graded = run(
+            request(
+                first,
+                headers,
+                "POST",
+                f"{SAMPLES}/{sample['id']}/evaluate",
+                {
+                    "output": {"answer": "fact"},
+                },
+            )
+        )
+        assert graded.status_code == 200 and graded.json()["evaluated"] is True
+        first.bridge.run(first.bindings.engine.dispose())
+        first.bridge.close()
+        profiles.remove(first)
+        second = build_runtime_profile(environ=env)
+        profiles.append(second)
+        # Reuse the REAL durable session: no demo principal or replacement actor.
+        receipt = run(
+            request(second, headers, "GET", f"/v1/executions/{sample['source_execution_id']}")
+        )
+        assert receipt.status_code == 200
+        records = run(
+            request(
+                second,
+                headers,
+                "GET",
+                f"/v1/admin/executions/{sample['source_execution_id']}/evaluations",
+            )
+        )
+        assert records.status_code == 200 and len(records.json()["evaluations"]) == 1
+        restored = run(request(second, headers, "GET", f"{SAMPLES}/{sample['id']}"))
+        assert restored.status_code == 200
+        assert restored.json()["sample"]["id"] == sample["id"]
+    finally:
+        for profile in profiles:
+            run(profile.release_adapters())
+            profile.bridge.run(profile.bindings.engine.dispose())
+            profile.bridge.close()
