@@ -70,6 +70,27 @@ errors must still propagate unchanged. Injected-error tests do not prove live DB
 persistence. Rollback: revert this one-file fix; preserve tests/evidence.
 The initial zero-production measurement unit is complete; this is the next unit.
 
+## Authorized protected-decision unit (2026-09-10)
+
+Recovered clean `47962487` from PR #14; main still `369cf37c`. Operator explicitly
+approved R178-DEC-01 option B implementation and rejection of legacy evidence
+without valid support; R178-DEC-02 option B is DESIGN REVIEW FIRST only. Preserve
+all integrity constraints; never invent successful executions. Previous completed
+FIX-01 remains closed; full gate 3321/0/0/64 is retained baseline evidence.
+
+DEC-01 bounded production scope (independent `round_r178_dec01`, cap 5 files):
+`apps/api/scenarios.py`, `apps/api/regression_evidence.py` (pure evidence codec),
+`apps/api/promotion_evidence.py`, `apps/api/app.py`, `apps/api/admin.py`.
+Reuse existing append-only EvaluationStorePort and real replay executions; no new
+store, schema, enum, provider or training system. Record required check results
+and versioned provenance bound to tenant/execution/scenario/output. Missing,
+legacy, ambiguous or failed evidence must deny, including non-strict legacy paths.
+Do not derive a passing regression verdict from SUCCEEDED alone. Tests must cover
+positive stored evidence, failed checks, missing/foreign/tampered/stale/duplicate
+records and persistence failures. DEC-02 adds only a reviewed lifecycle/transaction
+proposal and evidence, NOT storage rewiring or data migration. Rollback preserves
+stored evidence; never recommend restoring permissive legacy promotion semantics.
+
 ## Rows (append before each unit; completion needs Git + actual evidence)
 
 | Task | State / evidence | Exact next action |
