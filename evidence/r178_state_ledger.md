@@ -117,6 +117,26 @@ Initial subunit: failing-first API/recovery tests plus workspace-local PostgreSQ
 setup, production changes 0; implementation scope/accounting recorded before edits.
 No ambient provider credentials, production DB, training or data migration used.
 
+## First P01 production subunit: genuine subjects + shared evaluation
+
+Recovery on 2026-09-10: clean published `2252939e` restored from the R178 remote;
+main remains `369cf37c`. Authenticated repository identity/push and OPEN PR #14
+verified. Interrupted edits, ingestion.py and targeted output are ABSENT, not
+assumed successful. Published five-test RED remains the acceptance baseline.
+
+Independent `round_r178_p01_subject` cap 5 production files:
+`core/learning/lifecycle.py`, `apps/api/ingestion.py`, `apps/api/intake.py`,
+`apps/api/admin.py`, `apps/api/app.py`. Record an actual bounded sanitizer scan
+as a per-row VALIDATOR subject, propagate admitted actor, then use shared
+append-only evaluations. Receipt writes precede sample mutation; scan completion
+is NOT sanitization approval, eligibility, model inference or verified learning.
+No existing FK, closed contract, historical budget or frozen surface changes.
+
+This subunit DOES NOT establish durable sample lifecycle/restart closure. Follow
+with real local PostgreSQL and restart tests, implement durable sample/receipt
+recovery as required, and keep R178/Backend Closure OPEN until all recorded
+acceptance conditions hold. Rollback must preserve evidence and fail-closed trust.
+
 ## Rows (append before each unit; completion needs Git + actual evidence)
 
 | Task | State / evidence | Exact next action |
