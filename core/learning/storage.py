@@ -77,7 +77,7 @@ def prepare_capture(
         raise LearningStorageError("invalid capture payload")
     try:
         canonical = json.dumps(
-            {"knowledge_key": knowledge_key, "knowledge_value": knowledge_value},
+            {"key": knowledge_key, "value": knowledge_value},
             sort_keys=True,
             separators=(",", ":"),
             allow_nan=False,
@@ -86,7 +86,8 @@ def prepare_capture(
         raise LearningStorageError("invalid capture JSON") from exc
     if len(canonical) > MAX_CAPTURE_BYTES:
         raise LearningStorageError("capture payload exceeds custody bound")
-    payload = json.loads(canonical)
+    decoded = json.loads(canonical)
+    payload = {"knowledge_key": decoded["key"], "knowledge_value": decoded["value"]}
     scan = sanitize_knowledge(payload["knowledge_key"], payload["knowledge_value"])
     return PreparedCapture(
         content_digest=hashlib.sha256(canonical).hexdigest(),
