@@ -556,6 +556,20 @@
           "summary": "Only MODEL_CALL nodes reconstruct provider responses; validator receipts remain node evidence."
         }
       ]
+    },
+    "round_r178_dec03": {
+      "ceiling": 11,
+      "changes_used": 1,
+      "items": [
+        "R178-DEC03"
+      ],
+      "log": [
+        {
+          "item": "R178-DEC03",
+          "file": "core/learning/storage.py",
+          "summary": "Explicit tenant retention policy and bounded secret-free custody preparation; no implicit trust or default retention."
+        }
+      ]
     }
   },
   "baseline": {
