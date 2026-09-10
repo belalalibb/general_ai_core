@@ -805,7 +805,9 @@ def test_custody_adapter_capture_retry_and_fresh_recovery(database, quarantined)
         async with database[1]() as session:
             return [
                 (await session.execute(select(table))).mappings().all()
-                for table in (executions, execution_nodes, learning_samples, learning_sample_custody)
+                for table in (
+                    executions, execution_nodes, learning_samples, learning_sample_custody
+                )
             ]
 
     assert marker not in str(database[0].run(stored_rows()))
