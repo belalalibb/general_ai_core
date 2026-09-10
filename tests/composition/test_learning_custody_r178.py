@@ -246,3 +246,144 @@ def test_save_checks_current_policy_payload_and_revision(mode):
             with pytest.raises(LearningStorageError):
                 store.save(sample, {"version": 1}, **kwargs)
     assert sum(c[0] == "save" for c in repo.calls) == (mode in {"clean", "db_failure"})
+
+
+def execution_custody_fixture():
+    """Independent descriptor; synthetic unit fixture, not live-source proof."""
+    import hashlib
+
+    from core.contracts.execute import ExecutionStatus
+    from core.contracts.execution import Execution, ExecutionStrategy
+    from infrastructure.db.repositories.executions import ExecutionRecord
+
+    row, policy = custody_row()
+    row["source_kind"] = "execution"
+    row["descriptor_digest"] = hashlib.sha256(
+        json.dumps(
+            {
+                "tenant": str(policy.tenant_id),
+                "policy": str(policy.policy_id),
+                "rights": str(row["rights_ref"]),
+                "retention": 3600,
+                "source_kind": "execution",
+                "source": str(row["source_execution_id"]),
+                "content": row["content_digest"],
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    source = ExecutionRecord(
+        execution=Execution(
+            id=row["source_execution_id"],
+            tenant_id=policy.tenant_id,
+            user_id=uuid4(),
+            request_hash="unit-source",
+            status=ExecutionStatus.FAILED,
+            strategy=ExecutionStrategy.SINGLE,
+            cost_snapshot={"estimated_units": 0},
+            created_at=NOW - timedelta(days=1),
+            completed_at=NOW - timedelta(days=1),
+        ),
+        nodes=(),
+    )
+    request = args(row)
+    request.pop("actor_id")
+    request["source_execution_id"] = source.execution.id
+    return row, policy, source, request
+
+
+class ObservedSources:
+    def __init__(self, source):
+        self.source, self.calls, self.failure = source, [], None
+
+    async def get(self, tenant_id, execution_id):
+        self.calls.append((tenant_id, execution_id))
+        if self.failure:
+            raise self.failure
+        return self.source
+
+
+def execution_adapter(repo, bridge, policies, sources):
+    from apps.composition.learning import DurableLearningCustody
+
+    return DurableLearningCustody(
+        repository=repo, bridge=bridge, policies=policies, sources=sources, clock=lambda: NOW
+    )
+
+
+def test_execution_capture_reads_source_without_receipt_or_source_write(monkeypatch):
+    import apps.composition.learning as module
+
+    def refuse_receipt(*a, **kw):
+        pytest.fail("execution-born capture must not fabricate an ingestion subject")
+
+    monkeypatch.setattr(module, "build_external_ingestion_report", refuse_receipt)
+    row, policy, source, request = execution_custody_fixture()
+    repo, sources = ObservedRepository(row), ObservedSources(source)
+    with AsyncBridge() as bridge:
+        captured = execution_adapter(repo, bridge, (policy,), sources).capture_from_execution(
+            **request
+        )
+    assert sources.calls == [(policy.tenant_id, source.execution.id)]
+    assert len(repo.calls) == 1
+    call = repo.calls[0][1]
+    assert call["source_kind"] == "execution"
+    assert call["execution"] == source.execution and call["nodes"] == ()
+    assert call["sample"].source_execution_id == source.execution.id
+    assert captured.sample.id == row["sample_id"]  # stored identity, not candidate
+    assert captured.sample.verification_level.value == "RAW"
+    assert captured.sample.eligibility.value == "pending"  # failed source grants no trust
+    request["knowledge_value"]["nested"].append("mutated")
+    assert call["prepared"].payload["knowledge_value"] == {"nested": ["benign"]}
+
+
+@pytest.mark.parametrize("mode", ["unbound", "missing", "foreign", "wrong_id", "db_failure"])
+def test_execution_capture_unavailable_source_never_writes(mode):
+    from infrastructure.db.repositories.errors import ExecutionNotFound
+    from infrastructure.db.repositories.executions import ExecutionRecord
+
+    row, policy, source, request = execution_custody_fixture()
+    if mode in {"foreign", "wrong_id"}:
+        field = "tenant_id" if mode == "foreign" else "id"
+        source = ExecutionRecord(source.execution.model_copy(update={field: uuid4()}), ())
+    repo, sources = ObservedRepository(row), ObservedSources(source)
+    if mode == "missing":
+        sources.failure = ExecutionNotFound(source.execution.id)
+    elif mode == "db_failure":
+        sources.failure = ConnectionError("source database unavailable")
+    with AsyncBridge() as bridge:
+        store = execution_adapter(repo, bridge, (policy,), None if mode == "unbound" else sources)
+        error = ConnectionError if mode == "db_failure" else LearningStorageError
+        with pytest.raises(error):
+            store.capture_from_execution(**request)
+    assert repo.calls == []
+
+
+@pytest.mark.parametrize(
+    "missing", ["policy", "rights_ref", "idempotency_key", "source_execution_id"]
+)
+def test_execution_capture_requires_admission_before_source_io(missing):
+    row, policy, source, request = execution_custody_fixture()
+    repo, sources = ObservedRepository(row), ObservedSources(source)
+    policies = () if missing == "policy" else (policy,)
+    if missing != "policy":
+        request[missing] = None
+    with AsyncBridge() as bridge:
+        with pytest.raises(LearningStorageError):
+            execution_adapter(repo, bridge, policies, sources).capture_from_execution(**request)
+    assert repo.calls == [] and sources.calls == []
+
+
+def test_execution_capture_quarantines_and_propagates_write_failure():
+    row, policy, source, request = execution_custody_fixture()
+    marker = "ghp_" + "X" * 36
+    request["knowledge_value"] = {marker: marker}
+    repo, sources = ObservedRepository(row), ObservedSources(source)
+    repo.failure = ConnectionError("write unavailable")
+    with AsyncBridge() as bridge:
+        with pytest.raises(ConnectionError):
+            execution_adapter(repo, bridge, (policy,), sources).capture_from_execution(**request)
+    call = repo.calls[0][1]
+    assert call["prepared"].quarantined and call["prepared"].payload is None
+    assert marker not in repr(call)
