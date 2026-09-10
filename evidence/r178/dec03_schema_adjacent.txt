@@ -1,0 +1,12 @@
+......................................................F                  [100%]
+=================================== FAILURES ===================================
+____________ test_no_new_migration_needed_the_0010_table_is_reused _____________
+tests/composition/test_durable_evaluations_r177.py:202: in test_no_new_migration_needed_the_0010_table_is_reused
+    assert versions[-1].startswith("0018_"), versions[-1]
+E   AssertionError: 0019_learning_custody.py
+E   assert False
+E    +  where False = <built-in method startswith of str object at 0x7f2c009c9700>('0018_')
+E    +    where <built-in method startswith of str object at 0x7f2c009c9700> = '0019_learning_custody.py'.startswith
+=========================== short test summary info ============================
+FAILED tests/composition/test_durable_evaluations_r177.py::test_no_new_migration_needed_the_0010_table_is_reused
+1 failed, 54 passed in 1.61s
