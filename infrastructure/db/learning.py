@@ -9,16 +9,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, select, text
+from sqlalchemy import Select, and_, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.sql.elements import ColumnElement
 
-from core.contracts.base import utc_now
+from core.contracts.base import JsonObject, utc_now
 from core.contracts.execute import ExecutionStatus
 from core.contracts.execution import Execution, ExecutionNode, ExecutionNodeType
 from core.contracts.learning import LearningSample
+from core.learning.gates import PROMOTION_CONDITIONS, TRAINING_ELIGIBILITY_CONDITIONS
 from core.learning.storage import (
     LearningStorageConflict,
     LearningStorageError,
@@ -38,7 +41,7 @@ from infrastructure.db.tables import (
 )
 
 
-def _joined():
+def _joined() -> Select[Any]:
     return select(
         custody,
         learning_samples.c.eligibility,
@@ -79,6 +82,8 @@ class LearningCustodyRepository:
             "execution",
         }:
             raise LearningStorageError("invalid source binding")
+        if not isinstance(rights_ref, UUID) or not isinstance(idempotency_key, UUID):
+            raise LearningStorageError("explicit custody references required")
         if prepared.quarantined != (prepared.payload is None):
             raise LearningStorageError("invalid quarantine state")
         if prepared.payload is not None:
@@ -114,6 +119,13 @@ class LearningCustodyRepository:
                 text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
                 {"key": f"learning:{tenant}:{idempotency_key}"},
             )
+            actor = await session.scalar(
+                select(users.c.id).where(
+                    users.c.id == execution.user_id, users.c.tenant_id == tenant
+                )
+            )
+            if actor is None:
+                raise LearningStorageError("admitted actor unavailable")
             existing = (
                 (
                     await session.execute(
@@ -130,13 +142,6 @@ class LearningCustodyRepository:
                 if existing["descriptor_digest"] != descriptor:
                     raise LearningStorageConflict("idempotency descriptor conflict")
                 return dict(existing)
-            actor = await session.scalar(
-                select(users.c.id).where(
-                    users.c.id == execution.user_id, users.c.tenant_id == tenant
-                )
-            )
-            if actor is None:
-                raise LearningStorageError("admitted actor unavailable")
             if source_kind == "external":
                 if (
                     execution.status is not ExecutionStatus.SUCCEEDED
@@ -213,3 +218,126 @@ class LearningCustodyRepository:
             if row is None:
                 raise LearningStorageError("unknown learning sample")
             return dict(row)
+
+    async def list(self, tenant_id: UUID) -> tuple[dict[str, Any], ...]:
+        async with self._sessions() as session:
+            rows = (
+                (
+                    await session.execute(
+                        _joined()
+                        .where(custody.c.tenant_id == tenant_id)
+                        .order_by(custody.c.created_at, custody.c.sample_id)
+                    )
+                )
+                .mappings()
+                .all()
+            )
+            return tuple(dict(row) for row in rows)
+
+    async def save(
+        self, sample: LearningSample, state: JsonObject, *, expected_revision: int
+    ) -> int:
+        """CAS the lifecycle metadata, never payload/identity/policy. No secret snapshots."""
+        sample = LearningSample.model_validate(sample.model_dump())
+        allowed = {
+            "version",
+            "eligibility_verdicts",
+            "promotion_verdicts",
+            "evaluation_id",
+            "memory_id",
+        }
+        if set(state) - allowed or type(state.get("version")) is not int or state["version"] != 1:
+            raise LearningStorageError("unsupported custody state")
+        for field, names in (
+            ("eligibility_verdicts", TRAINING_ELIGIBILITY_CONDITIONS),
+            ("promotion_verdicts", PROMOTION_CONDITIONS),
+        ):
+            verdicts = state.get(field, {})
+            if (
+                not isinstance(verdicts, dict)
+                or set(verdicts) - set(names)
+                or any(type(v) is not bool for v in verdicts.values())
+            ):
+                raise LearningStorageError("invalid custody verdicts")
+        for field in ("evaluation_id", "memory_id"):
+            value = state.get(field)
+            if value is not None:
+                try:
+                    if not isinstance(value, str) or str(UUID(value)) != value:
+                        raise ValueError
+                except ValueError as exc:
+                    raise LearningStorageError("invalid custody reference") from exc
+        async with self._sessions.begin() as session:
+            row = (
+                await session.execute(
+                    update(custody)
+                    .where(
+                        custody.c.sample_id == sample.id,
+                        custody.c.tenant_id == sample.tenant_id,
+                        custody.c.source_execution_id == sample.source_execution_id,
+                        custody.c.revision == expected_revision,
+                        custody.c.revoked.is_(False),
+                        custody.c.quarantined.is_(False),
+                        custody.c.payload.is_not(None),
+                        custody.c.expires_at > func.clock_timestamp(),
+                    )
+                    .values(state=state, revision=custody.c.revision + 1)
+                    .returning(custody.c.revision)
+                )
+            ).first()
+            if row is None:
+                raise LearningStorageConflict("stale or unavailable learning sample")
+            await session.execute(
+                update(learning_samples)
+                .where(
+                    learning_samples.c.id == sample.id,
+                    learning_samples.c.tenant_id == sample.tenant_id,
+                    learning_samples.c.source_execution_id == sample.source_execution_id,
+                )
+                .values(
+                    eligibility=sample.eligibility.value,
+                    sanitization_state=sample.sanitization_state.value,
+                    verification_level=sample.verification_level.value,
+                    dataset_id=sample.dataset_id,
+                )
+            )
+            return int(row[0])
+
+    async def _invalidate(self, tenant_id: UUID, predicate: ColumnElement[bool]) -> int:
+        async with self._sessions.begin() as session:
+            ids = (
+                (
+                    await session.execute(
+                        update(custody)
+                        .where(
+                            custody.c.tenant_id == tenant_id,
+                            custody.c.revoked.is_(False),
+                            predicate,
+                        )
+                        .values(payload=None, revoked=True, revision=custody.c.revision + 1)
+                        .returning(custody.c.sample_id)
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if ids:
+                await session.execute(
+                    update(learning_samples)
+                    .where(
+                        learning_samples.c.tenant_id == tenant_id,
+                        learning_samples.c.id.in_(ids),
+                    )
+                    .values(eligibility="ineligible", sanitization_state="failed")
+                )
+            return len(ids)
+
+    async def expire(self, tenant_id: UUID, now: datetime) -> int:
+        """Operator policy sweep: erase expired payload, retain redacted immutable lineage."""
+        if now.utcoffset() is None:
+            raise LearningStorageError("storage clock must be timezone aware")
+        return await self._invalidate(tenant_id, custody.c.expires_at <= now)
+
+    async def revoke_policy(self, tenant_id: UUID, policy_id: UUID) -> int:
+        """Revoke existing custody without deleting sample, source or evaluation evidence."""
+        return await self._invalidate(tenant_id, custody.c.policy_id == policy_id)
