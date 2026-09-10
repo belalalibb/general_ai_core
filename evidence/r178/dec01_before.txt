@@ -1,0 +1,108 @@
+FFFFFFFFFFFFFF.F                                                         [100%]
+=================================== FAILURES ===================================
+____ test_real_replay_stores_immutable_results_and_new_reader_resolves_them ____
+tests/api/test_regression_evidence_r178.py:56: in test_real_replay_stores_immutable_results_and_new_reader_resolves_them
+    assert len(records) == 1
+E   assert 0 == 1
+E    +  where 0 = len(())
+_ test_successful_execution_with_failed_required_check_is_not_promotion_evidence _
+tests/api/test_regression_evidence_r178.py:72: in test_successful_execution_with_failed_required_check_is_not_promotion_evidence
+    assert resolve(world, store, execution_id).held is False
+E   AssertionError: assert True is False
+E    +  where True = EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('2cfd46b5-83e4-498e-a8c9-f6e9750f85f1'), reason='recorded scenario replay', level=None).held
+E    +    where EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('2cfd46b5-83e4-498e-a8c9-f6e9750f85f1'), reason='recorded scenario replay', level=None) = resolve(<tests.api.test_admin_api.World object at 0x7f8c7a496d50>, <apps.api.store.InMemoryExecutionStore object at 0x7f8c7a4979d0>, UUID('2cfd46b5-83e4-498e-a8c9-f6e9750f85f1'))
+____ test_legacy_status_and_replay_label_without_stored_evidence_is_refused ____
+tests/api/test_regression_evidence_r178.py:83: in test_legacy_status_and_replay_label_without_stored_evidence_is_refused
+    assert resolve(world, store, report.execution.id).held is False
+E   AssertionError: assert True is False
+E    +  where True = EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('1f2bbd52-b907-4554-bbae-eda12154239c'), reason='recorded scenario replay', level=None).held
+E    +    where EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('1f2bbd52-b907-4554-bbae-eda12154239c'), reason='recorded scenario replay', level=None) = resolve(<tests.api.test_admin_api.World object at 0x7f8c7a6934d0>, <apps.api.store.InMemoryExecutionStore object at 0x7f8c7a650050>, UUID('1f2bbd52-b907-4554-bbae-eda12154239c'))
+E    +      where UUID('1f2bbd52-b907-4554-bbae-eda12154239c') = Execution(id=UUID('1f2bbd52-b907-4554-bbae-eda12154239c'), tenant_id=UUID('24ce232c-4842-4146-9036-5f53116b9a18'), use...=datetime.timezone.utc), completed_at=datetime.datetime(2026, 9, 10, 15, 59, 10, 822115, tzinfo=datetime.timezone.utc)).id
+E    +        where Execution(id=UUID('1f2bbd52-b907-4554-bbae-eda12154239c'), tenant_id=UUID('24ce232c-4842-4146-9036-5f53116b9a18'), use...=datetime.timezone.utc), completed_at=datetime.datetime(2026, 9, 10, 15, 59, 10, 822115, tzinfo=datetime.timezone.utc)) = ExecutionReport(execution=Execution(id=UUID('1f2bbd52-b907-4554-bbae-eda12154239c'), tenant_id=UUID('24ce232c-4842-414...k'}, usage={}, error=None, latency_ms=None)),), status_history=(<ExecutionStatus.SUCCEEDED: 'succeeded'>,), usage=None).execution
+_______ test_modified_execution_provenance_cannot_reuse_evidence[output] _______
+tests/api/test_regression_evidence_r178.py:108: in test_modified_execution_provenance_cannot_reuse_evidence
+    assert resolve(world, store, execution_id).held is False
+E   AssertionError: assert True is False
+E    +  where True = EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('6058824a-29df-4469-b7ec-68e13a39f066'), reason='recorded scenario replay', level=None).held
+E    +    where EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('6058824a-29df-4469-b7ec-68e13a39f066'), reason='recorded scenario replay', level=None) = resolve(<tests.api.test_admin_api.World object at 0x7f8c7a700510>, <apps.api.store.InMemoryExecutionStore object at 0x7f8c7a7010f0>, UUID('6058824a-29df-4469-b7ec-68e13a39f066'))
+______ test_modified_execution_provenance_cannot_reuse_evidence[scenario] ______
+tests/api/test_regression_evidence_r178.py:108: in test_modified_execution_provenance_cannot_reuse_evidence
+    assert resolve(world, store, execution_id).held is False
+E   AssertionError: assert True is False
+E    +  where True = EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('92dc6e61-26a6-42cf-9945-a1d8652efebe'), reason='recorded scenario replay', level=None).held
+E    +    where EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('92dc6e61-26a6-42cf-9945-a1d8652efebe'), reason='recorded scenario replay', level=None) = resolve(<tests.api.test_admin_api.World object at 0x7f8c7a7003e0>, <apps.api.store.InMemoryExecutionStore object at 0x7f8c7a702ea0>, UUID('92dc6e61-26a6-42cf-9945-a1d8652efebe'))
+______ test_modified_execution_provenance_cannot_reuse_evidence[version] _______
+tests/api/test_regression_evidence_r178.py:108: in test_modified_execution_provenance_cannot_reuse_evidence
+    assert resolve(world, store, execution_id).held is False
+E   AssertionError: assert True is False
+E    +  where True = EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('858615e0-4f4b-491a-a984-304b4a4cf256'), reason='recorded scenario replay', level=None).held
+E    +    where EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('858615e0-4f4b-491a-a984-304b4a4cf256'), reason='recorded scenario replay', level=None) = resolve(<tests.api.test_admin_api.World object at 0x7f8c7a6c0b90>, <apps.api.store.InMemoryExecutionStore object at 0x7f8c7a6c16d0>, UUID('858615e0-4f4b-491a-a984-304b4a4cf256'))
+_______ test_modified_execution_provenance_cannot_reuse_evidence[checks] _______
+tests/api/test_regression_evidence_r178.py:108: in test_modified_execution_provenance_cannot_reuse_evidence
+    assert resolve(world, store, execution_id).held is False
+E   AssertionError: assert True is False
+E    +  where True = EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('d7b522df-3ebd-4b74-8776-3e2f21af8513'), reason='recorded scenario replay', level=None).held
+E    +    where EvidenceVerdict(condition='regression_pass', held=True, ref=UUID('d7b522df-3ebd-4b74-8776-3e2f21af8513'), reason='recorded scenario replay', level=None) = resolve(<tests.api.test_admin_api.World object at 0x7f8c7a547570>, <apps.api.store.InMemoryExecutionStore object at 0x7f8c7a545f20>, UUID('d7b522df-3ebd-4b74-8776-3e2f21af8513'))
+____________ test_missing_or_invalid_stored_record_denies[missing] _____________
+tests/api/test_regression_evidence_r178.py:115: in test_missing_or_invalid_stored_record_denies
+    assert len(original) == 1
+E   assert 0 == 1
+E    +  where 0 = len(())
+____________ test_missing_or_invalid_stored_record_denies[foreign] _____________
+tests/api/test_regression_evidence_r178.py:115: in test_missing_or_invalid_stored_record_denies
+    assert len(original) == 1
+E   assert 0 == 1
+E    +  where 0 = len(())
+_____________ test_missing_or_invalid_stored_record_denies[level] ______________
+tests/api/test_regression_evidence_r178.py:115: in test_missing_or_invalid_stored_record_denies
+    assert len(original) == 1
+E   assert 0 == 1
+E    +  where 0 = len(())
+_____________ test_missing_or_invalid_stored_record_denies[check] ______________
+tests/api/test_regression_evidence_r178.py:115: in test_missing_or_invalid_stored_record_denies
+    assert len(original) == 1
+E   assert 0 == 1
+E    +  where 0 = len(())
+__________ test_missing_or_invalid_stored_record_denies[fingerprint] ___________
+tests/api/test_regression_evidence_r178.py:115: in test_missing_or_invalid_stored_record_denies
+    assert len(original) == 1
+E   assert 0 == 1
+E    +  where 0 = len(())
+____ test_evidence_write_failure_never_returns_a_successful_replay_verdict _____
+tests/api/test_regression_evidence_r178.py:144: in test_evidence_write_failure_never_returns_a_successful_replay_verdict
+    with pytest.raises(ConnectionError):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ConnectionError
+_ test_unbacked_legacy_booleans_cannot_promote_even_with_compatibility_flag[False] _
+tests/api/test_regression_evidence_r178.py:168: in test_unbacked_legacy_booleans_cannot_promote_even_with_compatibility_flag
+    assert result["promoted"] is False
+E   assert True is False
+___ test_judgment_without_explicit_passing_checks_is_not_a_verification_pass ___
+tests/api/test_regression_evidence_r178.py:190: in test_judgment_without_explicit_passing_checks_is_not_a_verification_pass
+    assert resolver.evaluation(world.principal.tenant_id, source, record.id).held is False
+E   AssertionError: assert True is False
+E    +  where True = EvidenceVerdict(condition='offline_eval_pass', held=True, ref=UUID('801031f5-8bbe-4eb6-a861-89949a8c291c'), reason='recorded evaluation', level=<VerificationLevel.EVALUATED: 'EVALUATED'>).held
+E    +    where EvidenceVerdict(condition='offline_eval_pass', held=True, ref=UUID('801031f5-8bbe-4eb6-a861-89949a8c291c'), reason='recorded evaluation', level=<VerificationLevel.EVALUATED: 'EVALUATED'>) = evaluation(UUID('998a26cf-2f0e-468d-9115-48537f1520f3'), UUID('93041ac4-fd2a-4d52-ae9e-857bc3e4f4ef'), UUID('801031f5-8bbe-4eb6-a861-89949a8c291c'))
+E    +      where evaluation = <apps.api.promotion_evidence.PromotionEvidenceResolver object at 0x7f8c7a2f40f0>.evaluation
+E    +      and   UUID('998a26cf-2f0e-468d-9115-48537f1520f3') = Principal(tenant_id=UUID('998a26cf-2f0e-468d-9115-48537f1520f3'), user_id=UUID('ea1925a6-6f95-4ec3-91b4-58cf99af707c'), is_admin=True).tenant_id
+E    +        where Principal(tenant_id=UUID('998a26cf-2f0e-468d-9115-48537f1520f3'), user_id=UUID('ea1925a6-6f95-4ec3-91b4-58cf99af707c'), is_admin=True) = <tests.api.test_admin_api.World object at 0x7f8c7a67cd10>.principal
+E    +      and   UUID('801031f5-8bbe-4eb6-a861-89949a8c291c') = EvaluationRecord(id=UUID('801031f5-8bbe-4eb6-a861-89949a8c291c'), tenant_id=UUID('998a26cf-2f0e-468d-9115-48537f1520f3...graders=(GraderResult(type=<GraderType.SECURITY: 'security'>, name='review', passed=None, score=0.0, confidence=1.0),)).id
+=========================== short test summary info ============================
+FAILED tests/api/test_regression_evidence_r178.py::test_real_replay_stores_immutable_results_and_new_reader_resolves_them
+FAILED tests/api/test_regression_evidence_r178.py::test_successful_execution_with_failed_required_check_is_not_promotion_evidence
+FAILED tests/api/test_regression_evidence_r178.py::test_legacy_status_and_replay_label_without_stored_evidence_is_refused
+FAILED tests/api/test_regression_evidence_r178.py::test_modified_execution_provenance_cannot_reuse_evidence[output]
+FAILED tests/api/test_regression_evidence_r178.py::test_modified_execution_provenance_cannot_reuse_evidence[scenario]
+FAILED tests/api/test_regression_evidence_r178.py::test_modified_execution_provenance_cannot_reuse_evidence[version]
+FAILED tests/api/test_regression_evidence_r178.py::test_modified_execution_provenance_cannot_reuse_evidence[checks]
+FAILED tests/api/test_regression_evidence_r178.py::test_missing_or_invalid_stored_record_denies[missing]
+FAILED tests/api/test_regression_evidence_r178.py::test_missing_or_invalid_stored_record_denies[foreign]
+FAILED tests/api/test_regression_evidence_r178.py::test_missing_or_invalid_stored_record_denies[level]
+FAILED tests/api/test_regression_evidence_r178.py::test_missing_or_invalid_stored_record_denies[check]
+FAILED tests/api/test_regression_evidence_r178.py::test_missing_or_invalid_stored_record_denies[fingerprint]
+FAILED tests/api/test_regression_evidence_r178.py::test_evidence_write_failure_never_returns_a_successful_replay_verdict
+FAILED tests/api/test_regression_evidence_r178.py::test_unbacked_legacy_booleans_cannot_promote_even_with_compatibility_flag[False]
+FAILED tests/api/test_regression_evidence_r178.py::test_judgment_without_explicit_passing_checks_is_not_a_verification_pass
+15 failed, 1 passed in 1.93s
+
+PROCESS_EXIT=1
