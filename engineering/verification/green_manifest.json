@@ -559,7 +559,7 @@
     },
     "round_r178_dec03": {
       "ceiling": 11,
-      "changes_used": 5,
+      "changes_used": 6,
       "items": [
         "R178-DEC03"
       ],
@@ -588,6 +588,11 @@
           "item": "R178-DEC03",
           "file": "apps/api/ingestion.py",
           "summary": "Write-free genuine validator receipt builder for atomic custody composition; legacy recorder delegates with unchanged persistence behavior. Runtime binding remains open."
+        },
+        {
+          "item": "R178-DEC03",
+          "file": "apps/composition/learning.py",
+          "summary": "Explicit operator policy configuration and atomic custody adapter with safe decoded reads and availability-checked CAS writes; runtime/lifecycle binding remains open."
         }
       ]
     }
