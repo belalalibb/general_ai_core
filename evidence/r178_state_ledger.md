@@ -194,3 +194,26 @@ Backend Closure remains OPEN, sample restart/idempotency not yet implemented.
   policy/quarantine/idempotency/concurrency/failure tests → transactional durable
   sample/payload/recovery binding → actual runtime restart + full validation.
   Current A–K assessment reconciled. **Backend Closure NOT satisfied; R178 OPEN.**
+
+
+## R178-DEC-03 B APPROVED — implementation active
+
+Operator explicitly approved option B: explicit storage/retention policy, governed
+durable persistence, secret isolation without raw storage, operator-defined expiry,
+and fail-closed absent policy. Treat this as the final prerequisite, not another
+approval loop. Preserve trust/tenant/FK/rollback boundaries. Then live PostgreSQL,
+restart/recovery/idempotency, full regression, gateway and adversarial verification;
+no R178 completion or UI-ready claim without actual Backend Closure evidence.
+Recovered clean published `c59f0718`; authenticated repo identity/push verified;
+main remains `369cf37c`. Prior DEC-03 pending statements above are historical.
+
+Independent implementation budget `round_r178_dec03`, cap 11 production files:
+`core/learning/lifecycle.py`, `core/learning/storage.py`,
+`apps/composition/learning.py`, `infrastructure/db/learning.py`,
+`infrastructure/db/migrations/versions/0019_learning_custody.py`,
+`apps/api/ingestion.py`, `apps/api/app.py`, `apps/api/admin.py`,
+`apps/api/intake.py`, `apps/composition/runtime.py`,
+`infrastructure/db/migrations/env.py` (only if metadata discovery needs it).
+No earlier budget reused. Tests first; record actual results per bounded unit.
+Policy has no implicit tenant, rights grant or retention duration. Scan is not
+privacy/rights verification. Keep immutable redacted evidence on expiry/rollback.
