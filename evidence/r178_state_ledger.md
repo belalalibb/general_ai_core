@@ -165,3 +165,32 @@ response; validator output remains stored node evidence, not model inference.
 Existing P01 subject cap remains 5; freezing caller-owned JSON is inside its
 already-declared lifecycle.py scope. No schema, trust threshold or frozen edits.
 Backend Closure remains OPEN, sample restart/idempotency not yet implemented.
+
+
+## Current checkpoint — P01 durable closure OPEN (2026-09-10)
+
+- VERIFIED / TEST: `1ddc3f9b` fixed receipt/payload review defects. Corrected focused
+  run at `b9d9f55b`: `p01_subject_review_green.txt` 114 passed / 1 existing skip.
+  `p01_subject_review_after.txt` is a preserved COMMAND ERROR (wrong test path,
+  no tests ran), NOT passing evidence; the corrected artifact is authoritative.
+- VERIFIED / TEST: `p01_subject_full_gate.txt` at `b9d9f55b` = 3353/0/0/64,
+  governance PASS; gateway 194; original P01/P03 both pass. Saved at `43cf813a`.
+  Subject budget 5/5 and codec 1/1; historical budgets/frozen surfaces unchanged.
+- VERIFIED / LIVE + TEST: actual PostgreSQL subject/evaluation/tenant/FK/duplicate
+  checks pass; sample recovery fails. Further actual build_runtime_profile and
+  durable identity restart at `bffa5124`, saved `89e01dd3`, gives 2 passed/2 failed:
+  receipt/evaluation GETs succeed but sample GET is 404. No process-kill/network/
+  Alembic proof implied. `tests_live/r178/run_local_postgres.sh` is rerunnable.
+- Recovery: clean main `369cf37c` again, no venv or interrupted reconciliation;
+  recovered published `89e01dd3`, authenticated repo/push and OPEN PR #14 verified.
+  Only missing reconciliation recreated. No production code changed after the
+  saved 3353-pass gate; existing completed units are not reopened.
+- BLOCKED for protected data-governance writes: complete R178-DEC-03 option B
+  packet is `evidence/r178/dec02_ingestion_design.md` §8. P01 implementation is
+  already authorized; raw custody/quarantine/retention decisions are narrower and
+  were expressly left separate in the design. Do not serialize _SampleRecord
+  blindly, infer consent from scan success or invent a production retention TTL.
+- Exact next action: operator DEC-03 B decision → independent file scope →
+  policy/quarantine/idempotency/concurrency/failure tests → transactional durable
+  sample/payload/recovery binding → actual runtime restart + full validation.
+  Current A–K assessment reconciled. **Backend Closure NOT satisfied; R178 OPEN.**

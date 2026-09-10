@@ -1,6 +1,10 @@
 # R178-DEC-02 — external ingestion lifecycle design review
 
-Status: DESIGN REVIEW COMPLETE; implementation NOT performed. Authority: operator
+Sections 1–7 describe the HISTORICAL design unit. P01 implementation is now
+authorized; genuine-subject/shared-evaluation code is published in PR #14.
+Section 8 is a new, narrower protected payload-custody decision.
+
+Historical status: DESIGN REVIEW COMPLETE; implementation NOT performed. Authority: operator
 approved option B, design review first. No evaluation-store switch, schema change,
 fake execution, constraint removal, data migration or training is part of this unit.
 
@@ -157,3 +161,103 @@ transaction/receipt design over existing ports, with per-row subject semantics
 and rights/retention inputs specified. No production ingestion rewiring in this
 review. P01 remains a known gap; universal learning/model-training readiness is
 not claimed. DEC-01 implementation and its green gate do not close DEC-02 runtime.
+
+
+## 8. R178-DEC-03 — durable payload custody, quarantine and retention
+
+**Status: BLOCKED / STATIC + LIVE + TEST for the protected choice below only.**
+P01 IMPLEMENTATION is already authorized. This is NOT another request to approve
+DEC-02 implementation or reopen DEC-01. The choice now required is what raw data
+may become durable and its retention/revocation policy. Section 6 explicitly
+reserved retention policy and irreversible processing; the continuing mission
+also reserves major data-governance decisions to the operator.
+
+### New evidence and why a simple snapshot is unsafe
+
+- VERIFIED / LIVE + TEST: `p01_runtime_restart_red.txt`, code `bffa5124`, saved
+  `89e01dd3`: PostgreSQL 17.11, actual build_runtime_profile, real durable identity,
+  capture/evaluate, disposal of engine/bridge, then a newly composed runtime using
+  the SAME durable session. Execution and evaluation GETs succeed; sample GET is
+  404. Two restart tests fail, two FK/tenant/append-integrity tests pass. This is
+  real DB + ASGI, NOT a network/process-kill test or Alembic rehearsal.
+- VERIFIED / TEST: flagged-batch acceptance in the 3353-pass full gate proves raw
+  flagged candidates stay tracked in process, RAW/PENDING, with clean-review
+  refusal. Their execution receipts contain hashes/counts, not payloads.
+- INFERRED / STATIC: learning_samples lacks raw key/value, provenance and verdict
+  snapshots. Serializing _SampleRecord wholesale would newly persist unresolved
+  secret material; even scan paths may contain caller-controlled key text.
+- A regex-clean scan does not establish privacy, ownership, consent or a retention
+  period. Putting payload into execution JSON would expand receipt exposure;
+  using memory as a raw training-source store would violate memory != training data.
+
+### Options
+
+| Option | Result | Benefit | Limitation / risk |
+|---|---|---|---|
+| A | Persist existing sample metadata only; missing payload remains unavailable | No new raw-data custody | Full lifecycle/re-evaluation recovery remains incomplete; cannot claim Backend Closure. |
+| B — recommended | Explicit policy-governed durable payload companion, metadata-only quarantine, finite retention/revocation | Can support safe recovery and exact lineage | Additive schema, policy admission and coordinated lifecycle writes; missing policy must refuse durable payload admission. |
+| C — rejected | Unconditionally serialize raw sample/scan state to JSONB or execution metadata | Smallest patch | Unbounded flagged/secret-data persistence and missing rights/retention authority; not safe. |
+
+### Exact option B envelope requiring authorization
+
+1. Preserve learning_samples, all existing FKs/CHECKs, append-only evaluations and
+   frozen LearningSample fields. Add ONE infrastructure-owned payload/provenance/
+   lifecycle-revision companion, not another evaluation store. No historical
+   synthetic executions or fabricated provenance backfills.
+2. Persist payload only under an explicit tenant-admitted storage-policy reference,
+   source/rights attestation reference and finite expiry. **No default rights grant
+   or assistant-selected production TTL.** Missing/foreign/expired/revoked policy
+   refuses durable payload admission. Policy values are deployment input, not
+   inferred from scan success; attestations are not proof of legal ownership or
+   authorization to train.
+3. Unresolved secret findings yield metadata-only durable quarantine: opaque IDs,
+   digest/counts/closed reason codes; never raw flagged content, raw finding paths
+   or secret-shaped keys in receipts/audit/DB. Corrected content is re-ingested as
+   a new revision, still RAW/PENDING. Missing content must never restore as empty,
+   clean, eligible or verified data.
+4. Expiry/revocation disables further source eligibility and reconciles derived
+   retrieval copies while preserving redacted immutable evidence. Payload deletion
+   is not evidence deletion. No production purge/migration/processing is authorized
+   merely by implementing the code; rollout still needs deployment policy inputs.
+5. Tenant + idempotency key + exact descriptor/content revision returns the SAME
+   result after response loss/restart; changed content/policy conflicts. Database
+   uniqueness/transaction owns the decision; execution upsert is not create-once
+   authority. No cross-tenant deduplication or actor borrowing.
+6. Commit subject/sample/payload linkage atomically when all live in PostgreSQL.
+   Cross-store effects use the EXISTING outbox/recovery pattern. Lifecycle revision
+   checks prevent stale writers; failures never publish advanced trust. Sequential
+   independent writes must not be described as one transaction.
+7. Unconfigured durable custody is fail-closed and explicitly reported, not silent
+   in-process success. Preserve the in-memory demo's documented non-durability.
+   No training, live model promotion, provider spend or frozen/UI changes included.
+
+### Implementation dependency plan and accounting
+
+After approval: policy/codec failing tests → additive schema/repository → genuine
+transactional coordinator → lifecycle read/write/recovery binding → actual runtime
+and API/intake composition → live retry/concurrency/crash probes → full validation.
+Record a new independent production-file list/cap BEFORE editing. Expected areas:
+core learning ports/service (pure), infrastructure metadata/migration/repository,
+apps ingestion/composition/runtime/request admission. Old 5/5 subject + 1/1 codec
+budgets stay closed. Do not introduce a second state journal or evaluation store.
+
+### Acceptance, risks, rollout and rollback
+
+- Both committed restart failures must turn green through actual runtime storage,
+  NOT a test-only map hydrator; add true process-restart and interrupted-write tests.
+- Lost response, same/different-content concurrent retries, foreign tenant/row,
+  malformed/unsupported snapshot, stale writer, evaluation append/state-commit
+  failure, expiry/revocation and quarantined-source recovery must be exercised.
+- Secret sentinel absent from all persisted rows/receipts/logs. Missing policy
+  never confers rights/eligibility; unavailable payload never becomes clean data.
+- Migration forward/compatibility rehearsal in the local disposable DB before any
+  rollout. Rollback disables new intake, preserves evidence and uses a fail-closed
+  reader; do not DROP populated stores or restore permissive promotion.
+- Full unchanged hermetic gate, gateway, original P01/P03 and live DB suite pass
+  together. Browser/two-account provider and trained-model limitations stay explicit.
+
+**Decision requested:** approve R178-DEC-03 option B's custody/quarantine/retention
+and fail-closed admission envelope for tests-first implementation; retention values
+remain explicit operator configuration. Option A keeps Backend Closure OPEN;
+option C is rejected. Only this protected data-governance write path is paused;
+read-only analysis, acceptance tests and repository reconciliation remain allowed.

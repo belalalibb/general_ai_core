@@ -1,65 +1,72 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current post-authorization A–K checkpoint (supersedes historical status below)
+## Current P01 A–K checkpoint — Backend Closure OPEN
 
-**A — State:** DEC-01 implemented and verified; DEC-02 design review delivered,
-not runtime ingestion implementation. R177 remains closed. PR #14 contains the
-bounded work; no deployment or main-branch merge performed.
+This section supersedes the earlier DEC-only checkpoint and historical findings.
+P01 IMPLEMENTATION was authorized and acted on; it was not left design-only.
 
-**B — Verified strengths:** `decisions_final_gate.txt` at `002f19af` records
-3342 passed / 0 failed/errors / 64 skipped, all governance checks PASS, exit 0.
-`decisions_gateway.txt`: 194 passed, exit 0. Both captured at `04bc9ea1`.
-`dec01_codec_recheck.txt`: 21 focused tests including real persistence codecs
-(pass and fail cases); these are hermetic, not live PostgreSQL tests.
+**A — State (VERIFIED / CAPTURED):** Published `89e01dd3` recovered after another
+reset. Main remains `369cf37c`; R177 closed; PR #14 OPEN, not merged/deployed.
+Interrupted reconciliation was absent and recreated, not assumed published.
 
-**C — Gaps:** Original P03 is now VERIFIED (failed required scenario checks no
-longer establish regression_pass). P01 remains FAILED: external-sample evaluation
-still uses a private in-memory store. See `dec01_adversarial.txt`; its exit 1 is
-honest because P01 remains, not a hidden regression-suite failure.
+**B — Strengths (VERIFIED / TEST):** `p01_subject_full_gate.txt`, snapshot `b9d9f55b`:
+**3353 passed / 0 failed/errors / 64 skipped**, all governance/static gates PASS.
+Gateway **194 passed** (`p01_subject_gateway.txt`). Focused review **114 passed /
+1 existing skip** (`p01_subject_review_green.txt`). No test threshold, security
+exception, frozen surface or old budget weakened. No newer production changes.
 
-**D — Changes:** ScenarioService appends actual required-check results through
-the same EvaluationStorePort read by promotion. Evidence is bound to the stored
-tenant/execution/scenario/input/output and check-policy version. A deterministic
-per-run record ID prevents choosing a later contradictory append. Missing, legacy,
-mismatched or failed evidence denies. Compatibility flags no longer bypass
-artifact-backed verification; pure model scores alone do not count as passing
-checks. Positive promotion and downstream refusal tests still exercise their
-original behavior with real supporting evidence. Re-review found and fixed
-HTTP duplicate-check validation before final verification.
+**C — Gap (FAILED / LIVE + TEST):** Original P01 shared-evaluation visibility and
+original P03 now pass (`p01_subject_adversarial.txt`, exit 0). Durable P01 does NOT:
+`p01_runtime_restart_red.txt` has **2 passed / 2 failed**, exit 1. Both recomposition
+and actual durable runtime lose the sample (404); source/evaluation GETs survive.
+No xfail/skip masks these acceptance failures.
 
-**E — Blockers:** No live DB/restart, browser or two-account provider verification
-claimed. The unchanged two not_evaluated entries remain separate from PASS.
-External ingestion's per-row subject, durable sample/receipt and recovery design
-must precede any evaluation-store switch. No FK or schema was changed.
+**D — Changes (VERIFIED / TEST):** Genuine per-row validator scan receipts (no
+provider inference), admitted actor forwarding, shared append-only evaluations,
+write-failure containment. Review fixed caller payload aliasing and durable codec
+fabrication of provider responses for validator nodes. Positive learning/reach
+fixtures retain their assertions with explicit actors and honest receipt counts.
 
-**F — AI/model readiness:** Normal model/provider routing remains intact; no
-training runner, native trained candidate, live teacher quality or weight
-promotion/rollback proof is claimed by this unit.
+**E — Protected boundary (BLOCKED / STATIC + LIVE):** Full recovery needs raw
+payload/provenance/verdict custody; learning_samples only carries identity/states.
+Blind snapshots persist flagged data. New focused **R178-DEC-03 B** packet in
+`dec02_ingestion_design.md` §8 requests governed custody, metadata-only quarantine,
+explicit retention/revocation and fail-closed admission. P01 implementation
+permission itself is NOT pending again. No schema/raw-data store/purge introduced.
 
-**G — Universal learning:** Verification integrity improved; durable external
-learning and the complete experience-to-training chain remain incomplete. Memory
-and a dataset UUID are not a versioned training dataset or model adaptation.
+**F — AI/model readiness (UNVERIFIED / STATIC beyond existing tests):** Routing
+remains hermetically covered, not new live inference or model training proof.
+Native models remain ordinary Core-governed routable resources, not authorities.
+No trained weights, candidate quality, live teacher or weight-promotion claim.
 
-**H — Evolution:** `dec02_ingestion_design.md` reviews actual validator-operation
-representation, per-row provenance, rights/retention, idempotency, transactions,
-crash recovery, partial batches and rollback. `dec02_contract_review.txt` checks
-existing contract/schema assumptions. No successful execution was invented.
+**G — Learning chain (INFERRED / STATIC with measured links):** Capture/shared
+verification linkage VERIFIED here; durable sample/eligibility recovery FAILED.
+Privacy/rights/sanitization remain independent. Dataset UUID != versioned dataset.
+Training → candidate → trained-model evaluation → shadow/canary → promotion/rollback
+is UNVERIFIED, not implied by software tests. Memory != training data; successful
+execution != verified learning.
 
-**I — Decisions:** Both operator authorizations honored: DEC-01 option B delivered;
-DEC-02 option B design review complete, without silently expanding to storage
-implementation or production data migration. Earlier decision packets below are
-historical rationale, NOT outstanding approval requests for these completed units.
+**H — Recovery (VERIFIED / LIVE + TEST within limits):** Local PostgreSQL 17.11
+proves actual subject/evaluation persistence, fresh-store reads, real FK/duplicate
+refusal, tenant isolation, durable identity and actual-runtime sample-loss failure.
+ASGI transport and metadata-created tables only; no HTTP-network/process-kill,
+Alembic rehearsal, pgvector, production concurrency or provider-live proof claimed.
+The two unchanged not_evaluated entries remain separate from PASS.
 
-**J — Safe continuation:** Prepare the next tests-first ingestion implementation
-proposal using the reviewed prerequisites; preserve fail-closed legacy behavior,
-FKs, tenant isolation and actual source rights. No training or live promotion.
+**I — Decisions:** DEC-01 implemented; DEC-02 design and subsequent P01 implementation
+authority honored. DEC-03 is a new, narrower data-governance choice left unselected
+by the prior review (which reserved retention separately), not a repeated general
+implementation approval request. Full options/risks/acceptance/rollback in §8.
 
-**K — Exact next action:** Reconcile final ledger/PR, then specify per-row subject
-and durable transaction/receipt acceptance tests before any external-ingestion
-store rewiring. This completes the authorized bounded units, not the whole
-continuous-evolution mission or every readiness gap. Unit histories remain on
-`r178_verified_units` (initial work) and `r178_decisions_verified_units` (decisions)
-when the PR is squashed; evidence snapshot hashes remain resolvable there.
+**J — Safe continuation:** Keep the real restart RED. Re-run via
+`bash tests_live/r178/run_local_postgres.sh`; binary bootstrap instructions are in
+that runner. No ambient DB/provider credentials, raw secrets in receipts, fake
+historical executions, FK removal, default rights grant, training or promotion.
+
+**K — Exact next action:** DEC-03 B decision → independent production scope →
+policy/quarantine/idempotency/failure acceptance → governed transactional sample/
+payload/recovery binding → actual runtime restart + full gate/gateway/adversarial/
+live checks. **P01 durable closure and R178 remain OPEN until all pass.**
 
 ---
 
