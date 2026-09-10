@@ -1,0 +1,81 @@
+FFFFFFFFFFFFF                                                            [100%]
+=================================== FAILURES ===================================
+____________ test_absent_policy_denies_before_retaining_any_payload ____________
+tests/learning/test_storage_policy_r178.py:30: in test_absent_policy_denies_before_retaining_any_payload
+    from core.learning.storage import LearningStorageError
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+____________ test_foreign_policy_and_missing_rights_reference_deny _____________
+tests/learning/test_storage_policy_r178.py:37: in test_foreign_policy_and_missing_rights_reference_deny
+    from core.learning.storage import LearningStorageError
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+____________ test_retention_must_be_explicit_positive_integer[None] ____________
+tests/learning/test_storage_policy_r178.py:46: in test_retention_must_be_explicit_positive_integer
+    from core.learning.storage import RetentionPolicy
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+_____________ test_retention_must_be_explicit_positive_integer[0] ______________
+tests/learning/test_storage_policy_r178.py:46: in test_retention_must_be_explicit_positive_integer
+    from core.learning.storage import RetentionPolicy
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+_____________ test_retention_must_be_explicit_positive_integer[-1] _____________
+tests/learning/test_storage_policy_r178.py:46: in test_retention_must_be_explicit_positive_integer
+    from core.learning.storage import RetentionPolicy
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+____________ test_retention_must_be_explicit_positive_integer[True] ____________
+tests/learning/test_storage_policy_r178.py:46: in test_retention_must_be_explicit_positive_integer
+    from core.learning.storage import RetentionPolicy
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+____________ test_retention_must_be_explicit_positive_integer[1.5] _____________
+tests/learning/test_storage_policy_r178.py:46: in test_retention_must_be_explicit_positive_integer
+    from core.learning.storage import RetentionPolicy
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+____________ test_retention_must_be_explicit_positive_integer[inf] _____________
+tests/learning/test_storage_policy_r178.py:46: in test_retention_must_be_explicit_positive_integer
+    from core.learning.storage import RetentionPolicy
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+__________ test_clean_payload_has_explicit_expiry_but_no_trust_grant ___________
+tests/learning/test_storage_policy_r178.py:53: in test_clean_payload_has_explicit_expiry_but_no_trust_grant
+    prepared = prepare()
+               ^^^^^^^^^
+tests/learning/test_storage_policy_r178.py:13: in prepare
+    from core.learning.storage import RetentionPolicy, prepare_capture
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+___________ test_secret_in_value_or_key_is_metadata_only_quarantine ____________
+tests/learning/test_storage_policy_r178.py:65: in test_secret_in_value_or_key_is_metadata_only_quarantine
+    prepared = prepare(value)
+               ^^^^^^^^^^^^^^
+tests/learning/test_storage_policy_r178.py:13: in prepare
+    from core.learning.storage import RetentionPolicy, prepare_capture
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+________________ test_knowledge_key_secret_is_also_quarantined _________________
+tests/learning/test_storage_policy_r178.py:75: in test_knowledge_key_secret_is_also_quarantined
+    prepared = prepare(knowledge_key="ghp_" + "X" * 36)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_storage_policy_r178.py:13: in prepare
+    from core.learning.storage import RetentionPolicy, prepare_capture
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+___________ test_payload_is_detached_and_digest_changes_with_content ___________
+tests/learning/test_storage_policy_r178.py:81: in test_payload_is_detached_and_digest_changes_with_content
+    prepared = prepare(value)
+               ^^^^^^^^^^^^^^
+tests/learning/test_storage_policy_r178.py:13: in prepare
+    from core.learning.storage import RetentionPolicy, prepare_capture
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+________________ test_nonfinite_or_oversized_content_is_refused ________________
+tests/learning/test_storage_policy_r178.py:88: in test_nonfinite_or_oversized_content_is_refused
+    from core.learning.storage import LearningStorageError
+E   ModuleNotFoundError: No module named 'core.learning.storage'
+=========================== short test summary info ============================
+FAILED tests/learning/test_storage_policy_r178.py::test_absent_policy_denies_before_retaining_any_payload
+FAILED tests/learning/test_storage_policy_r178.py::test_foreign_policy_and_missing_rights_reference_deny
+FAILED tests/learning/test_storage_policy_r178.py::test_retention_must_be_explicit_positive_integer[None]
+FAILED tests/learning/test_storage_policy_r178.py::test_retention_must_be_explicit_positive_integer[0]
+FAILED tests/learning/test_storage_policy_r178.py::test_retention_must_be_explicit_positive_integer[-1]
+FAILED tests/learning/test_storage_policy_r178.py::test_retention_must_be_explicit_positive_integer[True]
+FAILED tests/learning/test_storage_policy_r178.py::test_retention_must_be_explicit_positive_integer[1.5]
+FAILED tests/learning/test_storage_policy_r178.py::test_retention_must_be_explicit_positive_integer[inf]
+FAILED tests/learning/test_storage_policy_r178.py::test_clean_payload_has_explicit_expiry_but_no_trust_grant
+FAILED tests/learning/test_storage_policy_r178.py::test_secret_in_value_or_key_is_metadata_only_quarantine
+FAILED tests/learning/test_storage_policy_r178.py::test_knowledge_key_secret_is_also_quarantined
+FAILED tests/learning/test_storage_policy_r178.py::test_payload_is_detached_and_digest_changes_with_content
+FAILED tests/learning/test_storage_policy_r178.py::test_nonfinite_or_oversized_content_is_refused
+13 failed in 0.32s
