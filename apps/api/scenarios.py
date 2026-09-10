@@ -37,7 +37,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from apps.api.regression_evidence import build_record, replay_metadata
 from core.contracts.base import BoundedStr, ContractModel, JsonObject, utc_now
@@ -89,6 +89,13 @@ class ScenarioSaveRequest(ContractModel):
     name: BoundedStr
     ask: BoundedStr
     checks: list[str] = Field(default_factory=lambda: sorted(SCENARIO_CHECKS), min_length=1)
+
+    @field_validator("checks")
+    @classmethod
+    def _unique_checks(cls, checks: list[str]) -> list[str]:
+        if len(checks) != len(set(checks)):
+            raise ValueError("scenario requires unique checks")
+        return checks
 
 
 @dataclass(frozen=True)
