@@ -1,5 +1,6 @@
 """P01 acceptance: real external subjects, shared evidence and failure containment."""
 
+import json
 from uuid import UUID, uuid4
 
 import httpx
@@ -107,3 +108,136 @@ def test_foreign_tenant_cannot_read_external_subject():
     store.get(world.principal.tenant_id, UUID(sample["source_execution_id"]))
     with pytest.raises(KeyError):
         store.get(uuid4(), UUID(sample["source_execution_id"]))
+
+
+def test_flagged_batch_has_honest_secret_free_per_row_receipts():
+    world = World()
+    store = InMemoryExecutionStore()
+    app = _app(world, strict=True, store=store)
+    marker = "ghp_" + "X" * 36
+    response = run(
+        _post(
+            app,
+            "/v1/admin/learning/intake",
+            {
+                "format": "json",
+                "content": json.dumps(
+                    [{"key": "bad", "value": marker}, {"key": "good", "value": "fact"}]
+                ),
+                "expectations": {"required_columns": ["key", "value"], "key_column": "key"},
+            },
+        )
+    )
+    assert response.status_code == 201
+    assert response.json()["flagged"] == 1
+    lifecycle = app.state.learning_lifecycle_service
+    samples = lifecycle.list_samples(world.principal.tenant_id)
+    assert len(samples) == 2
+    assert len({s.source_execution_id for s in samples}) == 2
+    receipts = [store.get(world.principal.tenant_id, s.source_execution_id) for s in samples]
+    for sample, receipt in zip(samples, receipts, strict=True):
+        node = receipt.nodes[0].node
+        assert node.input_ref["sample_id"] == str(sample.id)
+        assert node.output_ref["scan_completed"] is True
+        assert sample.verification_level.value == "RAW"
+        assert sample.eligibility.value == "pending"
+        assert marker not in node.model_dump_json()
+        assert "value" not in node.input_ref and "findings" not in node.output_ref
+    assert receipts[0].nodes[0].node.output_ref["scan_clean"] is False
+    assert receipts[1].nodes[0].node.output_ref["scan_clean"] is True
+    refusal = run(_post(app, f"{SAMPLES}/{samples[0].id}/sanitize", {"passed": True}))
+    assert refusal.status_code == 200 and refusal.json()["sanitized"] is False
+
+
+def test_quarantined_batch_creates_no_ingestion_subjects():
+    world = World()
+    store = InMemoryExecutionStore()
+    app = _app(world, strict=True, store=store)
+    response = run(
+        _post(
+            app,
+            "/v1/admin/learning/intake",
+            {
+                "format": "json",
+                "content": "not json",
+                "expectations": {"required_columns": ["key"], "key_column": "key"},
+            },
+        )
+    )
+    assert response.status_code == 422
+    assert store.list(world.principal.tenant_id) == ()
+    assert app.state.learning_lifecycle_service.list_samples(world.principal.tenant_id) == ()
+
+
+def test_composed_direct_capture_cannot_borrow_foreign_demo_actor():
+    from core.learning.errors import LearningError
+
+    world = World()
+    store = InMemoryExecutionStore()
+    app = _app(world, strict=True, store=store)
+    with pytest.raises(LearningError, match="admitted actor"):
+        app.state.learning_lifecycle_service.capture_external(
+            uuid4(), knowledge_key="foreign", knowledge_value={"fact": "x"}
+        )
+    assert store.list(world.principal.tenant_id) == ()
+
+
+def test_authenticated_capture_records_resolved_actor_not_demo_identity():
+    from tests.api.test_self_evolution_r161 import _admin, _profile
+
+    profile = _profile()
+    headers, tenant = _admin(profile)
+
+    async def request():
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=profile.app), base_url="http://test"
+        ) as client:
+            return await client.post(
+                SAMPLES,
+                headers=headers,
+                json={
+                    "knowledge_key": "authenticated",
+                    "knowledge_value": {"fact": "x"},
+                },
+            )
+
+    response = run(request())
+    assert response.status_code == 201
+    session = profile.identity.resolve_session(headers["Authorization"].split(" ", 1)[1])
+    receipt = profile.store.get(tenant, UUID(response.json()["source_execution_id"]))
+    assert receipt.execution.user_id == session.user_id
+    assert receipt.execution.tenant_id == session.tenant_id
+
+
+def test_caller_mutation_cannot_change_admitted_content_under_existing_receipt():
+    world = World()
+    app = _app(world, strict=True)
+    service = app.state.learning_lifecycle_service
+    payload = {"nested": {"answer": "original"}}
+    first = service.capture_external(
+        world.principal.tenant_id, knowledge_key="stable", knowledge_value=payload
+    )
+    payload["nested"]["answer"] = "changed"
+    service.capture_external(
+        world.principal.tenant_id,
+        knowledge_key="stable",
+        knowledge_value={"nested": {"answer": "original"}},
+    )
+    assert service.derived_signals(world.principal.tenant_id, first.id)["deduplicated"] is False
+
+
+def test_validator_receipt_reconstruction_does_not_invent_provider_response():
+    from apps.composition.durability import report_from_record
+    from infrastructure.db.repositories.executions import ExecutionRecord
+
+    world = World()
+    store = InMemoryExecutionStore()
+    app = _app(world, strict=True, store=store)
+    sample = capture(app)
+    original = store.get(world.principal.tenant_id, UUID(sample["source_execution_id"]))
+    recovered = report_from_record(
+        ExecutionRecord(execution=original.execution, nodes=tuple(n.node for n in original.nodes))
+    )
+    assert recovered.nodes[0].response is None
+    assert recovered.nodes[0].node == original.nodes[0].node
+    assert recovered.final_output == original.final_output
