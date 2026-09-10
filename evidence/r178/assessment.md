@@ -1,4 +1,69 @@
-# R178 — bounded engineering checkpoint and decision packets
+# R178 — engineering checkpoint and decision evidence
+
+## Current post-authorization A–K checkpoint (supersedes historical status below)
+
+**A — State:** DEC-01 implemented and verified; DEC-02 design review delivered,
+not runtime ingestion implementation. R177 remains closed. PR #14 contains the
+bounded work; no deployment or main-branch merge performed.
+
+**B — Verified strengths:** `decisions_final_gate.txt` at `002f19af` records
+3342 passed / 0 failed/errors / 64 skipped, all governance checks PASS, exit 0.
+`decisions_gateway.txt`: 194 passed, exit 0. Both captured at `04bc9ea1`.
+`dec01_codec_recheck.txt`: 21 focused tests including real persistence codecs
+(pass and fail cases); these are hermetic, not live PostgreSQL tests.
+
+**C — Gaps:** Original P03 is now VERIFIED (failed required scenario checks no
+longer establish regression_pass). P01 remains FAILED: external-sample evaluation
+still uses a private in-memory store. See `dec01_adversarial.txt`; its exit 1 is
+honest because P01 remains, not a hidden regression-suite failure.
+
+**D — Changes:** ScenarioService appends actual required-check results through
+the same EvaluationStorePort read by promotion. Evidence is bound to the stored
+tenant/execution/scenario/input/output and check-policy version. A deterministic
+per-run record ID prevents choosing a later contradictory append. Missing, legacy,
+mismatched or failed evidence denies. Compatibility flags no longer bypass
+artifact-backed verification; pure model scores alone do not count as passing
+checks. Positive promotion and downstream refusal tests still exercise their
+original behavior with real supporting evidence. Re-review found and fixed
+HTTP duplicate-check validation before final verification.
+
+**E — Blockers:** No live DB/restart, browser or two-account provider verification
+claimed. The unchanged two not_evaluated entries remain separate from PASS.
+External ingestion's per-row subject, durable sample/receipt and recovery design
+must precede any evaluation-store switch. No FK or schema was changed.
+
+**F — AI/model readiness:** Normal model/provider routing remains intact; no
+training runner, native trained candidate, live teacher quality or weight
+promotion/rollback proof is claimed by this unit.
+
+**G — Universal learning:** Verification integrity improved; durable external
+learning and the complete experience-to-training chain remain incomplete. Memory
+and a dataset UUID are not a versioned training dataset or model adaptation.
+
+**H — Evolution:** `dec02_ingestion_design.md` reviews actual validator-operation
+representation, per-row provenance, rights/retention, idempotency, transactions,
+crash recovery, partial batches and rollback. `dec02_contract_review.txt` checks
+existing contract/schema assumptions. No successful execution was invented.
+
+**I — Decisions:** Both operator authorizations honored: DEC-01 option B delivered;
+DEC-02 option B design review complete, without silently expanding to storage
+implementation or production data migration. Earlier decision packets below are
+historical rationale, NOT outstanding approval requests for these completed units.
+
+**J — Safe continuation:** Prepare the next tests-first ingestion implementation
+proposal using the reviewed prerequisites; preserve fail-closed legacy behavior,
+FKs, tenant isolation and actual source rights. No training or live promotion.
+
+**K — Exact next action:** Reconcile final ledger/PR, then specify per-row subject
+and durable transaction/receipt acceptance tests before any external-ingestion
+store rewiring. This completes the authorized bounded units, not the whole
+continuous-evolution mission or every readiness gap. Unit histories remain on
+`r178_verified_units` (initial work) and `r178_decisions_verified_units` (decisions)
+when the PR is squashed; evidence snapshot hashes remain resolvable there.
+
+---
+
+## Historical initial assessment and decision packets (pre-authorization)
 
 Scope: current post-R177 mission; R177 remains CLOSED. This is an initial
 cross-system checkpoint, not certification of every platform subsystem.
