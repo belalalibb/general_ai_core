@@ -1,0 +1,8 @@
+Initial live run failed only on duplicate fixture plan name; unique per-world plan preserves the database constraint.
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+....                                                                     [100%]
+4 passed, 30 deselected in 3.32s
+process_exit=0
