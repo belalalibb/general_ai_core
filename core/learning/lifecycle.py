@@ -25,9 +25,10 @@ evaluation delegates verbatim to the EXISTING policy service.
 
 Recorded design decisions:
 
-- SAMPLE STATE lives here in a tenant-keyed in-process map (same posture
-  as InMemoryEvaluationStore / ScenarioService: durable binding is a
-  later conscious slice; the SHAPE is the frozen contract).
+- SAMPLE STATE defaults to a tenant-keyed in-process map for uncomposed
+  fixtures. Optional custody owns durable capture/read/CAS; durable content
+  is never mirrored in that map. The frozen sample contract is unchanged.
+  Durable GOLD/derived retrieval stays closed pending copy reconciliation.
 - TENANT ISOLATION: every read/write is keyed (tenant_id, sample_id);
   absent and foreign-tenant ids are the SAME error (anti-enumeration,
   20 §6 posture — mirrors ScenarioService).
@@ -70,7 +71,7 @@ from uuid import UUID, uuid4
 
 from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import JsonObject, utc_now
-from core.contracts.evaluation import VerificationLevel
+from core.contracts.evaluation import EvaluationRecord, VerificationLevel
 from core.contracts.learning import (
     LearningEligibility,
     LearningSample,
@@ -85,6 +86,7 @@ from core.learning.gates import (
     TrainingEligibilityGate,
 )
 from core.learning.sanitizer import SanitizationReport, sanitize_knowledge
+from core.learning.storage import RecoveredCapture, validate_custody_state
 
 #: The machine-checkable source label GOLD knowledge carries in memory —
 #: the isolated test path answers ONLY from items with this source.
@@ -132,6 +134,45 @@ class ExternalCapturePort(Protocol):
         knowledge_key: str,
         knowledge_value: JsonObject,
     ) -> UUID: ...
+
+
+class LearningCustodyPort(Protocol):
+    """Core-owned custody seam; no authorization or trust is granted here.
+
+    Composition validates detached reads. Save must check policy availability
+    and revision atomically at the repository boundary. Source reads and
+    capture writes need not be one transaction. Caller admission is separate.
+    """
+
+    def capture_external(
+        self,
+        tenant_id: UUID,
+        *,
+        actor_id: UUID | None,
+        policy_id: UUID | None,
+        rights_ref: UUID | None,
+        idempotency_key: UUID | None,
+        knowledge_key: str,
+        knowledge_value: JsonObject,
+    ) -> RecoveredCapture: ...
+
+    def capture_from_execution(
+        self,
+        tenant_id: UUID,
+        source_execution_id: UUID,
+        *,
+        policy_id: UUID | None,
+        rights_ref: UUID | None,
+        idempotency_key: UUID | None,
+        knowledge_key: str,
+        knowledge_value: JsonObject,
+    ) -> RecoveredCapture: ...
+
+    def get(self, tenant_id: UUID, sample_id: UUID) -> RecoveredCapture: ...
+
+    def list(self, tenant_id: UUID) -> tuple[RecoveredCapture, ...]: ...
+
+    def save(self, sample: LearningSample, state: JsonObject, *, expected_revision: int) -> int: ...
 
 
 class EvaluationRunner(Protocol):
@@ -200,6 +241,8 @@ class _SampleRecord:
     eligibility_verdicts: dict[str, bool] = field(default_factory=dict)
     promotion_verdicts: dict[str, bool] = field(default_factory=dict)
     sanitization_report: SanitizationReport | None = None
+    revision: int = 0
+    custody_state: JsonObject = field(default_factory=lambda: {"version": 1})
 
 
 class LearningLifecycleService:
@@ -219,7 +262,9 @@ class LearningLifecycleService:
         eligibility_gate: TrainingEligibilityGate | None = None,
         promotion_gate: PromotionGate | None = None,
         external_capture: ExternalCapturePort | None = None,
+        custody: LearningCustodyPort | None = None,
     ) -> None:
+        self._custody = custody
         self._external_capture = external_capture
         self._evaluation = evaluation
         self._knowledge = knowledge
@@ -237,8 +282,21 @@ class LearningLifecycleService:
         *,
         knowledge_key: str,
         knowledge_value: JsonObject,
+        policy_id: UUID | None = None,
+        rights_ref: UUID | None = None,
+        idempotency_key: UUID | None = None,
     ) -> LearningSample:
         """Track one execution-born candidate — PENDING everything."""
+        if self._custody is not None:
+            return self._custody.capture_from_execution(
+                tenant_id,
+                source_execution_id,
+                policy_id=policy_id,
+                rights_ref=rights_ref,
+                idempotency_key=idempotency_key,
+                knowledge_key=knowledge_key,
+                knowledge_value=deepcopy(knowledge_value),
+            ).sample
         return self._capture(
             tenant_id,
             source_execution_id,
@@ -254,12 +312,25 @@ class LearningLifecycleService:
         knowledge_key: str,
         knowledge_value: JsonObject,
         actor_id: UUID | None = None,
+        policy_id: UUID | None = None,
+        rights_ref: UUID | None = None,
+        idempotency_key: UUID | None = None,
     ) -> LearningSample:
         """Capture RAW data; composed ingestion persists a real scan subject first.
 
         Uncomposed domain fixtures retain their in-memory identity only. That
         fallback is not durable execution provenance or verified learning.
         """
+        if self._custody is not None:
+            return self._custody.capture_external(
+                tenant_id,
+                actor_id=actor_id,
+                policy_id=policy_id,
+                rights_ref=rights_ref,
+                idempotency_key=idempotency_key,
+                knowledge_key=knowledge_key,
+                knowledge_value=deepcopy(knowledge_value),
+            ).sample
         knowledge_value = deepcopy(knowledge_value)
         sample_id = uuid4()
         source_id = (
@@ -304,15 +375,35 @@ class LearningLifecycleService:
     # --- reads (tenant-scoped, anti-enumeration) -------------------------------
 
     def get(self, tenant_id: UUID, sample_id: UUID) -> LearningSample:
+        if self._custody is not None:
+            return self._custody.get(tenant_id, sample_id).sample
         return self._record(tenant_id, sample_id).sample
 
     def list_samples(self, tenant_id: UUID) -> tuple[LearningSample, ...]:
+        if self._custody is not None:
+            return tuple(item.sample for item in self._custody.list(tenant_id))
         return tuple(
             record.sample for (owner, _), record in self._samples.items() if owner == tenant_id
         )
 
     def sample_report(self, tenant_id: UUID, sample_id: UUID) -> JsonObject:
         """One sample's full lifecycle state — evidence for the admin surface."""
+        if self._custody is not None:
+            current = self._custody.get(tenant_id, sample_id)
+            state = validate_custody_state(current.state)
+            # Custody reports never return raw scan paths or scan snapshots.
+            # Unavailable data remains lineage, not an empty clean payload.
+            return {
+                "sample": current.sample.model_dump(mode="json"),
+                "source_kind": current.source_kind,
+                "knowledge_key": (
+                    current.payload["knowledge_key"] if current.payload is not None else None
+                ),
+                "eligibility_verdicts": state.get("eligibility_verdicts", {}),
+                "promotion_verdicts": state.get("promotion_verdicts", {}),
+                "sanitization_report": None,
+                "derived_signals": self._custody_signals(tenant_id, current),
+            }
         record = self._record(tenant_id, sample_id)
         return {
             "sample": record.sample.model_dump(mode="json"),
@@ -327,10 +418,43 @@ class LearningLifecycleService:
         }
 
     def _record(self, tenant_id: UUID, sample_id: UUID) -> _SampleRecord:
+        if self._custody is not None:
+            current = self._custody.get(tenant_id, sample_id)
+            if current.payload is None:
+                raise LearningError("learning payload unavailable")
+            state = validate_custody_state(current.state)
+            return _SampleRecord(
+                sample=current.sample,
+                source_kind=SampleSource(current.source_kind),
+                knowledge_key=current.payload["knowledge_key"],
+                knowledge_value=deepcopy(current.payload["knowledge_value"]),
+                eligibility_verdicts=dict(state.get("eligibility_verdicts", {})),
+                promotion_verdicts=dict(state.get("promotion_verdicts", {})),
+                revision=current.revision,
+                custody_state=state,
+            )
         record = self._samples.get((tenant_id, sample_id))
         if record is None:  # absent == foreign-tenant (same answer)
             raise SampleNotFound(sample_id)
         return record
+
+    def _persist(self, record: _SampleRecord) -> LearningSample:
+        if self._custody is not None:
+            state = dict(record.custody_state)
+            state.update(
+                eligibility_verdicts=record.eligibility_verdicts,
+                promotion_verdicts=record.promotion_verdicts,
+            )
+            # A failed CAS never acknowledges or caches advanced trust. No raw
+            # content/scan is included; detached records die with this operation.
+            record.revision = self._custody.save(
+                record.sample, validate_custody_state(state), expected_revision=record.revision
+            )
+        return record.sample
+
+    def _require_reconciled_copies(self) -> None:
+        if self._custody is not None:
+            raise LearningError("durable GOLD requires derived-copy reconciliation")
 
     # --- sanitization (explicit reviewed act; no silent pass) -------------------
 
@@ -356,13 +480,17 @@ class LearningLifecycleService:
         """
         record = self._record(tenant_id, sample_id)
         if record.sanitization_report is None:
-            self.sanitize(tenant_id, sample_id)
+            record.sanitization_report = sanitize_knowledge(
+                record.knowledge_key, record.knowledge_value
+            )
         report = record.sanitization_report
-        assert report is not None  # set by sanitize()
         if passed and not report.clean:
             record.sample = record.sample.model_copy(
                 update={"sanitization_state": SanitizationState.FAILED}
             )
+            self._persist(record)
+            if self._custody is not None:
+                raise LearningError("learning sanitization refused")
             raise SanitizationRefused(sample_id, report)
         record.sample = record.sample.model_copy(
             update={
@@ -371,7 +499,7 @@ class LearningLifecycleService:
                 )
             }
         )
-        return record.sample
+        return self._persist(record)
 
     # --- derived eligibility signals (R161: measured, not asserted) -------------
     #
@@ -393,8 +521,25 @@ class LearningLifecycleService:
     def _canonical_value(value: JsonObject) -> str:
         return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
+    def _custody_signals(self, tenant_id: UUID, current: RecoveredCapture) -> dict[str, bool]:
+        if current.payload is None:
+            return {"deduplicated": False, "scan_clean": False}
+        assert self._custody is not None
+        # A tenant-scoped snapshot, NOT a cross-sample uniqueness transaction.
+        # Redacted lineage retains its digest, so expiry does not erase duplicates.
+        duplicate = any(
+            other.sample.id != current.sample.id and other.content_digest == current.content_digest
+            for other in self._custody.list(tenant_id)
+        )
+        scan = sanitize_knowledge(
+            current.payload["knowledge_key"], current.payload["knowledge_value"]
+        )
+        return {"deduplicated": not duplicate, "scan_clean": scan.clean}
+
     def derived_signals(self, tenant_id: UUID, sample_id: UUID) -> dict[str, bool]:
         """Facts the service can decide itself: ``deduplicated``, ``scan_clean``."""
+        if self._custody is not None:
+            return self._custody_signals(tenant_id, self._custody.get(tenant_id, sample_id))
         record = self._record(tenant_id, sample_id)
         canonical = self._canonical_value(record.knowledge_value)
         duplicate = any(
@@ -446,16 +591,30 @@ class LearningLifecycleService:
         level = getattr(evaluation, "level", None)
         if not isinstance(level, VerificationLevel):
             raise LearningError("evaluation seam returned no verification level")
+        if self._custody is not None:
+            if (
+                not isinstance(evaluation, EvaluationRecord)
+                or evaluation.tenant_id != tenant_id
+                or evaluation.execution_id != record.sample.source_execution_id
+            ):
+                raise LearningError("evaluation seam returned invalid source binding")
+            if level is VerificationLevel.GOLD:
+                self._require_reconciled_copies()
+            record.custody_state["evaluation_id"] = str(evaluation.id)
         record.sample = record.sample.model_copy(update={"verification_level": level})
-        return record.sample
+        # Evaluation evidence is append-only and independent of this CAS. A
+        # conflict retains that evidence but does not advance sample trust.
+        return self._persist(record)
 
     def set_verification_level(
         self, tenant_id: UUID, sample_id: UUID, level: VerificationLevel
     ) -> LearningSample:
         """Explicit reviewer act (e.g. human verification step, 22 §8)."""
         record = self._record(tenant_id, sample_id)
+        if level is VerificationLevel.GOLD:
+            self._require_reconciled_copies()
         record.sample = record.sample.model_copy(update={"verification_level": level})
-        return record.sample
+        return self._persist(record)
 
     # --- gates → GOLD → retrieval (the connection that was missing) -------------
 
@@ -482,6 +641,7 @@ class LearningLifecycleService:
                 update={"eligibility": LearningEligibility.INELIGIBLE}
             )
             record.eligibility_verdicts = self._eligibility.evaluate(record.sample, signals)
+            self._persist(record)
             raise
         record.eligibility_verdicts = verdicts
         record.sample = record.sample.model_copy(
@@ -490,7 +650,7 @@ class LearningLifecycleService:
                 "dataset_id": dataset_id if dataset_id is not None else uuid4(),
             }
         )
-        return record.sample
+        return self._persist(record)
 
     def promote_to_gold(
         self,
@@ -508,6 +668,7 @@ class LearningLifecycleService:
         through the EXISTING memory port — the retrieval substrate.
         """
         record = self._record(tenant_id, sample_id)
+        self._require_reconciled_copies()
         if record.sample.eligibility is not LearningEligibility.ELIGIBLE:
             raise LearningError("sample must pass training eligibility before promotion (22 §8)")
         verdicts = self._promotion.admit(str(sample_id), signals)
@@ -557,6 +718,7 @@ class LearningLifecycleService:
         Deny-by-default: no GOLD item under the key = an explicit
         ``found: False`` answer; the service never fabricates content.
         """
+        self._require_reconciled_copies()
         items = self._knowledge.query(tenant_id, scope=MemoryScope.TENANT, key=key)
         gold = [i for i in items if i.source == GOLD_KNOWLEDGE_SOURCE]
         if not gold:
@@ -572,6 +734,7 @@ class LearningLifecycleService:
 
     def learned_keys(self, tenant_id: UUID) -> tuple[str, ...]:
         """The tenant's GOLD knowledge keys — the testable surface, listed."""
+        self._require_reconciled_copies()
         items = self._knowledge.query(tenant_id, scope=MemoryScope.TENANT)
         return tuple(sorted({i.key for i in items if i.source == GOLD_KNOWLEDGE_SOURCE}))
 

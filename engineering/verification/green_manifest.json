@@ -559,7 +559,7 @@
     },
     "round_r178_dec03": {
       "ceiling": 11,
-      "changes_used": 6,
+      "changes_used": 7,
       "items": [
         "R178-DEC03"
       ],
@@ -593,6 +593,11 @@
           "item": "R178-DEC03",
           "file": "apps/composition/learning.py",
           "summary": "Explicit operator policy configuration and atomic custody adapter with safe decoded reads and availability-checked CAS writes; runtime/lifecycle binding remains open."
+        },
+        {
+          "item": "R178-DEC03",
+          "file": "core/learning/lifecycle.py",
+          "summary": "Core custody capture/read/CAS binding without raw local shadows; closed verdict and evaluation references; durable GOLD fails closed pending derived-copy reconciliation. Runtime binding remains open."
         }
       ]
     }
