@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Select, and_, func, select, text, update
+from sqlalchemy import Select, and_, delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.elements import ColumnElement
@@ -347,3 +347,26 @@ class LearningCustodyRepository:
                 ).on_conflict_do_nothing(constraint="uq_learning_policy_revocation_scope")
             )
             return await self._invalidate(session, tenant_id, custody.c.policy_id == policy_id)
+
+    async def release_legacy_hold(self, tenant_id: UUID, *, reconciliation_ref: UUID) -> bool:
+        """Remove ONLY the tenant-wide legacy_unresolved hold; explicit revocations stay.
+
+        The reconciliation reference is the operator's reviewed record; it is
+        required and audited by the API layer, not interpreted here. Returns
+        False when no hold exists (idempotent, never an error).
+        """
+        if not isinstance(tenant_id, UUID) or not isinstance(reconciliation_ref, UUID):
+            raise LearningStorageError("explicit custody references required")
+        async with self._sessions.begin() as session:
+            removed = (
+                await session.execute(
+                    delete(learning_policy_revocations)
+                    .where(
+                        learning_policy_revocations.c.tenant_id == tenant_id,
+                        learning_policy_revocations.c.policy_id.is_(None),
+                        learning_policy_revocations.c.reason == "legacy_unresolved",
+                    )
+                    .returning(learning_policy_revocations.c.tenant_id)
+                )
+            ).scalars().all()
+            return len(removed) == 1
