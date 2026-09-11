@@ -1202,3 +1202,73 @@ def test_custody_lifecycle_postgres_quarantine_is_metadata_only(database):
             return (await session.execute(select(learning_sample_custody))).mappings().all()
 
     assert marker not in str(database[0].run(stored())) and marker not in str(report)
+
+
+@pytest.mark.parametrize("preexisting", [False, True])
+@pytest.mark.parametrize("fresh_reader", [False, True])
+def test_policy_revocation_denies_new_api_capture_with_stale_config(
+    database, preexisting, fresh_reader
+):
+    """Revocation must survive cached/reloaded policy config, even with zero rows.
+
+    This is real API/adapter/PostgreSQL composition, not a process-kill test.
+    The constant policy-unavailable 404 is the existing response contract.
+    """
+    from core.learning.storage import RetentionPolicy
+    from infrastructure.db.learning import LearningCustodyRepository
+    from tests.api.test_external_evidence_p01_r178 import custody_body, governed_app
+
+    world, store, _ = composed(database)
+    tenant = world.principal.tenant_id
+    policy = RetentionPolicy(tenant, uuid4(), 3600)
+    stale = custody_adapter(database, policy)
+    app = governed_app(world, stale, store=store)
+    body = custody_body()
+    body["policy_id"] = str(policy.policy_id)
+    sample = None
+    if preexisting:
+        response = run(_post(app, SAMPLES, body))
+        assert response.status_code == 201
+        sample = response.json()
+        graded = run(_post(app, f"{SAMPLES}/{sample['id']}/evaluate", {"output": {"v": "fact"}}))
+        assert graded.status_code == 200 and graded.json()["evaluated"] is True
+    repo = LearningCustodyRepository(database[1])
+    assert database[0].run(repo.revoke_policy(tenant, policy.policy_id)) == int(preexisting)
+    assert database[0].run(repo.revoke_policy(tenant, policy.policy_id)) == 0
+    if sample is not None:
+        report = run(get(app, f"{SAMPLES}/{sample['id']}"))
+        assert report.status_code == 200
+        assert report.json()["knowledge_key"] is None
+        assert report.json()["sample"]["eligibility"] == "ineligible"
+        assert count(database, evaluations) == 1
+    if fresh_reader:
+        app = governed_app(world, custody_adapter(database, policy), store=store)
+    body["idempotency_key"] = str(uuid4())
+    body["knowledge_key"] = "new.admission.after.revocation"
+    refused = run(_post(app, SAMPLES, body))
+    assert refused.status_code == 404
+    assert refused.json()["error"]["message"] == "Learning storage unavailable."
+    assert count(database, learning_samples) == int(preexisting)
+    assert count(database, executions) == int(preexisting)
+    assert count(database, evaluations) == int(preexisting)
+    assert app.state.learning_lifecycle_service._samples == {}
+
+
+def test_policy_revocation_does_not_cross_tenant_or_other_policy(database):
+    from core.learning.storage import RetentionPolicy
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    first, _, _ = composed(database)
+    second, _, _ = composed(database)
+    revoked = RetentionPolicy(first.principal.tenant_id, uuid4(), 3600)
+    other_policy = RetentionPolicy(first.principal.tenant_id, uuid4(), 3600)
+    other_tenant = RetentionPolicy(second.principal.tenant_id, revoked.policy_id, 3600)
+    repo = LearningCustodyRepository(database[1])
+    assert database[0].run(repo.revoke_policy(revoked.tenant_id, revoked.policy_id)) == 0
+    for world, policy in ((first, other_policy), (second, other_tenant)):
+        recovered = custody_adapter(database, policy).capture_external(
+            **custody_adapter_request(world, policy)
+        )
+        assert recovered.payload is not None
+        assert recovered.sample.tenant_id == policy.tenant_id
+    assert count(database, learning_samples) == 2
