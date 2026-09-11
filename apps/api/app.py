@@ -233,7 +233,9 @@ from core.execution.service import (
     PipelineStage,
 )
 from core.identity.errors import SessionInvalid
-from core.learning import LearningLifecycleService, TrainingEligibilityGate
+from core.learning import LearningError, LearningLifecycleService, TrainingEligibilityGate
+from core.learning.lifecycle import LearningCustodyPort
+from core.learning.storage import LearningStorageConflict, LearningStorageError
 from core.memory.errors import ConversationNotFound
 from core.memory.ports import ConversationStorePort, MemoryStorePort
 from core.providers.registry import BindingRegistry, ModelRegistry
@@ -500,6 +502,7 @@ def create_app(
     strict_promotion_evidence: bool = False,
     preferences: PreferenceLearner | None = None,
     evaluation_judge: ModelJudgePort | None = None,
+    learning_custody: LearningCustodyPort | None = None,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -708,6 +711,28 @@ def create_app(
             "Request body failed contract validation.",
             details={"errors": [str(err.get("msg", "")) for err in exc.errors()]},
         )
+
+    if learning_custody is not None:
+        if admin is None or memory is None:
+            raise ValueError("learning custody requires admin and memory composition seams")
+
+        @app.exception_handler(LearningStorageError)
+        async def _learning_storage_error(
+            _request: Request, exc: LearningStorageError
+        ) -> JSONResponse:
+            # Missing/foreign/policy-unavailable collapse without reflecting
+            # backend messages or request data. CAS refusal is never success.
+            return error_response(
+                ErrorCode.VALIDATION_ERROR,
+                "Learning storage unavailable.",
+                http_status=409 if isinstance(exc, LearningStorageConflict) else 404,
+            )
+
+        @app.exception_handler(LearningError)
+        async def _learning_refused(_request: Request, _exc: LearningError) -> JSONResponse:
+            return error_response(
+                ErrorCode.VALIDATION_ERROR, "Learning operation refused.", http_status=409
+            )
 
     @app.exception_handler(Exception)
     async def _internal_handler(_request: Request, _exc: Exception) -> JSONResponse:
@@ -2143,6 +2168,7 @@ def create_app(
         learning_lifecycle_service = LearningLifecycleService(
             evaluation=EvaluationPolicyService(store=admin.evaluations, judge=evaluation_judge),
             knowledge=memory,
+            custody=learning_custody,
             external_capture=ExternalIngestionRecorder(
                 execution_store,
                 default_actor=(
@@ -2218,6 +2244,7 @@ def create_app(
                 context_lab=context_lab_service,
                 learning_observability=learning_observability_service,
                 learning_lifecycle=learning_lifecycle_service,
+                governed_learning=learning_custody is not None,
                 execution_store=execution_store,
                 self_review=self_review_service,
                 source_changes=source_change_workflow,
