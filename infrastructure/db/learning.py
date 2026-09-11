@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Select, and_, func, select, text, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.sql.elements import ColumnElement
 
@@ -32,6 +33,7 @@ from infrastructure.db.repositories.executions import _execution_values, _node_v
 from infrastructure.db.tables import (
     execution_nodes,
     executions,
+    learning_policy_revocations,
     learning_samples,
     users,
 )
@@ -60,6 +62,24 @@ def _joined() -> Select[Any]:
 class LearningCustodyRepository:
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
+
+    @staticmethod
+    async def _policy_lock(session: AsyncSession, tenant_id: UUID, policy_id: UUID) -> None:
+        # Always before the idempotency lock; shared by capture and revoke.
+        await session.execute(
+            text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+            {"key": f"learning-policy:{tenant_id}:{policy_id}"},
+        )
+
+    @staticmethod
+    async def _assert_reconciled(session: AsyncSession, tenant_id: UUID | None) -> None:
+        if tenant_id is None or await session.scalar(
+            select(learning_policy_revocations.c.tenant_id).where(
+                learning_policy_revocations.c.tenant_id == tenant_id,
+                learning_policy_revocations.c.policy_id.is_(None),
+            )
+        ) is not None:
+            raise LearningStorageError("storage policy unavailable")
 
     async def capture(
         self,
@@ -103,6 +123,8 @@ class LearningCustodyRepository:
             source_execution_id=execution.id, content_digest=prepared.content_digest,
         )
         async with self._sessions.begin() as session:
+            await self._policy_lock(session, tenant, policy.policy_id)
+            await self._assert_reconciled(session, tenant)
             # Locks are transaction scoped and serialize the same tenant/key across processes.
             await session.execute(
                 text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
@@ -130,7 +152,15 @@ class LearningCustodyRepository:
             if existing is not None:
                 if existing["descriptor_digest"] != descriptor:
                     raise LearningStorageConflict("idempotency descriptor conflict")
+                # Existing retry returns the redacted authoritative row, not new admission.
                 return dict(existing)
+            if await session.scalar(
+                select(learning_policy_revocations.c.tenant_id).where(
+                    learning_policy_revocations.c.tenant_id == tenant,
+                    learning_policy_revocations.c.policy_id == policy.policy_id,
+                )
+            ) is not None:
+                raise LearningStorageError("storage policy unavailable")
             if source_kind == "external":
                 if (
                     execution.status is not ExecutionStatus.SUCCEEDED
@@ -193,6 +223,7 @@ class LearningCustodyRepository:
 
     async def get(self, tenant_id: UUID, sample_id: UUID) -> dict[str, Any]:
         async with self._sessions() as session:
+            await self._assert_reconciled(session, tenant_id)
             row = (
                 (
                     await session.execute(
@@ -210,6 +241,7 @@ class LearningCustodyRepository:
 
     async def list(self, tenant_id: UUID) -> tuple[dict[str, Any], ...]:
         async with self._sessions() as session:
+            await self._assert_reconciled(session, tenant_id)
             rows = (
                 (
                     await session.execute(
@@ -230,6 +262,7 @@ class LearningCustodyRepository:
         sample = LearningSample.model_validate(sample.model_dump())
         state = validate_custody_state(state)
         async with self._sessions.begin() as session:
+            await self._assert_reconciled(session, sample.tenant_id)
             row = (
                 await session.execute(
                     update(custody)
@@ -265,41 +298,52 @@ class LearningCustodyRepository:
             )
             return int(row[0])
 
-    async def _invalidate(self, tenant_id: UUID, predicate: ColumnElement[bool]) -> int:
-        async with self._sessions.begin() as session:
-            ids = (
-                (
-                    await session.execute(
-                        update(custody)
-                        .where(
-                            custody.c.tenant_id == tenant_id,
-                            custody.c.revoked.is_(False),
-                            predicate,
-                        )
-                        .values(payload=None, revoked=True, revision=custody.c.revision + 1)
-                        .returning(custody.c.sample_id)
-                    )
-                )
-                .scalars()
-                .all()
-            )
-            if ids:
+    async def _invalidate(
+        self, session: AsyncSession, tenant_id: UUID, predicate: ColumnElement[bool]
+    ) -> int:
+        ids = (
+            (
                 await session.execute(
-                    update(learning_samples)
+                    update(custody)
                     .where(
-                        learning_samples.c.tenant_id == tenant_id,
-                        learning_samples.c.id.in_(ids),
+                        custody.c.tenant_id == tenant_id,
+                        custody.c.revoked.is_(False),
+                        predicate,
                     )
-                    .values(eligibility="ineligible", sanitization_state="failed")
+                    .values(payload=None, revoked=True, revision=custody.c.revision + 1)
+                    .returning(custody.c.sample_id)
                 )
-            return len(ids)
+            )
+            .scalars()
+            .all()
+        )
+        if ids:
+            await session.execute(
+                update(learning_samples)
+                .where(
+                    learning_samples.c.tenant_id == tenant_id,
+                    learning_samples.c.id.in_(ids),
+                )
+                .values(eligibility="ineligible", sanitization_state="failed")
+            )
+        return len(ids)
 
     async def expire(self, tenant_id: UUID, now: datetime) -> int:
         """Operator policy sweep: erase expired payload, retain redacted immutable lineage."""
         if now.utcoffset() is None:
             raise LearningStorageError("storage clock must be timezone aware")
-        return await self._invalidate(tenant_id, custody.c.expires_at <= now)
+        async with self._sessions.begin() as session:
+            return await self._invalidate(session, tenant_id, custody.c.expires_at <= now)
 
     async def revoke_policy(self, tenant_id: UUID, policy_id: UUID) -> int:
-        """Revoke existing custody without deleting sample, source or evaluation evidence."""
-        return await self._invalidate(tenant_id, custody.c.policy_id == policy_id)
+        """Atomically deny future admission and redact custody, preserving all lineage."""
+        if not isinstance(tenant_id, UUID) or not isinstance(policy_id, UUID):
+            raise LearningStorageError("explicit custody references required")
+        async with self._sessions.begin() as session:
+            await self._policy_lock(session, tenant_id, policy_id)
+            await session.execute(
+                insert(learning_policy_revocations).values(
+                    tenant_id=tenant_id, policy_id=policy_id, reason="revoked"
+                ).on_conflict_do_nothing(constraint="uq_learning_policy_revocation_scope")
+            )
+            return await self._invalidate(session, tenant_id, custody.c.policy_id == policy_id)
