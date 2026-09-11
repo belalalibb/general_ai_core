@@ -1,6 +1,51 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current Core lifecycle custody A–K checkpoint — Backend Closure OPEN
+## Current API/runtime custody A–K checkpoint — Backend Closure OPEN
+
+- **A / State — VERIFIED, CAPTURED:** recovered confirmed 2591870c; product
+  0e2d366f, main 369cf37c / mission remote prerequisite 84563ab9. Prior receipt,
+  custody, adapter, source and Core lifecycle units retained; R177 stays CLOSED.
+- **B / Regression — VERIFIED, TEST:** dec03_api_runtime_full_gate.txt (945309a8),
+  committed snapshot 2591870c: 3495 passed, 0 failed/errors, 64 skipped; strict
+  mypy, ruff, import boundaries, secret scan and budgets PASS; not_evaluated=2.
+- **C / Original gap — VERIFIED, LIVE + TEST:** dec03_api_runtime_restart.txt
+  (0dde9712): both original restart assertions now pass on PostgreSQL 17.11.
+  Complete live suite 39 passed, 0 failed (cc1e4678). No acceptance relaxation.
+- **D / Change — VERIFIED, TEST:** 18 actual failing-first binding cases
+  (ca15625d), then 85 API/adapter passes and static checks (628b4bc7). Four
+  approved surfaces inject the EXISTING Core custody seam and existing stores.
+  Runtime parses explicit policy config and binds custody even with no grants;
+  configured custody without a DB refuses, never silently becomes memory-only.
+- **E / Trust — VERIFIED within TEST + LIVE scope:** explicit policy/rights/
+  idempotency, admitted actor/tenant; source actor remains provenance only.
+  Missing refs refuse before capture; storage failures map to constant safe
+  refusals. Governed intake reports omit raw keys, columns and finding paths.
+  Clean scans and rights references are not proof of consent/training rights.
+- **F / Models — UNVERIFIED beyond prior envelope:** no real-provider inference,
+  training, weights or model promotion claimed; native routing unchanged.
+- **G / Learning — INFERRED, STATIC limits:** durable GOLD remains fail-closed
+  pending derived-copy reconciliation. Batch rows are independent transactions
+  with stable per-row retry keys, NOT atomic batch admission. Concurrent duplicate
+  admission and all runtime failure interleavings are not yet proved.
+- **H / Recovery — VERIFIED, LIVE + TEST within recomposition scope:** actual
+  runtime recreates DB bindings, reuses the real durable session, restores sample,
+  receipt and evaluation, and replays the same capture identity. 4a35eb8d added
+  explicit test-operator policies/refs required by DEC03; original 200/identity/
+  evidence assertions unchanged. Added no-policy negative control. No actual
+  process-kill/crash recovery proof is claimed by these recomposition tests.
+- **I / Decisions:** DEC03 B remains APPROVED, accounting 11/11. No frozen surface,
+  threshold, scanner exception, constraint or assertion weakened. Durable
+  revocation/new-admission denial across stale configured processes remains OPEN.
+- **J / Other checks — VERIFIED, TEST:** Gateway 194 (two warnings), original
+  adversarial harness exit 0, both retained at 5ad91e49. Publication BLOCKED,
+  CAPTURED: dry-run mission push has no environment authentication. No supplied
+  chat credential used, no PR update/merge/deployment or publication squash.
+- **K / Next:** tests-first stale-process new-admission revocation and retention/
+  derived-copy reconciliation; then runtime concurrency/partial-batch failures,
+  tenant isolation and true process crash/restart. Repeat integrated verification
+  after any product change. P01 final closure, Backend Closure and R178/UI OPEN.
+
+## Historical Core lifecycle custody A–K checkpoint — Backend Closure OPEN
 
 - **A / State — VERIFIED, CAPTURED:** restored confirmed 42fc734b. Product
   45e1f4b3 retained; main 369cf37c / mission remote 84563ab9. R177 remains CLOSED.
