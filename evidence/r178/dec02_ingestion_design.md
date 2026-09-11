@@ -319,3 +319,22 @@ PostgreSQL source cases; full gate 3458/0/0/64; Gateway 194; original adversaria
 exit 0. Full live suite 32 passed / 2 original restart failures. Accounting 6/11.
 Next: Core lifecycle custody binding, then runtime/API/intake admission, expiry/
 revocation and derived-copy reconciliation. No Backend Closure or UI readiness.
+
+Current Core lifecycle checkpoint supersedes the execution-source checkpoint
+above: product 45e1f4b3, tests 7afc02e0, live cef5a0fe, full gate 42fc734b.
+Optional Core-owned custody delegates both captures, detached read/list/report
+and closed-state revision CAS without raw local shadows. Unavailable content
+never becomes clean empty content; evaluation references bind tenant/source.
+182 learning/adapter units pass; five direct PostgreSQL lifecycle cases pass;
+full gate 3477 passed, 0 failed/errors, 64 skipped, all checks PASS, not_evaluated=2.
+Gateway 194 and original adversarial exit 0 retained at 2e5eedad. Complete live
+37 passed / two unchanged runtime restart failures: NOT Backend Closure.
+
+Current accounting **7/11**; four approved production files remain: API app,
+admin, intake and runtime. Durable GOLD assignment/promotion/retrieval refuses
+until coordinated derived memory/audit/retention handling. Dedup is a snapshot,
+not cross-sample atomic admission proof. Policy snapshots/repository revocation
+alone still cannot deny new capture by stale configured processes. Next is
+actual API/runtime custody composition, explicit policy/rights/idempotency and
+requesting-actor admission, safe refusals; then retention/revocation, derived
+copies, concurrency and true process restart/crash. DEC03 B remains APPROVED.
