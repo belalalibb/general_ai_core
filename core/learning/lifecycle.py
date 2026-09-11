@@ -176,6 +176,20 @@ class LearningCustodyPort(Protocol):
     def save(self, sample: LearningSample, state: JsonObject, *, expected_revision: int) -> int: ...
 
 
+class LearningGovernancePort(Protocol):
+    """Operator acts over durable custody: revoke, retention sweep, legacy release.
+
+    Optional capability of a custody composition. Every act is tenant-scoped,
+    explicit and audited by the caller; nothing here grants trust or consent.
+    """
+
+    def revoke_policy(self, tenant_id: UUID, policy_id: UUID) -> int: ...
+
+    def expire(self, tenant_id: UUID, now: datetime) -> int: ...
+
+    def release_legacy_hold(self, tenant_id: UUID, *, reconciliation_ref: UUID) -> bool: ...
+
+
 class EvaluationRunner(Protocol):
     """The EXISTING evaluation seam this service delegates to (P2).
 
@@ -483,6 +497,37 @@ class LearningLifecycleService:
             return gold
         live = self._live_gold_ids(tenant_id)
         return [i for i in gold if i.id in live]
+
+    def _governance(self) -> LearningGovernancePort:
+        custody = self._custody
+        if custody is None or not all(
+            callable(getattr(custody, name, None))
+            for name in ("revoke_policy", "expire", "release_legacy_hold")
+        ):
+            raise LearningError("learning governance requires durable custody")
+        return custody  # type: ignore[return-value]
+
+    def revoke_policy(self, tenant_id: UUID, policy_id: UUID) -> dict[str, object]:
+        """Deny future admission under a policy and redact its custody."""
+        revoked = self._governance().revoke_policy(tenant_id, policy_id)
+        return {"policy_id": str(policy_id), "revoked_samples": int(revoked)}
+
+    def sweep_retention(self, tenant_id: UUID) -> dict[str, object]:
+        """Server-clock expiry: redact expired custody, then remove orphaned copies."""
+        expired = self._governance().expire(tenant_id, utc_now())
+        return {
+            "expired_samples": int(expired),
+            "derived_copies": self.reconcile_derived_copies(tenant_id),
+        }
+
+    def release_legacy_hold(
+        self, tenant_id: UUID, *, reconciliation_ref: UUID
+    ) -> dict[str, object]:
+        """Explicit reviewed act; the reference names the operator's reconciliation record."""
+        released = self._governance().release_legacy_hold(
+            tenant_id, reconciliation_ref=reconciliation_ref
+        )
+        return {"released": bool(released), "reconciliation_ref": str(reconciliation_ref)}
 
     def reconcile_derived_copies(self, tenant_id: UUID) -> dict[str, int]:
         """Remove GOLD copies without live custody; never touch other memory."""
