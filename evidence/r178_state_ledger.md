@@ -736,3 +736,43 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   under revoked policy fails; same-key retry returns existing redacted evidence.
 - Backend Closure/P01/R178/UI remain OPEN. Publication not established; no chat
   credential used or persisted, merge/deployment, PR #13 change or PR #14 update.
+
+## Integrated revocation checkpoint reconciled — 2026-09-11
+
+- VERIFIED / CAPTURED: restored confirmed 13a70e21 bundle after clean main reset;
+  SHA256 6ab1fd68edda1002b1967efb8d92556de8e32814e7f23cdadf00f7271f71e01c.
+  Product, infrastructure, engineering and live tests equal verified 5360a651;
+  hermetic tests equal final gate snapshot 9ade59a3. Earlier interrupted reports
+  were not durable; only absent reconciliation was recreated. No dependency
+  reinstall, new test run or product reimplementation in this continuation.
+- VERIFIED / TEST: final canonical gate at 9ade59a3 retained in 13a70e21,
+  dec03_revocation_full_gate.txt: 3495 passed, zero failed/errors, 64 skipped;
+  mypy/ruff/import boundaries/secret scan/budgets PASS; not_evaluated=2.
+  Gateway 194 (105d7bdd), unchanged adversarial exit 0 (02942030) retained.
+- VERIFIED / LIVE + TEST: full 53-case suite (290ddfe7), including all four
+  formerly failing new-admission refusals, both original restart cases, actual
+  PostgreSQL lock waits in both race orderings, late-failure rollback and
+  stamped-0019 successor upgrade/downgrade. Not process-kill or whole historical
+  migration-chain proof. No original acceptance assertion was weakened.
+- Reconciled exact migration-head pin in 07060433; before/after proof 9ade59a3:
+  1 failed/9 passed -> 10 passed. Authorized successor is 0020, old 0019 pin
+  was stale. Original single evaluation/custody assertions retained, revocation
+  table uniqueness added. DEC03 scope approval is recorded and applied: 12/12.
+- Current assessment 07779a52 and design cb7f189e reflect the passing slice and
+  its limitations. Legacy tenants get explicit unresolved holds, not fabricated
+  policy intent; holds deny access but do not erase stored historical payloads.
+  No automatic release or production migration procedure is declared complete.
+- NEXT EXACT ACTION: review runtime retention/expiry and derived-copy paths plus
+  legacy-hold reconciliation requirements; add failing-first boundary probes
+  within existing approved surfaces before any further implementation. Preserve
+  current custody/revocation/API units. Then partial-batch/runtime concurrency,
+  true process-crash proof and final integrated closure verification. Do not
+  rerun the retained gate without code/test changes or a specific verification
+  reason. Additional production files would need a new narrow scope decision.
+- Backend Closure/P01 final closure, R178/UI remain OPEN; durable GOLD remains
+  deliberately fail-closed. Frozen surfaces equal main 369cf37c. No provider
+  calls, merge, deployment, training or secret persistence performed.
+- BLOCKED / CAPTURED publication: public fetch and main synchronization succeed;
+  mission-only dry-run push fails (exit 128, username unavailable). No chat token
+  copied/tested, push, PR #14 update or publication squash claimed. Never touch
+  remote genspark_ai_developer or PR #13. Preserve confirmed recovery bundle.
