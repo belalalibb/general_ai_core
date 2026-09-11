@@ -582,3 +582,82 @@ def test_governance_routes_absent_without_custody_and_denied_to_non_admin():
     app = governed_app(world, _GovernedCustody(custody))
     assert run(_post(app, f"{GOVERN}/sweep", {})).status_code == 403
     assert run(_post(app, f"{GOVERN}/revoke", {"policy_id": str(uuid4())})).status_code == 403
+
+
+# --- DEC03 partial batch: rows are independent atomic captures with stable retry keys
+
+
+class _FailingRowCustody:
+    """Port double: the Nth external capture fails after earlier rows committed."""
+
+    def __init__(self, inner, *, fail_on_call):
+        self.inner = inner
+        self.fail_on_call = fail_on_call
+        self.keys = []
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def capture_external(self, tenant_id, **kwargs):
+        from core.learning.storage import LearningStorageError
+
+        self.keys.append(kwargs["idempotency_key"])
+        if len(self.keys) == self.fail_on_call:
+            raise LearningStorageError("row custody unavailable")
+        return self.inner.capture_external(tenant_id, **kwargs)
+
+
+def intake_body(rows, batch_key):
+    body = custody_body()
+    del body["knowledge_key"], body["knowledge_value"]
+    body["idempotency_key"] = str(batch_key)
+    body.update(
+        format="json", content=json.dumps(rows),
+        expectations={"required_columns": ["key", "value"], "key_column": "key"},
+    )
+    return body
+
+
+def test_governed_intake_later_row_failure_keeps_earlier_rows_and_retry_keys_stable():
+    from uuid import uuid5
+
+    world, inner = custody_api_world()
+    custody = _FailingRowCustody(inner, fail_on_call=2)
+    app = governed_app(world, custody)
+    batch = uuid4()
+    rows = [{"key": "one", "value": "a"}, {"key": "two", "value": "b"}]
+    failed = run(_post(app, "/v1/admin/learning/intake", intake_body(rows, batch)))
+    # The batch is NOT all-or-nothing: row 1 committed before row 2 refused.
+    assert failed.status_code == 404
+    assert failed.json()["error"]["message"] == "Learning storage unavailable."
+    assert "row custody unavailable" not in failed.text
+    committed = [c[-1]["idempotency_key"] for c in inner.calls if c[0] == "external"]
+    assert committed == [uuid5(batch, "row:1")]
+    assert custody.keys == [uuid5(batch, "row:1"), uuid5(batch, "row:2")]
+    # Same batch key replays: row 1 reuses ITS key (custody dedups), row 2 proceeds.
+    retried = run(_post(app, "/v1/admin/learning/intake", intake_body(rows, batch)))
+    assert retried.status_code == 201
+    assert [r["row"] for r in retried.json()["admitted"]] == [1, 2]
+    assert custody.keys[2:] == [uuid5(batch, "row:1"), uuid5(batch, "row:2")]
+    assert app.state.learning_lifecycle_service._samples == {}
+
+
+def test_governed_intake_row_keys_are_batch_scoped_and_order_stable():
+    from uuid import uuid5
+
+    world, inner = custody_api_world()
+    app = governed_app(world, inner)
+    rows = [
+        {"key": "one", "value": "a"}, {"key": "", "value": "refused"}, {"key": "3", "value": "c"}
+    ]
+    first, second = uuid4(), uuid4()
+    for batch in (first, second):
+        response = run(_post(app, "/v1/admin/learning/intake", intake_body(rows, batch)))
+        assert response.status_code == 201
+        assert [r["row"] for r in response.json()["refused"]] == [2]
+        assert [r["row"] for r in response.json()["admitted"]] == [1, 3]
+    keys = [c[-1]["idempotency_key"] for c in inner.calls if c[0] == "external"]
+    # Refused row 2 consumed no custody key; row numbers, not positions, derive keys.
+    assert keys == [uuid5(first, "row:1"), uuid5(first, "row:3"),
+                    uuid5(second, "row:1"), uuid5(second, "row:3")]
+    assert len(set(keys)) == 4

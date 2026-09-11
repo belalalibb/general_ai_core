@@ -1621,3 +1621,119 @@ def test_governance_api_release_legacy_hold_then_capture_and_sweep_on_postgres(d
         "learning_retention_swept", "learning_retention_swept", "learning_policy_revoked",
     ]
     assert app.state.learning_lifecycle_service._samples == {}
+
+
+def test_governed_intake_partial_batch_on_postgres_keeps_committed_rows_and_retry_identity(
+    database,
+):
+    """Row 2's custody insert fails in the database; row 1 stays committed.
+
+    Batch replay with the SAME batch key returns row 1's committed identity and
+    admits row 2 once the fault clears. No all-or-nothing rollback is claimed
+    or wanted: independent atomic rows with stable per-row retry keys.
+    """
+    from uuid import uuid5
+
+    from sqlalchemy.exc import DBAPIError
+
+    from core.learning.storage import RetentionPolicy
+    from infrastructure.db.tables import execution_nodes, learning_sample_custody
+    from tests.api.test_external_evidence_p01_r178 import governed_app, intake_body
+
+    world, store, _ = composed(database)
+    tenant = world.principal.tenant_id
+    policy = RetentionPolicy(tenant, uuid4(), 3600)
+    app = governed_app(world, custody_adapter(database, policy), store=store)
+    batch = uuid4()
+    rows = [{"key": "one", "value": "a"}, {"key": "two", "value": "b"}, {"key": "3", "value": "c"}]
+    body = intake_body(rows, batch)
+    body["policy_id"] = str(policy.policy_id)
+    poisoned = uuid5(batch, "row:2")
+
+    async def fail_row_two():
+        async with database[1].begin() as s:
+            await s.execute(text(
+                "CREATE FUNCTION fail_row_two() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                f"BEGIN IF NEW.idempotency_key = '{poisoned}' THEN "
+                "RAISE EXCEPTION 'row custody unavailable'; END IF; RETURN NEW; END; $$"
+            ))
+            await s.execute(text(
+                "CREATE TRIGGER fail_row_two BEFORE INSERT ON learning_sample_custody "
+                "FOR EACH ROW EXECUTE FUNCTION fail_row_two()"
+            ))
+
+    async def clear_fault():
+        async with database[1].begin() as s:
+            await s.execute(text("DROP TRIGGER fail_row_two ON learning_sample_custody"))
+
+    async def custody_rows():
+        async with database[1]() as s:
+            result = await s.execute(
+                select(
+                    learning_sample_custody.c.idempotency_key, learning_sample_custody.c.sample_id
+                ).order_by(learning_sample_custody.c.created_at)
+            )
+            return list(result.all())
+
+    database[0].run(fail_row_two())
+    # Row 2's database fault propagates (ASGITransport re-raises after the
+    # constant 500 handler); row 1 was already committed and is NOT rolled back.
+    with pytest.raises(DBAPIError):
+        run(_post(app, "/v1/admin/learning/intake", body))
+    committed = database[0].run(custody_rows())
+    assert [k for k, _ in committed] == [uuid5(batch, "row:1")]
+    assert count(database, learning_samples) == count(database, executions) == 1
+    assert count(database, execution_nodes) == 1
+    row_one_id = committed[0][1]
+
+    database[0].run(clear_fault())
+    retried = run(_post(app, "/v1/admin/learning/intake", body))
+    assert retried.status_code == 201
+    admitted = retried.json()["admitted"]
+    assert [r["row"] for r in admitted] == [1, 2, 3]
+    assert admitted[0]["sample_id"] == str(row_one_id)
+    after = database[0].run(custody_rows())
+    assert [k for k, _ in after] == [uuid5(batch, f"row:{n}") for n in (1, 2, 3)]
+    assert count(database, learning_samples) == count(database, executions) == 3
+    assert app.state.learning_lifecycle_service._samples == {}
+
+
+def test_governed_intake_concurrent_duplicate_batches_admit_each_row_once_on_postgres(database):
+    """Four concurrent submissions of one batch key → exactly one row per key."""
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+    from uuid import uuid5
+
+    from core.learning.storage import RetentionPolicy
+    from infrastructure.db.tables import execution_nodes, learning_sample_custody
+    from tests.api.test_external_evidence_p01_r178 import governed_app, intake_body
+
+    world, store, _ = composed(database)
+    tenant = world.principal.tenant_id
+    policy = RetentionPolicy(tenant, uuid4(), 3600)
+    batch = uuid4()
+    rows = [{"key": f"k{n}", "value": f"v{n}"} for n in range(1, 6)]
+    body = intake_body(rows, batch)
+    body["policy_id"] = str(policy.policy_id)
+    ready = Barrier(4)
+
+    def submit(_):
+        app = governed_app(world, custody_adapter(database, policy), store=store)
+        ready.wait(timeout=10)
+        return run(_post(app, "/v1/admin/learning/intake", body))
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        responses = list(pool.map(submit, range(4)))
+    assert all(r.status_code == 201 for r in responses)
+    reports = [r.json() for r in responses]
+    ids = [[a["sample_id"] for a in report["admitted"]] for report in reports]
+    assert all(report["refused"] == [] for report in reports)
+    assert all(current == ids[0] for current in ids) and len(set(ids[0])) == 5
+    assert count(database, learning_samples) == count(database, executions) == 5
+    assert count(database, execution_nodes) == count(database, learning_sample_custody) == 5
+
+    async def keys():
+        async with database[1]() as s:
+            return set((await s.scalars(select(learning_sample_custody.c.idempotency_key))).all())
+
+    assert database[0].run(keys()) == {uuid5(batch, f"row:{n}") for n in range(1, 6)}

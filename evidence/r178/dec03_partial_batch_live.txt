@@ -1,0 +1,13 @@
+Commit under test: 93d0fe26+partial-batch tests (see commit following)
+Hermetic: tests/api/test_external_evidence_p01_r178.py -k 'later_row or batch_scoped' -> 2 passed
+Live: bash tests_live/r178/run_local_postgres.sh -k 'partial_batch or concurrent_duplicate'
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+..                                                                       [100%]
+=============================== warnings summary ===============================
+tests_live/r178/test_external_ingestion_postgres.py::test_governed_intake_concurrent_duplicate_batches_admit_each_row_once_on_postgres
+  /home/user/webapp/.venv/lib/python3.13/site-packages/pydantic/_internal/_generate_schema.py:2274: UnsupportedFieldAttributeWarning: The 'alias' attribute with value 'workspace_id' was provided to the `Field()` function, which has no effect in the context it was used. 'alias' is field-specific metadata, and can only be attached to a model field using `Annotated` metadata or by assignment. This may have happened because an `Annotated` type alias using the `type` statement was used, or if the `Field()` function was attached to a single member of a union type.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+2 passed, 56 deselected, 1 warning in 3.66s
