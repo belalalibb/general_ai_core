@@ -56,6 +56,8 @@ def database():
     names = {"executions", "execution_nodes", "evaluations", "learning_samples"}
     if "learning_sample_custody" in metadata.tables:
         names.add("learning_sample_custody")
+    if "learning_policy_revocations" in metadata.tables:
+        names.add("learning_policy_revocations")
     while True:
         parents = {f.column.table.name for n in names for f in metadata.tables[n].foreign_keys}
         if parents <= names:
@@ -1272,3 +1274,220 @@ def test_policy_revocation_does_not_cross_tenant_or_other_policy(database):
         assert recovered.payload is not None
         assert recovered.sample.tenant_id == policy.tenant_id
     assert count(database, learning_samples) == 2
+
+
+@pytest.mark.parametrize("capture_first", [False, True])
+def test_policy_revocation_transaction_orderings(database, capture_first):
+    import asyncio
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from core.learning.storage import LearningStorageError
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_policy_revocations
+
+    world, _, _ = composed(database)
+    args = custody_candidate(world)
+    tenant, policy = args["policy"].tenant_id, args["policy"].policy_id
+
+    async def race():
+        locked, attempted, release = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+        class PausingSession(AsyncSession):
+            async def execute(self, statement, params=None, **kw):
+                lock = (params or {}).get("key") == f"learning-policy:{tenant}:{policy}"
+                if lock and self.info["role"] == "second":
+                    attempted.set()
+                result = await super().execute(statement, params, **kw)
+                if lock and self.info["role"] == "first":
+                    locked.set()
+                    await asyncio.wait_for(release.wait(), 5)
+                return result
+
+        def repo(role):
+            return LearningCustodyRepository(async_sessionmaker(
+                database[1].kw["bind"], class_=PausingSession, info={"role": role}
+            ))
+
+        first, second = repo("first"), repo("second")
+        a = asyncio.create_task(
+            first.capture(**args) if capture_first else first.revoke_policy(tenant, policy)
+        )
+        b = None
+        try:
+            await asyncio.wait_for(locked.wait(), 5)
+            b = asyncio.create_task(
+                second.revoke_policy(tenant, policy) if capture_first else second.capture(**args)
+            )
+            await asyncio.wait_for(attempted.wait(), 5)
+            async with asyncio.timeout(5):
+                while True:
+                    async with database[1]() as observer:
+                        waiting = await observer.scalar(text(
+                            "SELECT EXISTS (SELECT 1 FROM pg_locks "
+                            "WHERE locktype = 'advisory' AND NOT granted)"
+                        ))
+                    if waiting:
+                        break
+                    await asyncio.sleep(0.01)
+            assert not a.done() and not b.done()  # real PostgreSQL lock wait observed
+            release.set()
+            results = await asyncio.wait_for(asyncio.gather(a, b, return_exceptions=True), 5)
+            if capture_first:
+                assert isinstance(results[0], dict) and results[1] == 1
+            else:
+                assert results[0] == 0 and isinstance(results[1], LearningStorageError)
+        finally:
+            release.set()
+            for task in (a, b):
+                if task is not None and not task.done():
+                    task.cancel()
+            await asyncio.gather(*(t for t in (a, b) if t is not None), return_exceptions=True)
+
+    database[0].run(race())
+    assert count(database, learning_policy_revocations) == 1
+    assert count(database, executions) == count(database, learning_samples) == int(capture_first)
+    repo = LearningCustodyRepository(database[1])
+    if capture_first:
+        row = database[0].run(repo.get(tenant, args["sample"].id))
+        assert row["payload"] is None and row["revoked"] and row["eligibility"] == "ineligible"
+        assert row["revision"] == 1
+    with pytest.raises(LearningStorageError):
+        database[0].run(repo.capture(**custody_candidate(world, policy=args["policy"])))
+
+
+def test_policy_revocation_late_failure_is_atomic(database):
+    from sqlalchemy.exc import DBAPIError
+
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_policy_revocations
+
+    world, _, _ = composed(database)
+    repo = LearningCustodyRepository(database[1])
+    args = custody_candidate(world)
+    original = database[0].run(repo.capture(**args))
+
+    async def trigger():
+        async with database[1].begin() as s:
+            await s.execute(text(
+                "CREATE FUNCTION fail_revoke() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                "BEGIN RAISE EXCEPTION 'injected late invalidation failure'; END; $$"
+            ))
+            await s.execute(text(
+                "CREATE TRIGGER fail_revoke BEFORE UPDATE ON learning_samples "
+                "FOR EACH ROW EXECUTE FUNCTION fail_revoke()"
+            ))
+
+    database[0].run(trigger())
+    with pytest.raises(DBAPIError):
+        database[0].run(repo.revoke_policy(args["policy"].tenant_id, args["policy"].policy_id))
+    assert count(database, learning_policy_revocations) == 0
+    assert database[0].run(repo.get(args["policy"].tenant_id, args["sample"].id)) == original
+    database[0].run(repo.capture(**custody_candidate(world, policy=args["policy"])))
+    assert count(database, learning_samples) == count(database, executions) == 2
+
+
+def revocation_migrate(connection, *, stamp=None, target="0020"):
+    """Actual Alembic traversal from metadata-built 0019 prerequisites, not 0001..0018."""
+    from pathlib import Path
+
+    from alembic.config import Config
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+    from alembic.script import ScriptDirectory
+
+    config = Config()
+    config.set_main_option("script_location", str(
+        Path(__file__).resolve().parents[2] / "infrastructure/db/migrations"
+    ))
+    script = ScriptDirectory.from_config(config)
+    context = MigrationContext.configure(connection)
+    if stamp is not None:
+        context.stamp(script, stamp)
+    fn = script._upgrade_revs if target == "0020" else script._downgrade_revs
+    context = MigrationContext.configure(connection, opts={
+        "fn": lambda revision, _context: fn(target, revision)
+    })
+    with Operations.context(context):
+        context.run_migrations()
+    return context.get_current_revision()
+
+
+@pytest.mark.parametrize("legacy", ["empty", "zero_row", "expired", "clean"])
+def test_policy_revocation_stamped_upgrade_legacy_denies(database, legacy):
+    from core.learning.storage import LearningStorageError
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_policy_revocations
+
+    world = args = None
+    repo = LearningCustodyRepository(database[1])
+    if legacy != "empty":
+        world, _, _ = composed(database)
+        args = custody_candidate(world)
+        if legacy != "zero_row":
+            database[0].run(repo.capture(**args))
+        if legacy == "expired":
+            from datetime import timedelta
+            database[0].run(repo.expire(world.principal.tenant_id, utc_now() + timedelta(hours=2)))
+
+    async def upgrade():
+        async with database[1].begin() as s:
+            c = await s.connection()
+            await c.run_sync(lambda sync: learning_policy_revocations.drop(sync))
+            assert await c.run_sync(lambda sync: revocation_migrate(sync, stamp="0019")) == "0020"
+            return (await s.execute(select(learning_policy_revocations))).mappings().all()
+
+    rows = database[0].run(upgrade())
+    if legacy == "empty":
+        assert rows == []
+    else:
+        # No invented policy UUID or inferred historical revocation/consent.
+        assert len(rows) == 1 and rows[0]["tenant_id"] == world.principal.tenant_id
+        assert rows[0]["policy_id"] is None and rows[0]["reason"] == "legacy_unresolved"
+        with pytest.raises(LearningStorageError):
+            database[0].run(repo.capture(**args))
+        with pytest.raises(LearningStorageError):
+            database[0].run(repo.list(world.principal.tenant_id))
+        if legacy != "zero_row":
+            with pytest.raises(LearningStorageError):
+                database[0].run(repo.get(world.principal.tenant_id, args["sample"].id))
+            with pytest.raises(LearningStorageError):
+                database[0].run(repo.save(args["sample"], {"version": 1}, expected_revision=0))
+        assert count(database, executions) == count(database, learning_samples) == int(
+            legacy != "zero_row"
+        )
+    other, _, _ = composed(database)
+    database[0].run(repo.capture(**custody_candidate(other)))
+
+
+@pytest.mark.parametrize("populated", [False, True])
+def test_policy_revocation_stamped_downgrade_preserves_evidence(database, populated):
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_policy_revocations
+
+    async def upgrade():
+        async with database[1].begin() as s:
+            c = await s.connection()
+            await c.run_sync(lambda sync: learning_policy_revocations.drop(sync))
+            assert await c.run_sync(lambda sync: revocation_migrate(sync, stamp="0019")) == "0020"
+    database[0].run(upgrade())
+    if populated:
+        world, _, _ = composed(database)
+        database[0].run(LearningCustodyRepository(database[1]).revoke_policy(
+            world.principal.tenant_id, uuid4()
+        ))
+
+    async def downgrade():
+        async with database[1].begin() as s:
+            c = await s.connection()
+            return await c.run_sync(lambda sync: revocation_migrate(sync, target="0019"))
+    if populated:
+        with pytest.raises(RuntimeError, match="preserve"):
+            database[0].run(downgrade())
+        assert count(database, learning_policy_revocations) == 1
+        async def revision():
+            async with database[1]() as s:
+                return await s.scalar(text("SELECT version_num FROM alembic_version"))
+        assert database[0].run(revision()) == "0020"
+    else:
+        assert database[0].run(downgrade()) == "0019"
