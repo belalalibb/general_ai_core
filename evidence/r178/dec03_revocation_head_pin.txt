@@ -1,0 +1,21 @@
+Recovered snapshot: 5360a651
+Command: python -m pytest tests/composition/test_durable_evaluations_r177.py -q -o addopts= -p no:cacheprovider --tb=short
+BEFORE: expected historical head 0019 conflicts with explicit 0020 approval
+.........F                                                               [100%]
+=================================== FAILURES ===================================
+____________ test_no_new_migration_needed_the_0010_table_is_reused _____________
+tests/composition/test_durable_evaluations_r177.py:204: in test_no_new_migration_needed_the_0010_table_is_reused
+    assert versions[-1] == "0019_learning_custody.py", versions[-1]
+E   AssertionError: 0020_learning_policy_revocations.py
+E   assert '0020_learnin...evocations.py' == '0019_learning_custody.py'
+E     
+E     - 0019_learning_custody.py
+E     + 0020_learning_policy_revocations.py
+=========================== short test summary info ============================
+FAILED tests/composition/test_durable_evaluations_r177.py::test_no_new_migration_needed_the_0010_table_is_reused
+1 failed, 9 passed in 2.06s
+before_process_exit=1
+AFTER: exact head 0020; original evaluation/custody uniqueness retained; revocation uniqueness added
+..........                                                               [100%]
+10 passed in 1.31s
+after_process_exit=0
