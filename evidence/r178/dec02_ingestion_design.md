@@ -366,3 +366,35 @@ copies, concurrency and true process restart/crash. DEC03 B remains APPROVED.
   derived-copy reconciliation, runtime concurrency/partial-batch failures and
   true process crash/restart. Durable GOLD remains deliberately fail-closed.
   This checkpoint does NOT grant P01 final closure, Backend Closure or UI readiness.
+
+## Narrow additive-migration scope proposal (not a DEC03 reapproval)
+
+Status: PROPOSED, not executed/self-approved. DEC03 B remains APPROVED.
+Evidence 40227b18 / tests efc1da52: 4 failed, 1 passed, 39 deselected on real
+PostgreSQL. Revocation before or after first custody does not deny new API
+capture from stale or fresh configured adapters (201 instead of 404).
+
+Published migration 0019 is identical at remote mission 84563ab9 and HEAD:
+blob 247cb784f08e8474eefb258d2797c5585d694f73. Editing its upgrade is not a
+path for databases already stamped 0019. The approved file budget is 11/11.
+A durable zero-row revocation record needs additive schema in the existing
+custody subsystem, not a second state journal or fabricated provenance.
+
+Requested narrow scope delta:
+- One new file: infrastructure/db/migrations/versions/0020_learning_policy_revocations.py.
+- Increase only DEC03's production-file ceiling from 11 to 12, naming this file.
+- Keep the existing tables.py and learning.py surfaces; no other budget,
+  threshold, scanner exception, frozen surface or trust-contract change.
+
+After approval: tenant/policy-keyed tombstones; capture/revoke serialize using
+the same transaction-scoped policy lock; record revocation and redact existing
+payloads atomically; retain source/sample/evaluation lineage. Prove zero-row
+revoke, idempotence, both race orderings, late failure rollback, tenant isolation,
+upgrade from 0019 and fail-closed downgrade. Existing revoked flags also encode
+expiry: do not infer historical policy intent from them; establish explicit,
+fail-closed reconciliation for ambiguous pre-upgrade state.
+
+Do not overwrite 0019 history, use ad hoc startup DDL, repurpose audit/evaluation
+records as policy state, invent sample/execution tombstones, or silently raise
+the ceiling. Then continue retention/derived-copy and true process-crash work
+before integrated Backend Closure. No product implementation in this proposal.
