@@ -125,6 +125,12 @@ class CustodyRepositoryPort(Protocol):
         expected_revision: int,
     ) -> int: ...
 
+    async def revoke_policy(self, tenant_id: UUID, policy_id: UUID) -> int: ...
+
+    async def expire(self, tenant_id: UUID, now: datetime) -> int: ...
+
+    async def release_legacy_hold(self, tenant_id: UUID, *, reconciliation_ref: UUID) -> bool: ...
+
 
 class ExecutionSourcePort(Protocol):
     """Read existing tenant-scoped provenance; no execution writer is exposed."""
@@ -309,6 +315,30 @@ class DurableLearningCustody:
         # Database CAS remains authoritative if availability changes after this read.
         return self._bridge.run(
             self._repository.save(sample, state, expected_revision=expected_revision)
+        )
+
+
+    # --- operator governance (core LearningGovernancePort) ----------------------
+
+    def revoke_policy(self, tenant_id: UUID, policy_id: UUID) -> int:
+        if not isinstance(tenant_id, UUID) or not isinstance(policy_id, UUID):
+            raise LearningStorageError("explicit custody references required")
+        return int(self._bridge.run(self._repository.revoke_policy(tenant_id, policy_id)))
+
+    def expire(self, tenant_id: UUID, now: datetime) -> int:
+        if not isinstance(tenant_id, UUID):
+            raise LearningStorageError("explicit custody references required")
+        return int(self._bridge.run(self._repository.expire(tenant_id, now)))
+
+    def release_legacy_hold(self, tenant_id: UUID, *, reconciliation_ref: UUID) -> bool:
+        if not isinstance(tenant_id, UUID) or not isinstance(reconciliation_ref, UUID):
+            raise LearningStorageError("explicit custody references required")
+        return bool(
+            self._bridge.run(
+                self._repository.release_legacy_hold(
+                    tenant_id, reconciliation_ref=reconciliation_ref
+                )
+            )
         )
 
 
