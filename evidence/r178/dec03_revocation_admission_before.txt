@@ -1,0 +1,34 @@
+Snapshot: current tests-first commit; product unchanged from faf00219
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+FFFF.                                                                    [100%]
+=================================== FAILURES ===================================
+_ test_policy_revocation_denies_new_api_capture_with_stale_config[False-False] _
+tests_live/r178/test_external_ingestion_postgres.py:1249: in test_policy_revocation_denies_new_api_capture_with_stale_config
+    assert refused.status_code == 404
+E   assert 201 == 404
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_policy_revocation_denies_new_api_capture_with_stale_config[False-True] __
+tests_live/r178/test_external_ingestion_postgres.py:1249: in test_policy_revocation_denies_new_api_capture_with_stale_config
+    assert refused.status_code == 404
+E   assert 201 == 404
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_policy_revocation_denies_new_api_capture_with_stale_config[True-False] __
+tests_live/r178/test_external_ingestion_postgres.py:1249: in test_policy_revocation_denies_new_api_capture_with_stale_config
+    assert refused.status_code == 404
+E   assert 201 == 404
+E    +  where 201 = <Response [201 Created]>.status_code
+__ test_policy_revocation_denies_new_api_capture_with_stale_config[True-True] __
+tests_live/r178/test_external_ingestion_postgres.py:1249: in test_policy_revocation_denies_new_api_capture_with_stale_config
+    assert refused.status_code == 404
+E   assert 201 == 404
+E    +  where 201 = <Response [201 Created]>.status_code
+=========================== short test summary info ============================
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_denies_new_api_capture_with_stale_config[False-False]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_denies_new_api_capture_with_stale_config[False-True]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_denies_new_api_capture_with_stale_config[True-False]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_denies_new_api_capture_with_stale_config[True-True]
+4 failed, 1 passed, 39 deselected in 4.53s
+process_exit=1
