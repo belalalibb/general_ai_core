@@ -1,0 +1,10 @@
+Snapshot: 10d65159; product a5084dc3; migration 7d009e54
+Command: bash tests_live/r178/run_local_postgres.sh
+Scope: actual PostgreSQL; 0019->0020 traversal with metadata-built prerequisite schema; not full historical chain or process-kill proof.
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+.....................................................                    [100%]
+53 passed in 25.72s
+process_exit=0
