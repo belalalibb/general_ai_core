@@ -689,3 +689,23 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
 - Backend Closure/P01 final closure, R178/UI remain OPEN. No product changes,
   raw chat credential use, PR #14 update, merge or deployment claimed. Secure
   publication remains blocked separately; preserve confirmed recovery bundles.
+
+## 2026-09-11 approved successor migration — recovered after interrupted work
+
+- VERIFIED / CAPTURED: clean reset to main; restored confirmed a9274d0e bundle
+  (SHA256 52b27f8b6f3eb859919d9a1fc9032bd24112cc7f71165b487a33d18c47a901a4).
+  Prior verified units and four retained revocation failures remain authoritative.
+  Subsequent interrupted local commits/tests had no confirmed upload and were
+  absent on disk; do not claim that expanded evidence or implementation retained.
+- APPROVED: operator explicitly authorized only new migration
+  infrastructure/db/migrations/versions/0020_learning_policy_revocations.py and
+  DEC03 ceiling 11 -> 12. DEC03 B unchanged; current usage remains 11 pending
+  migration addition. Scope approval is no longer a blocker.
+- NEXT: implement durable tenant/policy revocation and transaction serialization;
+  test zero-row persistence, rollback, both race orders and stamped-0019 upgrade.
+  Historical zero-row revocation cannot be inferred; any legacy reconciliation
+  must deny while unresolved rather than invent consent or policy intent.
+- Backend Closure/P01/R178 remain OPEN. No old verified unit reimplementation,
+  frozen-file change, assertion relaxation, merge or deployment authorized.
+  Chat credential not used or persisted. Publication must target only remote
+  genspark_ai_developer_r178 / existing PR #14; never PR #13's branch.
