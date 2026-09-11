@@ -659,3 +659,33 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   BLOCKED / CAPTURED: public fetch succeeds, dry-run mission push cannot obtain
   authentication. No supplied chat credential copied/tested, no PR #14 update,
   merge, deployment or publication squash claimed. Preserve confirmed bundle.
+
+## Confirmed revocation red checkpoint — narrow successor migration scope pending
+
+- VERIFIED / CAPTURED: restored confirmed 40227b18 bundle; tests efc1da52 and
+  dec03_revocation_admission_before.txt retained. Interrupted scope/full-live
+  docs were absent, not trusted; only missing reconciliation written here.
+- FAILED / LIVE + TEST: 4 failed, 1 passed, 39 deselected; new API capture after
+  revocation returns 201 instead of existing constant policy-unavailable 404,
+  for stale/fresh policy snapshots and zero/nonzero preexisting samples.
+  Existing payload redaction/evaluation retention assertions pass before failure;
+  cross-tenant/other-policy control passes. Not a process-kill test.
+- Product/core/apps/infrastructure/engineering/hermetic tests unchanged from
+  faf00219. Prior integrated 3495/0/0/64, Gateway 194, original adversarial and
+  39-case live evidence retained; no rerun or broader closure claim here.
+- VERIFIED / CAPTURED: public remote mission 84563ab9 already contains 0019,
+  same blob 247cb784f08e8474eefb258d2797c5585d694f73 as HEAD. Budget is 11/11.
+  Editing historical upgrade does not migrate stamped DBs. Recommended fix
+  requires one successor migration; no unapproved cap increase or startup DDL.
+- BLOCKED / scope: narrow proposal in dec02_ingestion_design.md requests only
+  0020_learning_policy_revocations.py and DEC03 ceiling 12. DEC03 B remains
+  approved; do not request its storage/retention decision again. Existing
+  revoked sample flags also encode expiry; do not invent historical intent.
+- NEXT EXACT ACTION: obtain this narrow scope delta, then implement durable
+  tenant-policy revocation/capture serialization in the existing custody DB
+  subsystem with migration/rollback/race tests. Retention/derived copies,
+  partial-batch/concurrency, tenant isolation and true process-crash proof remain.
+  Preserve the new red assertions and all previously verified units.
+- Backend Closure/P01 final closure, R178/UI remain OPEN. No product changes,
+  raw chat credential use, PR #14 update, merge or deployment claimed. Secure
+  publication remains blocked separately; preserve confirmed recovery bundles.
