@@ -1,0 +1,113 @@
+FFFFFFFFFFFF                                                             [100%]
+=================================== FAILURES ===================================
+__ test_custody_lifecycle_capture_delegates_without_local_snapshot[external] ___
+tests/learning/test_learning_lifecycle_e2e.py:312: in test_custody_lifecycle_capture_delegates_without_local_snapshot
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+__ test_custody_lifecycle_capture_delegates_without_local_snapshot[execution] __
+tests/learning/test_learning_lifecycle_e2e.py:312: in test_custody_lifecycle_capture_delegates_without_local_snapshot
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+___ test_custody_lifecycle_review_is_revision_checked_and_not_cached[False] ____
+tests/learning/test_learning_lifecycle_e2e.py:339: in test_custody_lifecycle_review_is_revision_checked_and_not_cached
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+____ test_custody_lifecycle_review_is_revision_checked_and_not_cached[True] ____
+tests/learning/test_learning_lifecycle_e2e.py:339: in test_custody_lifecycle_review_is_revision_checked_and_not_cached
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+_ test_custody_lifecycle_unavailable_payload_refuses_content_operations[scan] __
+tests/learning/test_learning_lifecycle_e2e.py:368: in test_custody_lifecycle_unavailable_payload_refuses_content_operations
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+_ test_custody_lifecycle_unavailable_payload_refuses_content_operations[review] _
+tests/learning/test_learning_lifecycle_e2e.py:368: in test_custody_lifecycle_unavailable_payload_refuses_content_operations
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+_ test_custody_lifecycle_unavailable_payload_refuses_content_operations[level] _
+tests/learning/test_learning_lifecycle_e2e.py:368: in test_custody_lifecycle_unavailable_payload_refuses_content_operations
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+_ test_custody_lifecycle_unavailable_payload_refuses_content_operations[evaluate] _
+tests/learning/test_learning_lifecycle_e2e.py:368: in test_custody_lifecycle_unavailable_payload_refuses_content_operations
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+_ test_custody_lifecycle_unavailable_payload_refuses_content_operations[admit] _
+tests/learning/test_learning_lifecycle_e2e.py:368: in test_custody_lifecycle_unavailable_payload_refuses_content_operations
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+_ test_custody_lifecycle_unavailable_payload_refuses_content_operations[promote] _
+tests/learning/test_learning_lifecycle_e2e.py:368: in test_custody_lifecycle_unavailable_payload_refuses_content_operations
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+___ test_custody_lifecycle_level_change_persists_and_foreign_is_not_exposed ____
+tests/learning/test_learning_lifecycle_e2e.py:391: in test_custody_lifecycle_level_change_persists_and_foreign_is_not_exposed
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+____ test_custody_lifecycle_promotion_waits_for_derived_copy_reconciliation ____
+tests/learning/test_learning_lifecycle_e2e.py:412: in test_custody_lifecycle_promotion_waits_for_derived_copy_reconciliation
+    service = _durable_lifecycle(custody)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learning/test_learning_lifecycle_e2e.py:306: in _durable_lifecycle
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: LearningLifecycleService.__init__() got an unexpected keyword argument 'custody'
+=========================== short test summary info ============================
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_capture_delegates_without_local_snapshot[external]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_capture_delegates_without_local_snapshot[execution]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_review_is_revision_checked_and_not_cached[False]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_review_is_revision_checked_and_not_cached[True]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_unavailable_payload_refuses_content_operations[scan]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_unavailable_payload_refuses_content_operations[review]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_unavailable_payload_refuses_content_operations[level]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_unavailable_payload_refuses_content_operations[evaluate]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_unavailable_payload_refuses_content_operations[admit]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_unavailable_payload_refuses_content_operations[promote]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_level_change_persists_and_foreign_is_not_exposed
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_lifecycle_promotion_waits_for_derived_copy_reconciliation
+12 failed, 6 deselected in 0.62s
+process_exit=1
