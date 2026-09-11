@@ -397,6 +397,77 @@ def test_custody_lifecycle_level_change_persists_and_foreign_is_not_exposed():
         service.get(uuid4(), sample.id)
 
 
+@pytest.mark.parametrize("race", [False, True])
+def test_custody_lifecycle_evaluation_binds_evidence_without_lost_update(race):
+    from core.learning.storage import LearningStorageConflict
+
+    custody = _Custody()
+    sample = custody.current.sample
+    records = []
+    pipeline = EvaluationPolicyService(store=InMemoryEvaluationStore())
+
+    class Runner:
+        async def evaluate(self, tenant_id, execution_id, output):
+            result = await pipeline.evaluate(tenant_id, execution_id, output)
+            records.append(result)
+            if race:
+                _durable_lifecycle(custody).mark_sanitized(tenant_id, sample.id, passed=True)
+            return result
+
+    service = _durable_lifecycle(custody, evaluation=Runner())
+    if race:
+        with pytest.raises(LearningStorageConflict):
+            run(service.evaluate(sample.tenant_id, sample.id, {"content": "fact"}))
+        assert custody.current.sample.verification_level is VerificationLevel.RAW
+        assert custody.current.sample.sanitization_state is SanitizationState.PASSED
+        assert "evaluation_id" not in custody.current.state
+    else:
+        changed = run(service.evaluate(sample.tenant_id, sample.id, {"content": "fact"}))
+        assert changed.verification_level == records[0].level
+        assert custody.current.state["evaluation_id"] == str(records[0].id)
+        assert _durable_lifecycle(custody).get(sample.tenant_id, sample.id) == changed
+    assert len(records) == 1  # committed evaluation survives a custody CAS conflict
+    assert service._samples == {}
+
+
+@pytest.mark.parametrize("allowed", [False, True])
+def test_custody_lifecycle_eligibility_persists_closed_verdicts(allowed):
+    custody = _Custody()
+    sample = custody.current.sample
+    service = _durable_lifecycle(custody)
+    t, s = sample.tenant_id, sample.id
+    service.mark_sanitized(t, s, passed=True)
+    service.set_verification_level(t, s, VerificationLevel.VERIFIED)
+    dataset = uuid4()
+    if allowed:
+        service.admit_to_training(t, s, ALL_ELIGIBLE, dataset_id=dataset)
+        assert custody.current.sample.dataset_id == dataset
+        assert custody.current.sample.eligibility is LearningEligibility.ELIGIBLE
+        assert all(custody.current.state["eligibility_verdicts"].values())
+    else:
+        with pytest.raises(NotEligibleForTraining):
+            service.admit_to_training(t, s, EligibilitySignals())
+        assert custody.current.sample.eligibility is LearningEligibility.INELIGIBLE
+        assert custody.current.state["eligibility_verdicts"]["privacy_policy_allows"] is False
+    assert custody.current.revision == 3
+    assert service._samples == {}
+
+
+@pytest.mark.parametrize("operation", ["level", "retrieve", "keys"])
+def test_custody_lifecycle_gold_bypasses_wait_for_reconciliation(operation):
+    custody = _Custody()
+    service = _durable_lifecycle(custody)
+    t, s = custody.current.sample.tenant_id, custody.current.sample.id
+    actions = {
+        "level": lambda: service.set_verification_level(t, s, VerificationLevel.GOLD),
+        "retrieve": lambda: service.ask_learned(t, "fact"),
+        "keys": lambda: service.learned_keys(t),
+    }
+    with pytest.raises(LearningError, match="reconciliation"):
+        actions[operation]()
+    assert custody.calls == []
+
+
 def test_custody_lifecycle_promotion_waits_for_derived_copy_reconciliation():
     from dataclasses import replace
 
