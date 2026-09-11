@@ -1,0 +1,142 @@
+FFFFFFFFFFFFFFFFFF                                                       [100%]
+=================================== FAILURES ===================================
+____ test_governed_api_forwards_refs_and_authenticated_actor_without_shadow ____
+tests/api/test_external_evidence_p01_r178.py:387: in test_governed_api_forwards_refs_and_authenticated_actor_without_shadow
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_______ test_governed_api_missing_refs_refuse_before_capture[policy_id] ________
+tests/api/test_external_evidence_p01_r178.py:407: in test_governed_api_missing_refs_refuse_before_capture
+    response = run(_post(governed_app(world, custody), SAMPLES, body))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_______ test_governed_api_missing_refs_refuse_before_capture[rights_ref] _______
+tests/api/test_external_evidence_p01_r178.py:407: in test_governed_api_missing_refs_refuse_before_capture
+    response = run(_post(governed_app(world, custody), SAMPLES, body))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+____ test_governed_api_missing_refs_refuse_before_capture[idempotency_key] _____
+tests/api/test_external_evidence_p01_r178.py:407: in test_governed_api_missing_refs_refuse_before_capture
+    response = run(_post(governed_app(world, custody), SAMPLES, body))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+________ test_governed_api_nonadmin_actor_cannot_use_source_provenance _________
+tests/api/test_external_evidence_p01_r178.py:419: in test_governed_api_nonadmin_actor_cannot_use_source_provenance
+    response = run(_post(governed_app(world, custody), SAMPLES, body))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_ test_governed_api_storage_refusals_are_constant_and_secret_safe[False-capture] _
+tests/api/test_external_evidence_p01_r178.py:437: in test_governed_api_storage_refusals_are_constant_and_secret_safe
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_ test_governed_api_storage_refusals_are_constant_and_secret_safe[False-read] __
+tests/api/test_external_evidence_p01_r178.py:437: in test_governed_api_storage_refusals_are_constant_and_secret_safe
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_ test_governed_api_storage_refusals_are_constant_and_secret_safe[False-evaluate] _
+tests/api/test_external_evidence_p01_r178.py:437: in test_governed_api_storage_refusals_are_constant_and_secret_safe
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_ test_governed_api_storage_refusals_are_constant_and_secret_safe[False-sanitize] _
+tests/api/test_external_evidence_p01_r178.py:437: in test_governed_api_storage_refusals_are_constant_and_secret_safe
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_ test_governed_api_storage_refusals_are_constant_and_secret_safe[True-capture] _
+tests/api/test_external_evidence_p01_r178.py:437: in test_governed_api_storage_refusals_are_constant_and_secret_safe
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+__ test_governed_api_storage_refusals_are_constant_and_secret_safe[True-read] __
+tests/api/test_external_evidence_p01_r178.py:437: in test_governed_api_storage_refusals_are_constant_and_secret_safe
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_ test_governed_api_storage_refusals_are_constant_and_secret_safe[True-evaluate] _
+tests/api/test_external_evidence_p01_r178.py:437: in test_governed_api_storage_refusals_are_constant_and_secret_safe
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_ test_governed_api_storage_refusals_are_constant_and_secret_safe[True-sanitize] _
+tests/api/test_external_evidence_p01_r178.py:437: in test_governed_api_storage_refusals_are_constant_and_secret_safe
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+_________ test_governed_intake_retry_refs_and_metadata_only_quarantine _________
+tests/api/test_external_evidence_p01_r178.py:457: in test_governed_intake_retry_refs_and_metadata_only_quarantine
+    app = governed_app(world, custody)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+________ test_governed_intake_parse_refusal_does_not_echo_secret_field _________
+tests/api/test_external_evidence_p01_r178.py:489: in test_governed_intake_parse_refusal_does_not_echo_secret_field
+    response = run(_post(governed_app(world, custody), "/v1/admin/learning/intake", body))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/api/test_external_evidence_p01_r178.py:355: in governed_app
+    return create_app(
+E   TypeError: create_app() got an unexpected keyword argument 'learning_custody'
+__ test_runtime_parses_learning_policy_before_constructing_services[not-json] __
+tests/composition/test_learning_custody_r178.py:396: in test_runtime_parses_learning_policy_before_constructing_services
+    with pytest.raises(LearningStorageError, match="invalid learning storage policies"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE LearningStorageError
+____ test_runtime_parses_learning_policy_before_constructing_services[[{}]] ____
+tests/composition/test_learning_custody_r178.py:396: in test_runtime_parses_learning_policy_before_constructing_services
+    with pytest.raises(LearningStorageError, match="invalid learning storage policies"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE LearningStorageError
+__________ test_runtime_configured_custody_never_falls_back_to_memory __________
+tests/composition/test_learning_custody_r178.py:404: in test_runtime_configured_custody_never_falls_back_to_memory
+    with pytest.raises(LearningStorageError, match="durable"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE LearningStorageError
+=========================== short test summary info ============================
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_forwards_refs_and_authenticated_actor_without_shadow
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_missing_refs_refuse_before_capture[policy_id]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_missing_refs_refuse_before_capture[rights_ref]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_missing_refs_refuse_before_capture[idempotency_key]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_nonadmin_actor_cannot_use_source_provenance
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_storage_refusals_are_constant_and_secret_safe[False-capture]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_storage_refusals_are_constant_and_secret_safe[False-read]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_storage_refusals_are_constant_and_secret_safe[False-evaluate]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_storage_refusals_are_constant_and_secret_safe[False-sanitize]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_storage_refusals_are_constant_and_secret_safe[True-capture]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_storage_refusals_are_constant_and_secret_safe[True-read]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_storage_refusals_are_constant_and_secret_safe[True-evaluate]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_api_storage_refusals_are_constant_and_secret_safe[True-sanitize]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_intake_retry_refs_and_metadata_only_quarantine
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governed_intake_parse_refusal_does_not_echo_secret_field
+FAILED tests/composition/test_learning_custody_r178.py::test_runtime_parses_learning_policy_before_constructing_services[not-json]
+FAILED tests/composition/test_learning_custody_r178.py::test_runtime_parses_learning_policy_before_constructing_services[[{}]]
+FAILED tests/composition/test_learning_custody_r178.py::test_runtime_configured_custody_never_falls_back_to_memory
+18 failed, 67 deselected in 2.90s
