@@ -793,3 +793,15 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   deployment, or rewrite of published history.
 - OPERATOR ACTION REQUIRED at mission end: revoke/rotate the supplied token
   (it appeared in chat) and remove the sandbox credential store.
+
+## Final-closure execution mandate — 2026-09-11
+
+- Operator instruction: complete ALL remaining closure items to the end; if
+  authentication is lost, re-authenticate with the operator-supplied token;
+  merge ONLY at the very end after every item is evidenced. Token again lives
+  only in the sandbox credential store; never in tracked files or evidence.
+- Recovered from remote mission head e9290794 (local reset to main again).
+  Remaining ordered items: (1) legacy-hold reconciliation procedure,
+  (2) retention/expiry + derived-copy reconciliation, (3) runtime concurrency /
+  partial-batch, (4) true process crash/restart proof, (5) final integrated
+  verification, (6) P01/Backend Closure declaration with evidence, (7) merge.
