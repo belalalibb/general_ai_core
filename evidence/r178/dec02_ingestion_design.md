@@ -338,3 +338,31 @@ alone still cannot deny new capture by stale configured processes. Next is
 actual API/runtime custody composition, explicit policy/rights/idempotency and
 requesting-actor admission, safe refusals; then retention/revocation, derived
 copies, concurrency and true process restart/crash. DEC03 B remains APPROVED.
+
+## API/runtime binding verification checkpoint (supersedes unbound status above)
+
+- VERIFIED / TEST: actual runtime policy parser and custody injection implemented
+  in approved app/admin/intake/runtime surfaces (product 0e2d366f). Tests-first
+  ca15625d: 18 genuine failures; 628b4bc7: 85 passes and strict mypy/ruff clean.
+- Explicit operator policy is required in durable runtime; absent policy still
+  binds custody and denies capture rather than falling back to local memory.
+  API references are closed optional UUID fields for legacy in-memory callers,
+  mandatory at governed admission. Request actor comes from the admin resolver,
+  never from source provenance or caller-provided actor/tenant fields.
+- Governed intake derives row retry UUIDs from the explicit batch UUID; its
+  output is metadata-only (no raw key/column/finding path). Row commits are
+  independent, so a late batch fault can leave earlier durable rows for retry.
+  Cross-row atomicity and all partial-failure interleavings are not claimed.
+- VERIFIED / LIVE + TEST: both original restart assertions PASS (0dde9712);
+  complete PostgreSQL 17.11 suite 39/0 (cc1e4678). Test prerequisites changed
+  at 4a35eb8d only to supply the now-approved explicit policy/rights/retry refs
+  and actual custody injection; 200/identity/evaluation/count assertions remain.
+  Added no-policy negative control and same-key identity replay after restart.
+- VERIFIED / TEST: canonical gate at 2591870c retained in 945309a8: 3495 passed,
+  0 failed/errors, 64 skipped; all static/governance checks PASS, not_evaluated=2.
+  Gateway 194 and original adversarial exit 0 retained in 5ad91e49. DEC03 11/11;
+  no assertion, constraint, scanner exception, threshold or frozen surface changed.
+- Still OPEN: stale-process new admission after revocation, complete retention/
+  derived-copy reconciliation, runtime concurrency/partial-batch failures and
+  true process crash/restart. Durable GOLD remains deliberately fail-closed.
+  This checkpoint does NOT grant P01 final closure, Backend Closure or UI readiness.
