@@ -594,3 +594,41 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
 - Secure publication remains BLOCKED pending GitHub environment authentication;
   no supplied chat token copied/tested, no PR update, merge or deployment claimed.
   Bundle checkpoint preserves recovery; it is not remote GitHub publication.
+
+## API/runtime custody and original restart assertions — bounded checkpoint
+
+- VERIFIED / CAPTURED: recovered 628b4bc7 from confirmed API/runtime-units
+  bundle after reset. Earlier unpublished a80373b9..b291397d attempts were lost;
+  the retained equivalents below, not conversation claims, are authoritative.
+- VERIFIED / TEST: 8055dc86 + 81f36c43 specify 18 genuine failing-first cases,
+  retained ca15625d (dec03_api_runtime_before.txt). Product c08738a2, 815c78e9,
+  37b5e456, 0e2d366f binds the four approved surfaces; 628b4bc7 retains 85
+  API/adapter passes and strict mypy/ruff clean. DEC03 accounting now 11/11;
+  no thresholds/constraints/assertions weakened. All prior verified units kept.
+- Runtime parses explicit operator policies before allocating services, refuses
+  configured custody without a DB, and always injects custody in durable mode,
+  including with zero policies (no legacy memory fallback). create_app binds the
+  existing Core seam; admin/intake forward policy/rights/idempotency and caller
+  actor after existing admin admission. Source provenance is not caller authority.
+- Intake uses deterministic row keys under the caller's batch UUID. Independent
+  row transactions, NOT atomic whole-batch admission; prior committed rows may
+  survive a later fault and can be retried. Governed reports expose no raw keys,
+  column names or finding paths; unavailable content remains metadata-only.
+- VERIFIED / LIVE + TEST: original restart assertions now PASS, 0dde9712:
+  dec03_api_runtime_restart.txt, PostgreSQL 17.11, 2 passed / 37 deselected.
+  Test prerequisite adjustment 4a35eb8d: old probes supplied neither custody nor
+  approved storage policy. Added explicit test-operator tenant policy and request
+  refs via actual constructor/environment; unchanged 200/identity/evidence/row
+  assertions. Added negative no-policy control and same-key restart replay.
+  No default grant or direct runtime lifecycle replacement. Complete suite at
+  cc1e4678: 39 passed / 0 failed, dec03_api_runtime_live.txt. Recomposition closes
+  the two historical 404 defects, NOT true process-crash or all Backend Closure.
+- NEXT EXACT ACTION: run integrated canonical gate, Gateway and original
+  adversarial checks on this committed API/runtime product, then tests-first
+  remaining retention/revocation, stale-process new-admission denial, derived-copy
+  reconciliation and true process crash/restart. Additional runtime concurrency,
+  partial-batch failure and tenant isolation coverage remain required.
+- Backend Closure/P01 final closure, R178/UI remain OPEN. Durable GOLD remains
+  deliberately fail-closed. Policy snapshots are NOT durable revocation records.
+  Secure mission publication remains blocked; no chat credential copied/tested,
+  PR #14 update, merge or production deployment. Preserve a confirmed bundle.
