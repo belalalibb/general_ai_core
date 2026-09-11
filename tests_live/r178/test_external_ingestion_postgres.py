@@ -1295,7 +1295,10 @@ def test_policy_revocation_transaction_orderings(database, capture_first):
 
         class PausingSession(AsyncSession):
             async def execute(self, statement, params=None, **kw):
-                lock = (params or {}).get("key") == f"learning-policy:{tenant}:{policy}"
+                # SQLAlchemy executemany passes a list (receipt nodes), not a mapping.
+                lock = isinstance(params, dict) and params.get("key") == (
+                    f"learning-policy:{tenant}:{policy}"
+                )
                 if lock and self.info["role"] == "second":
                     attempted.set()
                 result = await super().execute(statement, params, **kw)
