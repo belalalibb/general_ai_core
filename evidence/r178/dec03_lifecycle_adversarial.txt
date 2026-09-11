@@ -1,0 +1,62 @@
+Product 45e1f4b3; original adversarial harness; hermetic
+{
+  "environment": "hermetic ASGI; fake provider",
+  "probes": [
+    {
+      "probe": "P01 evaluated sample has discoverable admin evidence",
+      "expected": 1,
+      "actual": 1,
+      "status": "VERIFIED",
+      "evidence_type": "TEST"
+    },
+    {
+      "probe": "C01 evaluation alone does not grant training eligibility",
+      "expected": "pending",
+      "actual": "pending",
+      "status": "VERIFIED",
+      "evidence_type": "TEST"
+    },
+    {
+      "probe": "C02 caller metadata alone must not establish regression pass",
+      "expected": false,
+      "actual": false,
+      "status": "VERIFIED",
+      "evidence_type": "TEST"
+    },
+    {
+      "probe": "C03 foreign tenant cannot resolve execution evidence",
+      "expected": false,
+      "actual": false,
+      "status": "VERIFIED",
+      "evidence_type": "TEST"
+    },
+    {
+      "probe": "C02 caller metadata alone must not establish regression pass",
+      "expected": false,
+      "actual": false,
+      "status": "VERIFIED",
+      "evidence_type": "TEST"
+    },
+    {
+      "probe": "C03 foreign tenant cannot resolve execution evidence",
+      "expected": false,
+      "actual": false,
+      "status": "VERIFIED",
+      "evidence_type": "TEST"
+    },
+    {
+      "probe": "P03 required scenario check failure must refuse regression_pass",
+      "expected": {
+        "scenario_passed": false,
+        "resolver_held": false
+      },
+      "actual": {
+        "scenario_passed": false,
+        "resolver_held": false
+      },
+      "status": "VERIFIED",
+      "evidence_type": "TEST"
+    }
+  ]
+}
+process_exit=0
