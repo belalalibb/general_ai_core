@@ -572,3 +572,25 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   succeeds, main is ancestor of local HEAD; dry-run mission push cannot read
   username. No supplied chat credential copied/tested; no PR #14 update, merge
   or deployment claimed. Preserve mission history; squash only before publication.
+
+## Retained lifecycle verification reconciled after upload interruption
+
+- VERIFIED / CAPTURED: restored confirmed full-gate bundle at 42fc734b. Previous
+  42c937c5 reconciliation upload returned no URL; its docs were not assumed saved.
+  Only absent reconciliation redone; no verified implementation/test reruns.
+- VERIFIED / TEST: dec03_lifecycle_full_gate.txt at 42fc734b, snapshot cef5a0fe:
+  3477 passed, 0 failed/errors, 64 skipped, all static/governance checks PASS,
+  not_evaluated=2, DEC03 7/11. Gateway 194 and original adversarial exit 0 retained
+  at 2e5eedad. Product/tests/engineering/live tests equal tested cef5a0fe; frozen
+  surfaces equal main 369cf37c. A-K assessment and DEC03 packet reconciled.
+- FAILED / LIVE + TEST: complete live remains 37 passed / two unchanged original
+  runtime-restart failures (404 != 200). Direct Core lifecycle verification is
+  bounded; Backend Closure, R178 completion and UI readiness remain OPEN.
+- NEXT EXACT ACTION: tests-first actual API/runtime custody binding with explicit
+  policy/rights/idempotency/requesting-actor admission and safe HTTP refusals.
+  Then retention/revocation, derived copies, stale-process admission, concurrency,
+  true process restart/crash and final integrated checks. Do not repeat retained
+  lifecycle implementation/full gate or request DEC03 approval again.
+- Secure publication remains BLOCKED pending GitHub environment authentication;
+  no supplied chat token copied/tested, no PR update, merge or deployment claimed.
+  Bundle checkpoint preserves recovery; it is not remote GitHub publication.
