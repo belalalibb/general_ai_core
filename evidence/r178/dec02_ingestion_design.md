@@ -398,3 +398,46 @@ Do not overwrite 0019 history, use ad hoc startup DDL, repurpose audit/evaluatio
 records as policy state, invent sample/execution tombstones, or silently raise
 the ceiling. Then continue retention/derived-copy and true process-crash work
 before integrated Backend Closure. No product implementation in this proposal.
+
+## Approved successor migration — implemented and verified within declared envelope
+
+The preceding proposal is HISTORICAL. Operator explicitly approved the single
+0020_learning_policy_revocations.py addition and DEC03 ceiling 11 -> 12.
+Approval is recorded in the active ledger; no DEC03 B reapproval is required.
+Current accounting: 12/12. No other threshold, scanner exception or frozen
+surface changed. 0019 remains byte-identical to the published mission revision.
+
+Implementation: ef86e88e (metadata), 7d009e54 (migration), a5084dc3 (repository).
+A shared transaction-scoped tenant/policy advisory lock precedes the existing
+retry lock. Revoke records the permanent tenant/policy tombstone and invalidates
+existing custody in ONE transaction. Empty-policy revocation persists; repeated
+revocation does not overwrite its timestamp or create more rows. New captures
+are refused even through stale/rebuilt configured adapters. Existing matching
+retry returns the redacted authoritative sample; it is not new admission.
+Source/sample/evaluation lineage and existing actor/rights/ref checks remain.
+
+Legacy safety: every tenant existing at upgrade receives a NULL-policy
+legacy_unresolved hold. That explicitly means unknown historical intent, NOT
+policy revocation. 0019 lost zero-row revocations and conflated expiry with
+revocation; a guessed backfill would invent permission. The hold denies custody
+capture/read/list/save. Payloads are not erased by the hold; no erasure or
+consent-restoration proof is claimed. No automatic hold-release operation exists.
+Before any production migration, stop all old learning writers; do not resume
+old binaries afterward. Legacy reconciliation/release requires a reviewed,
+evidence-preserving operator procedure and remains OPEN. No deployment is done.
+
+VERIFIED / LIVE + TEST: dec03_revocation_live.txt, 53 passed, includes original
+four new-admission denials, both original restart cases, actual pg_locks waits
+for both capture/revoke orderings, late-failure rollback and stamped-0019
+Alembic upgrade/downgrade. Prerequisite schema is metadata-built; this is NOT a
+full 0001..0018 migration rehearsal, rolling-upgrade or process-kill test.
+VERIFIED / TEST: dec03_revocation_full_gate.txt, snapshot 9ade59a3, 3495/0/0/64,
+all static/governance checks PASS; not_evaluated=2. Gateway 194 and original
+adversarial exit 0 retained. Migration-head test 07060433 updates only the exact
+head to the authorized successor and adds revocation-table uniqueness; original
+evaluation/custody uniqueness is retained (dec03_revocation_head_pin.txt).
+
+Next: retention/derived-copy and legacy reconciliation review, runtime partial
+batch/concurrency boundaries, true process crash/recovery, then final integrated
+verification after product changes. Durable GOLD stays fail-closed. P01 final
+closure, Backend Closure, R178 completion and UI readiness remain OPEN.
