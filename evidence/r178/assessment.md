@@ -1,6 +1,74 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current revocation successor A–K checkpoint — tested slice VERIFIED, Backend Closure OPEN
+## Current final-closure A–K checkpoint — P01 / Backend Closure DECLARED within evidenced envelope
+
+Head under evidence: 43a655be (tests/product) with evidence retained at 1b78e545.
+All units below were recovered from the remote mission branch after each sandbox
+reset; nothing verified earlier was reimplemented.
+
+- **A / Recovery — VERIFIED, CAPTURED:** every unit committed and pushed to
+  `origin/genspark_ai_developer_r178` immediately after passing; recovery after
+  each reset was `git switch -C … origin/genspark_ai_developer_r178`. Frozen
+  surfaces (`ui/`, `apps/admin_agent/`, `core/tools/gate.py`,
+  `PROJECT_EXECUTION_STATE.md`, `final_docs_v3` 20 files, canonical prompt) have a
+  zero-line diff against `main` 369cf37c.
+- **B / Integrated verification — VERIFIED, TEST:** `final_full_gate.txt` on a
+  committed clone of 43a655be under `env -i`: 3504 passed, 0 failed, 0 errors,
+  64 skipped (floor 3127, ceiling 64); mypy --strict, ruff, import-linter, secret
+  scan (5/5 declared exceptions) PASS; all change budgets within ceilings
+  (DEC03 12/12); not_evaluated=2 unchanged (browser live-suite dependency,
+  two-account live provider failover). RESULT: PASS.
+- **C / Live acceptance — VERIFIED, LIVE + TEST:** `dec03_process_kill_live.txt`
+  — full isolated PostgreSQL 17.11 suite, 59 passed, including: governance chain
+  (`dec03_governance_live.txt`, 56 at that point), GOLD derived-copy
+  hide-and-reconcile for revoke and expire, partial-batch fault with committed
+  earlier rows and stable retry keys, four-way concurrent duplicate batch
+  admission, and a TRUE OS-process proof: `python -m apps.main` child process
+  over TCP, register/verify/login through the runtime's console token affordance,
+  capture + evaluate, SIGKILL (-9, no shutdown hook), restart, identical read-back,
+  replay 201 with same identity, changed-content 409, zero-row sweep; three
+  `runtime_started` banners, no traceback.
+- **D / Transactions — VERIFIED within LIVE + TEST envelope:** intake rows are
+  independent atomic captures (row N failure leaves rows <N committed; replay of
+  the same batch key returns their identities and admits the rest); tenant/policy
+  advisory lock precedes the retry lock; expiry sweep and policy revocation redact
+  payload and preserve lineage in one transaction; legacy-hold release is a
+  single DELETE keyed by tenant + NULL policy + `legacy_unresolved`.
+- **E / Trust — VERIFIED within LIVE + TEST envelope:** GOLD is granted only via
+  `promote_to_gold` in custody mode (evaluation cannot mint GOLD); a GOLD memory
+  item is servable only while a live custody row (payload present, level GOLD)
+  binds its `memory_id`; `reconcile_derived_copies` deletes orphaned GOLD items
+  only, never other sources or tenants; promotion write failure deletes the item
+  and refuses. Operator acts (revoke / sweep / release-legacy-hold) are admin-only,
+  audited as `SECURITY_POLICY_CHANGED` with `details.act`, absent without custody
+  (404) and denied to non-admins (403); legacy release requires an explicit
+  `reconciliation_ref` (422 without). Storage refusals stay constant and
+  secret-free.
+- **F / Models — UNVERIFIED (unchanged):** no real-provider call, training,
+  weight modification or model promotion is claimed by this mission.
+- **G / Migration — VERIFIED within LIVE + TEST envelope (unchanged):** stamped
+  0019 → 0020 traversal over metadata-built prerequisites; populated downgrade
+  refuses. NOT a full 0001..0018 rehearsal or a rolling-upgrade proof.
+- **H / Limits — INFERRED, STATIC:** the process-kill proof is single-node on a
+  disposable local cluster; no multi-node, network-partition, or production
+  migration claim. Retention sweep is operator-invoked (no scheduler is
+  composed). Legacy hold release is an explicit reviewed act; the runtime never
+  infers historical policy intent. Rights references remain attestations, not
+  ownership or training authorization. The intake fault surface for an
+  internal DB error is the constant 500 handler (ASGI test transport re-raises).
+- **I / Scope:** production files touched are exactly the twelve already in the
+  DEC03 log (12/12); this closure phase added tests, evidence and the governance
+  seam inside those files. No threshold, assertion or scanner exception weakened.
+- **J / Companions — VERIFIED, TEST:** Gateway 194 passed (`final_gateway.txt`);
+  unchanged adversarial harness exit 0 with all probes VERIFIED
+  (`final_adversarial.txt`), both at 43a655be.
+- **K / Verdict and next:** P01 (durable external-ingestion evidence chain) and
+  Backend Closure are DECLARED within the evidenced envelope above. R178 UI
+  readiness stays OPEN (frozen, out of mission scope). Remaining honest limits are
+  listed in H. Next: merge PR #14 into `main` as the last act of the mandate; the
+  operator must then revoke/rotate the chat-supplied token.
+
+## Historical revocation successor A–K checkpoint — tested slice VERIFIED (superseded by closure checkpoint above)
 
 - **A / Recovery — VERIFIED, CAPTURED:** restored confirmed 13a70e21 bundle
   (SHA256 6ab1fd68edda1002b1967efb8d92556de8e32814e7f23cdadf00f7271f71e01c).

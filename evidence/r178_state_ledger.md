@@ -805,3 +805,28 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   (2) retention/expiry + derived-copy reconciliation, (3) runtime concurrency /
   partial-batch, (4) true process crash/restart proof, (5) final integrated
   verification, (6) P01/Backend Closure declaration with evidence, (7) merge.
+
+## Final closure — VERIFIED / LIVE + TEST / CAPTURED (2026-09-11)
+
+- Recovered from remote mission head after each reset (c2b60071 → 93d0fe26 →
+  ad4f9b5f → 43a655be → 1b78e545). Sandbox credential store recreated from the
+  operator token each time; token never entered tracked files or evidence.
+- Item 1 (legacy-hold reconciliation): explicit `release_legacy_hold` repository/
+  adapter/lifecycle act + audited admin route; live chain 0020 hold → 404 →
+  422 without ref → released True → False → capture 201 → sweep → expiry
+  redaction → zero-row revoke → audit acts in order (`dec03_governance_live.txt`).
+- Item 2 (retention/derived copies): `sweep_retention` + `reconcile_derived_copies`;
+  GOLD only via promotion; memory_id binding; live revoke/expire hide-and-reconcile.
+- Item 3 (concurrency/partial batch): hermetic 2 + live 2 tests
+  (`dec03_partial_batch_live.txt`).
+- Item 4 (true crash): OS-process SIGKILL/restart over TCP against the isolated
+  cluster; full live suite 59 passed (`dec03_process_kill_live.txt`).
+- Item 5 (final integrated verification at 43a655be): `final_full_gate.txt`
+  3504/0/0/64 PASS, budgets 12/12, not_evaluated=2; `final_gateway.txt` 194;
+  `final_adversarial.txt` exit 0.
+- Item 6: assessment (new current A–K), design packet closure section and this
+  ledger reconciled. P01 and Backend Closure DECLARED within the evidenced
+  envelope; UI readiness OPEN (frozen). Limits recorded in assessment §H.
+- Item 7: merge of PR #14 into `main` performed as the last act (see PR).
+- OPERATOR ACTION REQUIRED: revoke/rotate the chat-supplied token; sandbox
+  credential store deleted at mission end.

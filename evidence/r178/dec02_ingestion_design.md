@@ -441,3 +441,29 @@ Next: retention/derived-copy and legacy reconciliation review, runtime partial
 batch/concurrency boundaries, true process crash/recovery, then final integrated
 verification after product changes. Durable GOLD stays fail-closed. P01 final
 closure, Backend Closure, R178 completion and UI readiness remain OPEN.
+
+## Closure checkpoint — governance, reconciliation, boundaries, crash proof
+
+Supersedes the "Next" paragraph above. Implemented within the existing twelve
+DEC03 production files (12/12), tests-first, each unit committed and pushed:
+
+- Derived-copy reconciliation: GOLD memory items are derived copies; servable
+  only while a live custody row binds their `memory_id`. `sweep_retention`
+  expires payloads and reconciles copies; orphaned GOLD items are removed, all
+  other memory untouched. The interim fail-closed GOLD refusal is replaced.
+- Operator governance: `LearningGovernancePort` (revoke_policy / expire /
+  release_legacy_hold) delegated repository → adapter → lifecycle; routes
+  `POST /v1/admin/learning/custody/{revoke,sweep,release-legacy-hold}`, admin-only,
+  audited `SECURITY_POLICY_CHANGED` with `details.act`. Legacy-hold release is
+  the explicit reviewed operator act (requires `reconciliation_ref`); the system
+  never infers legacy intent.
+- Boundaries: partial-batch (later row DB fault keeps earlier committed rows;
+  same batch key replays their identities), concurrent duplicate batches admit
+  each row exactly once (hermetic + live PostgreSQL).
+- Crash: real OS process (`python -m apps.main`) SIGKILLed after capture and
+  evaluation; restart reads back identical state over TCP.
+
+Evidence: `dec03_reconcile_*`, `dec03_governance_*`, `dec03_partial_batch_live.txt`,
+`dec03_process_kill_live.txt` (59 live passed), `final_full_gate.txt`
+(3504/0/0/64, PASS), `final_gateway.txt` (194), `final_adversarial.txt` (exit 0).
+P01 and Backend Closure DECLARED within this envelope; limits in assessment §H.
