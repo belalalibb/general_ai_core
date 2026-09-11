@@ -709,3 +709,30 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   frozen-file change, assertion relaxation, merge or deployment authorized.
   Chat credential not used or persisted. Publication must target only remote
   genspark_ai_developer_r178 / existing PR #14; never PR #13's branch.
+
+## Revocation successor implementation — LIVE slice VERIFIED, final gate pending
+
+- VERIFIED / LIVE + TEST: tests 4c899a9c, red evidence 2c197229 (13 failed,
+  1 passed, 39 deselected; original four 201-vs-404 failures plus missing schema).
+  Product a5084dc3, schema ef86e88e, successor 7d009e54; DEC03 12/12 in 267868f7.
+- VERIFIED / LIVE + TEST: full live suite at 10d65159: 53 passed, zero failed,
+  evidence dec03_revocation_live.txt. Original four red assertions unchanged;
+  both original restart cases and earlier custody units retained. Tests observe
+  actual PostgreSQL advisory lock contention for BOTH transaction orderings,
+  late failure rollback, stamped-0019 upgrade and evidence-preserving downgrade.
+- Test harness correction 10d65159: race observer originally called .get on
+  SQLAlchemy executemany list while inserting receipt nodes, yielding one harness
+  failure; now observes mapping parameters only. Acceptance assertions unchanged.
+- INFERRED / STATIC limits: migration snapshots every preexisting tenant into an
+  explicit legacy_unresolved hold (NULL policy), including zero-row history.
+  It does NOT infer policy revocation/consent from sample flags. Custody access
+  fails closed until separately reviewed operator reconciliation. Holds do not
+  erase historical payloads; no erasure or release procedure is claimed here.
+  Stop all old learning writers before migration; old binaries cannot enforce
+  0020 after migration. No production migration/deployment performed.
+- NEXT EXACT ACTION: integrated canonical gate plus Gateway/adversarial and
+  remaining revocation boundary probes; then retention/derived-copy reconciliation,
+  runtime concurrency/partial batch and true process-crash proof. New admission
+  under revoked policy fails; same-key retry returns existing redacted evidence.
+- Backend Closure/P01/R178/UI remain OPEN. Publication not established; no chat
+  credential used or persisted, merge/deployment, PR #13 change or PR #14 update.
