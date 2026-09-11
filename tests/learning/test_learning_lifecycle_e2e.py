@@ -485,3 +485,111 @@ def test_custody_lifecycle_promotion_waits_for_derived_copy_reconciliation():
     with pytest.raises(LearningError, match="reconciliation"):
         service.promote_to_gold(sample.tenant_id, sample.id, ALL_PROMOTABLE)
     assert custody.calls == []
+
+
+# --- DEC03 derived-copy reconciliation (replaces the interim fail-closed GOLD) ---
+
+
+def _eligible_custody():
+    from dataclasses import replace
+
+    custody = _Custody()
+    custody.current = replace(
+        custody.current,
+        sample=custody.current.sample.model_copy(
+            update={"eligibility": LearningEligibility.ELIGIBLE}
+        ),
+    )
+    return custody
+
+
+def test_custody_promotion_binds_memory_id_and_retrieval_checks_live_custody():
+    custody = _eligible_custody()
+    service = _durable_lifecycle(custody)
+    t, s = custody.current.sample.tenant_id, custody.current.sample.id
+    item = service.promote_to_gold(t, s, ALL_PROMOTABLE)
+    assert custody.current.sample.verification_level is VerificationLevel.GOLD
+    assert custody.current.state["memory_id"] == str(item.id)
+    assert service.ask_learned(t, "fact")["found"] is True
+    assert service.learned_keys(t) == ("fact",)
+    assert service._samples == {}
+
+
+def test_custody_promotion_write_failure_leaves_no_gold_and_no_memory_binding():
+    custody = _eligible_custody()
+    custody.fail_save = True
+    service = _durable_lifecycle(custody)
+    t, s = custody.current.sample.tenant_id, custody.current.sample.id
+    with pytest.raises(LearningError):
+        service.promote_to_gold(t, s, ALL_PROMOTABLE)
+    # Refused CAS must not leave a retrievable derived copy behind.
+    assert service.ask_learned(t, "fact")["found"] is False
+    assert service.learned_keys(t) == ()
+    assert custody.current.sample.verification_level is VerificationLevel.RAW
+
+
+@pytest.mark.parametrize("loss", ["revoked", "expired"])
+def test_custody_loss_hides_and_reconciles_derived_copy(loss):
+    from dataclasses import replace
+    from datetime import timedelta
+
+    from core.memory.errors import MemoryItemNotFound
+
+    custody = _eligible_custody()
+    service = _durable_lifecycle(custody)
+    t, s = custody.current.sample.tenant_id, custody.current.sample.id
+    item = service.promote_to_gold(t, s, ALL_PROMOTABLE)
+    if loss == "revoked":
+        custody.current = replace(custody.current, payload=None)
+    else:
+        custody.current = replace(
+            custody.current, payload=None, expires_at=custody.current.expires_at - timedelta(days=1)
+        )
+    # Retrieval never serves a copy whose custody is gone, even before the sweep.
+    assert service.ask_learned(t, "fact")["found"] is False
+    assert service.learned_keys(t) == ()
+    report = service.reconcile_derived_copies(t)
+    assert report == {"checked": 1, "removed": 1, "retained": 0}
+    with pytest.raises(MemoryItemNotFound):
+        service._knowledge.get(t, item.id)
+    assert service.reconcile_derived_copies(t) == {"checked": 1, "removed": 0, "retained": 0}
+
+
+def test_reconcile_never_touches_non_gold_or_other_tenant_memory():
+    from core.contracts.base import utc_now
+    from core.contracts.memory import MemoryItem, MemoryScope
+    from core.memory.errors import MemoryItemNotFound
+
+    custody = _eligible_custody()
+    service = _durable_lifecycle(custody)
+    t = custody.current.sample.tenant_id
+    other = uuid4()
+    foreign = service._knowledge.upsert(
+        MemoryItem(
+            id=uuid4(), tenant_id=other, user_id=None, scope=MemoryScope.TENANT, key="fact",
+            value={"v": 1}, source=GOLD_KNOWLEDGE_SOURCE, confidence=0.9, evidence_count=1,
+            last_seen=utc_now(),
+        )
+    )
+    plain = service._knowledge.upsert(
+        MemoryItem(
+            id=uuid4(), tenant_id=t, user_id=None, scope=MemoryScope.TENANT, key="pref",
+            value={"v": 2}, source="user.preference", confidence=0.9, evidence_count=1,
+            last_seen=utc_now(),
+        )
+    )
+    orphan = service._knowledge.upsert(
+        MemoryItem(
+            id=uuid4(), tenant_id=t, user_id=None, scope=MemoryScope.TENANT, key="orphan",
+            value={"v": 3}, source=GOLD_KNOWLEDGE_SOURCE, confidence=0.9, evidence_count=1,
+            last_seen=utc_now(),
+        )
+    )
+    # A GOLD copy with no custody lineage is unprovable: removed, not served.
+    assert service.ask_learned(t, "orphan")["found"] is False
+    assert service.reconcile_derived_copies(t) == {"checked": 1, "removed": 1, "retained": 0}
+    assert service._knowledge.get(other, foreign.id) == foreign
+    assert service._knowledge.get(t, plain.id) == plain
+    with pytest.raises(MemoryItemNotFound):
+        service._knowledge.get(t, orphan.id)
+    assert custody.calls == []
