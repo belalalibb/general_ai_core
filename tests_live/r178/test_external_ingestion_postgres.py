@@ -183,11 +183,22 @@ def test_missing_actor_fk_leaves_no_sample_or_execution(database):
 
 
 def test_backend_closure_sample_survives_recomposition(database):
-    world, _, app = composed(database)
-    sample = capture(app)
+    from core.learning.storage import RetentionPolicy
+    from tests.api.test_external_evidence_p01_r178 import custody_body, governed_app
+
+    # DEC03 changed admission prerequisites, not these recovery assertions.
+    # Supply operator policy explicitly; never infer one from a durable store.
+    world, store, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    app = governed_app(world, custody_adapter(database, policy), store=store)
+    body = custody_body()
+    body["policy_id"] = str(policy.policy_id)
+    captured = run(_post(app, SAMPLES, body))
+    assert captured.status_code == 201
+    sample = captured.json()
     bridge, sessions = database
     fresh = DurableExecutionStore(repository=PostgresExecutionRepository(sessions), bridge=bridge)
-    restarted = _app(world, strict=True, store=fresh)
+    restarted = governed_app(world, custody_adapter(database, policy), store=fresh)
     # Subject and evaluation durability alone cannot satisfy this assertion.
     response = run(get(restarted, f"{SAMPLES}/{sample['id']}"))
     assert response.status_code == 200
@@ -238,6 +249,8 @@ def runtime_database(database):
 
 
 def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_database):
+    import json
+
     import httpx
 
     from apps.composition.runtime import build_runtime_profile
@@ -254,10 +267,32 @@ def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_databas
             return await client.request(method, path, headers=headers, json=body)
 
     try:
+        bootstrap = build_runtime_profile(environ=env)
+        profiles.append(bootstrap)
+        headers, tenant = _admin(bootstrap)
+        # Negative control: durable runtime without a policy refuses even when
+        # all opaque references are present; no legacy in-memory fallback.
+        policy_id, rights_ref, retry_key = uuid4(), uuid4(), uuid4()
+        refs = dict(policy_id=str(policy_id), rights_ref=str(rights_ref),
+                    idempotency_key=str(retry_key))
+        refused = run(request(bootstrap, headers, "POST", SAMPLES, dict(
+            **refs, knowledge_key="runtime.restart", knowledge_value={"answer": "fact"}
+        )))
+        assert refused.status_code == 404
+        assert bootstrap.app.state.learning_lifecycle_service._samples == {}
+        assert bootstrap.app.state.learning_lifecycle_service.list_samples(tenant) == ()
+        run(bootstrap.release_adapters())
+        bootstrap.bridge.run(bootstrap.bindings.engine.dispose())
+        bootstrap.bridge.close()
+        profiles.remove(bootstrap)
+        # Test-operator configuration for the registered tenant, before boot.
+        # These are NOT application defaults or an internal policy-map mutation.
+        env["LEARNING_STORAGE_POLICIES"] = json.dumps([dict(
+            tenant_id=str(tenant), policy_id=str(policy_id), retention_seconds=3600
+        )])
         first = build_runtime_profile(environ=env)
         profiles.append(first)
         assert first.durable and first.demo_principal is None
-        headers, _ = _admin(first)
         captured = run(
             request(
                 first,
@@ -265,6 +300,7 @@ def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_databas
                 "POST",
                 SAMPLES,
                 {
+                    **refs,
                     "knowledge_key": "runtime.restart",
                     "knowledge_value": {"answer": "fact"},
                 },
@@ -306,6 +342,13 @@ def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_databas
         restored = run(request(second, headers, "GET", f"{SAMPLES}/{sample['id']}"))
         assert restored.status_code == 200
         assert restored.json()["sample"]["id"] == sample["id"]
+        replay = run(request(second, headers, "POST", SAMPLES, dict(
+            **refs, knowledge_key="runtime.restart", knowledge_value={"answer": "fact"}
+        )))
+        assert replay.status_code == 201
+        assert replay.json() == restored.json()["sample"]
+        assert len(second.app.state.learning_lifecycle_service.list_samples(tenant)) == 1
+        assert second.app.state.learning_lifecycle_service._samples == {}
     finally:
         for profile in profiles:
             run(profile.release_adapters())
