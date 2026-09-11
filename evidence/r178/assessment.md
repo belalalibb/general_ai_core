@@ -1,6 +1,44 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current execution-source custody A–K checkpoint — Backend Closure OPEN
+## Current Core lifecycle custody A–K checkpoint — Backend Closure OPEN
+
+- **A / State — VERIFIED, CAPTURED:** restored confirmed 42fc734b. Product
+  45e1f4b3 retained; main 369cf37c / mission remote 84563ab9. R177 remains CLOSED.
+- **B / Regression — VERIFIED, TEST:** dec03_lifecycle_full_gate.txt, snapshot
+  cef5a0fe: 3477 passed, 0 failed/errors, 64 skipped; all static/governance gates
+  PASS, not_evaluated=2. No threshold, assertion or exception weakened.
+- **C / Gap — FAILED, LIVE + TEST:** dec03_lifecycle_runtime_open.txt, 2e5eedad:
+  37 passed / two original runtime restart failures at lines 193/307, 404 != 200.
+- **D / Change — VERIFIED, TEST:** 19 failing-first missing-custody cases;
+  182 learning/adapter cases pass, strict mypy/ruff clean (7afc02e0). Core-owned
+  optional custody delegates both captures and detached reads/list/report/CAS,
+  without durable raw _samples shadows. In-memory behavior remains tested.
+- **E / Trust — VERIFIED within TEST + LIVE scope:** unavailable data remains
+  metadata, not clean empty content. Review/level/eligibility use closed-state CAS;
+  evaluation UUID binds tenant/source. Independent evaluation evidence survives
+  CAS conflict without advanced sample trust. Clean scans/rights refs grant no rights.
+- **F / Models — UNVERIFIED beyond existing tests:** no live inference, training,
+  weights or model-promotion proof; existing native routing unchanged.
+- **G / Learning — INFERRED, STATIC limits:** runtime/API/intake still unbound.
+  Durable GOLD assignment/promotion/retrieval fail closed pending derived-copy
+  reconciliation. Dedup is a snapshot, not cross-sample atomic admission proof.
+- **H / Recovery — VERIFIED, LIVE + TEST (direct Core composition only):** five
+  PostgreSQL 17.11 cases (1a6f733d / cef5a0fe): fresh review/evaluation/eligibility/
+  retry, review/revocation races, sample-write rollback after custody CAS, and
+  metadata-only quarantine. Direct recomposition is NOT process-crash proof.
+- **I / Decisions:** DEC03 B APPROVED, accounting 7/11. Four approved files remain:
+  API app/admin/intake and runtime. Policy snapshots are not durable revocation
+  registries; stale-process new admission and derived-copy reconciliation are open.
+- **J / Other checks — VERIFIED, TEST:** Gateway 194; original adversarial exit 0
+  (2e5eedad). Publication BLOCKED / CAPTURED: environment GitHub authentication
+  absent; dry-run push cannot authenticate. No chat credential used, PR update,
+  merge, deployment or publication-time squashing claimed.
+- **K / Next:** tests-first actual API/runtime custody composition with explicit
+  policy, requesting actor, rights and idempotency admission and safe refusals;
+  retention/revocation, derived copies, concurrent admission and true restart/crash
+  remain required before final integrated Backend Closure. R178/UI remain OPEN.
+
+## Historical execution-source custody A–K checkpoint — Backend Closure OPEN
 
 - **A / State — VERIFIED, CAPTURED:** recovered 2e7385f3 with all verification;
   main 369cf37c / mission remote 84563ab9. R177 remains closed.
