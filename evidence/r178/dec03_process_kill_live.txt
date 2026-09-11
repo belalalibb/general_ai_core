@@ -1,0 +1,8 @@
+Commit under test: ad4f9b5f + process-kill test (committed next)
+Runner: bash tests_live/r178/run_local_postgres.sh  (full live suite incl. true SIGKILL restart)
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+...........................................................              [100%]
+=============================== warnings summary ===============================
+tests_live/r178/test_external_ingestion_postgres.py::test_governed_intake_concurrent_duplicate_batches_admit_each_row_once_on_postgres
+59 passed, 1 warning in 38.22s

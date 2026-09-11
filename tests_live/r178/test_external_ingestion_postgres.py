@@ -1737,3 +1737,166 @@ def test_governed_intake_concurrent_duplicate_batches_admit_each_row_once_on_pos
             return set((await s.scalars(select(learning_sample_custody.c.idempotency_key))).all())
 
     assert database[0].run(keys()) == {uuid5(batch, f"row:{n}") for n in range(1, 6)}
+
+
+def _free_port():
+    import socket
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return int(probe.getsockname()[1])
+
+
+class _Server:
+    """A REAL ``python -m apps.main`` OS process on the isolated local cluster.
+
+    Not an in-process profile: the API, bridge loop, worker and relay live in
+    a child process that the test can SIGKILL without cleanup. stdout is
+    captured to a file so the console-delivered verification token can be
+    read honestly (the runtime's recorded local email affordance).
+    """
+
+    def __init__(self, env, port, log_path):
+        self.env = env
+        self.port = port
+        self.log_path = log_path
+        self.process = None
+
+    def __enter__(self):
+        import subprocess
+        import sys
+        import time
+
+        import httpx
+
+        self.log = open(self.log_path, "a", encoding="utf-8")  # noqa: SIM115 — child stream
+        self.process = subprocess.Popen(  # noqa: S603 — fixed argv, isolated env
+            [sys.executable, "-m", "apps.main"],
+            env={**self.env, "HOST": "127.0.0.1", "PORT": str(self.port), "LOG_LEVEL": "warning"},
+            stdout=self.log, stderr=subprocess.STDOUT, cwd=os.getcwd(),
+        )
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            if self.process.poll() is not None:
+                raise AssertionError(f"server exited early: {self.process.returncode}")
+            try:
+                if httpx.get(f"{self.base}/healthz", timeout=1).status_code == 200:
+                    return self
+            except httpx.HTTPError:
+                time.sleep(0.1)
+        raise AssertionError("server did not become live")
+
+    def __exit__(self, *_):
+        if self.process.poll() is None:
+            self.process.terminate()
+            self.process.wait(timeout=30)
+        self.log.close()
+
+    @property
+    def base(self):
+        return f"http://127.0.0.1:{self.port}"
+
+    def kill(self):
+        import signal
+
+        self.process.send_signal(signal.SIGKILL)
+        return self.process.wait(timeout=30)
+
+    def call(self, method, path, headers=None, body=None):
+        import httpx
+
+        return httpx.request(method, f"{self.base}{path}", headers=headers, json=body, timeout=30)
+
+
+def test_backend_closure_true_process_kill_and_restart_preserves_custody(runtime_database):
+    """OS-level crash proof: capture over TCP, SIGKILL -9, restart, read back.
+
+    Distinct from the in-process restart test: no Python object survives, no
+    bridge/engine is disposed, no shutdown hook runs. Only PostgreSQL rows
+    carry state across the boundary. The session token also survives because
+    identity is durable; no replacement actor or demo principal is used.
+    """
+    import json
+
+    from tests.composition.test_admin_console_runtime import ADMIN_EMAIL, PASSWORD
+
+    tenant_policy = uuid4()
+    port = _free_port()
+    log_path = os.path.join(os.environ["TMPDIR"], f"r178_server_{port}.log")
+    env = {
+        "PATH": os.environ["PATH"], "HOME": os.environ["HOME"], "TMPDIR": os.environ["TMPDIR"],
+        "PYTHONPATH": os.environ.get("PYTHONPATH", os.getcwd()), "LANG": "C.UTF-8",
+        "DATABASE_URL": runtime_database, "ADMIN_EMAILS": ADMIN_EMAIL,
+    }
+    refs = dict(policy_id=str(tenant_policy), rights_ref=str(uuid4()), idempotency_key=str(uuid4()))
+    body = dict(**refs, knowledge_key="process.kill", knowledge_value={"answer": "durable fact"})
+
+    with _Server(env, port, log_path) as bootstrap:
+        registered = bootstrap.call("POST", "/v1/auth/register", body=dict(
+            email=ADMIN_EMAIL, password=PASSWORD, preferred_language="en"
+        ))
+        assert registered.status_code == 201, registered.text
+        tenant = registered.json()["tenant_id"]
+        bootstrap.log.flush()
+        with open(log_path, encoding="utf-8") as captured:
+            issued = [
+                json.loads(line) for line in captured
+                if line.startswith("{") and "email_verification_token_issued" in line
+            ]
+        assert len(issued) == 1 and issued[0]["email"] == ADMIN_EMAIL
+        verified = bootstrap.call("POST", "/v1/auth/verify", body={"token": issued[0]["token"]})
+        assert verified.status_code == 200
+        credentials = dict(email=ADMIN_EMAIL, password=PASSWORD)
+        login = bootstrap.call("POST", "/v1/auth/login", body=credentials)
+        assert login.status_code == 200
+        headers = {"Authorization": f"Bearer {login.json()['token']}"}
+        # Negative control: durable process without a policy refuses capture.
+        assert bootstrap.call("POST", SAMPLES, headers, body).status_code == 404
+        assert bootstrap.call("GET", SAMPLES, headers).json()["samples"] == []
+        assert bootstrap.kill() == -9
+
+    env["LEARNING_STORAGE_POLICIES"] = json.dumps([dict(
+        tenant_id=tenant, policy_id=str(tenant_policy), retention_seconds=3600
+    )])
+    with _Server(env, port, log_path) as first:
+        captured = first.call("POST", SAMPLES, headers, body)
+        assert captured.status_code == 201, captured.text
+        sample = captured.json()
+        graded = first.call(
+            "POST", f"{SAMPLES}/{sample['id']}/evaluate", headers,
+            {"output": {"answer": "durable fact"}},
+        )
+        assert graded.status_code == 200 and graded.json()["evaluated"] is True
+        graded_sample = first.call("GET", f"{SAMPLES}/{sample['id']}", headers).json()["sample"]
+        assert graded_sample["verification_level"] == "VALIDATED"
+        assert {**sample, "verification_level": "VALIDATED"} == graded_sample
+        # SIGKILL: no lifespan shutdown, no engine dispose, no bridge close.
+        assert first.kill() == -9
+
+    with _Server(env, port, log_path) as second:
+        restored = second.call("GET", f"{SAMPLES}/{sample['id']}", headers)
+        assert restored.status_code == 200, restored.text
+        # Capture AND the evaluation's durable level advance survived the kill.
+        assert restored.json()["sample"] == graded_sample
+        receipt = second.call("GET", f"/v1/executions/{sample['source_execution_id']}", headers)
+        assert receipt.status_code == 200
+        records = second.call(
+            "GET", f"/v1/admin/executions/{sample['source_execution_id']}/evaluations", headers
+        )
+        assert records.status_code == 200 and len(records.json()["evaluations"]) == 1
+        replay = second.call("POST", SAMPLES, headers, body)
+        assert replay.status_code == 201 and replay.json() == graded_sample
+        listing = second.call("GET", SAMPLES, headers)
+        assert [s["id"] for s in listing.json()["samples"]] == [sample["id"]]
+        altered = {**body, "knowledge_value": {"answer": "other"}}
+        changed = second.call("POST", SAMPLES, headers, altered)
+        assert changed.status_code == 409
+        swept = second.call("POST", "/v1/admin/learning/custody/sweep", headers, {})
+        assert swept.status_code == 200
+        assert swept.json() == {
+            "expired_samples": 0, "derived_copies": {"checked": 0, "removed": 0, "retained": 0}
+        }
+    with open(log_path, encoding="utf-8") as captured:
+        transcript = captured.read()
+    assert transcript.count('"event": "runtime_started"') == 3
+    assert '"profile": "durable"' in transcript and "Traceback" not in transcript
