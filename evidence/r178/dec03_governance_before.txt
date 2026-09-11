@@ -1,0 +1,25 @@
+Tests-first governance API
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+E   assert 404 == 200
+     +  where 404 = <Response [404 Not Found]>.status_code
+/home/user/webapp/tests/api/test_external_evidence_p01_r178.py:537: assert 404 == 200
+E   assert 404 == 200
+     +  where 404 = <Response [404 Not Found]>.status_code
+/home/user/webapp/tests/api/test_external_evidence_p01_r178.py:549: assert 404 == 200
+E   AssertionError: assert 404 == 422
+     +  where 404 = <Response [404 Not Found]>.status_code
+     +    where <Response [404 Not Found]> = run(<coroutine object _post at 0x7f0cf23aa540>)
+     +      where <coroutine object _post at 0x7f0cf23aa540> = _post(<fastapi.applications.FastAPI object at 0x7f0cf21b5a90>, '/v1/admin/learning/custody/release-legacy-hold', {})
+/home/user/webapp/tests/api/test_external_evidence_p01_r178.py:563: AssertionError: assert 404 == 422
+E   AssertionError: assert 404 == 403
+     +  where 404 = <Response [404 Not Found]>.status_code
+     +    where <Response [404 Not Found]> = run(<coroutine object _post at 0x7f0cf22ed440>)
+     +      where <coroutine object _post at 0x7f0cf22ed440> = _post(<fastapi.applications.FastAPI object at 0x7f0cf1d55450>, '/v1/admin/learning/custody/sweep', {})
+/home/user/webapp/tests/api/test_external_evidence_p01_r178.py:583: AssertionError: assert 404 == 403
+=========================== short test summary info ============================
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governance_revoke_requires_admin_and_is_audited
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governance_retention_sweep_uses_server_clock_and_reconciles_copies
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governance_legacy_release_requires_explicit_reconciliation_reference
+FAILED tests/api/test_external_evidence_p01_r178.py::test_governance_routes_absent_without_custody_and_denied_to_non_admin
+4 failed, 33 deselected in 1.77s

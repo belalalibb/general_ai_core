@@ -490,3 +490,95 @@ def test_governed_intake_parse_refusal_does_not_echo_secret_field():
     assert response.status_code == 422
     assert marker not in response.text
     assert custody.calls == []
+
+
+# --- DEC03 operator governance: revoke / retention sweep + reconcile / legacy release
+
+
+class _GovernedCustody:
+    """Port double recording governance acts; no database claims."""
+
+    def __init__(self, inner):
+        self.inner = inner
+        self.acts = []
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    def revoke_policy(self, tenant_id, policy_id):
+        self.acts.append(("revoke", tenant_id, policy_id))
+        return 1
+
+    def expire(self, tenant_id, now):
+        self.acts.append(("expire", tenant_id, now))
+        return 2
+
+    def release_legacy_hold(self, tenant_id, *, reconciliation_ref):
+        self.acts.append(("release", tenant_id, reconciliation_ref))
+        return True
+
+
+GOVERN = "/v1/admin/learning/custody"
+
+
+def governed_world():
+    world, custody = custody_api_world()
+    governed = _GovernedCustody(custody)
+    return world, governed, governed_app(world, governed)
+
+
+def test_governance_revoke_requires_admin_and_is_audited():
+    from core.contracts.audit import AuditEventType
+
+    world, custody, app = governed_world()
+    tenant = world.principal.tenant_id
+    policy = uuid4()
+    response = run(_post(app, f"{GOVERN}/revoke", {"policy_id": str(policy)}))
+    assert response.status_code == 200
+    assert response.json() == {"policy_id": str(policy), "revoked_samples": 1}
+    assert custody.acts == [("revoke", tenant, policy)]
+    events = world.audit.read(tenant, event_type=AuditEventType.SECURITY_POLICY_CHANGED)
+    assert len(events) == 1 and events[0].actor_id == world.principal.user_id
+    assert events[0].details["act"] == "learning_policy_revoked"
+    assert events[0].details["policy_id"] == str(policy)
+
+
+def test_governance_retention_sweep_uses_server_clock_and_reconciles_copies():
+    world, custody, app = governed_world()
+    response = run(_post(app, f"{GOVERN}/sweep", {}))
+    assert response.status_code == 200
+    assert response.json() == {
+        "expired_samples": 2,
+        "derived_copies": {"checked": 0, "removed": 0, "retained": 0},
+    }
+    act = custody.acts[0]
+    assert act[0] == "expire" and act[1] == world.principal.tenant_id
+    assert act[2].utcoffset() is not None  # server clock, never caller-supplied
+
+
+def test_governance_legacy_release_requires_explicit_reconciliation_reference():
+    from core.contracts.audit import AuditEventType
+
+    world, custody, app = governed_world()
+    assert run(_post(app, f"{GOVERN}/release-legacy-hold", {})).status_code == 422
+    ref = uuid4()
+    released = run(_post(app, f"{GOVERN}/release-legacy-hold", {"reconciliation_ref": str(ref)}))
+    assert released.status_code == 200
+    assert released.json() == {"released": True, "reconciliation_ref": str(ref)}
+    assert custody.acts == [("release", world.principal.tenant_id, ref)]
+    events = world.audit.read(
+        world.principal.tenant_id, event_type=AuditEventType.SECURITY_POLICY_CHANGED
+    )
+    assert events[0].details["act"] == "learning_legacy_hold_released"
+    assert events[0].details["reconciliation_ref"] == str(ref)
+
+
+def test_governance_routes_absent_without_custody_and_denied_to_non_admin():
+    from dataclasses import replace
+
+    world, custody = custody_api_world()
+    assert run(_post(_app(world, strict=True), f"{GOVERN}/sweep", {})).status_code == 404
+    world.principal = replace(world.principal, is_admin=False)
+    app = governed_app(world, _GovernedCustody(custody))
+    assert run(_post(app, f"{GOVERN}/sweep", {})).status_code == 403
+    assert run(_post(app, f"{GOVERN}/revoke", {"policy_id": str(uuid4())})).status_code == 403
