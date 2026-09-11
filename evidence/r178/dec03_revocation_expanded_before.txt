@@ -1,0 +1,80 @@
+Tests-first snapshot: 4c899a9c
+Command: bash tests_live/r178/run_local_postgres.sh -k test_policy_revocation
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+FFFF.FFFFFFFFF                                                           [100%]
+=================================== FAILURES ===================================
+_ test_policy_revocation_denies_new_api_capture_with_stale_config[False-False] _
+tests_live/r178/test_external_ingestion_postgres.py:1251: in test_policy_revocation_denies_new_api_capture_with_stale_config
+    assert refused.status_code == 404
+E   assert 201 == 404
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_policy_revocation_denies_new_api_capture_with_stale_config[False-True] __
+tests_live/r178/test_external_ingestion_postgres.py:1251: in test_policy_revocation_denies_new_api_capture_with_stale_config
+    assert refused.status_code == 404
+E   assert 201 == 404
+E    +  where 201 = <Response [201 Created]>.status_code
+_ test_policy_revocation_denies_new_api_capture_with_stale_config[True-False] __
+tests_live/r178/test_external_ingestion_postgres.py:1251: in test_policy_revocation_denies_new_api_capture_with_stale_config
+    assert refused.status_code == 404
+E   assert 201 == 404
+E    +  where 201 = <Response [201 Created]>.status_code
+__ test_policy_revocation_denies_new_api_capture_with_stale_config[True-True] __
+tests_live/r178/test_external_ingestion_postgres.py:1251: in test_policy_revocation_denies_new_api_capture_with_stale_config
+    assert refused.status_code == 404
+E   assert 201 == 404
+E    +  where 201 = <Response [201 Created]>.status_code
+_____________ test_policy_revocation_transaction_orderings[False] ______________
+tests_live/r178/test_external_ingestion_postgres.py:1287: in test_policy_revocation_transaction_orderings
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+______________ test_policy_revocation_transaction_orderings[True] ______________
+tests_live/r178/test_external_ingestion_postgres.py:1287: in test_policy_revocation_transaction_orderings
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+________________ test_policy_revocation_late_failure_is_atomic _________________
+tests_live/r178/test_external_ingestion_postgres.py:1363: in test_policy_revocation_late_failure_is_atomic
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+_________ test_policy_revocation_stamped_upgrade_legacy_denies[empty] __________
+tests_live/r178/test_external_ingestion_postgres.py:1420: in test_policy_revocation_stamped_upgrade_legacy_denies
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+________ test_policy_revocation_stamped_upgrade_legacy_denies[zero_row] ________
+tests_live/r178/test_external_ingestion_postgres.py:1420: in test_policy_revocation_stamped_upgrade_legacy_denies
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+________ test_policy_revocation_stamped_upgrade_legacy_denies[expired] _________
+tests_live/r178/test_external_ingestion_postgres.py:1420: in test_policy_revocation_stamped_upgrade_legacy_denies
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+_________ test_policy_revocation_stamped_upgrade_legacy_denies[clean] __________
+tests_live/r178/test_external_ingestion_postgres.py:1420: in test_policy_revocation_stamped_upgrade_legacy_denies
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+______ test_policy_revocation_stamped_downgrade_preserves_evidence[False] ______
+tests_live/r178/test_external_ingestion_postgres.py:1466: in test_policy_revocation_stamped_downgrade_preserves_evidence
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+______ test_policy_revocation_stamped_downgrade_preserves_evidence[True] _______
+tests_live/r178/test_external_ingestion_postgres.py:1466: in test_policy_revocation_stamped_downgrade_preserves_evidence
+    from infrastructure.db.tables import learning_policy_revocations
+E   ImportError: cannot import name 'learning_policy_revocations' from 'infrastructure.db.tables' (/home/user/webapp/infrastructure/db/tables.py)
+=========================== short test summary info ============================
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_denies_new_api_capture_with_stale_config[False-False]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_denies_new_api_capture_with_stale_config[False-True]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_denies_new_api_capture_with_stale_config[True-False]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_denies_new_api_capture_with_stale_config[True-True]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_transaction_orderings[False]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_transaction_orderings[True]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_late_failure_is_atomic
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_stamped_upgrade_legacy_denies[empty]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_stamped_upgrade_legacy_denies[zero_row]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_stamped_upgrade_legacy_denies[expired]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_stamped_upgrade_legacy_denies[clean]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_stamped_downgrade_preserves_evidence[False]
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_policy_revocation_stamped_downgrade_preserves_evidence[True]
+13 failed, 1 passed, 39 deselected in 7.25s
+process_exit=1
