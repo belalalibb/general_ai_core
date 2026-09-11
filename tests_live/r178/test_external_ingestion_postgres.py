@@ -1587,6 +1587,9 @@ def test_governance_api_release_legacy_hold_then_capture_and_sweep_on_postgres(d
     assert swept.status_code == 200 and swept.json()["expired_samples"] == 0
 
     async def backdate():
+        # One clock reading: two utc_now() calls make expires - created exceed
+        # the stored retention by microseconds and the codec refuses the row.
+        anchor = utc_now() - timedelta(hours=2)
         async with database[1].begin() as s:
             await s.execute(
                 learning_sample_custody.update()
@@ -1594,8 +1597,8 @@ def test_governance_api_release_legacy_hold_then_capture_and_sweep_on_postgres(d
                 # Keep expires - created == retention (3600s); the codec refuses
                 # rows whose lifetime exceeds the stored policy, by design.
                 .values(
-                    created_at=utc_now() - timedelta(hours=2),
-                    expires_at=utc_now() - timedelta(hours=1),
+                    created_at=anchor,
+                    expires_at=anchor + timedelta(seconds=policy.retention_seconds),
                 )
             )
 
