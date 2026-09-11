@@ -453,38 +453,27 @@ def test_custody_lifecycle_eligibility_persists_closed_verdicts(allowed):
     assert service._samples == {}
 
 
-@pytest.mark.parametrize("operation", ["level", "retrieve", "keys"])
-def test_custody_lifecycle_gold_bypasses_wait_for_reconciliation(operation):
+def test_custody_lifecycle_gold_level_only_through_promotion():
+    # Interim "wait for reconciliation" refusal is superseded: reconciliation
+    # now exists, but GOLD still cannot be stamped without the promotion write.
     custody = _Custody()
     service = _durable_lifecycle(custody)
     t, s = custody.current.sample.tenant_id, custody.current.sample.id
-    actions = {
-        "level": lambda: service.set_verification_level(t, s, VerificationLevel.GOLD),
-        "retrieve": lambda: service.ask_learned(t, "fact"),
-        "keys": lambda: service.learned_keys(t),
-    }
-    with pytest.raises(LearningError, match="reconciliation"):
-        actions[operation]()
+    with pytest.raises(LearningError, match="promotion"):
+        service.set_verification_level(t, s, VerificationLevel.GOLD)
+    assert service.ask_learned(t, "fact")["found"] is False
+    assert service.learned_keys(t) == ()
     assert custody.calls == []
 
 
-def test_custody_lifecycle_promotion_waits_for_derived_copy_reconciliation():
-    from dataclasses import replace
-
+def test_custody_lifecycle_promotion_requires_eligibility_without_memory_write():
     custody = _Custody()
-    custody.current = replace(
-        custody.current,
-        sample=custody.current.sample.model_copy(
-            update={
-                "eligibility": LearningEligibility.ELIGIBLE,
-            }
-        ),
-    )
     service = _durable_lifecycle(custody)
     sample = custody.current.sample
-    with pytest.raises(LearningError, match="reconciliation"):
+    with pytest.raises(LearningError, match="eligibility"):
         service.promote_to_gold(sample.tenant_id, sample.id, ALL_PROMOTABLE)
     assert custody.calls == []
+    assert service.learned_keys(sample.tenant_id) == ()
 
 
 # --- DEC03 derived-copy reconciliation (replaces the interim fail-closed GOLD) ---
@@ -552,7 +541,8 @@ def test_custody_loss_hides_and_reconciles_derived_copy(loss):
     assert report == {"checked": 1, "removed": 1, "retained": 0}
     with pytest.raises(MemoryItemNotFound):
         service._knowledge.get(t, item.id)
-    assert service.reconcile_derived_copies(t) == {"checked": 1, "removed": 0, "retained": 0}
+    # The copy is gone, so nothing remains to check; repeat sweep is a no-op.
+    assert service.reconcile_derived_copies(t) == {"checked": 0, "removed": 0, "retained": 0}
 
 
 def test_reconcile_never_touches_non_gold_or_other_tenant_memory():

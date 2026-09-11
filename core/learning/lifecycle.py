@@ -87,6 +87,7 @@ from core.learning.gates import (
 )
 from core.learning.sanitizer import SanitizationReport, sanitize_knowledge
 from core.learning.storage import RecoveredCapture, validate_custody_state
+from core.memory.errors import MemoryStoreError
 
 #: The machine-checkable source label GOLD knowledge carries in memory —
 #: the isolated test path answers ONLY from items with this source.
@@ -199,6 +200,10 @@ class KnowledgeStorePort(Protocol):
         min_confidence: float = 0.0,
         include_expired: bool = False,
     ) -> tuple[MemoryItem, ...]: ...
+
+    def delete(self, tenant_id: UUID, memory_id: UUID) -> None:
+        """Existing MemoryStorePort.delete (13 §8) — used only for derived GOLD copies."""
+        ...
 
 
 class AuditPort(Protocol):
@@ -452,9 +457,48 @@ class LearningLifecycleService:
             )
         return record.sample
 
-    def _require_reconciled_copies(self) -> None:
-        if self._custody is not None:
-            raise LearningError("durable GOLD requires derived-copy reconciliation")
+    # --- derived-copy reconciliation (DEC03) -----------------------------------
+    #
+    # GOLD knowledge in memory is a DERIVED copy of custody payload. Custody is
+    # the authority: a copy is servable only while its sample still has payload
+    # (not revoked/expired/quarantined) and binds this exact memory id. The
+    # sweep removes copies whose custody is gone or that no sample claims.
+
+    def _live_gold_ids(self, tenant_id: UUID) -> set[UUID]:
+        assert self._custody is not None
+        live: set[UUID] = set()
+        for current in self._custody.list(tenant_id):
+            if current.payload is None:
+                continue
+            if current.sample.verification_level is not VerificationLevel.GOLD:
+                continue
+            bound = validate_custody_state(current.state).get("memory_id")
+            if isinstance(bound, str):
+                live.add(UUID(bound))
+        return live
+
+    def _servable_gold(self, tenant_id: UUID, items: Sequence[MemoryItem]) -> list[MemoryItem]:
+        gold = [i for i in items if i.source == GOLD_KNOWLEDGE_SOURCE]
+        if self._custody is None:
+            return gold
+        live = self._live_gold_ids(tenant_id)
+        return [i for i in gold if i.id in live]
+
+    def reconcile_derived_copies(self, tenant_id: UUID) -> dict[str, int]:
+        """Remove GOLD copies without live custody; never touch other memory."""
+        items = self._knowledge.query(tenant_id, scope=MemoryScope.TENANT, include_expired=True)
+        gold = [i for i in items if i.source == GOLD_KNOWLEDGE_SOURCE]
+        live = self._live_gold_ids(tenant_id) if self._custody is not None else {i.id for i in gold}
+        removed = 0
+        for item in gold:
+            if item.id in live:
+                continue
+            try:
+                self._knowledge.delete(tenant_id, item.id)
+            except MemoryStoreError:
+                continue
+            removed += 1
+        return {"checked": len(gold), "removed": removed, "retained": len(gold) - removed}
 
     # --- sanitization (explicit reviewed act; no silent pass) -------------------
 
@@ -599,7 +643,7 @@ class LearningLifecycleService:
             ):
                 raise LearningError("evaluation seam returned invalid source binding")
             if level is VerificationLevel.GOLD:
-                self._require_reconciled_copies()
+                raise LearningError("GOLD is granted only through promotion")
             record.custody_state["evaluation_id"] = str(evaluation.id)
         record.sample = record.sample.model_copy(update={"verification_level": level})
         # Evaluation evidence is append-only and independent of this CAS. A
@@ -611,8 +655,8 @@ class LearningLifecycleService:
     ) -> LearningSample:
         """Explicit reviewer act (e.g. human verification step, 22 §8)."""
         record = self._record(tenant_id, sample_id)
-        if level is VerificationLevel.GOLD:
-            self._require_reconciled_copies()
+        if level is VerificationLevel.GOLD and self._custody is not None:
+            raise LearningError("GOLD is granted only through promotion")
         record.sample = record.sample.model_copy(update={"verification_level": level})
         return self._persist(record)
 
@@ -668,7 +712,6 @@ class LearningLifecycleService:
         through the EXISTING memory port — the retrieval substrate.
         """
         record = self._record(tenant_id, sample_id)
-        self._require_reconciled_copies()
         if record.sample.eligibility is not LearningEligibility.ELIGIBLE:
             raise LearningError("sample must pass training eligibility before promotion (22 §8)")
         verdicts = self._promotion.admit(str(sample_id), signals)
@@ -694,6 +737,18 @@ class LearningLifecycleService:
         record.sample = record.sample.model_copy(
             update={"verification_level": VerificationLevel.GOLD}
         )
+        if self._custody is not None:
+            # Bind the derived copy to custody; a refused CAS removes the copy
+            # so nothing retrievable outlives an unacknowledged promotion.
+            record.custody_state["memory_id"] = str(item.id)
+            try:
+                self._persist(record)
+            except Exception:
+                try:
+                    self._knowledge.delete(tenant_id, item.id)
+                except MemoryStoreError:
+                    pass
+                raise LearningError("learning promotion refused") from None
         if self._audit is not None:
             self._audit.append(
                 AuditEvent(
@@ -718,9 +773,8 @@ class LearningLifecycleService:
         Deny-by-default: no GOLD item under the key = an explicit
         ``found: False`` answer; the service never fabricates content.
         """
-        self._require_reconciled_copies()
         items = self._knowledge.query(tenant_id, scope=MemoryScope.TENANT, key=key)
-        gold = [i for i in items if i.source == GOLD_KNOWLEDGE_SOURCE]
+        gold = self._servable_gold(tenant_id, items)
         if not gold:
             return {"found": False, "key": key, "answer": None, "evidence": None}
         best = max(gold, key=lambda i: i.confidence)
@@ -734,9 +788,8 @@ class LearningLifecycleService:
 
     def learned_keys(self, tenant_id: UUID) -> tuple[str, ...]:
         """The tenant's GOLD knowledge keys — the testable surface, listed."""
-        self._require_reconciled_copies()
         items = self._knowledge.query(tenant_id, scope=MemoryScope.TENANT)
-        return tuple(sorted({i.key for i in items if i.source == GOLD_KNOWLEDGE_SOURCE}))
+        return tuple(sorted({i.key for i in self._servable_gold(tenant_id, items)}))
 
     # --- measurable capability re-test (R160) ------------------------------------
     #
