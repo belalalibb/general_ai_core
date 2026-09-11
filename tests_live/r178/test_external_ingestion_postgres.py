@@ -1019,3 +1019,143 @@ def test_execution_custody_adapter_late_failure_keeps_source_without_sample(data
     assert database[0].run(
         PostgresExecutionRepository(database[1]).get(policy.tenant_id, source.execution.id)
     ) == source
+
+
+def custody_lifecycle(database, policy, *, evaluation=None):
+    from core.learning.lifecycle import LearningLifecycleService
+    from core.memory.memory import InMemoryMemoryStore
+
+    return LearningLifecycleService(
+        knowledge=InMemoryMemoryStore(), evaluation=evaluation,
+        custody=custody_adapter(database, policy),
+    )
+
+
+def test_custody_lifecycle_postgres_recomposition_preserves_review_and_evidence(database):
+    from core.contracts.evaluation import VerificationLevel
+    from core.evaluation.policy import EvaluationPolicyService
+    from core.learning.storage import RetentionPolicy
+    from tests.learning.test_learning_lifecycle_e2e import ALL_ELIGIBLE
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    pipeline = EvaluationPolicyService(store=world.evaluations)
+    service = custody_lifecycle(database, policy, evaluation=pipeline)
+    args = custody_adapter_request(world, policy)
+    sample = service.capture_external(**args)
+    t, s = policy.tenant_id, sample.id
+    service.mark_sanitized(t, s, passed=True)
+    evaluated = run(service.evaluate(t, s, {"content": "bounded fact"}))
+    recorded = world.evaluations.list_for_execution(t, sample.source_execution_id)
+    assert len(recorded) == 1 and evaluated.verification_level == recorded[0].level
+    assert custody_adapter(database, policy).get(t, s).state["evaluation_id"] == str(recorded[0].id)
+    service.set_verification_level(t, s, VerificationLevel.VERIFIED)
+    admitted = service.admit_to_training(t, s, ALL_ELIGIBLE, dataset_id=uuid4())
+    fresh = custody_lifecycle(database, policy)
+    assert fresh.get(t, s) == admitted and fresh.list_samples(t) == (admitted,)
+    assert fresh.capture_external(**args) == admitted
+    assert all(fresh.sample_report(t, s)["eligibility_verdicts"].values())
+    assert fresh.sample_report(t, s)["sanitization_report"] is None
+    assert custody_adapter(database, policy).get(t, s).revision == 4
+    assert service._samples == fresh._samples == {}
+    assert count(database, evaluations) == count(database, learning_samples) == 1
+
+
+@pytest.mark.parametrize("race", ["review", "revocation"])
+def test_custody_lifecycle_postgres_evaluation_race_keeps_evidence_not_trust(database, race):
+    from core.contracts.evaluation import VerificationLevel
+    from core.evaluation.policy import EvaluationPolicyService
+    from core.learning.storage import LearningStorageConflict, RetentionPolicy
+    from infrastructure.db.learning import LearningCustodyRepository
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    pipeline = EvaluationPolicyService(store=world.evaluations)
+    first = custody_lifecycle(database, policy)
+    sample = first.capture_external(**custody_adapter_request(world, policy))
+
+    class RacingEvaluation:
+        async def evaluate(self, tenant_id, execution_id, output):
+            result = await pipeline.evaluate(tenant_id, execution_id, output)
+            if race == "review":
+                custody_lifecycle(database, policy).mark_sanitized(
+                    tenant_id, sample.id, passed=True
+                )
+            else:
+                database[0].run(
+                    LearningCustodyRepository(database[1]).revoke_policy(
+                        tenant_id, policy.policy_id
+                    )
+                )
+            return result
+
+    service = custody_lifecycle(database, policy, evaluation=RacingEvaluation())
+    with pytest.raises(LearningStorageConflict):
+        run(service.evaluate(policy.tenant_id, sample.id, {"content": "bounded fact"}))
+    current = custody_adapter(database, policy).get(policy.tenant_id, sample.id)
+    assert current.revision == 1 and current.sample.verification_level is VerificationLevel.RAW
+    assert "evaluation_id" not in current.state
+    assert count(database, evaluations) == 1
+    assert service._samples == {}
+    if race == "revocation":
+        assert current.payload is None
+        assert service.sample_report(policy.tenant_id, sample.id)["knowledge_key"] is None
+
+
+def test_custody_lifecycle_postgres_failed_sample_update_rolls_back_custody_cas(database):
+    from sqlalchemy.exc import DBAPIError
+
+    from core.contracts.learning import SanitizationState
+    from core.learning.storage import RetentionPolicy
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    service = custody_lifecycle(database, policy)
+    sample = service.capture_external(**custody_adapter_request(world, policy))
+
+    async def fail_update():
+        async with database[1].begin() as session:
+            await session.execute(text(
+                "CREATE FUNCTION fail_sample_update() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                "BEGIN RAISE EXCEPTION 'sample update failed'; END; $$"
+            ))
+            await session.execute(text(
+                "CREATE TRIGGER fail_sample_update BEFORE UPDATE ON learning_samples "
+                "FOR EACH ROW EXECUTE FUNCTION fail_sample_update()"
+            ))
+
+    database[0].run(fail_update())
+    with pytest.raises(DBAPIError):
+        service.mark_sanitized(policy.tenant_id, sample.id, passed=True)
+    current = custody_adapter(database, policy).get(policy.tenant_id, sample.id)
+    assert current.revision == 0
+    assert current.sample.sanitization_state is SanitizationState.PENDING
+    assert current.state == {"version": 1}
+    assert service._samples == {}
+
+
+def test_custody_lifecycle_postgres_quarantine_is_metadata_only(database):
+    from core.learning.errors import LearningError
+    from core.learning.storage import RetentionPolicy
+    from infrastructure.db.tables import learning_sample_custody
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    args = custody_adapter_request(world, policy)
+    marker = "ghp_" + "Q" * 36
+    args["knowledge_value"] = {marker: "sensitive field name"}
+    service = custody_lifecycle(database, policy)
+    sample = service.capture_external(**args)
+    fresh = custody_lifecycle(database, policy)
+    report = fresh.sample_report(policy.tenant_id, sample.id)
+    assert report["knowledge_key"] is None and report["sanitization_report"] is None
+    assert report["derived_signals"] == {"deduplicated": False, "scan_clean": False}
+    with pytest.raises(LearningError):
+        fresh.mark_sanitized(policy.tenant_id, sample.id, passed=True)
+    assert service._samples == fresh._samples == {}
+
+    async def stored():
+        async with database[1]() as session:
+            return (await session.execute(select(learning_sample_custody))).mappings().all()
+
+    assert marker not in str(database[0].run(stored())) and marker not in str(report)
