@@ -1,6 +1,36 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current API/runtime custody A–K checkpoint — Backend Closure OPEN
+## Current revocation admission checkpoint — FAILED / LIVE + TEST
+
+- Confirmed recovery: 40227b18, including tests efc1da52 and actual PostgreSQL
+  evidence dec03_revocation_admission_before.txt: 4 failed, 1 passed,
+  39 deselected. New API captures return 201 after policy revocation instead of
+  the existing safe policy-unavailable 404. Both stale/fresh configured adapters
+  and revocation with/without existing samples expose the defect.
+- Existing payload redaction and independent evaluation retention assertions
+  pass before the admission failure. Cross-tenant/other-policy control passes.
+  These are API/adapter/database tests, not process-kill proof.
+- Product, hermetic tests and gate configuration are unchanged from faf00219.
+  Retained integrated gate 3495/0/0/64, Gateway 194 and prior 39-case live suite
+  remain historical proof of their declared scope, NOT full revocation closure.
+  The interrupted expanded-live/report checkpoint was not uploaded and is not
+  treated as retained evidence here.
+- INFERRED / STATIC: revoke_policy only updates existing custody rows; no
+  policy-level tombstone persists a zero-row revocation. Per-sample revoked also
+  represents expiry, so historical policy intent must not be fabricated.
+- BLOCKED / scope: 0019 already exists on mission remote 84563ab9, same blob
+  247cb784f08e8474eefb258d2797c5585d694f73 as HEAD; rewriting its upgrade does
+  not migrate an already-stamped DB. DEC03 production accounting is 11/11.
+  Recommended fix needs one additive successor migration, not startup DDL,
+  invented sample/execution rows or repurposed audit/evaluation evidence.
+- NEXT: obtain narrow authorization for 0020_learning_policy_revocations.py
+  and DEC03 ceiling 12; then implement tenant-policy tombstones and capture/
+  revoke transaction ordering in the existing custody repository, with upgrade,
+  rollback and race tests. DEC03 B remains approved; no reapproval requested.
+  Retention/derived copies, runtime concurrency and true crash proof remain open.
+  No budget, gate, assertion or production code changed in this checkpoint.
+
+## Historical API/runtime custody A–K checkpoint — Backend Closure OPEN
 
 - **A / State — VERIFIED, CAPTURED:** recovered confirmed 2591870c; product
   0e2d366f, main 369cf37c / mission remote prerequisite 84563ab9. Prior receipt,
