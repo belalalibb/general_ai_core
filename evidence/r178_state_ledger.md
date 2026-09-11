@@ -776,3 +776,20 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   mission-only dry-run push fails (exit 128, username unavailable). No chat token
   copied/tested, push, PR #14 update or publication squash claimed. Never touch
   remote genspark_ai_developer or PR #13. Preserve confirmed recovery bundle.
+
+## Mission publication — VERIFIED / CAPTURED (2026-09-11)
+
+- Operator explicitly authorized authenticating with the operator-supplied token
+  until mission completion. Authenticated identity: belalalibb; repository push
+  permission confirmed by API. Credential lives only in the sandbox user's git
+  credential store outside the repository; never in tracked files, evidence,
+  commit messages or logs (all command output redacted before capture).
+- Pre-push scan: every unpublished commit (84563ab9..d87e5db8) checked against the
+  manifest secret patterns; only synthetic test markers built from fragments.
+- Fast-forward push of exactly d87e5db8 to remote genspark_ai_developer_r178
+  (previous head 84563ab9). Remote genspark_ai_developer (PR #13) untouched at
+  a2e23547. PR #14 description/title updated to the verified state with explicit
+  "Backend Closure OPEN — do not merge as closure certification". No merge,
+  deployment, or rewrite of published history.
+- OPERATOR ACTION REQUIRED at mission end: revoke/rotate the supplied token
+  (it appeared in chat) and remove the sandbox credential store.
