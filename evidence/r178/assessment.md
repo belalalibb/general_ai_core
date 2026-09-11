@@ -1,6 +1,56 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current revocation admission checkpoint — FAILED / LIVE + TEST
+## Current revocation successor A–K checkpoint — tested slice VERIFIED, Backend Closure OPEN
+
+- **A / Recovery — VERIFIED, CAPTURED:** restored confirmed 13a70e21 bundle
+  (SHA256 6ab1fd68edda1002b1967efb8d92556de8e32814e7f23cdadf00f7271f71e01c).
+  Product a5084dc3, schema ef86e88e, migration 7d009e54 retained. R177 CLOSED;
+  prior receipt/custody/adapter/source/Core/API-runtime units not reimplemented.
+- **B / Integrated verification — VERIFIED, TEST:** dec03_revocation_full_gate.txt
+  at 13a70e21, committed snapshot 9ade59a3, isolated env-i: 3495 passed,
+  0 failed/errors, 64 skipped; mypy/ruff/import-linter/secret scan/budgets PASS;
+  not_evaluated=2 unchanged. This is the revocation product gate, not stale API proof.
+- **C / Live acceptance — VERIFIED, LIVE + TEST:** dec03_revocation_live.txt,
+  290ddfe7, snapshot 10d65159: 53 passed. Original four post-revocation 201-vs-404
+  failures now pass unchanged, as do both original restart acceptance cases.
+  Stale/fresh adapters and zero/nonzero existing custody are included.
+- **D / Transactions — VERIFIED within LIVE + TEST envelope:** common tenant/policy
+  advisory transaction lock orders capture and revoke before the existing retry
+  lock. Persistent tombstones deny new admission; same-key retries return existing
+  redacted evidence, not new rows. Real pg_locks wait observed in both orderings;
+  late invalidation failure rolls back tombstone and redaction together.
+- **E / Trust — VERIFIED within LIVE + TEST envelope:** policy/rights/idempotency,
+  tenant boundaries and independent evaluation lineage preserved. No default
+  consent, duplicate evaluation store, fabricated provenance or local shadow.
+  Rights references remain attestations, not ownership/training authorization.
+- **F / Models — UNVERIFIED outside prior envelope:** no real-provider call,
+  training, weight modification or model promotion. Native routing unchanged.
+- **G / Migration — VERIFIED within LIVE + TEST envelope:** real Alembic traversal
+  from stamped 0019 over metadata-built prerequisites, not a complete 0001..0018
+  rehearsal. Empty downgrade succeeds; populated downgrade refuses, preserving
+  stamp/evidence. Published 0019 unchanged. Legacy tenants receive explicit
+  tenant-wide legacy_unresolved holds, even without rows; no policy intent is
+  inferred from flags that also encode expiry. Hold denies capture/read/list/save.
+- **H / Limits — INFERRED, STATIC:** legacy hold is not erasure and has no automatic
+  release. Operator reconciliation must be reviewed before enabling legacy
+  learning. Stop all old writers before migration; old binaries do not enforce
+  0020. No production migration or rolling-upgrade/crash proof claimed.
+- **I / Scope:** explicit operator approval recorded in ledger: only 0020 plus
+  DEC03 ceiling 12, now 12/12. Test 07060433 updates the obsolete exact-head pin
+  to the authorized 0020 and adds revocation uniqueness; original evaluation/
+  custody uniqueness unchanged. Before/after: dec03_revocation_head_pin.txt
+  (1 failed/9 passed -> 10 passed). No scanner or acceptance threshold relaxed.
+- **J / Companions — VERIFIED, TEST:** Gateway 194 (2 warnings), 105d7bdd;
+  original unchanged adversarial harness exit 0, 02942030. Frozen surfaces and
+  product equality to the verified snapshot checked after recovery.
+- **K / Next and verdict:** runtime retention/derived-copy and legacy reconciliation
+  review, tests-first partial-batch/concurrency boundaries and true process-crash
+  recovery, then final integrated closure verification after any product changes.
+  Durable GOLD remains fail-closed. P01 final closure, Backend Closure, R178/UI OPEN.
+  Publication remains BLOCKED pending safe environment authentication; no chat
+  credential used/persisted, PR #14 update, merge/deployment or PR #13 change.
+
+## Historical revocation admission checkpoint — FAILED / LIVE + TEST
 
 - Confirmed recovery: 40227b18, including tests efc1da52 and actual PostgreSQL
   evidence dec03_revocation_admission_before.txt: 4 failed, 1 passed,
