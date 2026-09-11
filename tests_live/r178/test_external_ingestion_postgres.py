@@ -1494,3 +1494,53 @@ def test_policy_revocation_stamped_downgrade_preserves_evidence(database, popula
         assert database[0].run(revision()) == "0020"
     else:
         assert database[0].run(downgrade()) == "0019"
+
+
+@pytest.mark.parametrize("loss", ["revoke", "expire"])
+def test_custody_gold_promotion_and_loss_reconcile_on_postgres(database, loss):
+    """GOLD copy served only while custody lives; loss hides then removes it."""
+    from datetime import timedelta
+
+    from core.contracts.evaluation import VerificationLevel
+    from core.learning.storage import RetentionPolicy
+    from core.memory.errors import MemoryItemNotFound
+    from core.memory.memory import InMemoryMemoryStore
+    from infrastructure.db.learning import LearningCustodyRepository
+    from tests.learning.test_learning_lifecycle_e2e import ALL_ELIGIBLE, ALL_PROMOTABLE
+
+    world, _, _ = composed(database)
+    policy = RetentionPolicy(world.principal.tenant_id, uuid4(), 3600)
+    knowledge = InMemoryMemoryStore()
+    from core.learning.lifecycle import LearningLifecycleService
+
+    service = LearningLifecycleService(
+        knowledge=knowledge, custody=custody_adapter(database, policy), audit=world.audit
+    )
+    args = custody_adapter_request(world, policy)
+    sample = service.capture_external(**args)
+    t, s = policy.tenant_id, sample.id
+    service.mark_sanitized(t, s, passed=True)
+    service.set_verification_level(t, s, VerificationLevel.VERIFIED)
+    service.admit_to_training(t, s, ALL_ELIGIBLE, dataset_id=uuid4())
+    item = service.promote_to_gold(t, s, ALL_PROMOTABLE, actor_id=world.principal.user_id)
+    row = database[0].run(LearningCustodyRepository(database[1]).get(t, s))
+    assert row["verification_level"] == "GOLD" and row["state"]["memory_id"] == str(item.id)
+    # A fresh process sharing the knowledge substrate serves it from live custody.
+    fresh = LearningLifecycleService(knowledge=knowledge, custody=custody_adapter(database, policy))
+    assert fresh.ask_learned(t, "adapter.fact")["answer"] == {"answer": "bounded fact"}
+    assert fresh.learned_keys(t) == ("adapter.fact",)
+    repo = LearningCustodyRepository(database[1])
+    if loss == "revoke":
+        assert database[0].run(repo.revoke_policy(t, policy.policy_id)) == 1
+    else:
+        assert database[0].run(repo.expire(t, utc_now() + timedelta(hours=2))) == 1
+    # Before any sweep: hidden. Sample/evaluation lineage stays; payload gone.
+    assert fresh.ask_learned(t, "adapter.fact")["found"] is False
+    assert fresh.learned_keys(t) == ()
+    assert fresh.reconcile_derived_copies(t) == {"checked": 1, "removed": 1, "retained": 0}
+    with pytest.raises(MemoryItemNotFound):
+        knowledge.get(t, item.id)
+    assert count(database, learning_samples) == 1
+    redacted = database[0].run(repo.get(t, s))
+    assert redacted["payload"] is None and redacted["eligibility"] == "ineligible"
+    assert fresh.reconcile_derived_copies(t) == {"checked": 0, "removed": 0, "retained": 0}
