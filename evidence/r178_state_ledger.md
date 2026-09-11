@@ -533,3 +533,42 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   changes. R177 and verified R178 units remain closed. Backend Closure, R178
   completion/UI readiness remain OPEN. Secure publication separately blocked;
   no PR update, merge or deployment claimed. Preserve confirmed bundles.
+
+## Core lifecycle custody checkpoint — retained after repeated resets
+
+- VERIFIED / CAPTURED: restored cef5a0fe from confirmed r178_lifecycle_live.bundle.
+  Latest earlier attempts at full-gate/report reconciliation were not uploaded;
+  absent files are regenerated, not assumed retained. R177 remains CLOSED.
+- VERIFIED / TEST: tests-first 694e9858/4661a80d: 12 missing-custody failures;
+  extended 8e14b97d: 19 missing-custody failures. Product 45e1f4b3 introduces the
+  Core-owned optional LearningCustodyPort, no Core infrastructure imports.
+  Evidence 7afc02e0: 182 learning/adapter tests pass, strict mypy/ruff clean.
+- Both capture paths delegate explicit policy/rights/idempotency (and external
+  actor); durable reads/list/report use custody without raw _samples shadows.
+  Unavailable content stays metadata; payload-dependent operations refuse.
+  Review, reviewer level and eligibility use closed-state revision CAS. Evaluation
+  binds tenant/source and evaluation UUID; evaluation evidence is independent and
+  retained on CAS failure, but the sample does not acknowledge advanced trust.
+- VERIFIED / LIVE + TEST: five PostgreSQL 17.11 tests at 1a6f733d, evidence cef5a0fe:
+  direct lifecycle recomposition preserves review/evaluation/eligibility/retry;
+  review/revocation during evaluation refuses stale save and retains evaluation;
+  failure at sample UPDATE rolls back preceding custody CAS; quarantine is
+  metadata-only. This is direct Core composition, NOT API/runtime or process crash.
+- VERIFIED / TEST: regenerated companions at 2e5eedad: Gateway 194; original
+  adversarial harness exit 0. FAILED / LIVE + TEST: complete live 37 passed /
+  2 failed (original lines 193/307, 404 != 200), no assertion/skip weakening.
+- DEC03 remains APPROVED. Accounting 7/11 (core/learning/lifecycle.py added),
+  four remaining approved production files: apps/api/app.py, apps/api/admin.py,
+  apps/api/intake.py, apps/composition/runtime.py. Durable GOLD level/promotion/
+  retrieval fail closed pending derived-copy reconciliation. Dedup is a snapshot,
+  NOT a cross-sample uniqueness transaction. Concurrent admissions remain unproven.
+- NEXT EXACT ACTION: tests-first API/runtime custody composition and explicit
+  policy/rights/idempotency/requesting-actor admission with safe refusal mapping.
+  Then reconcile retention/revocation and derived memory/audit copies, prove stale
+  process new-admission denial, concurrent duplicate admission and true process
+  restart/crash, and rerun all integrated closure checks. Do not repeat the
+  retained Core binding or ask for DEC03 approval. Backend Closure/R178/UI OPEN.
+- Publication BLOCKED / CAPTURED: GH_TOKEN/GITHUB_TOKEN absent; public fetch main
+  succeeds, main is ancestor of local HEAD; dry-run mission push cannot read
+  username. No supplied chat credential copied/tested; no PR #14 update, merge
+  or deployment claimed. Preserve mission history; squash only before publication.
