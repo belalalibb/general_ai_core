@@ -1,0 +1,8 @@
+Snapshot: 4a35eb8d; original restart acceptance assertions unchanged; DEC03 explicit fixture policy and request refs added.
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+..                                                                       [100%]
+2 passed, 37 deselected in 4.95s
+process_exit=0
