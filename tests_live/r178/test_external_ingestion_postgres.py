@@ -1591,8 +1591,10 @@ def test_governance_api_release_legacy_hold_then_capture_and_sweep_on_postgres(d
             await s.execute(
                 learning_sample_custody.update()
                 .where(learning_sample_custody.c.sample_id == UUID(sample["id"]))
+                # Keep expires - created == retention (3600s); the codec refuses
+                # rows whose lifetime exceeds the stored policy, by design.
                 .values(
-                    created_at=utc_now() - timedelta(hours=3),
+                    created_at=utc_now() - timedelta(hours=2),
                     expires_at=utc_now() - timedelta(hours=1),
                 )
             )
