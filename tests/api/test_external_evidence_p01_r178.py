@@ -342,3 +342,151 @@ def test_legacy_recorder_delegates_to_builder_and_writes_exactly_once(monkeypatc
     assert writes == [report]
     assert execution_id == report.execution.id
     assert store.get(tenant, execution_id) is report
+
+
+def governed_app(world, custody, *, store=None):
+    """Exercise create_app injection, never post-construction rewiring."""
+    from dataclasses import replace
+
+    from apps.api.app import create_app
+    from core.execution.service import ExecutionService
+    from core.memory.memory import InMemoryMemoryStore
+
+    return create_app(
+        router=world.router,
+        execution_service=ExecutionService(
+            adapters={}, credential_refs={}, bindings=world.bindings, usage=world.usage
+        ),
+        principal=world.principal,
+        admin=replace(world.surface(), audit=world.audit),
+        memory=InMemoryMemoryStore(), store=store,
+        learning_custody=custody, strict_promotion_evidence=True,
+    )
+
+
+def custody_api_world():
+    from dataclasses import replace
+
+    from tests.learning.test_learning_lifecycle_e2e import _Custody
+
+    custody = _Custody()
+    world = World()
+    world.principal = replace(world.principal, tenant_id=custody.current.sample.tenant_id)
+    return world, custody
+
+
+def custody_body():
+    return dict(
+        knowledge_key="fact", knowledge_value={"answer": "fact"},
+        policy_id=str(uuid4()), rights_ref=str(uuid4()), idempotency_key=str(uuid4()),
+    )
+
+
+def test_governed_api_forwards_refs_and_authenticated_actor_without_shadow():
+    world, custody = custody_api_world()
+    app = governed_app(world, custody)
+    body = custody_body()
+    response = run(_post(app, SAMPLES, body))
+    assert response.status_code == 201
+    assert response.json()["id"] == str(custody.current.sample.id)
+    forwarded = custody.calls[0][-1]
+    assert forwarded["actor_id"] == world.principal.user_id
+    for name in ("policy_id", "rights_ref", "idempotency_key"):
+        assert forwarded[name] == UUID(body[name])
+    assert app.state.learning_lifecycle_service._samples == {}
+    restored = run(get(governed_app(world, custody), f"{SAMPLES}/{response.json()['id']}"))
+    assert restored.status_code == 200
+    assert restored.json()["sample"] == response.json()
+
+
+@pytest.mark.parametrize("missing", ["policy_id", "rights_ref", "idempotency_key"])
+def test_governed_api_missing_refs_refuse_before_capture(missing):
+    world, custody = custody_api_world()
+    body = custody_body()
+    del body[missing]
+    response = run(_post(governed_app(world, custody), SAMPLES, body))
+    assert response.status_code == 422
+    assert custody.calls == []
+
+
+def test_governed_api_nonadmin_actor_cannot_use_source_provenance():
+    from dataclasses import replace
+
+    world, custody = custody_api_world()
+    world.principal = replace(world.principal, is_admin=False)
+    body = custody_body()
+    body["source_execution_id"] = str(custody.current.sample.source_execution_id)
+    response = run(_post(governed_app(world, custody), SAMPLES, body))
+    assert response.status_code == 403
+    assert custody.calls == []
+
+
+@pytest.mark.parametrize("operation", ["capture", "read", "evaluate", "sanitize"])
+@pytest.mark.parametrize("conflict", [False, True])
+def test_governed_api_storage_refusals_are_constant_and_secret_safe(operation, conflict):
+    from core.learning.storage import LearningStorageConflict, LearningStorageError
+
+    world, custody = custody_api_world()
+    marker = "untrusted-backend-detail"
+
+    def refuse(*args, **kwargs):
+        raise (LearningStorageConflict if conflict else LearningStorageError)(marker)
+
+    custody.capture_external = refuse
+    custody.get = refuse
+    app = governed_app(world, custody)
+    path = f"{SAMPLES}/{custody.current.sample.id}"
+    if operation == "capture":
+        response = run(_post(app, SAMPLES, custody_body()))
+    elif operation == "read":
+        response = run(get(app, path))
+    else:
+        body = {"output": {"answer": "fact"}} if operation == "evaluate" else {"passed": True}
+        response = run(_post(app, f"{path}/{operation}", body))
+    assert response.status_code == (409 if conflict else 404)
+    assert marker not in response.text
+    assert response.json()["error"]["message"] == "Learning storage unavailable."
+
+
+def test_governed_intake_retry_refs_and_metadata_only_quarantine():
+    from dataclasses import replace
+    from uuid import uuid5
+
+    world, custody = custody_api_world()
+    custody.current = replace(custody.current, payload=None)
+    app = governed_app(world, custody)
+    body = custody_body()
+    del body["knowledge_key"], body["knowledge_value"]
+    batch_id = UUID(body["idempotency_key"])
+    marker = "ghp_" + "X" * 36
+    body.update(
+        format="json", content=json.dumps([{"key": marker, marker: "x"}]),
+        expectations={"required_columns": ["key", marker], "key_column": "key"},
+    )
+    for _ in range(2):
+        response = run(_post(app, "/v1/admin/learning/intake", body))
+        assert response.status_code == 201
+        assert marker not in response.text
+        row = response.json()["admitted"][0]
+        assert row["knowledge_key"] is None and row["findings"] == []
+        assert row["scan_clean"] is False
+        assert response.json()["columns_seen"] == []
+    calls = [c[-1] for c in custody.calls if c[0] == "external"]
+    assert len(calls) == 2
+    assert all(c["idempotency_key"] == uuid5(batch_id, "row:1") for c in calls)
+    assert all(c["actor_id"] == world.principal.user_id for c in calls)
+
+
+def test_governed_intake_parse_refusal_does_not_echo_secret_field():
+    world, custody = custody_api_world()
+    marker = "ghp_" + "X" * 36
+    body = custody_body()
+    del body["knowledge_key"], body["knowledge_value"]
+    body.update(
+        format="json", content=json.dumps([{marker: {"nested": "x"}}]),
+        expectations={"required_columns": ["key"], "key_column": "key"},
+    )
+    response = run(_post(governed_app(world, custody), "/v1/admin/learning/intake", body))
+    assert response.status_code == 422
+    assert marker not in response.text
+    assert custody.calls == []
