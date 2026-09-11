@@ -387,3 +387,19 @@ def test_execution_capture_quarantines_and_propagates_write_failure():
     call = repo.calls[0][1]
     assert call["prepared"].quarantined and call["prepared"].payload is None
     assert marker not in repr(call)
+
+
+@pytest.mark.parametrize("raw", ["not-json", "[{}]"])
+def test_runtime_parses_learning_policy_before_constructing_services(raw):
+    from apps.composition.runtime import build_runtime_profile
+
+    with pytest.raises(LearningStorageError, match="invalid learning storage policies"):
+        build_runtime_profile(environ={"LEARNING_STORAGE_POLICIES": raw})
+
+
+def test_runtime_configured_custody_never_falls_back_to_memory():
+    from apps.composition.runtime import build_runtime_profile
+
+    _, policy = custody_row()
+    with pytest.raises(LearningStorageError, match="durable"):
+        build_runtime_profile(environ={"LEARNING_STORAGE_POLICIES": json.dumps([entry(policy)])})
