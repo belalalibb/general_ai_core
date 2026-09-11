@@ -32,12 +32,13 @@ import io
 import json
 from dataclasses import dataclass, field
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid5
 
 from pydantic import Field, model_validator
 
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.learning.lifecycle import LearningLifecycleService
+from core.learning.storage import LearningStorageError
 
 __all__ = [
     "INTAKE_FORMATS",
@@ -83,13 +84,16 @@ class IntakeRequest(ContractModel):
     format: IntakeFormat
     content: str = Field(max_length=MAX_CONTENT_BYTES)
     expectations: IntakeExpectations
+    policy_id: UUID | None = None
+    rights_ref: UUID | None = None
+    idempotency_key: UUID | None = None
 
 
 @dataclass(frozen=True)
 class AdmittedRow:
     row: int
     sample_id: str
-    knowledge_key: str
+    knowledge_key: str | None
     scan_clean: bool
     findings: tuple[JsonObject, ...]
 
@@ -194,8 +198,9 @@ def parse_intake_rows(fmt: str, content: str) -> tuple[dict[str, str], ...]:
 class IntakeAdapter:
     """Batch → per-row ``capture_external`` + recorded scan; quarantine on batch faults."""
 
-    def __init__(self, *, lifecycle: LearningLifecycleService) -> None:
+    def __init__(self, *, lifecycle: LearningLifecycleService, governed: bool = False) -> None:
         self._lifecycle = lifecycle
+        self._governed = governed
 
     def ingest(
         self,
@@ -204,7 +209,18 @@ class IntakeAdapter:
         expectations: IntakeExpectations,
         format: str,
         content: str,
+        actor_id: UUID | None = None,
+        policy_id: UUID | None = None,
+        rights_ref: UUID | None = None,
+        idempotency_key: UUID | None = None,
     ) -> IntakeReport:
+        # Batch = independent atomic rows, NOT an all-or-nothing transaction.
+        # Stable row keys recover committed rows after later failure/response
+        # loss. Reusing a row key with changed content conflicts in custody.
+        if self._governed and not all(
+            isinstance(v, UUID) for v in (actor_id, policy_id, rights_ref, idempotency_key)
+        ):
+            raise LearningStorageError("explicit custody references required")
         if len(content.encode("utf-8")) > MAX_CONTENT_BYTES:
             return IntakeReport(
                 rows=0,
@@ -215,7 +231,12 @@ class IntakeAdapter:
         try:
             rows = parse_intake_rows(format, content)
         except ValueError as exc:
-            return IntakeReport(rows=0, quarantined=True, quarantine_reason=str(exc), format=format)
+            return IntakeReport(
+                rows=0,
+                quarantined=True,
+                quarantine_reason="invalid intake content" if self._governed else str(exc),
+                format=format,
+            )
         if len(rows) > expectations.max_rows:
             limit = expectations.max_rows
             return IntakeReport(
@@ -237,7 +258,12 @@ class IntakeAdapter:
             if missing:
                 refused.append(
                     RefusedRow(
-                        row=index, reason=f"missing required column(s): {', '.join(missing)}"
+                        row=index,
+                        reason=(
+                            "missing required columns"
+                            if self._governed
+                            else f"missing required column(s): {', '.join(missing)}"
+                        ),
                     )
                 )
                 continue
@@ -246,8 +272,30 @@ class IntakeAdapter:
                 column: value for column, value in row.items() if column != expectations.key_column
             }
             sample = self._lifecycle.capture_external(
-                tenant_id, knowledge_key=knowledge_key, knowledge_value=knowledge_value
+                tenant_id,
+                actor_id=actor_id,
+                knowledge_key=knowledge_key,
+                knowledge_value=knowledge_value,
+                policy_id=policy_id,
+                rights_ref=rights_ref,
+                idempotency_key=(
+                    uuid5(idempotency_key, f"row:{index}") if idempotency_key is not None else None
+                ),
             )
+            if self._governed:
+                # Custody already scanned; unavailable content stays metadata.
+                # Do not emit caller-controlled keys, columns or finding paths.
+                summary = self._lifecycle.sample_report(tenant_id, sample.id)
+                admitted.append(
+                    AdmittedRow(
+                        row=index,
+                        sample_id=str(sample.id),
+                        knowledge_key=None,
+                        scan_clean=summary["derived_signals"]["scan_clean"],
+                        findings=(),
+                    )
+                )
+                continue
             # Record the deterministic scan NOW (pure report; state untouched).
             report = self._lifecycle.sanitize(tenant_id, sample.id)
             admitted.append(
@@ -264,5 +312,5 @@ class IntakeAdapter:
             admitted=tuple(admitted),
             refused=tuple(refused),
             format=format,
-            columns_seen=tuple(columns_seen),
+            columns_seen=() if self._governed else tuple(columns_seen),
         )

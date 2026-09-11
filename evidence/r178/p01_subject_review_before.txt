@@ -1,0 +1,21 @@
+........FFF                                                              [100%]
+=================================== FAILURES ===================================
+_____ test_authenticated_capture_records_resolved_actor_not_demo_identity ______
+tests/api/test_external_evidence_p01_r178.py:207: in test_authenticated_capture_records_resolved_actor_not_demo_identity
+    receipt = profile.store.get(tenant, UUID(response.json()["source_execution_id"]))
+              ^^^^^^^^^^^^^
+E   AttributeError: 'RuntimeProfile' object has no attribute 'store'
+__ test_caller_mutation_cannot_change_admitted_content_under_existing_receipt __
+tests/api/test_external_evidence_p01_r178.py:226: in test_caller_mutation_cannot_change_admitted_content_under_existing_receipt
+    assert service.derived_signals(world.principal.tenant_id, first.id)["deduplicated"] is False
+E   assert True is False
+___ test_validator_receipt_reconstruction_does_not_invent_provider_response ____
+tests/api/test_external_evidence_p01_r178.py:241: in test_validator_receipt_reconstruction_does_not_invent_provider_response
+    assert recovered.nodes[0].response is None
+E   AssertionError: assert ProviderGenerateResponse(request_id=UUID('02d7d040-1e8d-4e15-98d8-ca686411b0a2'), succeeded=True, output={'scan_comple...: 0, 'scanned_paths': 3, 'verification_level': 'RAW', 'eligibility': 'pending'}, usage={}, error=None, latency_ms=None) is None
+E    +  where ProviderGenerateResponse(request_id=UUID('02d7d040-1e8d-4e15-98d8-ca686411b0a2'), succeeded=True, output={'scan_comple...: 0, 'scanned_paths': 3, 'verification_level': 'RAW', 'eligibility': 'pending'}, usage={}, error=None, latency_ms=None) = NodeReport(node=ExecutionNode(id=UUID('02d7d040-1e8d-4e15-98d8-ca686411b0a2'), execution_id=UUID('4e09b5f9-9682-43bd-8... 0, 'scanned_paths': 3, 'verification_level': 'RAW', 'eligibility': 'pending'}, usage={}, error=None, latency_ms=None)).response
+=========================== short test summary info ============================
+FAILED tests/api/test_external_evidence_p01_r178.py::test_authenticated_capture_records_resolved_actor_not_demo_identity
+FAILED tests/api/test_external_evidence_p01_r178.py::test_caller_mutation_cannot_change_admitted_content_under_existing_receipt
+FAILED tests/api/test_external_evidence_p01_r178.py::test_validator_receipt_reconstruction_does_not_invent_provider_response
+3 failed, 8 passed in 3.16s

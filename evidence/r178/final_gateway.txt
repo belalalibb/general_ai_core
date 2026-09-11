@@ -1,0 +1,5 @@
+Snapshot 43a655be; independent Gateway suite
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+194 passed, 2 warnings in 1.70s
+process_exit=0

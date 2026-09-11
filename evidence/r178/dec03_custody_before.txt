@@ -1,0 +1,29 @@
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+_______________ test_custody_atomic_roundtrip_and_same_key_retry _______________
+tests_live/r178/test_external_ingestion_postgres.py:351: in test_custody_atomic_roundtrip_and_same_key_retry
+    from infrastructure.db.learning import LearningCustodyRepository
+E   ModuleNotFoundError: No module named 'infrastructure.db.learning'
+____________________ test_custody_changed_content_conflicts ____________________
+tests_live/r178/test_external_ingestion_postgres.py:373: in test_custody_changed_content_conflicts
+    from infrastructure.db.learning import LearningCustodyRepository
+E   ModuleNotFoundError: No module named 'infrastructure.db.learning'
+_______________ test_custody_quarantine_never_writes_raw_secret ________________
+tests_live/r178/test_external_ingestion_postgres.py:398: in test_custody_quarantine_never_writes_raw_secret
+    from infrastructure.db.learning import LearningCustodyRepository
+E   ModuleNotFoundError: No module named 'infrastructure.db.learning'
+_____________________ test_custody_foreign_equals_missing ______________________
+tests_live/r178/test_external_ingestion_postgres.py:419: in test_custody_foreign_equals_missing
+    from infrastructure.db.learning import LearningCustodyRepository
+E   ModuleNotFoundError: No module named 'infrastructure.db.learning'
+=========================== short test summary info ============================
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_custody_atomic_roundtrip_and_same_key_retry
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_custody_changed_content_conflicts
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_custody_quarantine_never_writes_raw_secret
+FAILED tests_live/r178/test_external_ingestion_postgres.py::test_custody_foreign_equals_missing
+4 failed, 4 deselected in 2.88s
+process_exit=1

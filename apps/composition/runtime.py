@@ -88,6 +88,10 @@ from apps.composition.evaluation_policy import build_selective_judge
 from apps.composition.evaluations import build_durable_evaluation_store
 from apps.composition.gateway import gateway_settings_from_env, onboarding_secrets_from_env
 from apps.composition.identity import build_durable_identity_service
+from apps.composition.learning import (
+    build_durable_learning_custody,
+    learning_storage_policies_from_env,
+)
 from apps.composition.provider_onboarding import (
     PLATFORM_TENANT_ID,
     CatalogPersistence,
@@ -141,6 +145,8 @@ from core.evaluation.ports import EvaluationStorePort
 from core.execution.service import ExecutionService
 from core.identity.ports import IdentityServicePort
 from core.identity.service import InMemoryIdentityService, Session
+from core.learning.lifecycle import LearningCustodyPort
+from core.learning.storage import LearningStorageError
 from core.memory.memory import InMemoryConversationStore, InMemoryMemoryStore
 from core.memory.preferences import PreferenceLearningGate
 from core.providers.ports import ProviderAdapterPort
@@ -703,6 +709,11 @@ def build_runtime_profile(
     """
     env: Mapping[str, str] = os.environ if environ is None else environ
     env_dict = dict(env)
+    # Validate before allocating adapters/threads. No default policy or retention.
+    learning_policies = learning_storage_policies_from_env(env_dict)
+    if learning_policies and database_settings_from_env(env_dict) is None:
+        raise LearningStorageError("learning storage policies require a durable database")
+    learning_custody: LearningCustodyPort | None = None
 
     # --- registries (ONE set of instances — the instance-agreement duty) ----
     providers = ProviderRegistry()
@@ -816,6 +827,11 @@ def build_runtime_profile(
         # (FIX-08) — they persist in the existing 0010 table so a restart
         # no longer erases the artefacts the promote gate resolves.
         evaluations = build_durable_evaluation_store(bindings, bridge)
+        # Empty policy sets still bind custody: missing configuration must
+        # refuse capture, NEVER fall back to process-local learning.
+        learning_custody = build_durable_learning_custody(
+            bindings, bridge, policies=learning_policies
+        )
         # Closure GAP 1: the EXISTING V5 repositories (DatabaseBindings
         # composed them since migration 0002) reach the /v1/workspaces +
         # /v1/projects routes — bridged, same loop-affinity posture.
@@ -1046,6 +1062,7 @@ def build_runtime_profile(
         roles=roles,
         conversations=conversations,
         memory=memory_store,  # R158: learning GOLD knowledge substrate (P1)
+        learning_custody=learning_custody,
         composer=composer,
         admin=admin,
         models=models,

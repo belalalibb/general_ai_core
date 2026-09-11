@@ -37,13 +37,16 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
+from apps.api.regression_evidence import build_record, replay_metadata
 from core.contracts.base import BoundedStr, ContractModel, JsonObject, utc_now
+from core.contracts.evaluation import GraderResult, GraderType
 from core.contracts.execute import ExecutionStatus
 from core.contracts.provider import ProviderOperation
 from core.contracts.routing import RoutingRequest
 from core.evaluation.policy import MVP_DETERMINISTIC_CHECKS, DeterministicCheck
+from core.evaluation.ports import EvaluationStorePort
 from core.execution.service import ExecutionService
 from core.routing.errors import FallbackNotConfigured, NoEligibleCandidates
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
@@ -87,6 +90,13 @@ class ScenarioSaveRequest(ContractModel):
     ask: BoundedStr
     checks: list[str] = Field(default_factory=lambda: sorted(SCENARIO_CHECKS), min_length=1)
 
+    @field_validator("checks")
+    @classmethod
+    def _unique_checks(cls, checks: list[str]) -> list[str]:
+        if len(checks) != len(set(checks)):
+            raise ValueError("scenario requires unique checks")
+        return checks
+
 
 @dataclass(frozen=True)
 class Scenario:
@@ -100,6 +110,8 @@ class Scenario:
     created_at: datetime
 
     def __post_init__(self) -> None:
+        if not self.checks or len(self.checks) != len(set(self.checks)):
+            raise ValueError("scenario requires nonempty, unique checks")
         unknown = [c for c in self.checks if c not in SCENARIO_CHECKS]
         if unknown:
             raise UnknownCheckName(unknown[0])
@@ -128,6 +140,7 @@ class ScenarioService:
     router: SimpleScoringRouter
     execution_service: ExecutionService
     execution_store: ExecutionStorePort
+    evaluations: EvaluationStorePort | None = None
     _scenarios: dict[UUID, dict[UUID, Scenario]] = field(default_factory=dict)
 
     # --- store (data only) --------------------------------------------------
@@ -162,7 +175,9 @@ class ScenarioService:
         scenario = self.get(tenant_id, scenario_id)
         payload: JsonObject = {
             "ask": scenario.ask,
-            "context": {"metadata": {SCENARIO_LABEL_KEY: {"scenario_id": str(scenario.id)}}},
+            "context": {
+                "metadata": {SCENARIO_LABEL_KEY: replay_metadata(scenario.id, scenario.checks)}
+            },
         }
         try:
             decision = self.router.route(RoutingRequest(operation=ProviderOperation.GENERATE_TEXT))
@@ -213,9 +228,22 @@ class ScenarioService:
             passed = check.predicate(output)
             check_rows.append({"name": check_name, "passed": passed})
             all_passed = all_passed and passed
+        evaluation_id: str | None = None
+        if self.evaluations is not None:
+            record = build_record(
+                report,
+                tuple(
+                    GraderResult(type=GraderType.REGRESSION, name=row["name"], passed=row["passed"])
+                    for row in check_rows
+                ),
+            )
+            # Persist execution first (FK); evidence failure propagates loudly.
+            self.evaluations.record(record)
+            evaluation_id = str(record.id)
         return {
             "scenario_id": str(scenario.id),
             "replayed": True,
+            "evaluation_id": evaluation_id,
             "execution_id": str(report.execution.id),
             "execution_status": report.execution.status.value,
             "passed": all_passed,

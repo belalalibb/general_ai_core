@@ -1,0 +1,9 @@
+Scope: Core lifecycle over actual custody and shared evaluations; no API/runtime binding claim
+1a6f733de442d582f83e53725d700d7e4ba26496
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+.....                                                                    [100%]
+5 passed, 34 deselected in 2.99s
+process_exit=0

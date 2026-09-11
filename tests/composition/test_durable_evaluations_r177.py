@@ -199,7 +199,19 @@ def test_runtime_durable_profile_binds_the_durable_store() -> None:
 
 def test_no_new_migration_needed_the_0010_table_is_reused() -> None:
     versions = sorted(p.name for p in Path("infrastructure/db/migrations/versions").glob("0*.py"))
-    assert versions[-1].startswith("0018_"), versions[-1]
+    # DEC03 authorizes custody 0019 and explicitly approved successor 0020,
+    # NOT a second evaluation store. Keep a closed head pin and preserve
+    # the original no-duplicate-evaluations invariant.
+    assert versions[-1] == "0020_learning_policy_revocations.py", versions[-1]
+    import re
+
+    created = []
+    for name in versions:
+        source = (Path("infrastructure/db/migrations/versions") / name).read_text()
+        created.extend(re.findall(r'op\.create_table\(\s*"(\w+)"', source))
+    assert created.count("evaluations") == 1
+    assert created.count("learning_sample_custody") == 1
+    assert created.count("learning_policy_revocations") == 1
 
 
 # --- live Postgres round-trip -----------------------------------------------------

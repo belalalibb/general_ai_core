@@ -1,0 +1,47 @@
+...........FFFFFFF                                                       [100%]
+=================================== FAILURES ===================================
+__________ test_receipt_builder_is_write_free_and_content_safe[None] ___________
+tests/api/test_external_evidence_p01_r178.py:272: in test_receipt_builder_is_write_free_and_content_safe
+    report = ingestion.build_external_ingestion_report(tenant, sample, actor, key, value)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'apps.api.ingestion' has no attribute 'build_external_ingestion_report'
+___________ test_receipt_builder_is_write_free_and_content_safe[key] ___________
+tests/api/test_external_evidence_p01_r178.py:272: in test_receipt_builder_is_write_free_and_content_safe
+    report = ingestion.build_external_ingestion_report(tenant, sample, actor, key, value)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'apps.api.ingestion' has no attribute 'build_external_ingestion_report'
+__________ test_receipt_builder_is_write_free_and_content_safe[field] __________
+tests/api/test_external_evidence_p01_r178.py:272: in test_receipt_builder_is_write_free_and_content_safe
+    report = ingestion.build_external_ingestion_report(tenant, sample, actor, key, value)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'apps.api.ingestion' has no attribute 'build_external_ingestion_report'
+__________ test_receipt_builder_is_write_free_and_content_safe[value] __________
+tests/api/test_external_evidence_p01_r178.py:272: in test_receipt_builder_is_write_free_and_content_safe
+    report = ingestion.build_external_ingestion_report(tenant, sample, actor, key, value)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'apps.api.ingestion' has no attribute 'build_external_ingestion_report'
+_____________ test_receipt_builder_requires_actor_before_scanning ______________
+tests/api/test_external_evidence_p01_r178.py:307: in test_receipt_builder_requires_actor_before_scanning
+    ingestion.build_external_ingestion_report(uuid4(), uuid4(), None, "fact", {})
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'apps.api.ingestion' has no attribute 'build_external_ingestion_report'
+_______ test_receipt_builder_scan_failure_cannot_manufacture_completion ________
+tests/api/test_external_evidence_p01_r178.py:318: in test_receipt_builder_scan_failure_cannot_manufacture_completion
+    ingestion.build_external_ingestion_report(uuid4(), uuid4(), uuid4(), "fact", {})
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'apps.api.ingestion' has no attribute 'build_external_ingestion_report'
+______ test_legacy_recorder_delegates_to_builder_and_writes_exactly_once _______
+tests/api/test_external_evidence_p01_r178.py:325: in test_legacy_recorder_delegates_to_builder_and_writes_exactly_once
+    report = ingestion.build_external_ingestion_report(tenant, sample, actor, "fact", {})
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'apps.api.ingestion' has no attribute 'build_external_ingestion_report'
+=========================== short test summary info ============================
+FAILED tests/api/test_external_evidence_p01_r178.py::test_receipt_builder_is_write_free_and_content_safe[None]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_receipt_builder_is_write_free_and_content_safe[key]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_receipt_builder_is_write_free_and_content_safe[field]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_receipt_builder_is_write_free_and_content_safe[value]
+FAILED tests/api/test_external_evidence_p01_r178.py::test_receipt_builder_requires_actor_before_scanning
+FAILED tests/api/test_external_evidence_p01_r178.py::test_receipt_builder_scan_failure_cannot_manufacture_completion
+FAILED tests/api/test_external_evidence_p01_r178.py::test_legacy_recorder_delegates_to_builder_and_writes_exactly_once
+7 failed, 11 passed in 3.06s
+process_exit=1

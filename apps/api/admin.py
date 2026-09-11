@@ -123,7 +123,7 @@ from core.admin.service import (
 )
 from core.audit.ports import AuditLogPort
 from core.contracts.admin import AdminDraftRequest, ConfigChange, LearningDashboard
-from core.contracts.audit import AuditEventType
+from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.contracts.errors import ErrorCode
 from core.evaluation.errors import EvaluationNotFound
@@ -294,11 +294,9 @@ class LearningPromoteRequest(ContractModel):
             if name in resolved:
                 values[name] = resolved[name].held
             elif values[name]:
-                if strict:
-                    values[name] = False
-                    refused.append(name)
-                else:
-                    unverified.append(name)
+                # R178-DEC-01: compatibility never bypasses required evidence.
+                values[name] = False
+                refused.append(name)
         signals = PromotionSignals(
             offline_eval_pass=values["offline_eval_pass"],
             regression_pass=values["regression_pass"],
@@ -310,7 +308,8 @@ class LearningPromoteRequest(ContractModel):
             admin_approved=self.admin_approved,
         )
         evidence: JsonObject = {
-            "strict": strict,
+            "strict": strict,  # legacy flag, not an authorization bypass
+            "artifact_evidence_required": True,
             "resolved": {name: v.as_json() for name, v in resolved.items()},
             "unverified": unverified,
             "refused_unbacked": refused,
@@ -354,6 +353,18 @@ class LearningRetestRequest(ContractModel):
     baseline: JsonObject | None = None
 
 
+class LearningRevokeRequest(ContractModel):
+    """Explicit tenant policy to revoke; no wildcard, no implicit current policy."""
+
+    policy_id: UUID
+
+
+class LearningLegacyReleaseRequest(ContractModel):
+    """Reviewed reconciliation record reference; required, never defaulted."""
+
+    reconciliation_ref: UUID
+
+
 class LearningCaptureRequest(ContractModel):
     """R159 — the lifecycle's HTTP ENTRY (the R158 recorded producer gap).
 
@@ -366,6 +377,9 @@ class LearningCaptureRequest(ContractModel):
     knowledge_key: BoundedStr
     knowledge_value: JsonObject
     source_execution_id: UUID | None = None
+    policy_id: UUID | None = None
+    rights_ref: UUID | None = None
+    idempotency_key: UUID | None = None
 
 
 class LearningEvaluateRequest(ContractModel):
@@ -391,6 +405,7 @@ def create_admin_router(
     memory: MemoryStorePort | None = None,
     engineering: EngineeringAdminSurface | None = None,
     strict_promotion_evidence: bool = False,
+    governed_learning: bool = False,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -697,7 +712,16 @@ def create_admin_router(
             evaluations=surface.evaluations,
             executions=execution_store if execution_store is not None else surface.executions,
         )
-        intake_adapter = IntakeAdapter(lifecycle=lifecycle)
+        intake_adapter = IntakeAdapter(lifecycle=lifecycle, governed=governed_learning)
+
+        def _custody_refs(body: LearningCaptureRequest | IntakeRequest) -> JSONResponse | None:
+            if governed_learning and any(
+                v is None for v in (body.policy_id, body.rights_ref, body.idempotency_key)
+            ):
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR, "Explicit learning custody references required."
+                )
+            return None
 
         @router.post("/learning/intake")
         async def intake_learning_batch(request: Request, body: IntakeRequest) -> Response:
@@ -713,11 +737,18 @@ def create_admin_router(
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
+            refusal = _custody_refs(body)
+            if refusal is not None:
+                return refusal
             report = intake_adapter.ingest(
                 admitted.tenant_id,
                 expectations=body.expectations,
                 format=body.format,
                 content=body.content,
+                actor_id=admitted.user_id,
+                policy_id=body.policy_id,
+                rights_ref=body.rights_ref,
+                idempotency_key=body.idempotency_key,
             )
             if report.quarantined:
                 return error_response(
@@ -750,11 +781,18 @@ def create_admin_router(
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
+            refusal = _custody_refs(body)
+            if refusal is not None:
+                return refusal
             if body.source_execution_id is None:
                 sample = lifecycle.capture_external(
                     admitted.tenant_id,
+                    actor_id=admitted.user_id,
                     knowledge_key=body.knowledge_key,
                     knowledge_value=body.knowledge_value,
+                    policy_id=body.policy_id,
+                    rights_ref=body.rights_ref,
+                    idempotency_key=body.idempotency_key,
                 )
                 return _json(sample.model_dump(mode="json"), status=201)
             # The SAME tenant-scoped store the /v1/executions routes read:
@@ -780,6 +818,9 @@ def create_admin_router(
                 body.source_execution_id,
                 knowledge_key=body.knowledge_key,
                 knowledge_value=body.knowledge_value,
+                policy_id=body.policy_id,
+                rights_ref=body.rights_ref,
+                idempotency_key=body.idempotency_key,
             )
             return _json(sample.model_dump(mode="json"), status=201)
 
@@ -804,6 +845,8 @@ def create_admin_router(
                     http_status=404,
                 )
             except LearningError as exc:
+                if governed_learning:
+                    raise
                 return _json({"evaluated": False, "reason": str(exc)})
             return _json({"evaluated": True, "sample": sample.model_dump(mode="json")})
 
@@ -956,6 +999,8 @@ def create_admin_router(
                     http_status=404,
                 )
             except (PromotionDenied, LearningError) as exc:
+                if governed_learning:
+                    raise
                 return _json({"promoted": False, "reason": str(exc), "evidence": evidence})
             except MemoryStoreError as exc:
                 # The retrieval substrate refused the write (13 §7 secret
@@ -1077,6 +1122,62 @@ def create_admin_router(
             if isinstance(admitted, JSONResponse):
                 return admitted
             return _json(observability.mark_reviewed(admitted.tenant_id, admitted.user_id))
+
+    # --- DEC03 operator governance over durable custody (absent without custody) ---
+    if learning_lifecycle is not None and governed_learning and surface.audit is not None:
+        governance_lifecycle = learning_lifecycle
+        governance_audit = surface.audit
+
+        def _govern(
+            request: Request,
+            act: str,
+            details: JsonObject,
+            perform: Callable[[Principal], dict[str, object]],
+        ) -> Response:
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            result = perform(admitted)
+            governance_audit.append(
+                AuditEvent(
+                    tenant_id=admitted.tenant_id,
+                    event_type=AuditEventType.SECURITY_POLICY_CHANGED,
+                    actor_id=admitted.user_id,
+                    details={"act": act, **details, "result": result},
+                )
+            )
+            return _json(result)
+
+        @router.post("/learning/custody/revoke")
+        async def revoke_learning_policy(
+            request: Request, body: LearningRevokeRequest
+        ) -> Response:
+            """POST .../custody/revoke: durable policy revocation + redaction (audited)."""
+            return _govern(
+                request, "learning_policy_revoked", {"policy_id": str(body.policy_id)},
+                lambda p: governance_lifecycle.revoke_policy(p.tenant_id, body.policy_id),
+            )
+
+        @router.post("/learning/custody/sweep")
+        async def sweep_learning_retention(request: Request) -> Response:
+            """POST .../custody/sweep: server-clock expiry + derived-copy reconciliation."""
+            return _govern(
+                request, "learning_retention_swept", {},
+                lambda p: governance_lifecycle.sweep_retention(p.tenant_id),
+            )
+
+        @router.post("/learning/custody/release-legacy-hold")
+        async def release_legacy_learning_hold(
+            request: Request, body: LearningLegacyReleaseRequest
+        ) -> Response:
+            """POST .../custody/release-legacy-hold: reviewed release of the 0020 hold."""
+            return _govern(
+                request, "learning_legacy_hold_released",
+                {"reconciliation_ref": str(body.reconciliation_ref)},
+                lambda p: governance_lifecycle.release_legacy_hold(
+                    p.tenant_id, reconciliation_ref=body.reconciliation_ref
+                ),
+            )
 
     # --- AA-1 seam AUD-1: audit read (20 §9 events, port surfaced verbatim) ---------
 

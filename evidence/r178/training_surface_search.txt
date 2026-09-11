@@ -1,0 +1,39 @@
+apps/api/admin.py:241:    shadow_performance_acceptable: bool = False
+apps/api/admin.py:242:    canary_performance_acceptable: bool = False
+apps/api/admin.py:253:            shadow_performance_acceptable=self.shadow_performance_acceptable,
+apps/api/admin.py:254:            canary_performance_acceptable=self.canary_performance_acceptable,
+apps/api/admin.py:306:            shadow_performance_acceptable=self.shadow_performance_acceptable,
+apps/api/admin.py:307:            canary_performance_acceptable=self.canary_performance_acceptable,
+apps/api/app.py:1141:                        f"No eligible model candidates for node '{node_key}'.",
+apps/api/app.py:1168:                    "No eligible model candidates for this request.",
+apps/api/promotion_evidence.py:14:Everything else (shadow / canary / rollback plan / admin approval) remains a
+apps/api/promotion_evidence.py:45:    "shadow_performance_acceptable",
+apps/api/promotion_evidence.py:46:    "canary_performance_acceptable",
+apps/composition/evaluation_policy.py:10:canary evaluation. Not every request needs teacher review."
+apps/composition/evaluation_policy.py:20:  the declared set; ``canary: true``; ``high_value: true``. Categories not
+apps/composition/evaluation_policy.py:60:#: ``calibration=<key,key>``, ``canary=0|1``, ``high_value=0|1``.
+apps/composition/evaluation_policy.py:74:        "canary",
+apps/composition/evaluation_policy.py:80:    canary: bool = True
+apps/composition/evaluation_policy.py:105:        if self.canary and output.get("canary") is True:
+apps/composition/evaluation_policy.py:106:            return "canary"
+apps/composition/evaluation_policy.py:171:        elif key in ("canary", "high_value"):
+apps/composition/runtime.py:1137:    # additive; no route shadowing — /v1/* and /healthz stay untouched).
+core/contracts/admin.py:330:    trends, cost reduction, teacher agreement, canary status, promotion
+core/contracts/admin.py:349:    canary_status: BoundedStr | None = None
+core/contracts/audit.py:68:    TRAINING_DATASET_PROMOTED = "training_dataset_promoted"
+core/learning/gates.py:10:  regression pass / security eval pass / shadow performance acceptable /
+core/learning/gates.py:11:  canary performance acceptable / rollback plan exists / admin approval
+core/learning/gates.py:18:  "shadow/canary promotion gate" are these gates; "rollback model
+core/learning/gates.py:76:    "shadow_performance_acceptable",
+core/learning/gates.py:77:    "canary_performance_acceptable",
+core/learning/gates.py:135:    shadow_performance_acceptable: bool = False
+core/learning/gates.py:136:    canary_performance_acceptable: bool = False
+core/learning/gates.py:151:            "shadow_performance_acceptable": signals.shadow_performance_acceptable,
+core/learning/gates.py:152:            "canary_performance_acceptable": signals.canary_performance_acceptable,
+core/learning/lifecycle.py:14:                AuditEventType.TRAINING_DATASET_PROMOTED (20 §9) exists in
+core/learning/lifecycle.py:477:        Emits the 20 §9 ``TRAINING_DATASET_PROMOTED`` event (previously in
+core/learning/lifecycle.py:511:                    event_type=AuditEventType.TRAINING_DATASET_PROMOTED,
+core/tools/denied_paths.py:54:    *_anywhere("passwd", "shadow", ".netrc", ".pgpass"),
+core/tools/gate.py:38:  REQUIRE_APPROVAL (most-restrictive-wins; both authorities must consent).
+infrastructure/db/migrations/versions/0013_audit_events.py:26:  'security_policy_changed','training_dataset_promoted',
+infrastructure/db/migrations/versions/0013_audit_events.py:61:            " 'security_policy_changed', 'training_dataset_promoted',"

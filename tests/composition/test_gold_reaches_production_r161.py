@@ -92,7 +92,10 @@ async def _fetch(profile: RuntimeProfile, execution_id: str) -> dict[str, Any]:
 
 def _promote(profile: RuntimeProfile, tenant_id: UUID, key: str, value: dict[str, Any]) -> UUID:
     service = profile.app.state.learning_lifecycle_service
-    sample = service.capture_external(tenant_id, knowledge_key=key, knowledge_value=value)
+    # Trusted in-process fixture: actor is explicit, not borrowed cross-tenant.
+    sample = service.capture_external(
+        tenant_id, actor_id=uuid4(), knowledge_key=key, knowledge_value=value
+    )
     service.mark_sanitized(tenant_id, sample.id, passed=True)
     service.set_verification_level(tenant_id, sample.id, VerificationLevel.VERIFIED)
     service.admit_to_training(tenant_id, sample.id, ALL_ELIGIBLE)
@@ -230,6 +233,8 @@ class TestRetestMeasuresProductionReach:
         assert production["reached"] == ["ops.rollback"]
         assert production["never_reached"] == ["never.learned"]
         assert production["executions_examined"] >= 2
-        # every row in this hermetic profile carries its stored context
-        assert production["executions_without_stored_context"] == 0
+        # The real ingestion validator has no model context. It must not count
+        # as learned model reach; only the two actual model executions do.
+        assert production["executions_examined"] == 3
+        assert production["executions_without_stored_context"] == 1
         assert production["window"] == 200

@@ -1,0 +1,93 @@
+FFFFFFFFFFF                                                              [100%]
+=================================== FAILURES ===================================
+_____ test_execution_capture_reads_source_without_receipt_or_source_write ______
+tests/composition/test_learning_custody_r178.py:325: in test_execution_capture_reads_source_without_receipt_or_source_write
+    captured = execution_adapter(repo, bridge, (policy,), sources).capture_from_execution(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+_______ test_execution_capture_unavailable_source_never_writes[unbound] ________
+tests/composition/test_learning_custody_r178.py:356: in test_execution_capture_unavailable_source_never_writes
+    store = execution_adapter(repo, bridge, (policy,), None if mode == "unbound" else sources)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+_______ test_execution_capture_unavailable_source_never_writes[missing] ________
+tests/composition/test_learning_custody_r178.py:356: in test_execution_capture_unavailable_source_never_writes
+    store = execution_adapter(repo, bridge, (policy,), None if mode == "unbound" else sources)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+_______ test_execution_capture_unavailable_source_never_writes[foreign] ________
+tests/composition/test_learning_custody_r178.py:356: in test_execution_capture_unavailable_source_never_writes
+    store = execution_adapter(repo, bridge, (policy,), None if mode == "unbound" else sources)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+_______ test_execution_capture_unavailable_source_never_writes[wrong_id] _______
+tests/composition/test_learning_custody_r178.py:356: in test_execution_capture_unavailable_source_never_writes
+    store = execution_adapter(repo, bridge, (policy,), None if mode == "unbound" else sources)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+______ test_execution_capture_unavailable_source_never_writes[db_failure] ______
+tests/composition/test_learning_custody_r178.py:356: in test_execution_capture_unavailable_source_never_writes
+    store = execution_adapter(repo, bridge, (policy,), None if mode == "unbound" else sources)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+______ test_execution_capture_requires_admission_before_source_io[policy] ______
+tests/composition/test_learning_custody_r178.py:374: in test_execution_capture_requires_admission_before_source_io
+    execution_adapter(repo, bridge, policies, sources).capture_from_execution(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+____ test_execution_capture_requires_admission_before_source_io[rights_ref] ____
+tests/composition/test_learning_custody_r178.py:374: in test_execution_capture_requires_admission_before_source_io
+    execution_adapter(repo, bridge, policies, sources).capture_from_execution(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+_ test_execution_capture_requires_admission_before_source_io[idempotency_key] __
+tests/composition/test_learning_custody_r178.py:374: in test_execution_capture_requires_admission_before_source_io
+    execution_adapter(repo, bridge, policies, sources).capture_from_execution(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+_ test_execution_capture_requires_admission_before_source_io[source_execution_id] _
+tests/composition/test_learning_custody_r178.py:374: in test_execution_capture_requires_admission_before_source_io
+    execution_adapter(repo, bridge, policies, sources).capture_from_execution(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+_______ test_execution_capture_quarantines_and_propagates_write_failure ________
+tests/composition/test_learning_custody_r178.py:386: in test_execution_capture_quarantines_and_propagates_write_failure
+    execution_adapter(repo, bridge, (policy,), sources).capture_from_execution(**request)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_learning_custody_r178.py:310: in execution_adapter
+    return DurableLearningCustody(
+E   TypeError: DurableLearningCustody.__init__() got an unexpected keyword argument 'sources'
+=========================== short test summary info ============================
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_reads_source_without_receipt_or_source_write
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_unavailable_source_never_writes[unbound]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_unavailable_source_never_writes[missing]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_unavailable_source_never_writes[foreign]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_unavailable_source_never_writes[wrong_id]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_unavailable_source_never_writes[db_failure]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_requires_admission_before_source_io[policy]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_requires_admission_before_source_io[rights_ref]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_requires_admission_before_source_io[idempotency_key]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_requires_admission_before_source_io[source_execution_id]
+FAILED tests/composition/test_learning_custody_r178.py::test_execution_capture_quarantines_and_propagates_write_failure
+11 failed, 38 deselected in 1.99s
+process_exit=1

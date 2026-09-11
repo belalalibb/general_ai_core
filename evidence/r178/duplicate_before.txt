@@ -1,0 +1,28 @@
+F..                                                                      [100%]
+=================================== FAILURES ===================================
+_____________ test_migrated_primary_key_collision_has_domain_error _____________
+tests/infrastructure/test_evaluation_error_translation_r178.py:37: in test_migrated_primary_key_collision_has_domain_error
+    _attempt(error)
+tests/infrastructure/test_evaluation_error_translation_r178.py:27: in _attempt
+    asyncio.run(repository.record(record))
+/usr/local/lib/python3.13/asyncio/runners.py:196: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:119: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+infrastructure/db/repositories/evaluations.py:96: in record
+    await session.execute(stmt)
+/usr/local/lib/python3.13/unittest/mock.py:2327: in _execute_mock_call
+    raise effect
+E   sqlalchemy.exc.IntegrityError: (builtins.Exception) duplicate key violates unique constraint "pk_evaluations"
+E   [SQL: INSERT]
+E   (Background on this error at: https://sqlalche.me/e/20/gkpj)
+=========================== short test summary info ============================
+FAILED tests/infrastructure/test_evaluation_error_translation_r178.py::test_migrated_primary_key_collision_has_domain_error
+1 failed, 2 passed in 0.89s
+
+PROCESS_EXIT=1

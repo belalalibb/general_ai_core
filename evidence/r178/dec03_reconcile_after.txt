@@ -1,0 +1,5 @@
+After: core/learning/lifecycle.py derived-copy reconciliation
+Command: pytest tests/learning/test_learning_lifecycle_e2e.py
+............................                                             [100%]
+28 passed in 0.33s
+Broader: tests/learning tests/api tests/composition -> 978 passed, 4 skipped

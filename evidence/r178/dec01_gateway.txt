@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: /home/user/webapp/gateway-service
+configfile: pyproject.toml
+plugins: anyio-4.15.1, asyncio-1.4.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 194 items
+
+tests/providers/test_assemblyai.py ..................................... [ 19%]
+....................                                                     [ 29%]
+tests/providers/test_example_provider.py ....                            [ 31%]
+tests/providers/test_fixture_echo.py .............                       [ 38%]
+tests/providers/test_groq.py ..................................          [ 55%]
+tests/test_auth.py .......                                               [ 59%]
+tests/test_contract_parity.py ........                                   [ 63%]
+tests/test_contracts.py ..........                                       [ 68%]
+tests/test_discovery.py ......                                           [ 71%]
+tests/test_dispatch.py .............                                     [ 78%]
+tests/test_no_leak.py ......                                             [ 81%]
+tests/test_operational_hardening.py .........................            [ 94%]
+tests/test_provider_registry.py ......                                   [ 97%]
+tests/test_route_registry.py .....                                       [100%]
+
+============================= 194 passed in 1.75s ==============================
+
+PROCESS_EXIT=0

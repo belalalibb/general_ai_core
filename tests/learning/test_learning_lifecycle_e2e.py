@@ -254,3 +254,332 @@ class TestTenantIsolation:
         # The other tenant cannot see or query the learned knowledge.
         assert service.learned_keys(OTHER_TENANT) == ()
         assert service.ask_learned(OTHER_TENANT, "ops.playbook")["found"] is (False)
+
+
+# DEC03: port double only, not live database verification.
+class _Custody:
+    def __init__(self):
+        from core.learning.storage import recover_capture
+        from tests.learning.test_storage_policy_r178 import NOW, custody_row
+
+        row, policy = custody_row()
+        self.current = recover_capture(row, tenant_id=policy.tenant_id, policy=policy, now=NOW)
+        self.calls = []
+        self.fail_save = False
+
+    def get(self, tenant_id, sample_id):
+        from copy import deepcopy
+
+        from core.learning.storage import LearningStorageError
+
+        if tenant_id != self.current.sample.tenant_id or sample_id != self.current.sample.id:
+            raise LearningStorageError("unknown learning sample")
+        return deepcopy(self.current)
+
+    def list(self, tenant_id):
+        return (self.get(tenant_id, self.current.sample.id),)
+
+    def capture_external(self, tenant_id, **kwargs):
+        self.calls.append(("external", kwargs))
+        return self.get(tenant_id, self.current.sample.id)
+
+    def capture_from_execution(self, tenant_id, source_execution_id, **kwargs):
+        self.calls.append(("execution", source_execution_id, kwargs))
+        return self.get(tenant_id, self.current.sample.id)
+
+    def save(self, sample, state, *, expected_revision):
+        from copy import deepcopy
+        from dataclasses import replace
+
+        from core.learning.storage import LearningStorageConflict, validate_custody_state
+
+        if self.fail_save or expected_revision != self.current.revision:
+            raise LearningStorageConflict("stale or unavailable learning sample")
+        self.calls.append(("save", expected_revision, validate_custody_state(state)))
+        self.current = replace(
+            self.current, sample=sample, state=deepcopy(state), revision=expected_revision + 1
+        )
+        return self.current.revision
+
+
+def _durable_lifecycle(custody, **kwargs):
+    return LearningLifecycleService(knowledge=InMemoryMemoryStore(), custody=custody, **kwargs)
+
+
+@pytest.mark.parametrize("kind", ["external", "execution"])
+def test_custody_lifecycle_capture_delegates_without_local_snapshot(kind):
+    custody = _Custody()
+    service = _durable_lifecycle(custody)
+    args = dict(
+        knowledge_key="fact",
+        knowledge_value={"nested": ["benign"]},
+        policy_id=uuid4(),
+        rights_ref=uuid4(),
+        idempotency_key=uuid4(),
+    )
+    tenant, source = custody.current.sample.tenant_id, custody.current.sample.source_execution_id
+    if kind == "external":
+        args["actor_id"] = uuid4()
+        sample = service.capture_external(tenant, **args)
+    else:
+        sample = service.capture_from_execution(tenant, source, **args)
+    assert sample == custody.current.sample and service._samples == {}
+    assert custody.calls[0][-1] == args
+    fresh = _durable_lifecycle(custody)
+    assert fresh.get(tenant, sample.id) == sample
+    assert fresh.list_samples(tenant) == (sample,)
+    assert fresh.sample_report(tenant, sample.id)["knowledge_key"] == "fact"
+
+
+@pytest.mark.parametrize("fail", [False, True])
+def test_custody_lifecycle_review_is_revision_checked_and_not_cached(fail):
+    from core.learning.storage import LearningStorageConflict
+
+    custody = _Custody()
+    service = _durable_lifecycle(custody)
+    sample = custody.current.sample
+    custody.fail_save = fail
+    if fail:
+        with pytest.raises(LearningStorageConflict):
+            service.mark_sanitized(sample.tenant_id, sample.id, passed=True)
+        assert (
+            service.get(sample.tenant_id, sample.id).sanitization_state is SanitizationState.PENDING
+        )
+    else:
+        changed = service.mark_sanitized(sample.tenant_id, sample.id, passed=True)
+        assert changed.sanitization_state is SanitizationState.PASSED
+        assert _durable_lifecycle(custody).get(sample.tenant_id, sample.id) == changed
+        assert custody.calls[-1][0:2] == ("save", 0)
+        assert set(custody.current.state) <= {
+            "version",
+            "eligibility_verdicts",
+            "promotion_verdicts",
+            "evaluation_id",
+            "memory_id",
+        }
+
+
+@pytest.mark.parametrize("operation", ["scan", "review", "level", "evaluate", "admit", "promote"])
+def test_custody_lifecycle_unavailable_payload_refuses_content_operations(operation):
+    from dataclasses import replace
+
+    custody = _Custody()
+    custody.current = replace(custody.current, payload=None)
+    service = _durable_lifecycle(custody)
+    sample = custody.current.sample
+    t, s = sample.tenant_id, sample.id
+    actions = {
+        "scan": lambda: service.sanitize(t, s),
+        "review": lambda: service.mark_sanitized(t, s, passed=True),
+        "level": lambda: service.set_verification_level(t, s, VerificationLevel.VERIFIED),
+        "evaluate": lambda: run(service.evaluate(t, s, {"answer": "fact"})),
+        "admit": lambda: service.admit_to_training(t, s, ALL_ELIGIBLE),
+        "promote": lambda: service.promote_to_gold(t, s, ALL_PROMOTABLE),
+    }
+    assert service.get(t, s) == sample
+    report = service.sample_report(t, s)
+    assert report["knowledge_key"] is None and report["sanitization_report"] is None
+    assert report["derived_signals"] == {"deduplicated": False, "scan_clean": False}
+    with pytest.raises(LearningError):
+        actions[operation]()
+    assert custody.calls == []
+
+
+def test_custody_lifecycle_level_change_persists_and_foreign_is_not_exposed():
+    custody = _Custody()
+    sample = custody.current.sample
+    service = _durable_lifecycle(custody)
+    changed = service.set_verification_level(
+        sample.tenant_id, sample.id, VerificationLevel.VERIFIED
+    )
+    assert _durable_lifecycle(custody).get(sample.tenant_id, sample.id) == changed
+    with pytest.raises(LearningError):
+        service.get(uuid4(), sample.id)
+
+
+@pytest.mark.parametrize("race", [False, True])
+def test_custody_lifecycle_evaluation_binds_evidence_without_lost_update(race):
+    from core.learning.storage import LearningStorageConflict
+
+    custody = _Custody()
+    sample = custody.current.sample
+    records = []
+    pipeline = EvaluationPolicyService(store=InMemoryEvaluationStore())
+
+    class Runner:
+        async def evaluate(self, tenant_id, execution_id, output):
+            result = await pipeline.evaluate(tenant_id, execution_id, output)
+            records.append(result)
+            if race:
+                _durable_lifecycle(custody).mark_sanitized(tenant_id, sample.id, passed=True)
+            return result
+
+    service = _durable_lifecycle(custody, evaluation=Runner())
+    if race:
+        with pytest.raises(LearningStorageConflict):
+            run(service.evaluate(sample.tenant_id, sample.id, {"content": "fact"}))
+        assert custody.current.sample.verification_level is VerificationLevel.RAW
+        assert custody.current.sample.sanitization_state is SanitizationState.PASSED
+        assert "evaluation_id" not in custody.current.state
+    else:
+        changed = run(service.evaluate(sample.tenant_id, sample.id, {"content": "fact"}))
+        assert changed.verification_level == records[0].level
+        assert custody.current.state["evaluation_id"] == str(records[0].id)
+        assert _durable_lifecycle(custody).get(sample.tenant_id, sample.id) == changed
+    assert len(records) == 1  # committed evaluation survives a custody CAS conflict
+    assert service._samples == {}
+
+
+@pytest.mark.parametrize("allowed", [False, True])
+def test_custody_lifecycle_eligibility_persists_closed_verdicts(allowed):
+    custody = _Custody()
+    sample = custody.current.sample
+    service = _durable_lifecycle(custody)
+    t, s = sample.tenant_id, sample.id
+    service.mark_sanitized(t, s, passed=True)
+    service.set_verification_level(t, s, VerificationLevel.VERIFIED)
+    dataset = uuid4()
+    if allowed:
+        service.admit_to_training(t, s, ALL_ELIGIBLE, dataset_id=dataset)
+        assert custody.current.sample.dataset_id == dataset
+        assert custody.current.sample.eligibility is LearningEligibility.ELIGIBLE
+        assert all(custody.current.state["eligibility_verdicts"].values())
+    else:
+        with pytest.raises(NotEligibleForTraining):
+            service.admit_to_training(t, s, EligibilitySignals())
+        assert custody.current.sample.eligibility is LearningEligibility.INELIGIBLE
+        assert custody.current.state["eligibility_verdicts"]["privacy_policy_allows"] is False
+    assert custody.current.revision == 3
+    assert service._samples == {}
+
+
+def test_custody_lifecycle_gold_level_only_through_promotion():
+    # Interim "wait for reconciliation" refusal is superseded: reconciliation
+    # now exists, but GOLD still cannot be stamped without the promotion write.
+    custody = _Custody()
+    service = _durable_lifecycle(custody)
+    t, s = custody.current.sample.tenant_id, custody.current.sample.id
+    with pytest.raises(LearningError, match="promotion"):
+        service.set_verification_level(t, s, VerificationLevel.GOLD)
+    assert service.ask_learned(t, "fact")["found"] is False
+    assert service.learned_keys(t) == ()
+    assert custody.calls == []
+
+
+def test_custody_lifecycle_promotion_requires_eligibility_without_memory_write():
+    custody = _Custody()
+    service = _durable_lifecycle(custody)
+    sample = custody.current.sample
+    with pytest.raises(LearningError, match="eligibility"):
+        service.promote_to_gold(sample.tenant_id, sample.id, ALL_PROMOTABLE)
+    assert custody.calls == []
+    assert service.learned_keys(sample.tenant_id) == ()
+
+
+# --- DEC03 derived-copy reconciliation (replaces the interim fail-closed GOLD) ---
+
+
+def _eligible_custody():
+    from dataclasses import replace
+
+    custody = _Custody()
+    custody.current = replace(
+        custody.current,
+        sample=custody.current.sample.model_copy(
+            update={"eligibility": LearningEligibility.ELIGIBLE}
+        ),
+    )
+    return custody
+
+
+def test_custody_promotion_binds_memory_id_and_retrieval_checks_live_custody():
+    custody = _eligible_custody()
+    service = _durable_lifecycle(custody)
+    t, s = custody.current.sample.tenant_id, custody.current.sample.id
+    item = service.promote_to_gold(t, s, ALL_PROMOTABLE)
+    assert custody.current.sample.verification_level is VerificationLevel.GOLD
+    assert custody.current.state["memory_id"] == str(item.id)
+    assert service.ask_learned(t, "fact")["found"] is True
+    assert service.learned_keys(t) == ("fact",)
+    assert service._samples == {}
+
+
+def test_custody_promotion_write_failure_leaves_no_gold_and_no_memory_binding():
+    custody = _eligible_custody()
+    custody.fail_save = True
+    service = _durable_lifecycle(custody)
+    t, s = custody.current.sample.tenant_id, custody.current.sample.id
+    with pytest.raises(LearningError):
+        service.promote_to_gold(t, s, ALL_PROMOTABLE)
+    # Refused CAS must not leave a retrievable derived copy behind.
+    assert service.ask_learned(t, "fact")["found"] is False
+    assert service.learned_keys(t) == ()
+    assert custody.current.sample.verification_level is VerificationLevel.RAW
+
+
+@pytest.mark.parametrize("loss", ["revoked", "expired"])
+def test_custody_loss_hides_and_reconciles_derived_copy(loss):
+    from dataclasses import replace
+    from datetime import timedelta
+
+    from core.memory.errors import MemoryItemNotFound
+
+    custody = _eligible_custody()
+    service = _durable_lifecycle(custody)
+    t, s = custody.current.sample.tenant_id, custody.current.sample.id
+    item = service.promote_to_gold(t, s, ALL_PROMOTABLE)
+    if loss == "revoked":
+        custody.current = replace(custody.current, payload=None)
+    else:
+        custody.current = replace(
+            custody.current, payload=None, expires_at=custody.current.expires_at - timedelta(days=1)
+        )
+    # Retrieval never serves a copy whose custody is gone, even before the sweep.
+    assert service.ask_learned(t, "fact")["found"] is False
+    assert service.learned_keys(t) == ()
+    report = service.reconcile_derived_copies(t)
+    assert report == {"checked": 1, "removed": 1, "retained": 0}
+    with pytest.raises(MemoryItemNotFound):
+        service._knowledge.get(t, item.id)
+    # The copy is gone, so nothing remains to check; repeat sweep is a no-op.
+    assert service.reconcile_derived_copies(t) == {"checked": 0, "removed": 0, "retained": 0}
+
+
+def test_reconcile_never_touches_non_gold_or_other_tenant_memory():
+    from core.contracts.base import utc_now
+    from core.contracts.memory import MemoryItem, MemoryScope
+    from core.memory.errors import MemoryItemNotFound
+
+    custody = _eligible_custody()
+    service = _durable_lifecycle(custody)
+    t = custody.current.sample.tenant_id
+    other = uuid4()
+    foreign = service._knowledge.upsert(
+        MemoryItem(
+            id=uuid4(), tenant_id=other, user_id=None, scope=MemoryScope.TENANT, key="fact",
+            value={"v": 1}, source=GOLD_KNOWLEDGE_SOURCE, confidence=0.9, evidence_count=1,
+            last_seen=utc_now(),
+        )
+    )
+    plain = service._knowledge.upsert(
+        MemoryItem(
+            id=uuid4(), tenant_id=t, user_id=None, scope=MemoryScope.TENANT, key="pref",
+            value={"v": 2}, source="user.preference", confidence=0.9, evidence_count=1,
+            last_seen=utc_now(),
+        )
+    )
+    orphan = service._knowledge.upsert(
+        MemoryItem(
+            id=uuid4(), tenant_id=t, user_id=None, scope=MemoryScope.TENANT, key="orphan",
+            value={"v": 3}, source=GOLD_KNOWLEDGE_SOURCE, confidence=0.9, evidence_count=1,
+            last_seen=utc_now(),
+        )
+    )
+    # A GOLD copy with no custody lineage is unprovable: removed, not served.
+    assert service.ask_learned(t, "orphan")["found"] is False
+    assert service.reconcile_derived_copies(t) == {"checked": 1, "removed": 1, "retained": 0}
+    assert service._knowledge.get(other, foreign.id) == foreign
+    assert service._knowledge.get(t, plain.id) == plain
+    with pytest.raises(MemoryItemNotFound):
+        service._knowledge.get(t, orphan.id)
+    assert custody.calls == []

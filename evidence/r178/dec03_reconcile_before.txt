@@ -1,0 +1,21 @@
+Tests-first: derived-copy reconciliation
+Command: pytest tests/learning/test_learning_lifecycle_e2e.py -k "reconcil or binds_memory or write_failure or custody_loss"
+....FFFFF                                                                [100%]
+=================================== FAILURES ===================================
+E   core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+/home/user/webapp/core/learning/lifecycle.py:457: core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+E   core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+/home/user/webapp/core/learning/lifecycle.py:457: core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+E   core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+/home/user/webapp/core/learning/lifecycle.py:457: core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+E   core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+/home/user/webapp/core/learning/lifecycle.py:457: core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+E   core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+/home/user/webapp/core/learning/lifecycle.py:457: core.learning.errors.LearningError: durable GOLD requires derived-copy reconciliation
+=========================== short test summary info ============================
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_promotion_binds_memory_id_and_retrieval_checks_live_custody
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_promotion_write_failure_leaves_no_gold_and_no_memory_binding
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_loss_hides_and_reconciles_derived_copy[revoked]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_custody_loss_hides_and_reconciles_derived_copy[expired]
+FAILED tests/learning/test_learning_lifecycle_e2e.py::test_reconcile_never_touches_non_gold_or_other_tenant_memory
+5 failed, 4 passed, 21 deselected in 0.58s

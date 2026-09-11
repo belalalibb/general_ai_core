@@ -68,7 +68,11 @@ async def _review(profile: RuntimeProfile, headers: dict[str, str]) -> dict[str,
 
 def _promote(profile: RuntimeProfile, tenant_id: UUID, key: str) -> None:
     service = profile.app.state.learning_lifecycle_service
-    sample = service.capture_external(tenant_id, knowledge_key=key, knowledge_value={"v": key})
+    # Trusted in-process fixture supplies its actor explicitly; HTTP admission is
+    # independently pinned by R178. No ambient demo actor for arbitrary tenants.
+    sample = service.capture_external(
+        tenant_id, actor_id=uuid4(), knowledge_key=key, knowledge_value={"v": key}
+    )
     service.mark_sanitized(tenant_id, sample.id, passed=True)
     service.set_verification_level(tenant_id, sample.id, VerificationLevel.VERIFIED)
     service.admit_to_training(
@@ -134,7 +138,9 @@ class TestEvolutionSection:
         headers, tenant = _admin(profile)
         _promote(profile, tenant, "ops.rollback")
         service = profile.app.state.learning_lifecycle_service
-        service.capture_external(tenant, knowledge_key="pending.k", knowledge_value={"v": 1})
+        service.capture_external(
+            tenant, actor_id=uuid4(), knowledge_key="pending.k", knowledge_value={"v": 1}
+        )
         knowledge = run(_review(profile, headers))["evolution"]["knowledge_lane"]
         assert knowledge["samples"] == 2
         assert knowledge["by_eligibility"] == {"eligible": 1, "pending": 1}

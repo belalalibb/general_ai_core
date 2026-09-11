@@ -210,6 +210,7 @@ from sqlalchemy import (
     Column,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Identity,
     Index,
     Integer,
@@ -219,6 +220,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
@@ -459,9 +461,7 @@ provider_model_bindings = Table(
     Column("limits_metadata", JSONB, nullable=False, server_default="{}"),
     Column("capabilities", JSONB, nullable=False, server_default="{}"),
     Column("agent_runtime", JSONB, nullable=True),
-    PrimaryKeyConstraint(
-        "provider_id", "model_id", name="pk_provider_model_bindings"
-    ),
+    PrimaryKeyConstraint("provider_id", "model_id", name="pk_provider_model_bindings"),
     CheckConstraint(
         f"availability IN ({_enum_values(BindingAvailability)})",
         name="availability_closed_set",
@@ -517,9 +517,7 @@ conversations = Table(
     ),
     Column("title", String(512), nullable=False),
     Column("status", String(32), nullable=False),
-    CheckConstraint(
-        f"status IN ({_enum_values(ConversationStatus)})", name="status_closed_set"
-    ),
+    CheckConstraint(f"status IN ({_enum_values(ConversationStatus)})", name="status_closed_set"),
     Index("ix_conversations_tenant_id", "tenant_id"),
 )
 
@@ -636,6 +634,7 @@ executions = Table(
     # REQUIRED posture here: idempotency_key is nullable by spec, and
     # executions submitted WITHOUT a key must never collide with each other.
     UniqueConstraint("tenant_id", "idempotency_key", name="uq_executions_idempotency_key"),
+    UniqueConstraint("id", "tenant_id", name="uq_executions_custody_identity"),
     Index("ix_executions_tenant_id", "tenant_id"),
 )
 
@@ -779,8 +778,81 @@ learning_samples = Table(
         f"verification_level IN ({_enum_values(VerificationLevel)})",
         name="verification_level_closed_set",
     ),
+    UniqueConstraint(
+        "id", "tenant_id", "source_execution_id", name="uq_learning_samples_custody_identity"
+    ),
     Index("ix_learning_samples_tenant_id", "tenant_id"),
     Index("ix_learning_samples_source_execution_id", "source_execution_id"),
+)
+
+
+# DEC03: infrastructure custody companion, not a second LearningSample contract.
+# Null payload is irreversible quarantine/revocation; no secret-bearing snapshots.
+learning_sample_custody = Table(
+    "learning_sample_custody",
+    metadata,
+    Column("sample_id", UUID(as_uuid=True), primary_key=True),
+    Column("tenant_id", UUID(as_uuid=True), nullable=False),
+    Column("source_execution_id", UUID(as_uuid=True), nullable=False),
+    Column("idempotency_key", UUID(as_uuid=True), nullable=False),
+    Column("policy_id", UUID(as_uuid=True), nullable=False),
+    Column("rights_ref", UUID(as_uuid=True), nullable=False),
+    Column("retention_seconds", BigInteger, nullable=False),
+    Column("created_at", TIMESTAMP(timezone=True), nullable=False),
+    Column("expires_at", TIMESTAMP(timezone=True), nullable=False),
+    Column("content_digest", String(64), nullable=False),
+    Column("descriptor_digest", String(64), nullable=False),
+    Column("source_kind", String(32), nullable=False),
+    Column("payload", JSONB(none_as_null=True), nullable=True),
+    Column("quarantined", Boolean, nullable=False),
+    Column("revoked", Boolean, nullable=False, server_default="false"),
+    Column("revision", Integer, nullable=False, server_default="0"),
+    Column("state", JSONB, nullable=False, server_default="{}"),
+    ForeignKeyConstraint(
+        ["sample_id", "tenant_id", "source_execution_id"],
+        [
+            "learning_samples.id",
+            "learning_samples.tenant_id",
+            "learning_samples.source_execution_id",
+        ],
+        name="fk_custody_sample_identity",
+        ondelete="RESTRICT",
+    ),
+    ForeignKeyConstraint(
+        ["source_execution_id", "tenant_id"],
+        ["executions.id", "executions.tenant_id"],
+        name="fk_custody_execution_tenant",
+        ondelete="RESTRICT",
+    ),
+    UniqueConstraint("tenant_id", "idempotency_key", name="uq_custody_tenant_idempotency"),
+    CheckConstraint("retention_seconds > 0 AND expires_at > created_at", name="custody_retention"),
+    CheckConstraint("revision >= 0", name="custody_revision"),
+    CheckConstraint("source_kind IN ('external', 'execution')", name="custody_source_kind"),
+    CheckConstraint(
+        "NOT (quarantined OR revoked) OR payload IS NULL", name="custody_no_quarantined_payload"
+    ),
+    CheckConstraint("jsonb_typeof(state) = 'object'", name="custody_state_object"),
+    Index("ix_custody_tenant_expiry", "tenant_id", "expires_at"),
+)
+
+# NULL policy means unresolved pre-0020 tenant history, not an invented policy.
+# Only explicit revocation uses a policy UUID. No runtime path clears either.
+learning_policy_revocations = Table(
+    "learning_policy_revocations",
+    metadata,
+    Column("tenant_id", UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="RESTRICT"),
+           nullable=False),
+    Column("policy_id", UUID(as_uuid=True), nullable=True),
+    Column("reason", String(32), nullable=False),
+    Column("recorded_at", TIMESTAMP(timezone=True), nullable=False,
+           server_default=text("CURRENT_TIMESTAMP")),
+    UniqueConstraint("tenant_id", "policy_id", name="uq_learning_policy_revocation_scope",
+                     postgresql_nulls_not_distinct=True),
+    CheckConstraint(
+        "(policy_id IS NULL AND reason = 'legacy_unresolved') OR "
+        "(policy_id IS NOT NULL AND reason = 'revoked')",
+        name="learning_policy_revocation_reason",
+    ),
 )
 
 credentials = Table(
