@@ -1544,3 +1544,75 @@ def test_custody_gold_promotion_and_loss_reconcile_on_postgres(database, loss):
     redacted = database[0].run(repo.get(t, s))
     assert redacted["payload"] is None and redacted["eligibility"] == "ineligible"
     assert fresh.reconcile_derived_copies(t) == {"checked": 0, "removed": 0, "retained": 0}
+
+
+def test_governance_api_release_legacy_hold_then_capture_and_sweep_on_postgres(database):
+    """0020 hold denies; only an explicit reviewed release re-enables the tenant."""
+    from datetime import timedelta
+
+    from core.contracts.audit import AuditEventType
+    from core.learning.storage import RetentionPolicy
+    from infrastructure.db.learning import LearningCustodyRepository
+    from infrastructure.db.tables import learning_policy_revocations, learning_sample_custody
+    from tests.api.test_external_evidence_p01_r178 import GOVERN, custody_body, governed_app
+
+    world, store, _ = composed(database)
+    tenant = world.principal.tenant_id
+    policy = RetentionPolicy(tenant, uuid4(), 3600)
+    app = governed_app(world, custody_adapter(database, policy), store=store)
+    body = custody_body()
+    body["policy_id"] = str(policy.policy_id)
+
+    async def hold():
+        async with database[1].begin() as s:
+            await s.execute(learning_policy_revocations.insert().values(
+                tenant_id=tenant, policy_id=None, reason="legacy_unresolved"
+            ))
+
+    database[0].run(hold())
+    denied = run(_post(app, SAMPLES, body))
+    assert denied.status_code == 404 and count(database, learning_samples) == 0
+    assert run(_post(app, f"{GOVERN}/release-legacy-hold", {})).status_code == 422
+    assert count(database, learning_policy_revocations) == 1
+    ref = uuid4()
+    released = run(_post(app, f"{GOVERN}/release-legacy-hold", {"reconciliation_ref": str(ref)}))
+    assert released.status_code == 200 and released.json()["released"] is True
+    assert count(database, learning_policy_revocations) == 0
+    again = run(_post(app, f"{GOVERN}/release-legacy-hold", {"reconciliation_ref": str(ref)}))
+    assert again.status_code == 200 and again.json()["released"] is False
+    captured = run(_post(app, SAMPLES, body))
+    assert captured.status_code == 201
+    sample = captured.json()
+    swept = run(_post(app, f"{GOVERN}/sweep", {}))
+    assert swept.status_code == 200 and swept.json()["expired_samples"] == 0
+
+    async def backdate():
+        async with database[1].begin() as s:
+            await s.execute(
+                learning_sample_custody.update()
+                .where(learning_sample_custody.c.sample_id == UUID(sample["id"]))
+                .values(
+                    created_at=utc_now() - timedelta(hours=3),
+                    expires_at=utc_now() - timedelta(hours=1),
+                )
+            )
+
+    database[0].run(backdate())
+    swept = run(_post(app, f"{GOVERN}/sweep", {}))
+    assert swept.status_code == 200 and swept.json()["expired_samples"] == 1
+    row = database[0].run(LearningCustodyRepository(database[1]).get(tenant, UUID(sample["id"])))
+    assert row["payload"] is None and row["revoked"] is True
+    other = uuid4()
+    revoked = run(_post(app, f"{GOVERN}/revoke", {"policy_id": str(other)}))
+    assert revoked.status_code == 200
+    assert revoked.json() == {"policy_id": str(other), "revoked_samples": 0}
+    assert count(database, learning_policy_revocations) == 1
+    acts = [
+        e.details["act"]
+        for e in world.audit.read(tenant, event_type=AuditEventType.SECURITY_POLICY_CHANGED)
+    ]
+    assert acts == [
+        "learning_legacy_hold_released", "learning_legacy_hold_released",
+        "learning_retention_swept", "learning_retention_swept", "learning_policy_revoked",
+    ]
+    assert app.state.learning_lifecycle_service._samples == {}
