@@ -1,0 +1,8 @@
+Snapshot: 0dde9712; product 0e2d366f
+waiting for server to start.... done
+server started
+PostgreSQL version: postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)
+Scope: disposable local cluster; metadata dependency closure; no migration/production claim
+.......................................                                  [100%]
+39 passed in 18.94s
+process_exit=0
