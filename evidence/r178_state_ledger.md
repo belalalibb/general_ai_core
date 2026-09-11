@@ -632,3 +632,30 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   deliberately fail-closed. Policy snapshots are NOT durable revocation records.
   Secure mission publication remains blocked; no chat credential copied/tested,
   PR #14 update, merge or production deployment. Preserve a confirmed bundle.
+
+## Integrated API/runtime verification retained — Backend Closure still open
+
+- VERIFIED / CAPTURED: restored confirmed 2591870c after reset. Lost integrated
+  verification attempts had no uploaded checkpoint; only absent checks rerun.
+  API/runtime product 0e2d366f and 39-pass live proof retained, not reimplemented.
+- VERIFIED / TEST: canonical check_repo.sh on committed 2591870c clone, env-i:
+  3495 passed, 0 failed/errors, 64 skipped; strict mypy/ruff/imports/secret scan/
+  budgets PASS; not_evaluated=2. Evidence dec03_api_runtime_full_gate.txt, 945309a8.
+  Gateway 194 (two warnings), original adversarial exit 0, both 5ad91e49.
+- VERIFIED / CAPTURED: product/tests/engineering/live tests equal tested 2591870c;
+  frozen surfaces equal 369cf37c. Current A-K assessment and DEC03 packet
+  reconciled. Original 404 restart defects now fixed within the documented
+  explicit-policy recomposition envelope; this is NOT actual process-kill proof.
+- NEXT EXACT ACTION: tests-first durable revocation/new-admission denial across
+  stale configured processes, retaining redacted lineage/evaluation evidence.
+  Reuse existing custody repository and approved schema surfaces; no parallel
+  state journal. Then retention/derived-copy reconciliation, runtime concurrency/
+  partial-batch failure and tenant isolation, true process crash/restart, and
+  final integrated verification after product changes. Do not reopen receipt,
+  codec, adapter, Core lifecycle or API/runtime binding; do not rerun this retained
+  full gate unless product/tests change or a specific verification reason exists.
+- DEC03 B remains approved (11/11); durable GOLD still fails closed. P01 final
+  closure/Backend Closure, R178 and UI readiness remain OPEN. Secure publication
+  BLOCKED / CAPTURED: public fetch succeeds, dry-run mission push cannot obtain
+  authentication. No supplied chat credential copied/tested, no PR #14 update,
+  merge, deployment or publication squash claimed. Preserve confirmed bundle.
