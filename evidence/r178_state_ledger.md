@@ -492,3 +492,44 @@ This section supersedes the missing-verification NEXT EXACT ACTION above.
   Backend Closure, R178 completion and UI readiness remain OPEN. Publication is
   separately blocked by absent GitHub environment authentication; no chat token
   copied/tested, no PR #14 update, merge or production deployment claimed.
+
+
+## Execution-born custody verified — lifecycle binding next
+
+- VERIFIED / CAPTURED: restored confirmed 2e7385f3 bundle, including full gate and
+  all companion checks. Interrupted reconciliation upload had no confirmed URL;
+  only missing documentation reconciled here, no implementation/tests repeated.
+- VERIFIED / TEST: production 0fa16e80; tests-first 2636a28e / red 8f3cef0b:
+  11 missing-sources-binding failures. Green 4e5edf74: 49 adapter tests, strict
+  mypy/ruff pass. Earlier lost attempts with enum import errors are not this proof.
+- Existing tenant-scoped ExecutionRecord now comes from a read-only source port
+  bound to PostgresExecutionRepository. No fabricated ingestion source or node
+  rewrite. Stored actor is provenance, NOT caller authorization. Failed executions
+  may supply RAW/PENDING candidates without trust. Source read and custody write
+  are separate transactions; repository checks source/FKs on capture. No default
+  policy/rights/retention, missing-source fallback or acknowledgement after failure.
+- VERIFIED / LIVE + TEST: dec03_execution_adapter_live_green.txt, c659be07:
+  4 passed / 30 deselected, PostgreSQL 17.11. Actual API/service source executions
+  with a test provider (not live inference); fresh retry identity, no source/node
+  rewriting, clean/quarantine, content/source conflicts, foreign==missing refusal,
+  late-write rollback preserving source. Initial 3-pass/1-failure run retained;
+  fixture-only duplicate plan name fixed by namespacing plans (8c5fb4c9), without
+  relaxing the unique constraint or original restart assertions.
+- VERIFIED / TEST: dec03_execution_adapter_full_gate.txt, c659be07 / 3847087c:
+  3458 passed, 0 failed/errors, 64 skipped, all static/governance gates PASS,
+  not_evaluated=2, DEC03 6/11. Gateway 194 (e2924dae); original adversarial exit 0
+  (2e7385f3). Outputs retained; product equality with tested c659be07 verified.
+- FAILED / LIVE + TEST: dec03_execution_adapter_runtime_open.txt (74a2d555):
+  32 passed / 2 failed, exit 1. Original restart assertions at lines 193/307 still
+  get 404 != 200. This is NOT Backend Closure or actual process-crash proof.
+- NEXT EXACT ACTION: tests-first Core-facing custody lifecycle port and optional
+  durable binding in core/learning/lifecycle.py. Bind both capture paths, safe
+  recovered reads/list/report and CAS metadata transitions. Refuse unavailable
+  payload operations; preserve independent evaluation/promotion gates. Then API
+  app/admin/intake and runtime explicit policy/rights/idempotency admission,
+  expiry/revocation and derived-copy reconciliation. Prove true process restart/
+  crash and both original acceptance cases before final integrated closure checks.
+- DEC03 APPROVED; five approved production files remain; no budget/frozen/gate
+  changes. R177 and verified R178 units remain closed. Backend Closure, R178
+  completion/UI readiness remain OPEN. Secure publication separately blocked;
+  no PR update, merge or deployment claimed. Preserve confirmed bundles.
