@@ -1,6 +1,35 @@
 # R178 — engineering checkpoint and decision evidence
 
-## Current adapter A–K checkpoint — Backend Closure OPEN
+## Current execution-source custody A–K checkpoint — Backend Closure OPEN
+
+- **A / State — VERIFIED, CAPTURED:** recovered 2e7385f3 with all verification;
+  main 369cf37c / mission remote 84563ab9. R177 remains closed.
+- **B / Regression — VERIFIED, TEST:** dec03_execution_adapter_full_gate.txt:
+  3458 passed, 0 failed/errors, 64 skipped, all static/governance checks PASS.
+- **C / Gap — FAILED, LIVE + TEST:** dec03_execution_adapter_runtime_open.txt:
+  32 passed / 2 unchanged sample-restart failures (404 != 200), exit 1.
+- **D / Change — VERIFIED, TEST:** 11 genuine missing-binding failures before
+  implementation, all 49 adapter tests pass after, strict mypy/ruff pass.
+- **E / Trust — VERIFIED within TEST + LIVE scope:** actual tenant-scoped source,
+  no fabricated ingestion or node rewrite, RAW/PENDING only. Source actor is
+  provenance, not caller authorization. Missing policy/source/references refuse.
+- **F / Models — UNVERIFIED beyond existing tests:** test provider only;
+  no new live inference, training/weights or model-promotion evidence.
+- **G / Learning — INFERRED, STATIC:** lifecycle/runtime/API still unbound;
+  memory is not training data; execution success is not verified learning.
+- **H / Recovery — VERIFIED, LIVE + TEST (adapter scope):** four PostgreSQL cases
+  pass, covering real API source executions, fresh retry, quarantine, tenant
+  denial, source conflicts and late-write rollback. Duplicate fixture plan name
+  was corrected, not database constraints. No process-crash closure claim.
+- **I / Decisions:** DEC03 B APPROVED, 6/11, not_evaluated=2, gates unchanged.
+  Source read and custody capture are separate transactions, not atomic together.
+- **J / Other checks — VERIFIED, TEST:** Gateway 194 and original adversarial
+  exit 0 in dec03_execution_adapter_* evidence. No PR update/merge/deployment.
+- **K / Next:** tests-first Core lifecycle custody port/read/CAS binding; then
+  runtime/API admission, expiry/revocation, derived-copy reconciliation and
+  true crash/restart proof. Backend Closure, R178 and UI readiness remain OPEN.
+
+## Historical external adapter A–K checkpoint — Backend Closure OPEN
 
 This section supersedes the historical assessments below.
 
