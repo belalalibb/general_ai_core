@@ -220,6 +220,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, TIMESTAMP, UUID
 
@@ -832,6 +833,26 @@ learning_sample_custody = Table(
     ),
     CheckConstraint("jsonb_typeof(state) = 'object'", name="custody_state_object"),
     Index("ix_custody_tenant_expiry", "tenant_id", "expires_at"),
+)
+
+# NULL policy means unresolved pre-0020 tenant history, not an invented policy.
+# Only explicit revocation uses a policy UUID. No runtime path clears either.
+learning_policy_revocations = Table(
+    "learning_policy_revocations",
+    metadata,
+    Column("tenant_id", UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="RESTRICT"),
+           nullable=False),
+    Column("policy_id", UUID(as_uuid=True), nullable=True),
+    Column("reason", String(32), nullable=False),
+    Column("recorded_at", TIMESTAMP(timezone=True), nullable=False,
+           server_default=text("CURRENT_TIMESTAMP")),
+    UniqueConstraint("tenant_id", "policy_id", name="uq_learning_policy_revocation_scope",
+                     postgresql_nulls_not_distinct=True),
+    CheckConstraint(
+        "(policy_id IS NULL AND reason = 'legacy_unresolved') OR "
+        "(policy_id IS NOT NULL AND reason = 'revoked')",
+        name="learning_policy_revocation_reason",
+    ),
 )
 
 credentials = Table(
