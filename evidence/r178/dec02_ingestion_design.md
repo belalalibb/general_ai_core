@@ -307,3 +307,15 @@ state, explicit runtime/API policy/rights/idempotency admission. Policy snapshot
 are not durable revocation registries or automatic purge; repository revoke_policy
 alone cannot deny new capture by stale configured processes. Expiry/revocation
 and derived-copy reconciliation remain mandatory. No Backend Closure/UI claim.
+
+
+Current execution-source checkpoint (0fa16e80, verified c659be07..2e7385f3):
+read-only tenant-scoped ExecutionRecord source binding, no new ingestion source
+or node rewrite; explicit policy/rights/idempotency and RAW/PENDING admission.
+Stored source actor is provenance, not caller authorization. Source read and
+custody write are separate; repository rechecks tenant/source and FKs on capture.
+Retained evidence: 11 failing-first cases -> 49 adapter passes; four real
+PostgreSQL source cases; full gate 3458/0/0/64; Gateway 194; original adversarial
+exit 0. Full live suite 32 passed / 2 original restart failures. Accounting 6/11.
+Next: Core lifecycle custody binding, then runtime/API/intake admission, expiry/
+revocation and derived-copy reconciliation. No Backend Closure or UI readiness.
