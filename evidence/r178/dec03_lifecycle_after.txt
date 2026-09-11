@@ -1,0 +1,9 @@
+Snapshot: 45e1f4b3; Python 3.13; detached Core lifecycle + adapter units (not runtime closure)
+Command: pytest tests/learning tests/composition/test_learning_custody_r178.py; strict mypy lifecycle; ruff lifecycle/tests
+........................................................................ [ 39%]
+........................................................................ [ 79%]
+......................................                                   [100%]
+182 passed in 1.67s
+Success: no issues found in 1 source file
+All checks passed!
+process_exit=0
