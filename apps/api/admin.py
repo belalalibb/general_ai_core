@@ -365,6 +365,9 @@ class LearningCaptureRequest(ContractModel):
     knowledge_key: BoundedStr
     knowledge_value: JsonObject
     source_execution_id: UUID | None = None
+    policy_id: UUID | None = None
+    rights_ref: UUID | None = None
+    idempotency_key: UUID | None = None
 
 
 class LearningEvaluateRequest(ContractModel):
@@ -390,6 +393,7 @@ def create_admin_router(
     memory: MemoryStorePort | None = None,
     engineering: EngineeringAdminSurface | None = None,
     strict_promotion_evidence: bool = False,
+    governed_learning: bool = False,
 ) -> APIRouter:
     """Build the /v1/admin/* router over a per-request principal resolver.
 
@@ -696,7 +700,16 @@ def create_admin_router(
             evaluations=surface.evaluations,
             executions=execution_store if execution_store is not None else surface.executions,
         )
-        intake_adapter = IntakeAdapter(lifecycle=lifecycle)
+        intake_adapter = IntakeAdapter(lifecycle=lifecycle, governed=governed_learning)
+
+        def _custody_refs(body: LearningCaptureRequest | IntakeRequest) -> JSONResponse | None:
+            if governed_learning and any(
+                v is None for v in (body.policy_id, body.rights_ref, body.idempotency_key)
+            ):
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR, "Explicit learning custody references required."
+                )
+            return None
 
         @router.post("/learning/intake")
         async def intake_learning_batch(request: Request, body: IntakeRequest) -> Response:
@@ -712,12 +725,18 @@ def create_admin_router(
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
+            refusal = _custody_refs(body)
+            if refusal is not None:
+                return refusal
             report = intake_adapter.ingest(
                 admitted.tenant_id,
                 expectations=body.expectations,
                 format=body.format,
                 content=body.content,
                 actor_id=admitted.user_id,
+                policy_id=body.policy_id,
+                rights_ref=body.rights_ref,
+                idempotency_key=body.idempotency_key,
             )
             if report.quarantined:
                 return error_response(
@@ -750,12 +769,18 @@ def create_admin_router(
             admitted = _admit(request)
             if isinstance(admitted, JSONResponse):
                 return admitted
+            refusal = _custody_refs(body)
+            if refusal is not None:
+                return refusal
             if body.source_execution_id is None:
                 sample = lifecycle.capture_external(
                     admitted.tenant_id,
                     actor_id=admitted.user_id,
                     knowledge_key=body.knowledge_key,
                     knowledge_value=body.knowledge_value,
+                    policy_id=body.policy_id,
+                    rights_ref=body.rights_ref,
+                    idempotency_key=body.idempotency_key,
                 )
                 return _json(sample.model_dump(mode="json"), status=201)
             # The SAME tenant-scoped store the /v1/executions routes read:
@@ -781,6 +806,9 @@ def create_admin_router(
                 body.source_execution_id,
                 knowledge_key=body.knowledge_key,
                 knowledge_value=body.knowledge_value,
+                policy_id=body.policy_id,
+                rights_ref=body.rights_ref,
+                idempotency_key=body.idempotency_key,
             )
             return _json(sample.model_dump(mode="json"), status=201)
 
@@ -805,6 +833,8 @@ def create_admin_router(
                     http_status=404,
                 )
             except LearningError as exc:
+                if governed_learning:
+                    raise
                 return _json({"evaluated": False, "reason": str(exc)})
             return _json({"evaluated": True, "sample": sample.model_dump(mode="json")})
 
@@ -957,6 +987,8 @@ def create_admin_router(
                     http_status=404,
                 )
             except (PromotionDenied, LearningError) as exc:
+                if governed_learning:
+                    raise
                 return _json({"promoted": False, "reason": str(exc), "evidence": evidence})
             except MemoryStoreError as exc:
                 # The retrieval substrate refused the write (13 §7 secret
