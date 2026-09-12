@@ -288,8 +288,17 @@ POST /v1/admin/learning/custody/release-legacy-hold  {reconciliation_ref} → {r
   tenant's historical samples, record the review under `reconciliation_ref` in
   your own system, then call the endpoint. `released:false` means no hold was
   present (already released or never held).
-- Before a production migration to 0020: stop ALL old learning writers; do not
-  resume old binaries afterward (they do not enforce holds/tombstones).
+- Before a production migration to 0020/0021: stop ALL old learning writers;
+  do not resume old binaries afterward (they do not enforce holds/tombstones).
+- **Structural guard (0021, R179 rulings Q2 — MEASURED)**: the procedure above
+  is hygiene, no longer the only protection. `learning_sample_custody` carries
+  `custody_schema_generation SMALLINT NOT NULL` with NO server default; the
+  current code supplies it, a pre-0021 binary cannot, so an old writer's capture
+  fails AT THE DATABASE (`NotNullViolationError`, HTTP 500, no row landed —
+  `evidence/r179/deploy_truth_rolling_crash_after_q2.json`, `F05_old_writer_refused_by_0021.txt`).
+  No trigger, no policy in DDL: the column records which metadata generation
+  wrote the row. Downgrading 0021 removes the guard (structural, reversible);
+  a populated 0020 still refuses downgrade.
 
 ---
 

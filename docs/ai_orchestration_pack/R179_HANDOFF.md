@@ -34,7 +34,7 @@ Rulings received on Q1–Q5 (verbatim in `evidence/r179_state_ledger.md`, row "R
 | F-R179-02 promote unreachable over HTTP | S2 | CLOSED by rulings Q3 (capability, not relaxation): SECURITY grader activated; live promote 201, GOLD survives SIGKILL (`durability_measured_after_q3.json`); 409 for a failing sample pinned |
 | F-R179-03 memory dies with process | S1 | CLOSED by 4.5 (memory_blocks 1→1) |
 | F-R179-04 audit/usage reset on restart | S2 | AUDIT CLOSED by rulings Q1 (P3 1→1→1, `durability_measured_after_q1.json`); USAGE still OPEN → F-R179-06 / Q6; documented §13 |
-| F-R179-05 old writer not refused by 0020 schema | S2 | OPEN → Q2; procedure in §8.1 |
+| F-R179-05 old writer not refused by 0020 schema | S2 | CLOSED by rulings Q2: migration 0021 structural NOT NULL guard (no trigger); live old writer 500/`NotNullViolationError`, 0 rows landed (`deploy_truth_rolling_crash_after_q2.json`) |
 | F-R179-06 durable usage binding violates `usage_ledger` FK on every execute | S2 | OPEN → Q6; usage kept process-local (`del durable_usage` in runtime.py), evidence `evidence/r179/F06_usage_ledger_fk_violation.txt` |
 | F-R179-07 frozen `apps/admin_agent/tools.py` annotates concrete `InMemoryUsageAccounting` | S4 | OPEN → fixed in the Q5 thaw commit; no type: ignore needed while usage stays concrete |
 
