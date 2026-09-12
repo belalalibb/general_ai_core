@@ -70,7 +70,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import Field
 
-from apps.api.capabilities import Capability, catalog_json
+from apps.api.capabilities import Capability, admin_actions_json, catalog_json
 from apps.api.context_lab import (
     ContextLabRequest,
     ContextLabService,
@@ -1267,6 +1267,19 @@ def create_admin_router(
             if isinstance(admitted, JSONResponse):
                 return admitted
             return _json(catalog_payload)
+
+        # R179 4.3: action discovery — derived ONCE from the canonical vocabulary
+        # (core.contracts.admin.ACTION_AREA); own route so the shelf row shape
+        # stays frozen for the V7 consumers. Admin-gated like every read here.
+        actions_payload = admin_actions_json()
+
+        @router.get("/capabilities/actions")
+        async def capability_actions(request: Request) -> Response:
+            """GET .../capabilities/actions: which admin actions exist and who owns them."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(actions_payload)
 
     # --- V7 chunk 2: Capability Exercise Surface (real probes, real evidence) -------
 

@@ -40,6 +40,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from core.contracts.admin import ACTION_AREA, FINAL_ACTIVE_ADMIN_AREAS, AdminAction, AdminArea
 from core.contracts.base import JsonObject
 
 
@@ -127,4 +128,45 @@ def catalog_json(entries: tuple[Capability, ...]) -> JsonObject:
             }
             for entry in sorted(entries, key=lambda e: e.id)
         ],
+    }
+
+
+#: The shelf row that owns the admin change lifecycle (the ONLY capability
+#: whose "supported actions" question has a canonical answer today).
+ADMIN_ACTIONS_CAPABILITY_ID = "admin.control_plane"
+
+
+def admin_actions_json() -> JsonObject:
+    """R179 4.3 — action discovery, DERIVED from the canonical vocabulary.
+
+    A generic consumer asks "which admin actions does the control plane
+    support, and which area owns each?" and gets a pure function of
+    ``core.contracts.admin.ACTION_AREA`` (one owner per action, closed) and
+    ``FINAL_ACTIVE_ADMIN_AREAS``. There is NO second list to maintain: every
+    ``AdminAction`` and every ``AdminArea`` value is enumerated from the enums,
+    so drift between vocabulary and discovery is impossible by construction.
+
+    Scope (recorded): the ACTION half only. The payload-schema half stays
+    imperative in ``core/admin/service.py`` (DEC-A: design only this round) and
+    is deliberately NOT exposed here. The shelf row shape ``{id,state,evidence}``
+    is untouched — this is a separate read model on its own route.
+    """
+    actions = [
+        {"action": action.value, "area": ACTION_AREA[action].value}
+        for action in sorted(AdminAction, key=lambda a: a.value)
+    ]
+    areas = [
+        {
+            "area": area.value,
+            "active": area in FINAL_ACTIVE_ADMIN_AREAS,
+            "actions": sorted(a.value for a, owner in ACTION_AREA.items() if owner is area),
+        }
+        for area in sorted(AdminArea, key=lambda a: a.value)
+    ]
+    return {
+        "scope": "process",
+        "capability": ADMIN_ACTIONS_CAPABILITY_ID,
+        "vocabulary": "core.contracts.admin.ACTION_AREA",
+        "actions": actions,
+        "areas": areas,
     }
