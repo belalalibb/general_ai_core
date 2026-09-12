@@ -22,7 +22,7 @@ import re
 from pathlib import Path
 from types import ModuleType
 
-from sqlalchemy import MetaData, Table
+from sqlalchemy import Column, MetaData, Table
 from sqlalchemy.dialects import postgresql
 
 from infrastructure.db.tables import CUSTODY_SCHEMA_GENERATION, learning_sample_custody
@@ -94,9 +94,10 @@ class TestOldWriterInsertIsRefusedStructurally:
 
     @staticmethod
     def _pre_0021_custody() -> Table:
+        """The pre-0021 metadata: every custody column except the guard."""
         old = MetaData()
         columns = [
-            c.copy()
+            Column(c.name, c.type, nullable=c.nullable)
             for c in learning_sample_custody.columns
             if c.name != "custody_schema_generation"
         ]

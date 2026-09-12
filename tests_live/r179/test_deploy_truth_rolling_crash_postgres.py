@@ -232,27 +232,25 @@ def test_rolling_pair_measures_old_writer_against_0020(cluster):  # noqa: F811
     verdict["rows_landed_by_old_writer_under_hold"] = (
         1 if verdict.get("old_writer_capture_status") == 201 else 0
     )
-    # MEASURED TRUTH (F-R179-05): the 0020 hold is enforced by the NEW binary's
-    # repository, not by the schema — an OLD binary restarted on the 0020 database
-    # is NOT refused and lands custody rows under the hold. The only protection is
-    # the documented procedure (OPERATIONS.md §8.1: stop ALL old writers before the
-    # migration; never resume old binaries). A schema-level guard would need a new
-    # migration, which this round forbids — recorded, not masked.
+    # F-R179-05 (measured before rulings Q2): the 0020 hold was enforced by the
+    # NEW binary's repository only — the OLD binary landed rows under the hold.
+    # Rulings Q2 landed the smallest STRUCTURAL guard (migration 0021:
+    # ``custody_schema_generation SMALLINT NOT NULL``, no server default, no
+    # trigger). An old writer's INSERT omits the column and the DATABASE refuses
+    # it — the guard is now a binding truth this probe asserts, not a finding.
     verdict["old_writer_refused_by_schema"] = verdict.get("old_writer_capture_status") != 201
     _write_evidence("rolling_pair", verdict)
-    # Binding truths that DO hold: the hold refused the NEW writer while present;
-    # release is explicit and works; the new writer works after release; no orphans.
+    assert verdict["old_writer_refused_by_schema"] is True, verdict.get("old_writer_capture_body")
+    assert verdict["rows_landed_by_old_writer_under_hold"] == 0
+    # Binding truths that hold as before: the hold refused the NEW writer while
+    # present; release is explicit and works; the new writer works after release
+    # (its INSERT supplies the generation through the metadata default); no orphans.
     assert verdict["new_writer_capture_under_hold_status"] == 404
     assert verdict["release_status"] == 200 and verdict["release_body"].get("released") is True
     assert verdict["new_writer_capture_after_release_status"] == 201
     assert verdict["rows"]["orphan_samples_without_custody"] == 0
     assert verdict["rows"]["orphan_custody_without_sample"] == 0
-    assert (
-        verdict["rows"]["learning_sample_custody"]
-        == 1 + verdict["rows_landed_by_old_writer_under_hold"]
-    )
-    # The finding must stay visible in the evidence file, never asserted away.
-    assert "old_writer_refused_by_schema" in verdict
+    assert verdict["rows"]["learning_sample_custody"] == 1
 
 
 # --- 4.6-c crash DURING a write ----------------------------------------------------

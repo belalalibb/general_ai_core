@@ -275,11 +275,18 @@ def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_databas
         # Negative control: durable runtime without a policy refuses even when
         # all opaque references are present; no legacy in-memory fallback.
         policy_id, rights_ref, retry_key = uuid4(), uuid4(), uuid4()
-        refs = dict(policy_id=str(policy_id), rights_ref=str(rights_ref),
-                    idempotency_key=str(retry_key))
-        refused = run(request(bootstrap, headers, "POST", SAMPLES, dict(
-            **refs, knowledge_key="runtime.restart", knowledge_value={"answer": "fact"}
-        )))
+        refs = dict(
+            policy_id=str(policy_id), rights_ref=str(rights_ref), idempotency_key=str(retry_key)
+        )
+        refused = run(
+            request(
+                bootstrap,
+                headers,
+                "POST",
+                SAMPLES,
+                dict(**refs, knowledge_key="runtime.restart", knowledge_value={"answer": "fact"}),
+            )
+        )
         assert refused.status_code == 404
         assert bootstrap.app.state.learning_lifecycle_service._samples == {}
         assert bootstrap.app.state.learning_lifecycle_service.list_samples(tenant) == ()
@@ -289,9 +296,9 @@ def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_databas
         profiles.remove(bootstrap)
         # Test-operator configuration for the registered tenant, before boot.
         # These are NOT application defaults or an internal policy-map mutation.
-        env["LEARNING_STORAGE_POLICIES"] = json.dumps([dict(
-            tenant_id=str(tenant), policy_id=str(policy_id), retention_seconds=3600
-        )])
+        env["LEARNING_STORAGE_POLICIES"] = json.dumps(
+            [dict(tenant_id=str(tenant), policy_id=str(policy_id), retention_seconds=3600)]
+        )
         first = build_runtime_profile(environ=env)
         profiles.append(first)
         assert first.durable and first.demo_principal is None
@@ -344,9 +351,15 @@ def test_backend_closure_actual_runtime_restart_preserves_sample(runtime_databas
         restored = run(request(second, headers, "GET", f"{SAMPLES}/{sample['id']}"))
         assert restored.status_code == 200
         assert restored.json()["sample"]["id"] == sample["id"]
-        replay = run(request(second, headers, "POST", SAMPLES, dict(
-            **refs, knowledge_key="runtime.restart", knowledge_value={"answer": "fact"}
-        )))
+        replay = run(
+            request(
+                second,
+                headers,
+                "POST",
+                SAMPLES,
+                dict(**refs, knowledge_key="runtime.restart", knowledge_value={"answer": "fact"}),
+            )
+        )
         assert replay.status_code == 201
         assert replay.json() == restored.json()["sample"]
         assert len(second.app.state.learning_lifecycle_service.list_samples(tenant)) == 1
@@ -661,15 +674,21 @@ def custody_migration(connection, direction):
     from alembic.migration import MigrationContext
     from alembic.operations import Operations
 
-    path = (
-        Path(__file__).resolve().parents[2]
-        / "infrastructure/db/migrations/versions/0019_learning_custody.py"
-    )
-    spec = importlib.util.spec_from_file_location("custody_migration", path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    with Operations.context(MigrationContext.configure(connection)):
-        getattr(module, direction)()
+    # R179 rulings Q2: the custody table now spans 0019 (create) + 0021 (the
+    # structural NOT NULL guard column); run both so column parity with the
+    # metadata still holds. Upgrade forward, downgrade in reverse.
+    versions = Path(__file__).resolve().parents[2] / "infrastructure/db/migrations/versions"
+    names = ["0019_learning_custody.py", "0021_custody_schema_generation.py"]
+    if direction == "downgrade":
+        names.reverse()
+    for name in names:
+        spec = importlib.util.spec_from_file_location(
+            f"custody_migration_{name[:4]}", versions / name
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with Operations.context(MigrationContext.configure(connection)):
+            getattr(module, direction)()
 
 
 def test_custody_migration_roundtrip_empty_and_refuses_populated_downgrade(database):
@@ -729,7 +748,9 @@ def test_custody_codec_recovers_real_rows_without_restoring_unavailable_payload(
     # A new repository instance, not the capture return value or an in-process cache.
     loaded = database[0].run(LearningCustodyRepository(database[1]).get(tenant, first["sample_id"]))
     restored = recover_capture(
-        loaded, tenant_id=tenant, policy=None if mode == "no_policy" else args["policy"],
+        loaded,
+        tenant_id=tenant,
+        policy=None if mode == "no_policy" else args["policy"],
         now=utc_now(),
     )
     assert restored.sample.id == first["sample_id"]
@@ -748,10 +769,13 @@ def test_custody_codec_recovers_real_rows_without_restoring_unavailable_payload(
     assert count(database, executions) == count(database, learning_samples) == 1
 
 
-@pytest.mark.parametrize("field,value", [
-    ("state", {"version": 999}),
-    ("payload", {"knowledge_key": "fact", "knowledge_value": {"answer": "corrupt-marker"}}),
-])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("state", {"version": 999}),
+        ("payload", {"knowledge_key": "fact", "knowledge_value": {"answer": "corrupt-marker"}}),
+    ],
+)
 def test_custody_codec_refuses_corrupt_persisted_json(database, field, value):
     from core.learning.storage import LearningStorageError, recover_capture
     from infrastructure.db.learning import LearningCustodyRepository
@@ -792,16 +816,18 @@ def custody_adapter(database, policy, *, configured=True, repository=None):
 
     env = {}
     if configured:
-        env["LEARNING_STORAGE_POLICIES"] = json.dumps([{
-            "tenant_id": str(policy.tenant_id),
-            "policy_id": str(policy.policy_id),
-            "retention_seconds": policy.retention_seconds,
-        }])
+        env["LEARNING_STORAGE_POLICIES"] = json.dumps(
+            [
+                {
+                    "tenant_id": str(policy.tenant_id),
+                    "policy_id": str(policy.policy_id),
+                    "retention_seconds": policy.retention_seconds,
+                }
+            ]
+        )
     policies = learning_storage_policies_from_env(env)
     if repository is not None:
-        return DurableLearningCustody(
-            repository=repository, bridge=database[0], policies=policies
-        )
+        return DurableLearningCustody(repository=repository, bridge=database[0], policies=policies)
     return build_durable_learning_custody(
         SimpleNamespace(session_factory=database[1]), database[0], policies=policies
     )
@@ -837,9 +863,11 @@ def test_custody_adapter_capture_retry_and_fresh_recovery(database, quarantined)
     assert fresh.capture_external(**args) == first
     assert first.sample.verification_level.value == "RAW"
     assert first.sample.eligibility.value == "pending"
-    assert first.payload == (None if quarantined else {
-        "knowledge_key": args["knowledge_key"], "knowledge_value": args["knowledge_value"]
-    })
+    assert first.payload == (
+        None
+        if quarantined
+        else {"knowledge_key": args["knowledge_key"], "knowledge_value": args["knowledge_value"]}
+    )
     with pytest.raises(LearningStorageConflict):
         fresh.capture_external(**{**args, "knowledge_value": {"answer": "changed"}})
     with pytest.raises(LearningStorageError, match="unknown learning sample"):
@@ -851,7 +879,10 @@ def test_custody_adapter_capture_retry_and_fresh_recovery(database, quarantined)
             return [
                 (await session.execute(select(table))).mappings().all()
                 for table in (
-                    executions, execution_nodes, learning_samples, learning_sample_custody
+                    executions,
+                    execution_nodes,
+                    learning_samples,
+                    learning_sample_custody,
                 )
             ]
 
@@ -896,9 +927,12 @@ def test_custody_adapter_cas_and_repository_revocation(database):
     assert loaded.sample == changed and loaded.revision == 1
     with pytest.raises(LearningStorageConflict):
         adapter.save(first.sample, first.state, expected_revision=0)
-    assert database[0].run(
-        LearningCustodyRepository(database[1]).revoke_policy(policy.tenant_id, policy.policy_id)
-    ) == 1
+    assert (
+        database[0].run(
+            LearningCustodyRepository(database[1]).revoke_policy(policy.tenant_id, policy.policy_id)
+        )
+        == 1
+    )
     revoked = fresh.get(policy.tenant_id, first.sample.id)
     assert revoked.payload is None and revoked.revision == 2
     assert revoked.sample.source_execution_id == first.sample.source_execution_id
@@ -996,9 +1030,12 @@ def test_execution_custody_adapter_reuses_real_source_and_retry_identity(databas
     assert count(database, executions) == 1
     assert count(database, execution_nodes) == before_nodes
     assert count(database, learning_samples) == count(database, learning_sample_custody) == 1
-    assert database[0].run(
-        PostgresExecutionRepository(database[1]).get(policy.tenant_id, source.execution.id)
-    ) == source
+    assert (
+        database[0].run(
+            PostgresExecutionRepository(database[1]).get(policy.tenant_id, source.execution.id)
+        )
+        == source
+    )
     with pytest.raises(LearningStorageConflict):
         fresh.capture_from_execution(**{**args, "knowledge_value": {"changed": True}})
     other = execution_source(database, world, app)
@@ -1046,14 +1083,18 @@ def test_execution_custody_adapter_late_failure_keeps_source_without_sample(data
 
     async def fail_write():
         async with database[1].begin() as session:
-            await session.execute(text(
-                "CREATE FUNCTION fail_custody() RETURNS trigger LANGUAGE plpgsql AS $$ "
-                "BEGIN RAISE EXCEPTION 'custody write failed'; END; $$"
-            ))
-            await session.execute(text(
-                "CREATE TRIGGER fail_custody_insert BEFORE INSERT ON learning_sample_custody "
-                "FOR EACH ROW EXECUTE FUNCTION fail_custody()"
-            ))
+            await session.execute(
+                text(
+                    "CREATE FUNCTION fail_custody() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                    "BEGIN RAISE EXCEPTION 'custody write failed'; END; $$"
+                )
+            )
+            await session.execute(
+                text(
+                    "CREATE TRIGGER fail_custody_insert BEFORE INSERT ON learning_sample_custody "
+                    "FOR EACH ROW EXECUTE FUNCTION fail_custody()"
+                )
+            )
 
     database[0].run(fail_write())
     with pytest.raises(DBAPIError):
@@ -1061,9 +1102,12 @@ def test_execution_custody_adapter_late_failure_keeps_source_without_sample(data
             **args, source_execution_id=source.execution.id
         )
     assert count(database, learning_samples) == 0 and count(database, executions) == 1
-    assert database[0].run(
-        PostgresExecutionRepository(database[1]).get(policy.tenant_id, source.execution.id)
-    ) == source
+    assert (
+        database[0].run(
+            PostgresExecutionRepository(database[1]).get(policy.tenant_id, source.execution.id)
+        )
+        == source
+    )
 
 
 def custody_lifecycle(database, policy, *, evaluation=None):
@@ -1071,7 +1115,8 @@ def custody_lifecycle(database, policy, *, evaluation=None):
     from core.memory.memory import InMemoryMemoryStore
 
     return LearningLifecycleService(
-        knowledge=InMemoryMemoryStore(), evaluation=evaluation,
+        knowledge=InMemoryMemoryStore(),
+        evaluation=evaluation,
         custody=custody_adapter(database, policy),
     )
 
@@ -1160,14 +1205,18 @@ def test_custody_lifecycle_postgres_failed_sample_update_rolls_back_custody_cas(
 
     async def fail_update():
         async with database[1].begin() as session:
-            await session.execute(text(
-                "CREATE FUNCTION fail_sample_update() RETURNS trigger LANGUAGE plpgsql AS $$ "
-                "BEGIN RAISE EXCEPTION 'sample update failed'; END; $$"
-            ))
-            await session.execute(text(
-                "CREATE TRIGGER fail_sample_update BEFORE UPDATE ON learning_samples "
-                "FOR EACH ROW EXECUTE FUNCTION fail_sample_update()"
-            ))
+            await session.execute(
+                text(
+                    "CREATE FUNCTION fail_sample_update() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                    "BEGIN RAISE EXCEPTION 'sample update failed'; END; $$"
+                )
+            )
+            await session.execute(
+                text(
+                    "CREATE TRIGGER fail_sample_update BEFORE UPDATE ON learning_samples "
+                    "FOR EACH ROW EXECUTE FUNCTION fail_sample_update()"
+                )
+            )
 
     database[0].run(fail_update())
     with pytest.raises(DBAPIError):
@@ -1308,9 +1357,11 @@ def test_policy_revocation_transaction_orderings(database, capture_first):
                 return result
 
         def repo(role):
-            return LearningCustodyRepository(async_sessionmaker(
-                database[1].kw["bind"], class_=PausingSession, info={"role": role}
-            ))
+            return LearningCustodyRepository(
+                async_sessionmaker(
+                    database[1].kw["bind"], class_=PausingSession, info={"role": role}
+                )
+            )
 
         first, second = repo("first"), repo("second")
         a = asyncio.create_task(
@@ -1326,10 +1377,12 @@ def test_policy_revocation_transaction_orderings(database, capture_first):
             async with asyncio.timeout(5):
                 while True:
                     async with database[1]() as observer:
-                        waiting = await observer.scalar(text(
-                            "SELECT EXISTS (SELECT 1 FROM pg_locks "
-                            "WHERE locktype = 'advisory' AND NOT granted)"
-                        ))
+                        waiting = await observer.scalar(
+                            text(
+                                "SELECT EXISTS (SELECT 1 FROM pg_locks "
+                                "WHERE locktype = 'advisory' AND NOT granted)"
+                            )
+                        )
                     if waiting:
                         break
                     await asyncio.sleep(0.01)
@@ -1372,14 +1425,18 @@ def test_policy_revocation_late_failure_is_atomic(database):
 
     async def trigger():
         async with database[1].begin() as s:
-            await s.execute(text(
-                "CREATE FUNCTION fail_revoke() RETURNS trigger LANGUAGE plpgsql AS $$ "
-                "BEGIN RAISE EXCEPTION 'injected late invalidation failure'; END; $$"
-            ))
-            await s.execute(text(
-                "CREATE TRIGGER fail_revoke BEFORE UPDATE ON learning_samples "
-                "FOR EACH ROW EXECUTE FUNCTION fail_revoke()"
-            ))
+            await s.execute(
+                text(
+                    "CREATE FUNCTION fail_revoke() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                    "BEGIN RAISE EXCEPTION 'injected late invalidation failure'; END; $$"
+                )
+            )
+            await s.execute(
+                text(
+                    "CREATE TRIGGER fail_revoke BEFORE UPDATE ON learning_samples "
+                    "FOR EACH ROW EXECUTE FUNCTION fail_revoke()"
+                )
+            )
 
     database[0].run(trigger())
     with pytest.raises(DBAPIError):
@@ -1400,17 +1457,17 @@ def revocation_migrate(connection, *, stamp=None, target="0020"):
     from alembic.script import ScriptDirectory
 
     config = Config()
-    config.set_main_option("script_location", str(
-        Path(__file__).resolve().parents[2] / "infrastructure/db/migrations"
-    ))
+    config.set_main_option(
+        "script_location", str(Path(__file__).resolve().parents[2] / "infrastructure/db/migrations")
+    )
     script = ScriptDirectory.from_config(config)
     context = MigrationContext.configure(connection)
     if stamp is not None:
         context.stamp(script, stamp)
     fn = script._upgrade_revs if target == "0020" else script._downgrade_revs
-    context = MigrationContext.configure(connection, opts={
-        "fn": lambda revision, _context: fn(target, revision)
-    })
+    context = MigrationContext.configure(
+        connection, opts={"fn": lambda revision, _context: fn(target, revision)}
+    )
     with Operations.context(context):
         context.run_migrations()
     return context.get_current_revision()
@@ -1431,6 +1488,7 @@ def test_policy_revocation_stamped_upgrade_legacy_denies(database, legacy):
             database[0].run(repo.capture(**args))
         if legacy == "expired":
             from datetime import timedelta
+
             database[0].run(repo.expire(world.principal.tenant_id, utc_now() + timedelta(hours=2)))
 
     async def upgrade():
@@ -1456,8 +1514,10 @@ def test_policy_revocation_stamped_upgrade_legacy_denies(database, legacy):
                 database[0].run(repo.get(world.principal.tenant_id, args["sample"].id))
             with pytest.raises(LearningStorageError):
                 database[0].run(repo.save(args["sample"], {"version": 1}, expected_revision=0))
-        assert count(database, executions) == count(database, learning_samples) == int(
-            legacy != "zero_row"
+        assert (
+            count(database, executions)
+            == count(database, learning_samples)
+            == int(legacy != "zero_row")
         )
     other, _, _ = composed(database)
     database[0].run(repo.capture(**custody_candidate(other)))
@@ -1473,24 +1533,28 @@ def test_policy_revocation_stamped_downgrade_preserves_evidence(database, popula
             c = await s.connection()
             await c.run_sync(lambda sync: learning_policy_revocations.drop(sync))
             assert await c.run_sync(lambda sync: revocation_migrate(sync, stamp="0019")) == "0020"
+
     database[0].run(upgrade())
     if populated:
         world, _, _ = composed(database)
-        database[0].run(LearningCustodyRepository(database[1]).revoke_policy(
-            world.principal.tenant_id, uuid4()
-        ))
+        database[0].run(
+            LearningCustodyRepository(database[1]).revoke_policy(world.principal.tenant_id, uuid4())
+        )
 
     async def downgrade():
         async with database[1].begin() as s:
             c = await s.connection()
             return await c.run_sync(lambda sync: revocation_migrate(sync, target="0019"))
+
     if populated:
         with pytest.raises(RuntimeError, match="preserve"):
             database[0].run(downgrade())
         assert count(database, learning_policy_revocations) == 1
+
         async def revision():
             async with database[1]() as s:
                 return await s.scalar(text("SELECT version_num FROM alembic_version"))
+
         assert database[0].run(revision()) == "0020"
     else:
         assert database[0].run(downgrade()) == "0019"
@@ -1565,9 +1629,11 @@ def test_governance_api_release_legacy_hold_then_capture_and_sweep_on_postgres(d
 
     async def hold():
         async with database[1].begin() as s:
-            await s.execute(learning_policy_revocations.insert().values(
-                tenant_id=tenant, policy_id=None, reason="legacy_unresolved"
-            ))
+            await s.execute(
+                learning_policy_revocations.insert().values(
+                    tenant_id=tenant, policy_id=None, reason="legacy_unresolved"
+                )
+            )
 
     database[0].run(hold())
     denied = run(_post(app, SAMPLES, body))
@@ -1617,8 +1683,11 @@ def test_governance_api_release_legacy_hold_then_capture_and_sweep_on_postgres(d
         for e in world.audit.read(tenant, event_type=AuditEventType.SECURITY_POLICY_CHANGED)
     ]
     assert acts == [
-        "learning_legacy_hold_released", "learning_legacy_hold_released",
-        "learning_retention_swept", "learning_retention_swept", "learning_policy_revoked",
+        "learning_legacy_hold_released",
+        "learning_legacy_hold_released",
+        "learning_retention_swept",
+        "learning_retention_swept",
+        "learning_policy_revoked",
     ]
     assert app.state.learning_lifecycle_service._samples == {}
 
@@ -1650,15 +1719,19 @@ def test_governed_intake_partial_batch_on_postgres_keeps_committed_rows_and_retr
 
     async def fail_row_two():
         async with database[1].begin() as s:
-            await s.execute(text(
-                "CREATE FUNCTION fail_row_two() RETURNS trigger LANGUAGE plpgsql AS $$ "
-                f"BEGIN IF NEW.idempotency_key = '{poisoned}' THEN "
-                "RAISE EXCEPTION 'row custody unavailable'; END IF; RETURN NEW; END; $$"
-            ))
-            await s.execute(text(
-                "CREATE TRIGGER fail_row_two BEFORE INSERT ON learning_sample_custody "
-                "FOR EACH ROW EXECUTE FUNCTION fail_row_two()"
-            ))
+            await s.execute(
+                text(
+                    "CREATE FUNCTION fail_row_two() RETURNS trigger LANGUAGE plpgsql AS $$ "
+                    f"BEGIN IF NEW.idempotency_key = '{poisoned}' THEN "
+                    "RAISE EXCEPTION 'row custody unavailable'; END IF; RETURN NEW; END; $$"
+                )
+            )
+            await s.execute(
+                text(
+                    "CREATE TRIGGER fail_row_two BEFORE INSERT ON learning_sample_custody "
+                    "FOR EACH ROW EXECUTE FUNCTION fail_row_two()"
+                )
+            )
 
     async def clear_fault():
         async with database[1].begin() as s:
@@ -1783,7 +1856,9 @@ class _Server:
         self.process = subprocess.Popen(  # noqa: S603 — fixed argv, isolated env
             [sys.executable, "-m", "apps.main"],
             env={**self.env, "HOST": "127.0.0.1", "PORT": str(self.port), "LOG_LEVEL": "warning"},
-            stdout=self.log, stderr=subprocess.STDOUT, cwd=os.getcwd(),
+            stdout=self.log,
+            stderr=subprocess.STDOUT,
+            cwd=os.getcwd(),
         )
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
@@ -1834,23 +1909,30 @@ def test_backend_closure_true_process_kill_and_restart_preserves_custody(runtime
     port = _free_port()
     log_path = os.path.join(os.environ["TMPDIR"], f"r178_server_{port}.log")
     env = {
-        "PATH": os.environ["PATH"], "HOME": os.environ["HOME"], "TMPDIR": os.environ["TMPDIR"],
-        "PYTHONPATH": os.environ.get("PYTHONPATH", os.getcwd()), "LANG": "C.UTF-8",
-        "DATABASE_URL": runtime_database, "ADMIN_EMAILS": ADMIN_EMAIL,
+        "PATH": os.environ["PATH"],
+        "HOME": os.environ["HOME"],
+        "TMPDIR": os.environ["TMPDIR"],
+        "PYTHONPATH": os.environ.get("PYTHONPATH", os.getcwd()),
+        "LANG": "C.UTF-8",
+        "DATABASE_URL": runtime_database,
+        "ADMIN_EMAILS": ADMIN_EMAIL,
     }
     refs = dict(policy_id=str(tenant_policy), rights_ref=str(uuid4()), idempotency_key=str(uuid4()))
     body = dict(**refs, knowledge_key="process.kill", knowledge_value={"answer": "durable fact"})
 
     with _Server(env, port, log_path) as bootstrap:
-        registered = bootstrap.call("POST", "/v1/auth/register", body=dict(
-            email=ADMIN_EMAIL, password=PASSWORD, preferred_language="en"
-        ))
+        registered = bootstrap.call(
+            "POST",
+            "/v1/auth/register",
+            body=dict(email=ADMIN_EMAIL, password=PASSWORD, preferred_language="en"),
+        )
         assert registered.status_code == 201, registered.text
         tenant = registered.json()["tenant_id"]
         bootstrap.log.flush()
         with open(log_path, encoding="utf-8") as captured:
             issued = [
-                json.loads(line) for line in captured
+                json.loads(line)
+                for line in captured
                 if line.startswith("{") and "email_verification_token_issued" in line
             ]
         assert len(issued) == 1 and issued[0]["email"] == ADMIN_EMAIL
@@ -1865,15 +1947,17 @@ def test_backend_closure_true_process_kill_and_restart_preserves_custody(runtime
         assert bootstrap.call("GET", SAMPLES, headers).json()["samples"] == []
         assert bootstrap.kill() == -9
 
-    env["LEARNING_STORAGE_POLICIES"] = json.dumps([dict(
-        tenant_id=tenant, policy_id=str(tenant_policy), retention_seconds=3600
-    )])
+    env["LEARNING_STORAGE_POLICIES"] = json.dumps(
+        [dict(tenant_id=tenant, policy_id=str(tenant_policy), retention_seconds=3600)]
+    )
     with _Server(env, port, log_path) as first:
         captured = first.call("POST", SAMPLES, headers, body)
         assert captured.status_code == 201, captured.text
         sample = captured.json()
         graded = first.call(
-            "POST", f"{SAMPLES}/{sample['id']}/evaluate", headers,
+            "POST",
+            f"{SAMPLES}/{sample['id']}/evaluate",
+            headers,
             {"output": {"answer": "durable fact"}},
         )
         assert graded.status_code == 200 and graded.json()["evaluated"] is True
@@ -1904,7 +1988,8 @@ def test_backend_closure_true_process_kill_and_restart_preserves_custody(runtime
         swept = second.call("POST", "/v1/admin/learning/custody/sweep", headers, {})
         assert swept.status_code == 200
         assert swept.json() == {
-            "expired_samples": 0, "derived_copies": {"checked": 0, "removed": 0, "retained": 0}
+            "expired_samples": 0,
+            "derived_copies": {"checked": 0, "removed": 0, "retained": 0},
         }
     with open(log_path, encoding="utf-8") as captured:
         transcript = captured.read()
