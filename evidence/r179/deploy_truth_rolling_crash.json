@@ -5,9 +5,9 @@
     "old_writer_booted_on_0020": true,
     "old_writer_capture_status": 201,
     "old_writer_capture_body": {
-      "id": "dc75ac40-4489-4a0e-a1e4-e8b194c2443f",
-      "source_execution_id": "bf3b6f98-ee59-48b3-b66b-3deded7969ca",
-      "tenant_id": "c558852a-3d4b-43e3-bec4-a9820544ad06",
+      "id": "76606831-67da-4b01-9d58-974e58574d01",
+      "source_execution_id": "d328a3c4-d34b-4b10-956a-19de42803f65",
+      "tenant_id": "1cfe42a0-8332-4f2d-9139-da6aade946c9",
       "eligibility": "pending",
       "sanitization_state": "pending",
       "verification_level": "RAW",
@@ -18,7 +18,8 @@
     "release_status": 200,
     "release_body": {
       "released": true,
-      "reconciliation_ref": "1c22325d-24e9-4898-9742-8b8765608ca5"
+      "reconciliation_ref": "d6511d3c-4d01-4612-8611-c3a9e5fba794",
+      "outcome": "released"
     },
     "new_writer_capture_after_release_status": 201,
     "rows": {
@@ -29,13 +30,13 @@
       "revocations": 0
     },
     "custody_rows_by_key": [
-      "dc75ac40-4489-4a0e-a1e4-e8b194c2443f",
-      "b4237dc4-4a7c-4899-8be2-15f2ab3b7255"
+      "76606831-67da-4b01-9d58-974e58574d01",
+      "ac49c913-96a5-4d89-b132-96c10aad5c44"
     ],
     "rows_landed_by_old_writer_under_hold": 1,
     "old_writer_refused_by_schema": false
   },
-  "git_head": "fa12bf60",
+  "git_head": "482e87b0",
   "crash_during_write": {
     "before": {
       "learning_samples": 0,

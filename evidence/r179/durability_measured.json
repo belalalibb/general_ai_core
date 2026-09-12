@@ -1,5 +1,5 @@
 {
-  "commit": "63625443",
+  "commit": "482e87b0",
   "method": "python -m apps.main OS process over TCP; SIGKILL -9 between phases; DATABASE_URL on a fresh real-alembic schema",
   "arrange": {
     "p1_admitted": [
@@ -36,15 +36,15 @@
     "preference_items_before": {
       "preferences": [
         {
-          "id": "a2a859c1-e58b-48e7-9ed9-a62fd830dd95",
+          "id": "21a7d72f-12d8-4f1b-a6bf-27c9ebb738cc",
           "key": "preferred_language",
           "value": "ar",
           "scope": "tenant",
           "source": "preference",
-          "user_id": "259d4c17-5771-4c4f-8139-33ba44a2abd6",
+          "user_id": "5124e44e-d182-4aee-8c4d-d967b6b5bc6c",
           "confidence": 1.0,
           "evidence_count": 1,
-          "last_seen": "2026-09-12T09:42:47.989105+00:00",
+          "last_seen": "2026-09-12T11:22:36.588570+00:00",
           "sensitivity": "low"
         }
       ]
@@ -52,15 +52,15 @@
     "preference_items_after": {
       "preferences": [
         {
-          "id": "a2a859c1-e58b-48e7-9ed9-a62fd830dd95",
+          "id": "21a7d72f-12d8-4f1b-a6bf-27c9ebb738cc",
           "key": "preferred_language",
           "value": "ar",
           "scope": "tenant",
           "source": "preference",
-          "user_id": "259d4c17-5771-4c4f-8139-33ba44a2abd6",
+          "user_id": "5124e44e-d182-4aee-8c4d-d967b6b5bc6c",
           "confidence": 1.0,
           "evidence_count": 1,
-          "last_seen": "2026-09-12T09:42:47.989105+00:00",
+          "last_seen": "2026-09-12T11:22:36.588570+00:00",
           "sensitivity": "low"
         }
       ]
