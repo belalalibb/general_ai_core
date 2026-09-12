@@ -501,6 +501,9 @@ class _GovernedCustody:
     def __init__(self, inner):
         self.inner = inner
         self.acts = []
+        # R179 4.7: the double models the durable hold row honestly (held until
+        # released) so the route's before/after invariant check can run.
+        self.held = True
 
     def __getattr__(self, name):
         return getattr(self.inner, name)
@@ -513,9 +516,22 @@ class _GovernedCustody:
         self.acts.append(("expire", tenant_id, now))
         return 2
 
+    def list_revocations(self, tenant_id):
+        if not self.held:
+            return ()
+        return (
+            {
+                "tenant_id": tenant_id,
+                "policy_id": None,
+                "reason": "legacy_unresolved",
+                "recorded_at": None,
+            },
+        )
+
     def release_legacy_hold(self, tenant_id, *, reconciliation_ref):
         self.acts.append(("release", tenant_id, reconciliation_ref))
-        return True
+        released, self.held = self.held, False
+        return released
 
 
 GOVERN = "/v1/admin/learning/custody"
@@ -564,8 +580,17 @@ def test_governance_legacy_release_requires_explicit_reconciliation_reference():
     ref = uuid4()
     released = run(_post(app, f"{GOVERN}/release-legacy-hold", {"reconciliation_ref": str(ref)}))
     assert released.status_code == 200
-    assert released.json() == {"released": True, "reconciliation_ref": str(ref)}
-    assert custody.acts == [("release", world.principal.tenant_id, ref)]
+    # R179 4.7(b) — conscious pin update: the response names the OUTCOME
+    # (released / already_released / no_hold), see test_operator_visibility_r179.
+    assert released.json() == {
+        "released": True,
+        "outcome": "released",
+        "reconciliation_ref": str(ref),
+    }
+    # Read-only holds lookups bracket the act (no mutation); the act itself is one.
+    assert [a for a in custody.acts if a[0] == "release"] == [
+        ("release", world.principal.tenant_id, ref)
+    ]
     events = world.audit.read(
         world.principal.tenant_id, event_type=AuditEventType.SECURITY_POLICY_CHANGED
     )
@@ -628,9 +653,16 @@ def test_governed_intake_later_row_failure_keeps_earlier_rows_and_retry_keys_sta
     rows = [{"key": "one", "value": "a"}, {"key": "two", "value": "b"}]
     failed = run(_post(app, "/v1/admin/learning/intake", intake_body(rows, batch)))
     # The batch is NOT all-or-nothing: row 1 committed before row 2 refused.
-    assert failed.status_code == 404
-    assert failed.json()["error"]["message"] == "Learning storage unavailable."
+    # R179 4.7(c) — conscious pin update (tests/api/test_operator_visibility_r179.py):
+    # a per-row custody REFUSAL is now reported as a refused row inside a 201
+    # report (the batch continues), no longer as a whole-batch 404 that hid
+    # the landed row. Backend detail still never leaks.
+    assert failed.status_code == 201
     assert "row custody unavailable" not in failed.text
+    report = failed.json()
+    assert [r["row"] for r in report["admitted"]] == [1]
+    assert report["refused"] == [{"row": 2, "reason": "custody refused"}]
+    assert report["layer_fault"] is None and report["not_attempted"] == []
     committed = [c[-1]["idempotency_key"] for c in inner.calls if c[0] == "external"]
     assert committed == [uuid5(batch, "row:1")]
     assert custody.keys == [uuid5(batch, "row:1"), uuid5(batch, "row:2")]

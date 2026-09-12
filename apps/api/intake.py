@@ -38,7 +38,7 @@ from pydantic import Field, model_validator
 
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.learning.lifecycle import LearningLifecycleService
-from core.learning.storage import LearningStorageError
+from core.learning.storage import LearningStorageConflict, LearningStorageError
 
 __all__ = [
     "INTAKE_FORMATS",
@@ -127,6 +127,11 @@ class IntakeReport:
     quarantine_reason: str | None = None
     format: str = ""
     columns_seen: tuple[str, ...] = field(default=())
+    # R179 4.7(c): a DURABLE-LAYER fault (not a row refusal) stopped the batch.
+    # ``not_attempted`` names the rows never reached; landed rows stay in
+    # ``admitted`` so a retry of the SAME batch key is safe and visible.
+    layer_fault: str | None = None
+    not_attempted: tuple[int, ...] = ()
 
     @property
     def flagged(self) -> int:
@@ -142,6 +147,8 @@ class IntakeReport:
             "flagged": self.flagged,
             "quarantined": self.quarantined,
             "quarantine_reason": self.quarantine_reason,
+            "layer_fault": self.layer_fault,
+            "not_attempted": list(self.not_attempted),
         }
 
 
@@ -253,7 +260,12 @@ class IntakeAdapter:
 
         admitted: list[AdmittedRow] = []
         refused: list[RefusedRow] = []
+        layer_fault: str | None = None
+        not_attempted: list[int] = []
         for index, row in enumerate(rows, start=1):
+            if layer_fault is not None:
+                not_attempted.append(index)
+                continue
             missing = [c for c in expectations.required_columns if not row.get(c, "").strip()]
             if missing:
                 refused.append(
@@ -271,17 +283,35 @@ class IntakeAdapter:
             knowledge_value: JsonObject = {
                 column: value for column, value in row.items() if column != expectations.key_column
             }
-            sample = self._lifecycle.capture_external(
-                tenant_id,
-                actor_id=actor_id,
-                knowledge_key=knowledge_key,
-                knowledge_value=knowledge_value,
-                policy_id=policy_id,
-                rights_ref=rights_ref,
-                idempotency_key=(
-                    uuid5(idempotency_key, f"row:{index}") if idempotency_key is not None else None
-                ),
-            )
+            try:
+                sample = self._lifecycle.capture_external(
+                    tenant_id,
+                    actor_id=actor_id,
+                    knowledge_key=knowledge_key,
+                    knowledge_value=knowledge_value,
+                    policy_id=policy_id,
+                    rights_ref=rights_ref,
+                    idempotency_key=(
+                        uuid5(idempotency_key, f"row:{index}")
+                        if idempotency_key is not None
+                        else None
+                    ),
+                )
+            except LearningStorageConflict:
+                # R179 4.7(c): THIS row was refused by custody (idempotency /
+                # descriptor conflict); content-free reason; the batch continues.
+                refused.append(RefusedRow(row=index, reason="custody refused (conflict)"))
+                continue
+            except LearningStorageError:
+                refused.append(RefusedRow(row=index, reason="custody refused"))
+                continue
+            except Exception:  # noqa: BLE001 — classified, not swallowed: reported as a fault
+                # Anything else is the DURABLE LAYER failing (pool, network,
+                # driver): not a verdict on the row. Stop, keep landed rows
+                # visible, name the remaining rows; the route answers 503.
+                layer_fault = "durable layer unavailable"
+                not_attempted.append(index)
+                continue
             if self._governed:
                 # Custody already scanned; unavailable content stays metadata.
                 # Do not emit caller-controlled keys, columns or finding paths.
@@ -313,4 +343,6 @@ class IntakeAdapter:
             refused=tuple(refused),
             format=format,
             columns_seen=() if self._governed else tuple(columns_seen),
+            layer_fault=layer_fault,
+            not_attempted=tuple(not_attempted),
         )

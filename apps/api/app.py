@@ -2009,7 +2009,7 @@ def create_app(
             and learning_custody is not None
             and admin.audit is not None,
             "custody seam (LEARNING_STORAGE_POLICIES + DATABASE_URL) -> "
-            "/v1/admin/learning/custody/revoke|sweep|release-legacy-hold (R178 DEC03)",
+            "/v1/admin/learning/custody/holds|revoke|sweep|release-legacy-hold (R178 DEC03; R179 4.7)",
         ),
     )
     # One derivation, two consumers (module header): the admin route below

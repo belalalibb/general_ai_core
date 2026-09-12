@@ -756,6 +756,17 @@ def create_admin_router(
                     f"Intake batch quarantined: {report.quarantine_reason}",
                     details={"field": "content", "report": report.as_json()},
                 )
+            if report.layer_fault is not None:
+                # R179 4.7(c): the DURABLE LAYER failed mid-batch — not a row
+                # refusal. Landed rows are reported so the operator can retry
+                # the SAME batch key safely (stable per-row idempotency keys).
+                return error_response(
+                    ErrorCode.INTERNAL_ERROR,
+                    "Intake stopped: durable layer unavailable.",
+                    retryable=True,
+                    details={"report": report.as_json()},
+                    http_status=503,
+                )
             return _json(report.as_json(), status=201)
 
         @router.get("/learning/samples")
@@ -1166,17 +1177,63 @@ def create_admin_router(
                 lambda p: governance_lifecycle.sweep_retention(p.tenant_id),
             )
 
+        @router.get("/learning/custody/holds")
+        async def read_learning_custody_holds(request: Request) -> Response:
+            """GET .../custody/holds (R179 4.7a): tenant-scoped, read-only holds view.
+
+            A read is not an operator ACT: nothing is mutated, nothing is
+            audited. A HELD tenant sees its own hold (the reason capture
+            answers 404); explicit policy revocations are listed alongside.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(governance_lifecycle.custody_holds(admitted.tenant_id))
+
+        def _release_with_outcome(p: Principal, reconciliation_ref: UUID) -> dict[str, object]:
+            # R179 4.7(b): the outcome is derived from DURABLE state before and
+            # after the act, never from custody's boolean alone; a contradiction
+            # between the two is an invariant break and is REFUSED (409).
+            before = bool(governance_lifecycle.custody_holds(p.tenant_id)["legacy_hold"])
+            result = governance_lifecycle.release_legacy_hold(
+                p.tenant_id, reconciliation_ref=reconciliation_ref
+            )
+            after = bool(governance_lifecycle.custody_holds(p.tenant_id)["legacy_hold"])
+            released = bool(result.get("released"))
+            if after or released != before:
+                raise LearningError("legacy hold release contradicts durable state")
+            if released:
+                outcome = "released"
+            else:
+                prior = governance_audit.read(
+                    p.tenant_id, event_type=AuditEventType.SECURITY_POLICY_CHANGED
+                )
+                outcome = (
+                    "already_released"
+                    if any(
+                        e.details.get("act") == "learning_legacy_hold_released"
+                        and isinstance(e.details.get("result"), dict)
+                        and e.details["result"].get("released") is True
+                        for e in prior
+                    )
+                    else "no_hold"
+                )
+            return {**result, "outcome": outcome}
+
         @router.post("/learning/custody/release-legacy-hold")
         async def release_legacy_learning_hold(
             request: Request, body: LearningLegacyReleaseRequest
         ) -> Response:
-            """POST .../custody/release-legacy-hold: reviewed release of the 0020 hold."""
+            """POST .../custody/release-legacy-hold: reviewed release of the 0020 hold.
+
+            Outcome is unambiguous (R179 4.7b): ``released`` (acted),
+            ``already_released`` (a prior audited release exists) or ``no_hold``
+            (never held); an invariant break refuses with 409.
+            """
             return _govern(
                 request, "learning_legacy_hold_released",
                 {"reconciliation_ref": str(body.reconciliation_ref)},
-                lambda p: governance_lifecycle.release_legacy_hold(
-                    p.tenant_id, reconciliation_ref=body.reconciliation_ref
-                ),
+                lambda p: _release_with_outcome(p, body.reconciliation_ref),
             )
 
     # --- AA-1 seam AUD-1: audit read (20 §9 events, port surfaced verbatim) ---------
