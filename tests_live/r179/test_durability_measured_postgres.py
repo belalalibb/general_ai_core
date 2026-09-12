@@ -183,7 +183,9 @@ def test_four_pillars_across_real_sigkill_restart(cluster):  # noqa: F811
             {"name": "r179 gold arm", "ask": "probe", "checks": ["output_present"]},
         )
         assert saved.status_code == 201, saved.text
-        replay = first.call("POST", f"/v1/admin/scenarios/{saved.json()['id']}/replay", headers, {})
+        replay = first.call(
+            "POST", f"/v1/admin/scenarios/{saved.json()['scenario_id']}/replay", headers, {}
+        )
         verdicts["p1_replay"] = replay.status_code, replay.json().get("passed")
         admitted = first.call(
             "POST",

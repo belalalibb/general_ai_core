@@ -31,7 +31,7 @@ Rulings received on Q1–Q5 (verbatim in `evidence/r179_state_ledger.md`, row "R
 | id | severity | disposition |
 |---|---|---|
 | F-R179-01 execute+conversation_id 500 (durable) | S1 | CLOSED by 4.5 (after-measure 200/200/200) |
-| F-R179-02 promote unreachable over HTTP | S2 | OPEN → Q3 |
+| F-R179-02 promote unreachable over HTTP | S2 | CLOSED by rulings Q3 (capability, not relaxation): SECURITY grader activated; live promote 201, GOLD survives SIGKILL (`durability_measured_after_q3.json`); 409 for a failing sample pinned |
 | F-R179-03 memory dies with process | S1 | CLOSED by 4.5 (memory_blocks 1→1) |
 | F-R179-04 audit/usage reset on restart | S2 | AUDIT CLOSED by rulings Q1 (P3 1→1→1, `durability_measured_after_q1.json`); USAGE still OPEN → F-R179-06 / Q6; documented §13 |
 | F-R179-05 old writer not refused by 0020 schema | S2 | OPEN → Q2; procedure in §8.1 |
