@@ -1634,8 +1634,6 @@ def test_governed_intake_partial_batch_on_postgres_keeps_committed_rows_and_retr
     """
     from uuid import uuid5
 
-    from sqlalchemy.exc import DBAPIError
-
     from core.learning.storage import RetentionPolicy
     from infrastructure.db.tables import execution_nodes, learning_sample_custody
     from tests.api.test_external_evidence_p01_r178 import governed_app, intake_body
@@ -1676,10 +1674,22 @@ def test_governed_intake_partial_batch_on_postgres_keeps_committed_rows_and_retr
             return list(result.all())
 
     database[0].run(fail_row_two())
-    # Row 2's database fault propagates (ASGITransport re-raises after the
-    # constant 500 handler); row 1 was already committed and is NOT rolled back.
-    with pytest.raises(DBAPIError):
-        run(_post(app, "/v1/admin/learning/intake", body))
+    # R179 4.7(c) — conscious pin update (tests/api/test_operator_visibility_r179.py):
+    # a DATABASE fault on row 2 (DBAPIError, not a custody refusal) is now
+    # classified as a DURABLE-LAYER fault: the batch STOPS, the route answers
+    # 503 retryable with the partial report (row 1 landed, rows 2..3 not
+    # attempted) instead of re-raising through the constant 500 handler. Row 1
+    # was already committed and is NOT rolled back.
+    faulted = run(_post(app, "/v1/admin/learning/intake", body))
+    assert faulted.status_code == 503, faulted.text
+    error = faulted.json()["error"]
+    assert error["code"] == "internal_error" and error["retryable"] is True
+    assert "row custody unavailable" not in faulted.text
+    report = error["details"]["report"]
+    assert [r["row"] for r in report["admitted"]] == [1]
+    assert report["refused"] == []
+    assert report["not_attempted"] == [2, 3]
+    assert report["layer_fault"] == "durable layer unavailable"
     committed = database[0].run(custody_rows())
     assert [k for k, _ in committed] == [uuid5(batch, "row:1")]
     assert count(database, learning_samples) == count(database, executions) == 1
