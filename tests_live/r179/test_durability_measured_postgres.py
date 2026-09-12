@@ -170,6 +170,21 @@ def test_four_pillars_across_real_sigkill_restart(cluster):  # noqa: F811
             "POST", f"{SAMPLES}/{sid}/evaluate", headers, {"output": {"answer": "durable gold"}}
         )
         assert graded.status_code == 200 and graded.json()["evaluated"] is True
+        # R179 rulings Q3: the evaluate record (deterministic + SECURITY rows from
+        # the shipped composition) is the artefact BOTH offline_eval_pass and
+        # security_eval_pass resolve from; regression_pass resolves from a REAL
+        # scenario replay over HTTP. No boolean is asserted without a ref.
+        evaluation_id = graded.json().get("evaluation_id")
+        verdicts["p1_evaluation_id_present"] = evaluation_id is not None
+        saved = first.call(
+            "POST",
+            "/v1/admin/scenarios",
+            headers,
+            {"name": "r179 gold arm", "ask": "probe", "checks": ["output_present"]},
+        )
+        assert saved.status_code == 201, saved.text
+        replay = first.call("POST", f"/v1/admin/scenarios/{saved.json()['id']}/replay", headers, {})
+        verdicts["p1_replay"] = replay.status_code, replay.json().get("passed")
         admitted = first.call(
             "POST",
             f"{SAMPLES}/{sid}/admit",
@@ -188,14 +203,16 @@ def test_four_pillars_across_real_sigkill_restart(cluster):  # noqa: F811
             f"{SAMPLES}/{sid}/promote",
             headers,
             dict(
-                offline_eval_pass=True,
-                regression_pass=True,
-                security_eval_pass=True,
                 shadow_performance_acceptable=True,
                 canary_performance_acceptable=True,
                 rollback_plan_exists=True,
                 approval_required=True,
                 admin_approved=True,
+                evidence_refs=dict(
+                    evaluation_id=evaluation_id,
+                    security_evaluation_id=evaluation_id,
+                    regression_execution_id=replay.json().get("execution_id"),
+                ),
             ),
         )
         verdicts["p1_promote_status"] = promoted.status_code

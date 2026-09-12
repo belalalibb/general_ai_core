@@ -386,17 +386,22 @@ class TestCounterEvaluator:
 # --- activation boundary (FINAL_ACTIVE_GRADER_TYPES + injectable active_types) -----------
 
 
+# R179 rulings Q3 (conscious pin update): SECURITY joined the FINAL set with a
+# REAL implementing grader (core.evaluation.graders.SecretMaterialGrader, pinned
+# by tests/api/test_security_grader_q3_r179.py). The four 41 §18 items are
+# unchanged; the still-inactive set shrinks to the three types that have no
+# documented mechanism inside this pipeline.
 FINAL_NEW_TYPES = frozenset(
     {
         GraderType.PAIRWISE,
         GraderType.SKILL_SPECIFIC,
         GraderType.ROLE_SPECIFIC,
         GraderType.COUNTER_EVALUATION,
+        GraderType.SECURITY,
     }
 )
 STILL_INACTIVE_TYPES = frozenset(
     {
-        GraderType.SECURITY,
         GraderType.REGRESSION,
         GraderType.HUMAN_CALIBRATED,
         GraderType.PRODUCTION_SIGNAL,
@@ -405,10 +410,10 @@ STILL_INACTIVE_TYPES = frozenset(
 
 
 class TestActivationBoundary:
-    def test_final_set_is_mvp_plus_the_four_41s18_items(self) -> None:
+    def test_final_set_is_mvp_plus_the_four_41s18_items_and_security(self) -> None:
         assert FINAL_ACTIVE_GRADER_TYPES == MVP_ACTIVE_GRADER_TYPES | FINAL_NEW_TYPES
 
-    def test_final_set_leaves_the_undocumented_four_inactive(self) -> None:
+    def test_final_set_leaves_the_undocumented_three_inactive(self) -> None:
         assert FINAL_ACTIVE_GRADER_TYPES & STILL_INACTIVE_TYPES == frozenset()
 
     def test_all_ten_22s5_types_are_accounted_for(self) -> None:

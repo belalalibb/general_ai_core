@@ -139,7 +139,8 @@ class TestLifecycleOverHttp:
         promoted = run(
             _post(app, f"{SAMPLES}/{sample_id}/promote", _backed_promotion(app, world, sample_id))
         )
-        assert promoted.status_code == 200
+        # R179 rulings Q3 (conscious pin update): a promotion CREATES a GOLD item -> 201.
+        assert promoted.status_code == 201
         assert promoted.json()["promoted"] is True
         assert promoted.json()["knowledge_key"] == "ops.rollback"
 
