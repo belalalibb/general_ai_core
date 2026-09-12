@@ -1,6 +1,6 @@
 """Durable memory + conversation bindings — R179 4.5 (F-R179-01 / F-R179-03).
 
-Measured (4.4, ``evidence/r179/durability_measured.json``): knowledge
+Measured (4.4, ``evidence/r179/durability_measured_before.json``): knowledge
 injected into memory died with the process (memory_blocks 1→0) and the
 execute path with ``conversation_id`` failed 500 in the durable profile —
 the ``executions.conversation_id`` FK points at the ``conversations``

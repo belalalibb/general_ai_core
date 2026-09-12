@@ -54,12 +54,19 @@ def fresh_database(cluster):
 def alembic(database_url, *args):
     """The REAL migration tool, as an operator runs it (docs/OPERATIONS.md §1)."""
     env = {
-        "PATH": os.environ["PATH"], "HOME": os.environ["HOME"], "LANG": "C.UTF-8",
-        "PYTHONPATH": ROOT, "DATABASE_URL": database_url,
+        "PATH": os.environ["PATH"],
+        "HOME": os.environ["HOME"],
+        "LANG": "C.UTF-8",
+        "PYTHONPATH": ROOT,
+        "DATABASE_URL": database_url,
     }
     return subprocess.run(  # noqa: S603 — fixed argv, isolated env
         [sys.executable, "-m", "alembic", "-c", ALEMBIC_INI, *args],
-        env=env, cwd=ROOT, capture_output=True, text=True, timeout=300,
+        env=env,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=300,
     )
 
 
@@ -82,19 +89,21 @@ def sql(database_url, statement, **params):
 
 
 def current_revision(database_url):
-    rows = sql(
-        database_url,
-        "SELECT version_num FROM alembic_version "
-        "WHERE to_regclass('public.alembic_version') IS NOT NULL",
-    ) if "alembic_version" in all_tables(database_url) else []
+    rows = (
+        sql(
+            database_url,
+            "SELECT version_num FROM alembic_version "
+            "WHERE to_regclass('public.alembic_version') IS NOT NULL",
+        )
+        if "alembic_version" in all_tables(database_url)
+        else []
+    )
     return rows[0][0] if rows else None
 
 
 def all_tables(database_url):
     return {
-        r[0] for r in sql(
-            database_url, "SELECT tablename FROM pg_tables WHERE schemaname='public'"
-        )
+        r[0] for r in sql(database_url, "SELECT tablename FROM pg_tables WHERE schemaname='public'")
     }
 
 
@@ -135,7 +144,8 @@ def test_alembic_downgrade_refuses_populated_0020_and_succeeds_when_empty(cluste
         url,
         "INSERT INTO tenants (id, name, type, status, plan_id) "
         "VALUES (:t, 'r179', 'personal', 'active', :p)",
-        t=tenant, p=plan,
+        t=tenant,
+        p=plan,
     )
     sql(
         url,

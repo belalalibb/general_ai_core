@@ -840,7 +840,7 @@ def build_runtime_profile(
         # composed them since migration 0002) reach the /v1/workspaces +
         # /v1/projects routes — bridged, same loop-affinity posture.
         workspace_store, project_store = build_durable_workspace_stores(bindings, bridge)
-        # R179 4.5 (F-R179-01/-03, measured in evidence/r179/durability_measured.json):
+        # R179 4.5 (F-R179-01/-03, before: evidence/r179/durability_measured_before.json):
         # memory + conversations reach the EXISTING V1 repositories (migrations
         # 0002/0007) instead of dying with the process; the executions FK to
         # `conversations` now points at rows the runtime actually writes.
