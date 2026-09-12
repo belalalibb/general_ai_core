@@ -1999,6 +1999,18 @@ def create_app(
             admin is not None,
             "admin seam -> GET /v1/admin/evaluations/{id} + /executions/{id}/evaluations (22 §7)",
         ),
+        # R179 4.2: the SAME mount condition create_admin_router applies to the
+        # DEC03 governance routes: lifecycle service (admin + memory, below),
+        # governed_learning (= learning_custody is not None) and admin.audit.
+        _cap(
+            "learning.custody_governance",
+            admin is not None
+            and memory is not None
+            and learning_custody is not None
+            and admin.audit is not None,
+            "custody seam (LEARNING_STORAGE_POLICIES + DATABASE_URL) -> "
+            "/v1/admin/learning/custody/revoke|sweep|release-legacy-hold (R178 DEC03)",
+        ),
     )
     # One derivation, two consumers (module header): the admin route below
     # AND the composition root (which hands the SAME tuple to the agent's

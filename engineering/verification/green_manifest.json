@@ -629,7 +629,7 @@
     "round_r179": {
       "ceiling": 6,
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 2,
+      "changes_used": 4,
       "items": [
         "R179-SD capability self-description: custody governance ids + action discovery derived from the canonical vocabulary",
         "R179-OV operator visibility: read-only holds/revocations view; unambiguous legacy-release outcome; intake row-vs-layer fault clarity",
@@ -647,6 +647,18 @@
           "file": "apps/composition/runtime.py",
           "loc": "+13/-4",
           "summary": "Durable branch binds build_durable_memory_stores(bindings, bridge); in-memory branch keeps InMemoryMemoryStore/InMemoryConversationStore (hoisted into the profile branch so the repo_map tool, composer, preference learner and create_app still share ONE instance). Before/after re-measure recorded in evidence/r179/durability_measured*.json."
+        },
+        {
+          "item": "R179-SD",
+          "file": "apps/api/capabilities.py",
+          "loc": "+6/-0",
+          "summary": "The ONE authorized closed-set widening 22 -> 23: id learning.custody_governance for the DEC03 routes /v1/admin/learning/custody/{revoke,sweep,release-legacy-hold} that were mounted without a shelf row. Pin updated with written justification in tests/api/test_capability_catalog_r177.py."
+        },
+        {
+          "item": "R179-SD",
+          "file": "apps/api/app.py",
+          "loc": "+14/-0 (catalog derivation only)",
+          "summary": "Row derived from the SAME seam variables create_admin_router mounts the governance routes with (admin + memory + learning_custody + admin.audit); AVAILABLE iff mounted, INERT otherwise (hermetic proof tests/api/test_capability_shelf_coverage_r179.py). Row shape {id,state,evidence} unchanged (V7 exact-key pins intact)."
         }
       ],
       "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."

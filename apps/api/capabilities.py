@@ -81,6 +81,12 @@ CAPABILITY_IDS: frozenset[str] = frozenset(
         "skills.import",  # create_app(skills_import=True) when the console attaches SKL-1
         "workspaces.projects",  # always mounted -> /v1/workspaces + /v1/projects
         "evaluation.records",  # admin seam -> /v1/admin/evaluations/* reads
+        # R179 4.2: the ONE authorized closed-set widening (22 -> 23). Durable
+        # custody governance routes (R178 DEC03) are mounted ONLY when a
+        # LearningCustodyPort is composed AND the admin surface carries an
+        # audit log — an operator surface that existed without a shelf row.
+        # -> /v1/admin/learning/custody/{revoke,sweep,release-legacy-hold}
+        "learning.custody_governance",
     }
 )
 

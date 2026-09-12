@@ -4,8 +4,9 @@ A04 (evidence/r177/A04_composition): the agent runtime, the source-change
 workflow, skills import, workspaces/projects and evaluation records are all
 served by ``create_app`` / the admin console yet ``GET /v1/admin/capabilities``
 never mentioned them. This test pins the deliberate closed-set extension
-17 → 22 and the state rule of every new row (same seam variable that mounts
-the surface — honesty by construction, apps/api/capabilities.py header).
+17 → 22 (R177) and 22 → 23 (R179 4.2, ``learning.custody_governance``) and the
+state rule of every new row (same seam variable that mounts the surface — honesty
+by construction, apps/api/capabilities.py header).
 """
 
 from __future__ import annotations
@@ -71,13 +72,22 @@ def _app(world: World, **extra: Any) -> FastAPI:
     )
 
 
-def test_closed_set_is_exactly_twenty_two_and_contains_the_five_new_ids() -> None:
+def test_closed_set_is_exactly_twenty_three_and_contains_the_new_ids() -> None:
     assert NEW_IDS <= CAPABILITY_IDS, sorted(NEW_IDS - CAPABILITY_IDS)
-    assert len(CAPABILITY_IDS) == 22
+    # R179 4.2 — the ONE authorized widening this round (22 → 23). Justification:
+    # the DEC03 custody governance routes (/v1/admin/learning/custody/*) were an
+    # operator surface mounted by create_admin_router with NO shelf row, so the
+    # shelf could not describe every mounted operator surface (4.2 mandate).
+    # The row is DERIVED from the same seam variables that mount the routes
+    # (admin + memory + learning_custody + admin.audit) — never a documentation claim.
+    assert "learning.custody_governance" in CAPABILITY_IDS
+    assert len(CAPABILITY_IDS) == 23
 
 
 def test_minimal_admin_composition_states() -> None:
     states = _states(_app(World()))
+    # R179 4.2: no custody port composed ⇒ governance routes absent ⇒ INERT.
+    assert states["learning.custody_governance"] == "inert"
     # Always mounted by create_app (in-memory defaults; durable when stores bound):
     assert states["workspaces.projects"] == "available"
     # Admin surface exists ⇒ the hermetic R3 workflow and evaluation reads exist:
