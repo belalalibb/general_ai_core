@@ -383,13 +383,18 @@ reports missing stubs — a stubs gap, not a defect.
 
 ## 13. Known limitations (honest)
 No email delivery; durable stores exist for executions/identity/workspaces/
-source-change/evaluations/learning custody. **Measured on the durable profile
-with a real process kill (R179, `evidence/r179/durability_measured.json`):**
-memory items (preferences, GOLD copies), conversations, audit events and
-usage accounting are composed IN-PROCESS on both profiles and are lost on
-restart; a `conversation_id` on `POST /v1/execute` currently fails (500) on
-the durable profile (F-R179-01). Durable audit/usage is the recorded DEC-B
-deferral (decision-gated, not a defect). No
+source-change/evaluations/learning custody/memory/conversations/audit.
+**Measured on the durable profile with a real process kill (R179,
+`evidence/r179/durability_measured_after_q1.json`):** memory items
+(preferences, GOLD copies), conversations and audit events survive a
+SIGKILL/restart (4.5 + rulings Q1). **Usage accounting is still composed
+IN-PROCESS on both profiles and resets on restart** (`used` 5.0 → 2.0):
+binding the existing `usage_ledger` repository fails at the database because
+`usage_ledger.execution_id` is a NOT NULL FK to `executions.id` while the
+execution service reserves BEFORE the executions row exists (F-R179-06,
+`evidence/r179/F06_usage_ledger_fk_violation.txt`) — decision-gated (Q6), not
+a composition defect; the durable adapter is composed and one name flips it
+once ruled. Billing/quota claims across restarts are therefore NOT made. No
 distributed worker; no token streaming; gateway onboarding is untestable
 end-to-end without a gateway; authoritative self-modification is gated off
 by design (the engineering workspace refuses the platform's own checkout —
