@@ -629,7 +629,7 @@
     "round_r179": {
       "ceiling": 6,
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 4,
+      "changes_used": 5,
       "items": [
         "R179-SD capability self-description: custody governance ids + action discovery derived from the canonical vocabulary",
         "R179-OV operator visibility: read-only holds/revocations view; unambiguous legacy-release outcome; intake row-vs-layer fault clarity",
@@ -659,6 +659,18 @@
           "file": "apps/api/app.py",
           "loc": "+14/-0 (catalog derivation only)",
           "summary": "Row derived from the SAME seam variables create_admin_router mounts the governance routes with (admin + memory + learning_custody + admin.audit); AVAILABLE iff mounted, INERT otherwise (hermetic proof tests/api/test_capability_shelf_coverage_r179.py). Row shape {id,state,evidence} unchanged (V7 exact-key pins intact)."
+        },
+        {
+          "item": "R179-SD",
+          "file": "apps/api/capabilities.py",
+          "loc": "+45/-0 (second edit of the same file, same budget slot)",
+          "summary": "admin_actions_json(): action discovery derived purely from core.contracts.admin.ACTION_AREA + FINAL_ACTIVE_ADMIN_AREAS (every AdminAction once with its ONE owner area; every AdminArea once with active flag). No hand-maintained names (test scans the producer for enum literals). Payload-schema half NOT exposed (DEC-A design only)."
+        },
+        {
+          "item": "R179-SD",
+          "file": "apps/api/admin.py",
+          "loc": "+14/-1",
+          "summary": "GET /v1/admin/capabilities/actions serves the derived read model, admin-gated, serialized once at mount; separate route so the shelf row shape stays frozen for V7 consumers (ui/, apps/admin_agent untouched)."
         }
       ],
       "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."
