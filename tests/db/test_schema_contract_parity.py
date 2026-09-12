@@ -414,10 +414,25 @@ class TestMigrationMetadataParity:
         assert len(created) == len(set(created)), f"duplicate create_table: {created}"
 
     def test_migrations_declare_every_column_of_each_table(self) -> None:
+        # UNION across revisions (module docstring §3): the create_table block
+        # plus every later ``op.add_column`` for the same table, minus every
+        # ``op.drop_column`` issued in an UPGRADE (0021 is the first revision
+        # that alters an existing table; F-R179-08).
         for table in metadata.sorted_tables:
             block = self._table_block(table)
             declared = set(re.findall(r'sa\.Column\(\s*"(\w+)"', block))
+            declared |= self._columns_added_later(table)
+            declared -= self._columns_dropped_in_upgrades(table)
             assert declared == {c.name for c in table.columns}, table.name
+
+    def test_0021_add_column_is_attributed_to_its_own_table(self) -> None:
+        """F-R179-08 regression: an ``op.add_column`` following another table's
+        ``create_table`` in the joined source must not leak into that block."""
+        by_name = {t.name: t for t in metadata.sorted_tables}
+        revocations = by_name["learning_policy_revocations"]
+        custody = by_name["learning_sample_custody"]
+        assert "custody_schema_generation" not in self._table_block(revocations)
+        assert self._columns_added_later(custody) == {"custody_schema_generation"}
 
     def test_each_downgrade_drops_everything_its_upgrade_creates(self) -> None:
         for name, source in MIGRATION_SOURCES.items():
@@ -464,9 +479,26 @@ class TestMigrationMetadataParity:
 
     def _table_block(self, table: Table) -> str:
         start = ALL_SOURCE.index(f'op.create_table(\n        "{table.name}"')
-        # The block ends at the next op.* call — or at end-of-source when
-        # this create_table is the last operation in the chain.
-        end = ALL_SOURCE.find("op.create_", start + 1)
-        if end == -1:
-            end = len(ALL_SOURCE)
+        # The block ends at the next top-level op.* call inside a migration
+        # function (4-space indent) — or at end-of-source when this
+        # create_table is the last operation in the chain.
+        match = re.compile(r"\n    op\.").search(ALL_SOURCE, start + 1)
+        end = match.start() if match else len(ALL_SOURCE)
         return ALL_SOURCE[start:end]
+
+    @staticmethod
+    def _columns_added_later(table: Table) -> set[str]:
+        return set(
+            re.findall(
+                rf'op\.add_column\(\s*"{table.name}",\s*sa\.Column\(\s*"(\w+)"',
+                ALL_SOURCE,
+            )
+        )
+
+    @staticmethod
+    def _columns_dropped_in_upgrades(table: Table) -> set[str]:
+        dropped: set[str] = set()
+        for source in MIGRATION_SOURCES.values():
+            upgrade = source.split("def downgrade", 1)[0]
+            dropped |= set(re.findall(rf'op\.drop_column\("{table.name}",\s*"(\w+)"\)', upgrade))
+        return dropped
