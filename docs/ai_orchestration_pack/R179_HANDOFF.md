@@ -1,6 +1,6 @@
 # R179 HANDOFF — instructions (Part B §9)
 
-Branch `genspark_ai_developer_r179`; R179 close gate d747b158 (3533/0/0/64); rulings round gate: see `evidence/r179/final_gate_rulings_*.txt`; live r178 59 + r179 5 (rolling pair now asserts the schema refusal).
+Branch `genspark_ai_developer_r179`; R179 close gate d747b158 (3533/0/0/64); rulings round + pre-merge gate on 990024bb (3609/0/0/64, `evidence/r179/final_gate_990024bb.txt`; the earlier head ff142215 FAILED — F-R179-08); live r178 59 + r179 5 (rolling pair now asserts the schema refusal).
 Read `R179_READINESS.md` for analysis; this file only says what to do next.
 
 ## A. Ordered items
@@ -37,6 +37,7 @@ Rulings received on Q1–Q5 (verbatim in `evidence/r179_state_ledger.md`, row "R
 | F-R179-05 old writer not refused by 0020 schema | S2 | CLOSED by rulings Q2: migration 0021 structural NOT NULL guard (no trigger); live old writer 500/`NotNullViolationError`, 0 rows landed (`deploy_truth_rolling_crash_after_q2.json`) |
 | F-R179-06 durable usage binding violates `usage_ledger` FK on every execute | S2 | OPEN → Q6; usage kept process-local (`del durable_usage` in runtime.py), evidence `evidence/r179/F06_usage_ledger_fk_violation.txt` |
 | F-R179-07 frozen `apps/admin_agent/tools.py` annotates concrete `InMemoryUsageAccounting` | S4 | OPEN → fixed in the Q5 thaw commit; no type: ignore needed while usage stays concrete |
+| F-R179-08 pre-merge whole-gate re-run on the PR head FAILED (parity helper mis-attributed 0021 `add_column`; PEM literal tripped the secret scan) | S2 | CLOSED test-only at 990024bb; gate on the fix head 3609/0/0/64 PASS, gateway 194 (`evidence/r179/final_gate_990024bb.txt`) |
 
 ## D. Resume mechanism (unchanged)
 Remote branch head is the checkpoint; rebuild `.venv` (`pip install -e '.[dev]'`) and the workspace PostgreSQL binaries
