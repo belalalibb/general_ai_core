@@ -1491,3 +1491,18 @@ primitive). None is implemented. Legacy files ARCHITECTURE_GAPS.md / FUTURE_IMPR
 
 ### R179-DEC-06 — change-budget unit for round_r179 = one production FILE; ceiling 6 → 8 → 9 (2026-09-12)
 - Declared 6; elastic 8 when 4.5 triggered; absolute 9 with the 4.7 design note committed (60d09d95) BEFORE the 4.7 production commit (ccfa9a7d). Final 9/9 distinct files; a file edited twice is ONE change with both edits described in its log summary.
+
+### R179-DEC-07 — rulings round: Q1 audit durable, usage blocked by MEASURED F-R179-06 → Q6 (2026-09-12)
+- Operator ruling Q1 (DEC-B) executed with the 4.5 seam pattern. Audit binds durably (P3 1→1→1 across SIGKILL). Binding the durable usage ledger made every `/v1/execute` fail (`usage_ledger.execution_id` NOT NULL FK → `executions.id`; the execution service reserves BEFORE the row exists; tool calls never have one). Decision: usage stays process-local in BOTH profiles until the operator rules Q6 (reserve-after-row vs. schema change); the durable adapter is composed, not bound. Audit/usage screens still do not ship.
+
+### R179-DEC-08 — Q3 resolved by CAPABILITY: SECURITY grader activated, promote 201/409 over HTTP (2026-09-12)
+- `GraderType.SECURITY` joins `FINAL_ACTIVE_GRADER_TYPES` with a real implementing grader (`SecretMaterialGrader`: the 13 §7 credential sanitizer over the graded output — non-vacuous, never echoes matches). Reaches the pipeline through the new injectable `output_graders` step (default empty; MVP posture byte-identical). `POST …/evaluate` returns `evaluation_id`; `POST …/promote` answers 201 when a GOLD item is created; 409 stays the governed refusal. The promote gate condition is UNCHANGED (no relaxation). Live: promote 201, GOLD survives restart. Supersedes the F-R179-02 "policy-gated by design" posture of R179-DEC-02/-03.
+
+### R179-DEC-09 — Q4: ONE declared payload field-rule source (DEC-A approved) (2026-09-12)
+- `core.admin.service.PAYLOAD_FIELD_RULES` (closed `FieldRule` rows per every `AdminAction`) is read by BOTH the validator (`field_rule_problem` runs first; inline presence/shape checks removed) and the shelf (`admin_actions_json` publishes `fields`). Semantic checks stay imperative after the declared rules hold. Supersedes the "payload half stays imperative" clause of R179-DEC-03.
+
+### R179-DEC-10 — Q2: structural guard against stale writers, NO trigger (supersedes R179-DEC-04) (2026-09-12)
+- Migration 0021 adds `learning_sample_custody.custody_schema_generation SMALLINT NOT NULL` (backfill 1, server default dropped); the metadata supplies 2 client-side. An old writer's INSERT omits the column and the database refuses it (measured live: 500 / `NotNullViolationError`, zero rows). No trigger, no function, no policy logic in DDL; the column records the writer's metadata generation. The stop-old-writers procedure (OPERATIONS §8.1) remains as hygiene.
+
+### R179-DEC-11 — rulings budget: ceiling 8 → 10 with history; merge by MERGE COMMIT (2026-09-12)
+- `round_r179_rulings` declared 8 before the first production commit; raised to 10 with the Q3 design note committed before the Q3 production commit (Q3 = 4 files by the designed activation path). Final 10/10 distinct production files; diff == log table in `R179_READINESS.md` Part 4. Operator instruction: merge with a merge commit (no squash) so per-item SHAs stay resolvable; the gate is re-run on the merge commit.

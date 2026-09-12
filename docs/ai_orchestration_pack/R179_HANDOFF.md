@@ -1,14 +1,14 @@
 # R179 HANDOFF — instructions (Part B §9)
 
-Branch `genspark_ai_developer_r179`; gate clone d747b158 (3533/0/0/64), gateway 194, live r178 59 + r179 5.
+Branch `genspark_ai_developer_r179`; R179 close gate d747b158 (3533/0/0/64); rulings round gate: see `evidence/r179/final_gate_rulings_*.txt`; live r178 59 + r179 5 (rolling pair now asserts the schema refusal).
 Read `R179_READINESS.md` for analysis; this file only says what to do next.
 
 ## A. Ordered items
 
 | # | item | where | do |
 |---|---|---|---|
-| 1 | Merge R179 PR after review | GitHub | squash-merge; keep `evidence/r179/*` |
-| 2 | Production 0020 procedure | `docs/OPERATIONS.md` §8.1 | stop ALL old writers BEFORE `alembic upgrade head`; never restart pre-0020 binaries (F-R179-05) |
+| 1 | Merge R179 PR after review | GitHub | **merge COMMIT (no squash)** per rulings; re-run the canonical gate on the merge commit; keep `evidence/r179/*` |
+| 2 | Production 0020/0021 procedure | `docs/OPERATIONS.md` §8.1 | stop ALL old writers BEFORE `alembic upgrade head` (hygiene); 0021's NOT NULL guard now refuses any pre-0021 writer at the database (F-R179-05 CLOSED) |
 | 3 | Retention sweeps | external timer | call `POST /v1/admin/learning/custody/sweep` with an admin session (D2=(a)) |
 | 4 | Operator visibility | `GET /v1/admin/learning/custody/holds` | use before any release; read the `outcome` on release |
 | 5 | Intake retries | `POST /v1/admin/learning/intake` | on 503 re-send the SAME batch `idempotency_key`; landed rows dedup |
