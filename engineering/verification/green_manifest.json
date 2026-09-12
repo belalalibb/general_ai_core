@@ -631,7 +631,7 @@
       "ceiling_history": "declared 8 BEFORE the first production commit (5e16d0a6) -> 10 with the Q3 design note in evidence/r179_state_ledger.md committed BEFORE the Q3 production commit: Q3 = 4 files (the designed activation path spans graders.py + policy.py + the app.py composition, and the 201 the ruling names is the promote route in admin.py), Q4 = 2 (rules declared in core/admin/service.py, read by the shelf in apps/api/capabilities.py), Q2 = 2 (migration 0021 + tables.py metadata mirror); 2 + 4 + 2 + 2 = 10, no slack",
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 6,
+      "changes_used": 8,
       "items": [
         "Q1 durable audit + usage bound in the DATABASE_URL profile (4.5 seam pattern); measured before/after with a real SIGKILL",
         "Q3 promote-to-GOLD completable over HTTP: GraderType.SECURITY activated with a real, non-vacuous security check (201 pass / 409 fail)",
@@ -674,6 +674,18 @@
           "file": "apps/api/admin.py",
           "loc": "+41/-8",
           "summary": "POST …/evaluate returns `evaluation_id` (set difference over the SAME evaluation store the resolver reads — append-only, never positional) so the HTTP caller can bind the record as evidence_refs.security_evaluation_id; POST …/promote answers 201 when a GOLD item was CREATED (200 stays the non-governed refusal-as-data; 409 the governed refusal via the LearningError handler)."
+        },
+        {
+          "item": "Q4",
+          "file": "core/admin/service.py",
+          "loc": "+175/-60",
+          "summary": "PAYLOAD_FIELD_RULES — the ONE declared source of admin payload field rules: FieldRule(name, kind ∈ PAYLOAD_FIELD_KINDS closed set, required, contract) per EVERY AdminAction (closed by assert; CAPABILITY_PROPOSAL rows derived from the CapabilityProposalPayload contract). field_rule_problem() derives presence + shape refusals from the table and runs FIRST in _validation_problem; every inline presence/shape check (model_key/provider_key/skill_id/tool_id/urls/disabled/provider/manifest/model/bindings/SET_PLAN/weights, _require_uuid_payload) removed; the semantic half (registries, contract parse, duplicates, template, pipeline status) unchanged. field_rules_json() = the shelf's pure projection."
+        },
+        {
+          "item": "Q4",
+          "file": "apps/api/capabilities.py",
+          "loc": "+18/-6",
+          "summary": "admin_actions_json() actions rows gain `fields` = field_rules_json(action) (read from the SAME table the validator reads) + top-level `field_rules` source pointer; areas rows and the shelf row shape {id,state,evidence} untouched; no hand-maintained field names in the producer (pinned)."
         }
       ],
       "note": "Operator rulings on R179_HANDOFF.md section B (Q1-Q5). Q5 (ui/ thaw) is the NEXT round's opening commit, not this budget. Ceiling declared 8 BEFORE the first production commit; every file logged here before its commit (evidence/r179_state_ledger.md)."
