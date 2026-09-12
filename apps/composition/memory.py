@@ -109,9 +109,7 @@ class DurableConversationStore:
     def get_history(
         self, tenant_id: UUID, conversation_id: UUID, limit: int | None = None
     ) -> tuple[Message, ...]:
-        return self.bridge.run(
-            self.repository.get_history(tenant_id, conversation_id, limit=limit)
-        )
+        return self.bridge.run(self.repository.get_history(tenant_id, conversation_id, limit=limit))
 
 
 def build_durable_memory_stores(

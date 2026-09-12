@@ -92,6 +92,7 @@ from apps.composition.learning import (
     build_durable_learning_custody,
     learning_storage_policies_from_env,
 )
+from apps.composition.memory import build_durable_memory_stores
 from apps.composition.provider_onboarding import (
     PLATFORM_TENANT_ID,
     CatalogPersistence,
@@ -148,6 +149,7 @@ from core.identity.service import InMemoryIdentityService, Session
 from core.learning.lifecycle import LearningCustodyPort
 from core.learning.storage import LearningStorageError
 from core.memory.memory import InMemoryConversationStore, InMemoryMemoryStore
+from core.memory.ports import ConversationStorePort, MemoryStorePort
 from core.memory.preferences import PreferenceLearningGate
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
@@ -780,6 +782,8 @@ def build_runtime_profile(
     store: ExecutionStorePort
     idempotency: IdempotencyPort
     evaluations: EvaluationStorePort
+    memory_store: MemoryStorePort
+    conversations: ConversationStorePort
     if settings is not None:
         bridge = AsyncBridge()
         bindings = build_database_bindings(settings)
@@ -836,12 +840,19 @@ def build_runtime_profile(
         # composed them since migration 0002) reach the /v1/workspaces +
         # /v1/projects routes — bridged, same loop-affinity posture.
         workspace_store, project_store = build_durable_workspace_stores(bindings, bridge)
+        # R179 4.5 (F-R179-01/-03, measured in evidence/r179/durability_measured.json):
+        # memory + conversations reach the EXISTING V1 repositories (migrations
+        # 0002/0007) instead of dying with the process; the executions FK to
+        # `conversations` now points at rows the runtime actually writes.
+        memory_store, conversations = build_durable_memory_stores(bindings, bridge)
         # Loop affinity (recorded): the pool lives on the bridge loop —
         # server-loop callers (execute route, relay, worker) cross over.
         outbox: OutboxPort = BridgedOutbox(inner=bindings.outbox, bridge=bridge)
         idempotency = BridgedIdempotency(inner=bindings.idempotency, bridge=bridge)
     else:
         store = InMemoryExecutionStore()
+        # In-memory profile: process-local memory + conversations, unchanged.
+        memory_store, conversations = InMemoryMemoryStore(), InMemoryConversationStore()
         # Same BudgetGrantingIdentity posture as the durable branch (recorded
         # decision 5, symmetric): an admin/user registering in the in-memory
         # profile (e.g. to reach the /admin console) gets the composition-data
@@ -898,9 +909,8 @@ def build_runtime_profile(
     # opt-in by AGENT_WORKSPACE_ROOT; §14 guard refuses the platform's own
     # checkout at boot. Same registry, same firewall, same audit log.
     engineering = build_engineering(env, audit=audit)
-    # R177-FIX-06: the memory substrate is created HERE (before the agent) so
-    # the repo_map tool writes into the SAME store the composer reads below.
-    memory_store = InMemoryMemoryStore()
+    # R177-FIX-06: the memory substrate is created ABOVE (profile branch, before
+    # the agent) so the repo_map tool writes into the SAME store the composer reads.
     # R177-FIX-06: the project store the /v1/projects surface AND the repo_map
     # tool resolve against (R168 D-08 one store) — in-memory profile builds
     # the same default create_app would, and hands it over explicitly.
@@ -1016,7 +1026,6 @@ def build_runtime_profile(
         }
 
     # --- context composition (13 §5) — same registry/store instances ---------
-    conversations = InMemoryConversationStore()
     roles = RoleRegistry()
     skills = SkillRegistry()
     composer = ContextComposer(memory_store, conversations, roles)

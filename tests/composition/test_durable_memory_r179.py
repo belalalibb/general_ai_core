@@ -280,9 +280,7 @@ class TestDurableMemoryStore:
         assert second.value == "en"
         assert second.evidence_count == 2
 
-    def test_query_forwards_every_filter_keyword(
-        self, bridge: AsyncBridge
-    ) -> None:
+    def test_query_forwards_every_filter_keyword(self, bridge: AsyncBridge) -> None:
         seen: dict[str, Any] = {}
 
         class Recording(FakeMemoryRepository):
@@ -347,9 +345,7 @@ class TestDurableConversationStore:
         assert conversations.get_history(TENANT, conv.id) == (m1, m2)
         assert conversations.get_history(TENANT, conv.id, limit=1) == (m2,)
 
-    def test_named_refusals_cross_unchanged(
-        self, conversations: DurableConversationStore
-    ) -> None:
+    def test_named_refusals_cross_unchanged(self, conversations: DurableConversationStore) -> None:
         conv = conversations.create_conversation(_conversation())
         with pytest.raises(ConversationNotFound):
             conversations.get_conversation(OTHER_TENANT, conv.id)
