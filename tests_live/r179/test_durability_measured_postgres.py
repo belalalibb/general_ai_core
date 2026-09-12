@@ -123,11 +123,17 @@ def test_four_pillars_across_real_sigkill_restart(cluster):
 
     with Server(env, port, log_path) as boot:
         headers, tenant = _admin_session(boot, log_path, ADMIN_EMAIL, PASSWORD)
+        # P3 baseline: LOGIN is audited in THIS process; does it outlive it?
+        audit_boot = boot.call("GET", "/v1/admin/audit", headers).json()["total_recorded"]
         assert boot.kill() == -9
 
     env["LEARNING_STORAGE_POLICIES"] = json.dumps([dict(
         tenant_id=tenant, policy_id=str(policy), retention_seconds=3600
     )])
+    # P1 second arm: the ONE HTTP-reachable memory writer (13 §6 preference
+    # learning, operator opt-in) — repeated explicit language facts become a
+    # memory item that later answers carry as a memory block.
+    env["PREFERENCE_LEARNING_ALLOWED"] = "1"
     with Server(env, port, log_path) as first:
         # --- P1 arrange: a GOLD item via the governed lifecycle -------------------
         refs = dict(policy_id=str(policy), rights_ref=str(uuid4()), idempotency_key=str(uuid4()))
@@ -162,8 +168,12 @@ def test_four_pillars_across_real_sigkill_restart(cluster):
             run = first.call("POST", "/v1/execute", headers, {"ask": turn, "conversation_id": conversation})
             conv_status.append(run.status_code)
         verdicts["p2_conversation_execute_status"] = conv_status
+        for _ in range(2):
+            fact = first.call("POST", "/v1/execute", headers, {"ask": "fact", "context": {"language": "ar"}})
+            assert fact.status_code == 200, fact.text
         before = first.call("POST", "/v1/execute", headers, {"ask": "before kill"})
         assert before.status_code == 200, before.text
+        prefs_before = first.call("GET", "/v1/memory/preferences", headers)
         prov_before = _provenance(before.json())
         audit_before = first.call("GET", "/v1/admin/audit", headers).json()["total_recorded"]
         usage_before = first.call("GET", "/v1/usage", headers).json()
@@ -176,6 +186,7 @@ def test_four_pillars_across_real_sigkill_restart(cluster):
         )
         verdicts["p2_conversation_execute_status_after_restart"] = after_conv.status_code
         after = second.call("POST", "/v1/execute", headers, {"ask": "after kill"})
+        prefs_after = second.call("GET", "/v1/memory/preferences", headers)
         prov_after = _provenance(after.json()) if after.status_code == 200 else None
         audit_after = second.call("GET", "/v1/admin/audit", headers).json()["total_recorded"]
         usage_after = second.call("GET", "/v1/usage", headers).json()
@@ -193,6 +204,10 @@ def test_four_pillars_across_real_sigkill_restart(cluster):
             "learned_keys_before": learned_before, "learned_keys_after": learned_after,
             "gold_blocks_before": blocks(prov_before, "gold_blocks"),
             "gold_blocks_after": blocks(prov_after, "gold_blocks"),
+            "memory_blocks_before": blocks(prov_before, "memory"),
+            "memory_blocks_after": blocks(prov_after, "memory"),
+            "preference_items_before": prefs_before.json() if prefs_before.status_code == 200 else prefs_before.status_code,
+            "preference_items_after": prefs_after.json() if prefs_after.status_code == 200 else prefs_after.status_code,
             "custody_row_after_status": sample_after.status_code,
             "custody_level_after": sample_after.json().get("sample", {}).get("verification_level") if sample_after.status_code == 200 else None,
         },
@@ -202,7 +217,10 @@ def test_four_pillars_across_real_sigkill_restart(cluster):
             "execute_after_status": after.status_code,
             "execute_after_error": None if after.status_code == 200 else after.json(),
         },
-        "P3_audit_survivability": {"total_before_kill": audit_before, "total_after_restart": audit_after},
+        "P3_audit_survivability": {
+            "total_after_login_in_boot_process": audit_boot,
+            "total_before_kill": audit_before, "total_after_restart": audit_after,
+        },
         "P4_usage_accounting": {"summary_before_kill": usage_before, "summary_after_restart": usage_after},
     }
     os.makedirs(os.path.dirname(EVIDENCE), exist_ok=True)
