@@ -153,12 +153,17 @@ def test_four_pillars_across_real_sigkill_restart(cluster):
         ))
         verdicts["p1_promote_status"] = promoted.status_code
         verdicts["p1_promote_body"] = promoted.json() if promoted.status_code != 500 else None
-        # --- P2/P3/P4 arrange: two turns in one conversation --------------------
+        # --- P2 arrange: turns in one conversation. F-R179-01: on the durable
+        # profile this path answers 500 (in-memory conversation store vs the
+        # executions FK). Measure, record, continue with a plain execute so
+        # P1/P3/P4 are still measured; never mask the failure.
+        conv_status = []
         for turn in ("first turn", "second turn"):
             run = first.call("POST", "/v1/execute", headers, {"ask": turn, "conversation_id": conversation})
-            assert run.status_code == 200, run.text
-        before = first.call("POST", "/v1/execute", headers, {"ask": "before kill", "conversation_id": conversation})
-        assert before.status_code == 200
+            conv_status.append(run.status_code)
+        verdicts["p2_conversation_execute_status"] = conv_status
+        before = first.call("POST", "/v1/execute", headers, {"ask": "before kill"})
+        assert before.status_code == 200, before.text
         prov_before = _provenance(before.json())
         audit_before = first.call("GET", "/v1/admin/audit", headers).json()["total_recorded"]
         usage_before = first.call("GET", "/v1/usage", headers).json()
@@ -166,7 +171,11 @@ def test_four_pillars_across_real_sigkill_restart(cluster):
         assert first.kill() == -9
 
     with Server(env, port, log_path) as second:
-        after = second.call("POST", "/v1/execute", headers, {"ask": "after kill", "conversation_id": conversation})
+        after_conv = second.call(
+            "POST", "/v1/execute", headers, {"ask": "after kill", "conversation_id": conversation}
+        )
+        verdicts["p2_conversation_execute_status_after_restart"] = after_conv.status_code
+        after = second.call("POST", "/v1/execute", headers, {"ask": "after kill"})
         prov_after = _provenance(after.json()) if after.status_code == 200 else None
         audit_after = second.call("GET", "/v1/admin/audit", headers).json()["total_recorded"]
         usage_after = second.call("GET", "/v1/usage", headers).json()
