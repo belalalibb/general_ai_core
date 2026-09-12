@@ -36,7 +36,7 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 3127
+      "min_passed": 3504
     },
     "last_measured": {
       "passed": 3127,
@@ -625,6 +625,18 @@
           "summary": "Governed API/runtime custody injection, explicit references, tenant admission and safe refusals; derived-copy and revocation closure remain open."
         }
       ]
+    },
+    "round_r179": {
+      "ceiling": 6,
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 0,
+      "items": [
+        "R179-SD capability self-description: custody governance ids + action discovery derived from the canonical vocabulary",
+        "R179-OV operator visibility: read-only holds/revocations view; unambiguous legacy-release outcome; intake row-vs-layer fault clarity",
+        "R179-DC durability correction (conditional on the 4.4 measurement)"
+      ],
+      "log": [],
+      "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."
     }
   },
   "baseline": {
