@@ -1,0 +1,39 @@
+F-R179-06 — durable usage binding violates usage_ledger FK on every execute
+===========================================================================
+Measured: R179 rulings Q1, head be407d2e (durable AUDIT + USAGE bound in the
+DATABASE_URL profile), runner: bash tests_live/r179/run_local_postgres.sh -k four_pillars
+Cluster: disposable workspace PostgreSQL 17.11 (+pgvector), REAL alembic upgrade head (0020).
+
+Observed (server log / test failure, first execute after login):
+  POST /v1/execute -> 500
+  sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError)
+  <class 'asyncpg.exceptions.ForeignKeyViolationError'>: insert or update on table
+  "usage_ledger" violates foreign key constraint "fk_usage_ledger_execution_id_executions"
+  DETAIL:  Key (execution_id)=(<uuid>) is not present in table "executions".
+  [SQL: INSERT INTO usage_ledger (id, tenant_id, execution_id, units_reserved,
+   units_settled, modality_costs, status) VALUES ($1::UUID, $2::UUID, $3::UUID,
+   $4::FLOAT, $5::FLOAT, $6::JSONB, $7::VARCHAR)]
+
+Root cause (structural, not the adapter):
+  infrastructure/db/tables.py:672-700   usage_ledger.execution_id NOT NULL, UNIQUE,
+                                        FK -> executions.id ON DELETE RESTRICT
+  core/execution/service.py:383,402     execution_id minted, usage.reserve() called
+                                        BEFORE any executions row exists (03 §7:
+                                        reserve before provider work)
+  core/tools/executor.py:166            reserve under a tool call_id that never
+                                        becomes an executions row
+  core/usage/memory.py                  in-memory ledger has no FK -> never surfaced
+
+Consequence:
+  The DEC-B target "usage 5.0 -> 2.0 must become stable across restart" cannot be met
+  by binding the existing 0002 repository. It needs either (a) reserve-after-row (a
+  contract-order change for 03 §7) or (b) a schema change. Both are outside the Q1
+  ruling ("same seam pattern as 4.5") -> operator question Q6.
+
+Runtime disposition (fix commit after be407d2e):
+  audit  -> DurableAuditLog bound in the DATABASE_URL profile (P3 measured stable).
+  usage  -> DurableUsageAccounting composed (seam proven) then NOT bound; usage stays
+            process-local in BOTH profiles (P4 still resets on restart, stated in
+            docs/OPERATIONS.md §13).
+
+Re-measurement after the fix: evidence/r179/durability_measured_after_q1.json

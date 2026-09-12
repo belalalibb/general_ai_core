@@ -1,0 +1,102 @@
+{
+  "commit": "5e522d45",
+  "method": "python -m apps.main OS process over TCP; SIGKILL -9 between phases; DATABASE_URL on a fresh real-alembic schema",
+  "arrange": {
+    "p1_admitted": [
+      true,
+      null
+    ],
+    "p1_promote_status": 409,
+    "p1_promote_body": {
+      "error": {
+        "code": "validation_error",
+        "message": "Learning operation refused.",
+        "retryable": false,
+        "details": {},
+        "trace_id": null
+      }
+    },
+    "p2_conversation_execute_status": [
+      200,
+      200
+    ],
+    "p2_conversation_execute_status_after_restart": 200
+  },
+  "P1_knowledge_injected": {
+    "learned_keys_before": {
+      "keys": []
+    },
+    "learned_keys_after": {
+      "keys": []
+    },
+    "gold_blocks_before": 0,
+    "gold_blocks_after": 0,
+    "memory_blocks_before": 1,
+    "memory_blocks_after": 1,
+    "preference_items_before": {
+      "preferences": [
+        {
+          "id": "2b40d757-a11c-4bb4-9642-745362573385",
+          "key": "preferred_language",
+          "value": "ar",
+          "scope": "tenant",
+          "source": "preference",
+          "user_id": "1b48d267-ef6a-45cc-9ee5-445c5edc4709",
+          "confidence": 1.0,
+          "evidence_count": 1,
+          "last_seen": "2026-09-12T16:38:08.286536+00:00",
+          "sensitivity": "low"
+        }
+      ]
+    },
+    "preference_items_after": {
+      "preferences": [
+        {
+          "id": "2b40d757-a11c-4bb4-9642-745362573385",
+          "key": "preferred_language",
+          "value": "ar",
+          "scope": "tenant",
+          "source": "preference",
+          "user_id": "1b48d267-ef6a-45cc-9ee5-445c5edc4709",
+          "confidence": 1.0,
+          "evidence_count": 1,
+          "last_seen": "2026-09-12T16:38:08.286536+00:00",
+          "sensitivity": "low"
+        }
+      ]
+    },
+    "custody_row_after_status": 200,
+    "custody_level_after": "VALIDATED"
+  },
+  "P2_conversation_continuity": {
+    "blocks_total_before": 2,
+    "blocks_total_after": 2,
+    "execute_after_status": 200,
+    "execute_after_error": null
+  },
+  "P3_audit_survivability": {
+    "total_after_login_in_boot_process": 1,
+    "total_before_kill": 1,
+    "total_after_restart": 1
+  },
+  "P4_usage_accounting": {
+    "summary_before_kill": {
+      "plan": "local-default",
+      "task_units": {
+        "limit": 1000000.0,
+        "used": 5.0,
+        "remaining": 999995.0
+      },
+      "modality_limits": {}
+    },
+    "summary_after_restart": {
+      "plan": "local-default",
+      "task_units": {
+        "limit": 1000000.0,
+        "used": 2.0,
+        "remaining": 999998.0
+      },
+      "modality_limits": {}
+    }
+  }
+}

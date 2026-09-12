@@ -131,6 +131,8 @@ class CustodyRepositoryPort(Protocol):
 
     async def release_legacy_hold(self, tenant_id: UUID, *, reconciliation_ref: UUID) -> bool: ...
 
+    async def list_revocations(self, tenant_id: UUID) -> tuple[Mapping[str, object], ...]: ...
+
 
 class ExecutionSourcePort(Protocol):
     """Read existing tenant-scoped provenance; no execution writer is exposed."""
@@ -340,6 +342,31 @@ class DurableLearningCustody:
                 )
             )
         )
+
+    def list_revocations(self, tenant_id: UUID) -> tuple[Mapping[str, object], ...]:
+        """R179 4.7(a): read-only holds/revocations; decoded to plain values only."""
+        if not isinstance(tenant_id, UUID):
+            raise LearningStorageError("explicit custody references required")
+        rows = self._bridge.run(self._repository.list_revocations(tenant_id))
+        out: list[Mapping[str, object]] = []
+        for row in rows:
+            if row.get("tenant_id") != tenant_id:
+                raise LearningStorageError("invalid custody record")
+            policy_id = row.get("policy_id")
+            reason = row.get("reason")
+            if policy_id is not None and not isinstance(policy_id, UUID):
+                raise LearningStorageError("invalid custody record")
+            if reason not in ("legacy_unresolved", "revoked"):
+                raise LearningStorageError("invalid custody record")
+            out.append(
+                {
+                    "tenant_id": tenant_id,
+                    "policy_id": policy_id,
+                    "reason": reason,
+                    "recorded_at": row.get("recorded_at"),
+                }
+            )
+        return tuple(out)
 
 
 def build_durable_learning_custody(

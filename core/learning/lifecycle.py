@@ -61,7 +61,7 @@ Recorded design decisions:
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -188,6 +188,12 @@ class LearningGovernancePort(Protocol):
     def expire(self, tenant_id: UUID, now: datetime) -> int: ...
 
     def release_legacy_hold(self, tenant_id: UUID, *, reconciliation_ref: UUID) -> bool: ...
+
+
+class LearningHoldsReadPort(Protocol):
+    """R179 4.7(a): read-only view of a tenant's holds/revocations (no mutation)."""
+
+    def list_revocations(self, tenant_id: UUID) -> Sequence[Mapping[str, object]]: ...
 
 
 class EvaluationRunner(Protocol):
@@ -528,6 +534,38 @@ class LearningLifecycleService:
             tenant_id, reconciliation_ref=reconciliation_ref
         )
         return {"released": bool(released), "reconciliation_ref": str(reconciliation_ref)}
+
+    def custody_holds(self, tenant_id: UUID) -> dict[str, object]:
+        """R179 4.7(a): tenant-scoped, read-only holds/revocations view.
+
+        Requires a custody composition that can list revocations; never mutates.
+        ``legacy_hold`` is True iff the tenant-wide (policy_id NULL) hold exists.
+        """
+        custody = self._custody
+        if custody is None or not callable(getattr(custody, "list_revocations", None)):
+            raise LearningError("learning governance requires durable custody")
+        rows = custody.list_revocations(tenant_id)  # type: ignore[attr-defined]
+        holds: list[dict[str, object]] = []
+        for row in rows:
+            if row.get("tenant_id") != tenant_id:
+                raise LearningError("custody row outside tenant scope")
+            policy_id = row.get("policy_id")
+            recorded_at = row.get("recorded_at")
+            holds.append(
+                {
+                    "scope": "tenant" if policy_id is None else "policy",
+                    "policy_id": None if policy_id is None else str(policy_id),
+                    "reason": str(row.get("reason")),
+                    "recorded_at": (
+                        recorded_at.isoformat() if isinstance(recorded_at, datetime) else None
+                    ),
+                }
+            )
+        return {
+            "tenant_id": str(tenant_id),
+            "legacy_hold": any(h["scope"] == "tenant" for h in holds),
+            "holds": holds,
+        }
 
     def reconcile_derived_copies(self, tenant_id: UUID) -> dict[str, int]:
         """Remove GOLD copies without live custody; never touch other memory."""

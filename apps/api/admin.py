@@ -70,7 +70,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import Field
 
-from apps.api.capabilities import Capability, catalog_json
+from apps.api.capabilities import Capability, admin_actions_json, catalog_json
 from apps.api.context_lab import (
     ContextLabRequest,
     ContextLabService,
@@ -756,6 +756,17 @@ def create_admin_router(
                     f"Intake batch quarantined: {report.quarantine_reason}",
                     details={"field": "content", "report": report.as_json()},
                 )
+            if report.layer_fault is not None:
+                # R179 4.7(c): the DURABLE LAYER failed mid-batch — not a row
+                # refusal. Landed rows are reported so the operator can retry
+                # the SAME batch key safely (stable per-row idempotency keys).
+                return error_response(
+                    ErrorCode.INTERNAL_ERROR,
+                    "Intake stopped: durable layer unavailable.",
+                    retryable=True,
+                    details={"report": report.as_json()},
+                    http_status=503,
+                )
             return _json(report.as_json(), status=201)
 
         @router.get("/learning/samples")
@@ -835,7 +846,20 @@ def create_admin_router(
             parsed = _parse_uuid(sample_id, "sample_id")
             if isinstance(parsed, JSONResponse):
                 return parsed
+            # R179 rulings Q3: the caller must be able to hand THIS record back
+            # as ``evidence_refs.security_evaluation_id``. Records are append-
+            # only and the store's listing order is not a sequence (0010 has no
+            # sequence column), so the new record is identified by set
+            # difference over the SAME store the resolver reads — never by
+            # position.
             try:
+                source_execution_id = lifecycle.get(admitted.tenant_id, parsed).source_execution_id
+                before = {
+                    r.id
+                    for r in surface.evaluations.list_for_execution(
+                        admitted.tenant_id, source_execution_id
+                    )
+                }
                 sample = await lifecycle.evaluate(admitted.tenant_id, parsed, body.output)
             except SampleNotFound:
                 return error_response(
@@ -848,7 +872,20 @@ def create_admin_router(
                 if governed_learning:
                     raise
                 return _json({"evaluated": False, "reason": str(exc)})
-            return _json({"evaluated": True, "sample": sample.model_dump(mode="json")})
+            new_ids = {
+                r.id
+                for r in surface.evaluations.list_for_execution(
+                    admitted.tenant_id, source_execution_id
+                )
+            } - before
+            evaluation_id = str(next(iter(new_ids))) if len(new_ids) == 1 else None
+            return _json(
+                {
+                    "evaluated": True,
+                    "evaluation_id": evaluation_id,
+                    "sample": sample.model_dump(mode="json"),
+                }
+            )
 
         @router.get("/learning/samples/{sample_id}")
         async def learning_sample_report(request: Request, sample_id: str) -> Response:
@@ -1012,13 +1049,17 @@ def create_admin_router(
                         "stage": "knowledge_write",
                     }
                 )
+            # R179 rulings Q3: a promotion CREATES a GOLD knowledge item — 201
+            # (created) is the honest status; 200 stays the refusal-as-data
+            # answer in the non-governed profile, 409 the governed refusal.
             return _json(
                 {
                     "promoted": True,
                     "memory_item_id": str(item.id),
                     "knowledge_key": item.key,
                     "evidence": evidence,
-                }
+                },
+                status=201,
             )
 
         @router.get("/learning/learned")
@@ -1166,17 +1207,63 @@ def create_admin_router(
                 lambda p: governance_lifecycle.sweep_retention(p.tenant_id),
             )
 
+        @router.get("/learning/custody/holds")
+        async def read_learning_custody_holds(request: Request) -> Response:
+            """GET .../custody/holds (R179 4.7a): tenant-scoped, read-only holds view.
+
+            A read is not an operator ACT: nothing is mutated, nothing is
+            audited. A HELD tenant sees its own hold (the reason capture
+            answers 404); explicit policy revocations are listed alongside.
+            """
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(governance_lifecycle.custody_holds(admitted.tenant_id))
+
+        def _release_with_outcome(p: Principal, reconciliation_ref: UUID) -> dict[str, object]:
+            # R179 4.7(b): the outcome is derived from DURABLE state before and
+            # after the act, never from custody's boolean alone; a contradiction
+            # between the two is an invariant break and is REFUSED (409).
+            before = bool(governance_lifecycle.custody_holds(p.tenant_id)["legacy_hold"])
+            result = governance_lifecycle.release_legacy_hold(
+                p.tenant_id, reconciliation_ref=reconciliation_ref
+            )
+            after = bool(governance_lifecycle.custody_holds(p.tenant_id)["legacy_hold"])
+            released = bool(result.get("released"))
+            if after or released != before:
+                raise LearningError("legacy hold release contradicts durable state")
+            if released:
+                outcome = "released"
+            else:
+                prior = governance_audit.read(
+                    p.tenant_id, event_type=AuditEventType.SECURITY_POLICY_CHANGED
+                )
+                outcome = (
+                    "already_released"
+                    if any(
+                        e.details.get("act") == "learning_legacy_hold_released"
+                        and isinstance(e.details.get("result"), dict)
+                        and e.details["result"].get("released") is True
+                        for e in prior
+                    )
+                    else "no_hold"
+                )
+            return {**result, "outcome": outcome}
+
         @router.post("/learning/custody/release-legacy-hold")
         async def release_legacy_learning_hold(
             request: Request, body: LearningLegacyReleaseRequest
         ) -> Response:
-            """POST .../custody/release-legacy-hold: reviewed release of the 0020 hold."""
+            """POST .../custody/release-legacy-hold: reviewed release of the 0020 hold.
+
+            Outcome is unambiguous (R179 4.7b): ``released`` (acted),
+            ``already_released`` (a prior audited release exists) or ``no_hold``
+            (never held); an invariant break refuses with 409.
+            """
             return _govern(
                 request, "learning_legacy_hold_released",
                 {"reconciliation_ref": str(body.reconciliation_ref)},
-                lambda p: governance_lifecycle.release_legacy_hold(
-                    p.tenant_id, reconciliation_ref=body.reconciliation_ref
-                ),
+                lambda p: _release_with_outcome(p, body.reconciliation_ref),
             )
 
     # --- AA-1 seam AUD-1: audit read (20 §9 events, port surfaced verbatim) ---------
@@ -1267,6 +1354,19 @@ def create_admin_router(
             if isinstance(admitted, JSONResponse):
                 return admitted
             return _json(catalog_payload)
+
+        # R179 4.3: action discovery — derived ONCE from the canonical vocabulary
+        # (core.contracts.admin.ACTION_AREA); own route so the shelf row shape
+        # stays frozen for the V7 consumers. Admin-gated like every read here.
+        actions_payload = admin_actions_json()
+
+        @router.get("/capabilities/actions")
+        async def capability_actions(request: Request) -> Response:
+            """GET .../capabilities/actions: which admin actions exist and who owns them."""
+            admitted = _admit(request)
+            if isinstance(admitted, JSONResponse):
+                return admitted
+            return _json(actions_payload)
 
     # --- V7 chunk 2: Capability Exercise Surface (real probes, real evidence) -------
 

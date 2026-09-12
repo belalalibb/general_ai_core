@@ -202,7 +202,9 @@ def test_no_new_migration_needed_the_0010_table_is_reused() -> None:
     # DEC03 authorizes custody 0019 and explicitly approved successor 0020,
     # NOT a second evaluation store. Keep a closed head pin and preserve
     # the original no-duplicate-evaluations invariant.
-    assert versions[-1] == "0020_learning_policy_revocations.py", versions[-1]
+    # R179 rulings Q2 (conscious pin update): 0021 adds ONE structural column to
+    # learning_sample_custody (no new table) — the closed head pin moves with it.
+    assert versions[-1] == "0021_custody_schema_generation.py", versions[-1]
     import re
 
     created = []

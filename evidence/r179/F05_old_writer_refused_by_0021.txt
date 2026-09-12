@@ -1,0 +1,2 @@
+F-R179-05 disposition (rulings Q2, live): OLD writer 2c197229 on the 0021 database — POST /v1/admin/learning/samples -> 500, custody row NOT landed. Database error (server log):
+asyncpg.exceptions.NotNullViolationError: null value in column "custody_schema_generation" of relation "learning_sample_custody" violates not-null constraint

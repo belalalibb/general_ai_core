@@ -348,6 +348,37 @@ class LearningCustodyRepository:
             )
             return await self._invalidate(session, tenant_id, custody.c.policy_id == policy_id)
 
+    async def list_revocations(self, tenant_id: UUID) -> tuple[dict[str, Any], ...]:
+        """R179 4.7(a): the tenant's hold/revocation rows, read-only.
+
+        Deliberately does NOT run ``_assert_reconciled``: a HELD tenant must be
+        able to see WHY every custody act answers 404. Foreign tenants are
+        never visible (tenant predicate); nothing is mutated.
+        """
+        if not isinstance(tenant_id, UUID):
+            raise LearningStorageError("explicit custody references required")
+        async with self._sessions() as session:
+            rows = (
+                (
+                    await session.execute(
+                        select(
+                            learning_policy_revocations.c.tenant_id,
+                            learning_policy_revocations.c.policy_id,
+                            learning_policy_revocations.c.reason,
+                            learning_policy_revocations.c.recorded_at,
+                        )
+                        .where(learning_policy_revocations.c.tenant_id == tenant_id)
+                        .order_by(
+                            learning_policy_revocations.c.recorded_at,
+                            learning_policy_revocations.c.policy_id,
+                        )
+                    )
+                )
+                .mappings()
+                .all()
+            )
+            return tuple(dict(row) for row in rows)
+
     async def release_legacy_hold(self, tenant_id: UUID, *, reconciliation_ref: UUID) -> bool:
         """Remove ONLY the tenant-wide legacy_unresolved hold; explicit revocations stay.
 
