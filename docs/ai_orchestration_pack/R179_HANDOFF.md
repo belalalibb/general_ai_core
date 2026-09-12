@@ -8,11 +8,10 @@ Read `R179_READINESS.md` for analysis; this file only says what to do next.
 | # | item | where | do |
 |---|---|---|---|
 | 1 | Merge R179 PR after review | GitHub | squash-merge; keep `evidence/r179/*` |
-| 2 | Rotate the operator token used in-session | GitHub settings | the token appeared in chat; rotate before next round |
-| 3 | Production 0020 procedure | `docs/OPERATIONS.md` §8.1 | stop ALL old writers BEFORE `alembic upgrade head`; never restart pre-0020 binaries (F-R179-05) |
-| 4 | Retention sweeps | external timer | call `POST /v1/admin/learning/custody/sweep` with an admin session (D2=(a)) |
-| 5 | Operator visibility | `GET /v1/admin/learning/custody/holds` | use before any release; read the `outcome` on release |
-| 6 | Intake retries | `POST /v1/admin/learning/intake` | on 503 re-send the SAME batch `idempotency_key`; landed rows dedup |
+| 2 | Production 0020 procedure | `docs/OPERATIONS.md` §8.1 | stop ALL old writers BEFORE `alembic upgrade head`; never restart pre-0020 binaries (F-R179-05) |
+| 3 | Retention sweeps | external timer | call `POST /v1/admin/learning/custody/sweep` with an admin session (D2=(a)) |
+| 4 | Operator visibility | `GET /v1/admin/learning/custody/holds` | use before any release; read the `outcome` on release |
+| 5 | Intake retries | `POST /v1/admin/learning/intake` | on 503 re-send the SAME batch `idempotency_key`; landed rows dedup |
 
 ## B. Decision queue (operator rulings needed)
 
@@ -35,5 +34,6 @@ Read `R179_READINESS.md` for analysis; this file only says what to do next.
 | F-R179-05 old writer not refused by 0020 schema | S2 | OPEN → Q2; procedure in §8.1 |
 
 ## D. Resume mechanism (unchanged)
-Remote branch head is the checkpoint; recreate `~/.git-credentials`, `.venv` (`pip install -e '.[dev]'`) and the workspace
-PostgreSQL binaries (`tests_live/r179/run_local_postgres.sh` prints the exact commands). Do not invent alternate paths.
+Remote branch head is the checkpoint; rebuild `.venv` (`pip install -e '.[dev]'`) and the workspace PostgreSQL binaries
+(`tests_live/r179/run_local_postgres.sh` prints the exact commands). Authentication is supplied by the operator per
+session and is never written into the workspace or the home directory. Do not invent alternate paths.
