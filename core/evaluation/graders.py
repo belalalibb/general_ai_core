@@ -41,13 +41,27 @@ Recorded derivations (nothing invented silently):
   record that carries no score is a caller error (nothing exists to
   challenge) — refused loudly, never graded.
 
+- SECURITY (``security``, R179 rulings Q3 / F-R179-02): 22 §11 names
+  "security eval pass" as a promotion condition and the platform ALREADY
+  owns exactly one machine-decidable security check — the 13 §7
+  credential vocabulary (``core.learning.sanitizer``, the same patterns the
+  memory screen enforces). ``SecretMaterialGrader`` runs that sanitizer
+  over the graded OUTPUT: passed = no credential-like material. It is
+  non-vacuous (a credential-bearing output FAILS) and never echoes what
+  it found (labels + count only — a grader that repeats the secret is a
+  leak). Broader security semantics (adversarial content, policy
+  violations) have no documented mechanism and are NOT claimed.
+
 Activation: FINAL_ACTIVE_GRADER_TYPES widens the admitted set; the
 EvaluationPolicyService takes it via its (new, injectable) ``active_types``
 — MVP_ACTIVE_GRADER_TYPES stays the default so every recorded MVP posture
-and test keeps holding. security/regression/human_calibrated/
-production_signal remain representable-but-inactive: 41 §18 does not list
-them, and no doc defines their mechanism (recorded, not skipped silently —
-naming one still raises InactiveGraderType).
+and test keeps holding. Single-output graders on ``OutputGraderPort`` reach
+the pipeline through the service's injectable ``output_graders`` (default
+empty) and run ONLY when their type is admitted. regression/
+human_calibrated/production_signal remain representable-but-inactive: 41
+§18 does not list them, and no doc defines their mechanism inside this
+pipeline (recorded, not skipped silently — naming one still raises
+InactiveGraderType; regression rows are minted by the scenario replay).
 """
 
 from __future__ import annotations
@@ -66,10 +80,12 @@ from core.contracts.evaluation import (
 )
 from core.contracts.role_profile import RoleProfile
 from core.contracts.skills import Skill
-from core.evaluation.policy import ModelJudgePort
+from core.evaluation.policy import ModelJudgePort, OutputGraderPort
+from core.learning.sanitizer import sanitize_knowledge
 
 #: The FINAL Phase 15 admitted set (41 §18): MVP pair + the four named
-#: build items. The remaining four 22 §5 types stay inactive (see module
+#: build items + SECURITY (R179 Q3 — the first implementing grader lives
+#: below). The remaining three 22 §5 types stay inactive (see module
 #: docstring — no documented mechanism; never silently run).
 FINAL_ACTIVE_GRADER_TYPES: frozenset[GraderType] = MVP_ACTIVE_GRADER_TYPES | frozenset(
     {
@@ -77,21 +93,50 @@ FINAL_ACTIVE_GRADER_TYPES: frozenset[GraderType] = MVP_ACTIVE_GRADER_TYPES | fro
         GraderType.SKILL_SPECIFIC,
         GraderType.ROLE_SPECIFIC,
         GraderType.COUNTER_EVALUATION,
+        GraderType.SECURITY,
     }
 )
 
 
-class OutputGraderPort(Protocol):
-    """A pure single-output specialty grader the policy service can run."""
+# ``OutputGraderPort`` is DEFINED in core.evaluation.policy (the service types
+# its ``output_graders`` with it; this module imports policy, so the port lives
+# upstream) and re-exported here under its recorded name.
+__all__ = [
+    "FINAL_ACTIVE_GRADER_TYPES",
+    "CounterEvaluator",
+    "NothingToChallenge",
+    "OutputGraderPort",
+    "PairwiseDecision",
+    "PairwiseEvaluator",
+    "PairwiseJudgePort",
+    "PairwiseTie",
+    "RoleContractGrader",
+    "SecretMaterialGrader",
+    "SkillFormatGrader",
+]
 
-    @property
-    def grader_type(self) -> GraderType:
-        """Which 22 §5 family this grader belongs to."""
-        ...
+
+# --- security grader (22 §5 security; R179 rulings Q3) -----------------------------
+
+
+class SecretMaterialGrader:
+    """Fails an output that carries credential-like material (13 §7 vocabulary).
+
+    Pure and deterministic: the existing sanitizer decides; this class only
+    shapes its report into a 22 §6 check row. The row name carries the
+    finding COUNT and the closed-set labels — never a path's text and never
+    the matched material.
+    """
+
+    grader_type: GraderType = GraderType.SECURITY
 
     def row(self, output: JsonObject) -> GraderResult:
-        """Grade one execution output; always returns an explicit row."""
-        ...
+        report = sanitize_knowledge("output", output)
+        if report.clean:
+            return GraderResult(type=self.grader_type, name="secret_material:none", passed=True)
+        labels = sorted({finding.label for finding in report.findings})
+        name = f"secret_material:{len(report.findings)}:{','.join(labels)}"
+        return GraderResult(type=self.grader_type, name=name[:200], passed=False)
 
 
 # --- skill grader (22 §5 skill_specific) ---------------------------------------------

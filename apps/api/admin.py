@@ -846,7 +846,20 @@ def create_admin_router(
             parsed = _parse_uuid(sample_id, "sample_id")
             if isinstance(parsed, JSONResponse):
                 return parsed
+            # R179 rulings Q3: the caller must be able to hand THIS record back
+            # as ``evidence_refs.security_evaluation_id``. Records are append-
+            # only and the store's listing order is not a sequence (0010 has no
+            # sequence column), so the new record is identified by set
+            # difference over the SAME store the resolver reads — never by
+            # position.
             try:
+                source_execution_id = lifecycle.get(admitted.tenant_id, parsed).source_execution_id
+                before = {
+                    r.id
+                    for r in surface.evaluations.list_for_execution(
+                        admitted.tenant_id, source_execution_id
+                    )
+                }
                 sample = await lifecycle.evaluate(admitted.tenant_id, parsed, body.output)
             except SampleNotFound:
                 return error_response(
@@ -859,7 +872,20 @@ def create_admin_router(
                 if governed_learning:
                     raise
                 return _json({"evaluated": False, "reason": str(exc)})
-            return _json({"evaluated": True, "sample": sample.model_dump(mode="json")})
+            new_ids = {
+                r.id
+                for r in surface.evaluations.list_for_execution(
+                    admitted.tenant_id, source_execution_id
+                )
+            } - before
+            evaluation_id = str(next(iter(new_ids))) if len(new_ids) == 1 else None
+            return _json(
+                {
+                    "evaluated": True,
+                    "evaluation_id": evaluation_id,
+                    "sample": sample.model_dump(mode="json"),
+                }
+            )
 
         @router.get("/learning/samples/{sample_id}")
         async def learning_sample_report(request: Request, sample_id: str) -> Response:
@@ -1023,13 +1049,17 @@ def create_admin_router(
                         "stage": "knowledge_write",
                     }
                 )
+            # R179 rulings Q3: a promotion CREATES a GOLD knowledge item — 201
+            # (created) is the honest status; 200 stays the refusal-as-data
+            # answer in the non-governed profile, 409 the governed refusal.
             return _json(
                 {
                     "promoted": True,
                     "memory_item_id": str(item.id),
                     "knowledge_key": item.key,
                     "evidence": evidence,
-                }
+                },
+                status=201,
             )
 
         @router.get("/learning/learned")

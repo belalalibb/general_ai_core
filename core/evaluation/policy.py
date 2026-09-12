@@ -53,6 +53,13 @@ A request naming any type OUTSIDE the admitted set is DENIED loudly with
 :class:`InactiveGraderType` — never silently skipped (silent skipping
 would fake coverage that never ran).
 
+Step 1b (R179 rulings Q3): ``output_graders`` — injectable single-output
+specialty graders (``OutputGraderPort``: skill / role / security). Each
+runs ONLY when its ``grader_type`` is in the admitted set for the call;
+the default is empty, so every recorded MVP posture is byte-identical.
+Their rows are CHECK rows (``passed``) and cap the level exactly like a
+failed deterministic check (22 §12, positional).
+
 22 §7 user visibility (scores never in user-facing responses) binds at
 the API surface in T-IMPL-032, not here — this service is admin-side
 machinery producing evidence records.
@@ -79,6 +86,27 @@ from core.contracts.provider import ProviderGenerateRequest, ProviderOperation
 from core.evaluation.errors import InactiveGraderType, JudgeFailure
 from core.evaluation.ports import EvaluationStorePort
 from core.providers.ports import ProviderAdapterPort
+
+# --- single-output specialty grader seam (step 1b) ---------------------------------
+
+
+class OutputGraderPort(Protocol):
+    """A pure single-output specialty grader the policy service can run.
+
+    Defined here (not in ``graders.py``, which imports this module) so the
+    service can type its ``output_graders`` without an import cycle;
+    ``core.evaluation.graders`` re-exports the same name.
+    """
+
+    @property
+    def grader_type(self) -> GraderType:
+        """Which 22 §5 family this grader belongs to."""
+        ...
+
+    def row(self, output: JsonObject) -> GraderResult:
+        """Grade one execution output; always returns an explicit row."""
+        ...
+
 
 # --- deterministic graders (step 1) ------------------------------------------------
 
@@ -220,6 +248,7 @@ class EvaluationPolicyService:
         checks: tuple[DeterministicCheck, ...] = MVP_DETERMINISTIC_CHECKS,
         judge: ModelJudgePort | None = None,
         active_types: frozenset[GraderType] = MVP_ACTIVE_GRADER_TYPES,
+        output_graders: tuple[OutputGraderPort, ...] = (),
         verified_confidence_threshold: float = 0.75,
         id_factory: Callable[[], UUID] = uuid4,
     ) -> None:
@@ -227,6 +256,7 @@ class EvaluationPolicyService:
         self._checks = checks
         self._judge = judge
         self._active_types = active_types
+        self._output_graders = output_graders
         self._verified_confidence_threshold = verified_confidence_threshold
         self._id_factory = id_factory
 
@@ -251,6 +281,12 @@ class EvaluationPolicyService:
         rows: list[GraderResult] = []
         if GraderType.DETERMINISTIC in requested:
             rows.extend(self._run_checks(output))
+
+        # Step 1b — single-output specialty graders (skill / role / security),
+        # each ONLY when its family is admitted for this call.
+        rows.extend(
+            grader.row(output) for grader in self._output_graders if grader.grader_type in requested
+        )
 
         # Step 2 — OPTIONAL model judge; a broken judge degrades to
         # deterministic-only (contained here, the single containment point).

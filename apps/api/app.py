@@ -214,6 +214,7 @@ from core.contracts.webhooks import (
     WebhookSubscriptionRequest,
     WebhookSubscriptionResponse,
 )
+from core.evaluation.graders import FINAL_ACTIVE_GRADER_TYPES, SecretMaterialGrader
 from core.evaluation.policy import EvaluationPolicyService, ModelJudgePort
 from core.events import (
     WebhookUrlRefused,
@@ -2178,8 +2179,18 @@ def create_app(
     if admin is not None and memory is not None:
         # R177-FIX-09: the OPTIONAL model judge (22 §10 selective teacher) is
         # composition data — absent ⇒ deterministic-only, level ≤ VALIDATED.
+        # R179 rulings Q3 (F-R179-02): the designed activation path — the
+        # FINAL admitted set + the first real GraderType.SECURITY grader
+        # (13 §7 credential scan over the graded output). This is what makes
+        # ``security_eval_pass`` resolvable from a record the HTTP caller can
+        # produce; the promote gate itself is untouched.
         learning_lifecycle_service = LearningLifecycleService(
-            evaluation=EvaluationPolicyService(store=admin.evaluations, judge=evaluation_judge),
+            evaluation=EvaluationPolicyService(
+                store=admin.evaluations,
+                judge=evaluation_judge,
+                active_types=FINAL_ACTIVE_GRADER_TYPES,
+                output_graders=(SecretMaterialGrader(),),
+            ),
             knowledge=memory,
             custody=learning_custody,
             external_capture=ExternalIngestionRecorder(
