@@ -627,7 +627,8 @@
       ]
     },
     "round_r179_rulings": {
-      "ceiling": 8,
+      "ceiling": 10,
+      "ceiling_history": "declared 8 BEFORE the first production commit (5e16d0a6) -> 10 with the Q3 design note in evidence/r179_state_ledger.md committed BEFORE the Q3 production commit: Q3 = 4 files (the designed activation path spans graders.py + policy.py + the app.py composition, and the 201 the ruling names is the promote route in admin.py), Q4 = 2 (rules declared in core/admin/service.py, read by the shelf in apps/api/capabilities.py), Q2 = 2 (migration 0021 + tables.py metadata mirror); 2 + 4 + 2 + 2 = 10, no slack",
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
       "changes_used": 2,
