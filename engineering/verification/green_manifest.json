@@ -629,7 +629,7 @@
     "round_r179": {
       "ceiling": 6,
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 5,
+      "changes_used": 9,
       "items": [
         "R179-SD capability self-description: custody governance ids + action discovery derived from the canonical vocabulary",
         "R179-OV operator visibility: read-only holds/revocations view; unambiguous legacy-release outcome; intake row-vs-layer fault clarity",
@@ -671,9 +671,45 @@
           "file": "apps/api/admin.py",
           "loc": "+14/-1",
           "summary": "GET /v1/admin/capabilities/actions serves the derived read model, admin-gated, serialized once at mount; separate route so the shelf row shape stays frozen for V7 consumers (ui/, apps/admin_agent untouched)."
+        },
+        {
+          "item": "R179-OV",
+          "file": "infrastructure/db/learning.py",
+          "loc": "+30/-0",
+          "summary": "LearningCustodyRepository.list_revocations(tenant_id): read-only, tenant-predicated SELECT over learning_policy_revocations; deliberately without _assert_reconciled so a HELD tenant can see its hold. No schema change."
+        },
+        {
+          "item": "R179-OV",
+          "file": "apps/composition/learning.py",
+          "loc": "+26/-0",
+          "summary": "DurableLearningCustody.list_revocations over the bridge; rows validated (tenant match, UUID/None policy, closed reason set) and reduced to plain values; CustodyRepositoryPort gains the read."
+        },
+        {
+          "item": "R179-OV",
+          "file": "core/learning/lifecycle.py",
+          "loc": "+42/-1",
+          "summary": "LearningHoldsReadPort + LearningLifecycleService.custody_holds(tenant_id): tenant-scoped read model {tenant_id, legacy_hold, holds[scope, policy_id, reason, recorded_at]}; refuses rows outside tenant scope; no mutation."
+        },
+        {
+          "item": "R179-OV",
+          "file": "apps/api/intake.py",
+          "loc": "+34/-11",
+          "summary": "IntakeAdapter.ingest classifies per-row failures: LearningStorageConflict/LearningStorageError => refused row (content-free reason), batch continues; any other exception => layer_fault='durable layer unavailable', stop, remaining rows in not_attempted, landed rows kept in admitted. IntakeReport gains layer_fault + not_attempted."
+        },
+        {
+          "item": "R179-OV",
+          "file": "apps/api/admin.py",
+          "loc": "+66/-4 (second edit, same slot)",
+          "summary": "GET /v1/admin/learning/custody/holds (read-only, not audited, admin-gated, mounted with the governance family); release-legacy-hold derives outcome released|already_released|no_hold from durable holds before/after + audit history and REFUSES (409) on contradiction; intake answers 503 retryable with the partial report on a layer fault."
+        },
+        {
+          "item": "R179-SD/OV",
+          "file": "apps/api/app.py",
+          "loc": "+1/-1 (evidence string only; same slot)",
+          "summary": "learning.custody_governance evidence names the holds route alongside revoke|sweep|release-legacy-hold."
         }
       ],
-      "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."
+      "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. FINAL: 9 distinct production files (apps/composition/memory.py, apps/composition/runtime.py, apps/api/capabilities.py, apps/api/app.py, apps/api/admin.py, infrastructure/db/learning.py, apps/composition/learning.py, core/learning/lifecycle.py, apps/api/intake.py); 4.5 triggered (evidence/r179/durability_measured_before.json) and the 4.7 design note was committed at 60d09d95 BEFORE the 4.7 production commit ccfa9a7d. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."
     }
   },
   "baseline": {
