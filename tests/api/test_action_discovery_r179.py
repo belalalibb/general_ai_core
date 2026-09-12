@@ -55,7 +55,9 @@ def test_read_model_is_a_pure_function_of_the_canonical_vocabulary() -> None:
     # Every action exactly once, sorted, owner == ACTION_AREA (one owner per action).
     assert [row["action"] for row in actions] == sorted(a.value for a in AdminAction)
     for row in actions:
-        assert set(row) == {"action", "area"}  # DEC-A: no payload schema half
+        # R179 rulings Q4 (conscious pin update): DEC-A approved — the payload half
+        # rides the SAME row as `fields`, read from core.admin.service.PAYLOAD_FIELD_RULES.
+        assert set(row) == {"action", "area", "fields"}
         assert ACTION_AREA[AdminAction(row["action"])].value == row["area"]
     # Every area exactly once (the closed 21-value set), active flag from the
     # FINAL set, actions grouped under their owner, inactive areas empty.
