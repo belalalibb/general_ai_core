@@ -216,6 +216,7 @@ from sqlalchemy import (
     Integer,
     MetaData,
     PrimaryKeyConstraint,
+    SmallInteger,
     String,
     Table,
     Text,
@@ -786,6 +787,13 @@ learning_samples = Table(
 )
 
 
+#: R179 rulings Q2 (F-R179-05): the metadata generation THIS code writes into
+#: ``learning_sample_custody.custody_schema_generation``. 1 = rows backfilled by
+#: migration 0021 (written by the 0019/0020 world); 2 = written by 0021+ code.
+#: The column is NOT NULL with NO server default: a writer compiled from older
+#: metadata omits it and is refused at the database. A writer fact, not a policy.
+CUSTODY_SCHEMA_GENERATION = 2
+
 # DEC03: infrastructure custody companion, not a second LearningSample contract.
 # Null payload is irreversible quarantine/revocation; no secret-bearing snapshots.
 learning_sample_custody = Table(
@@ -808,6 +816,13 @@ learning_sample_custody = Table(
     Column("revoked", Boolean, nullable=False, server_default="false"),
     Column("revision", Integer, nullable=False, server_default="0"),
     Column("state", JSONB, nullable=False, server_default="{}"),
+    # Structural guard (0021): client-side default only — see CUSTODY_SCHEMA_GENERATION.
+    Column(
+        "custody_schema_generation",
+        SmallInteger,
+        nullable=False,
+        default=CUSTODY_SCHEMA_GENERATION,
+    ),
     ForeignKeyConstraint(
         ["sample_id", "tenant_id", "source_execution_id"],
         [

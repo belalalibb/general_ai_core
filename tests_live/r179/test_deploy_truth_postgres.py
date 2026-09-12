@@ -117,7 +117,7 @@ def test_alembic_forward_0001_to_head_then_backward_to_base_through_the_real_too
     assert current_revision(url) is None and tables(url) == set()
     up = alembic(url, "upgrade", "head")
     assert up.returncode == 0, up.stderr[-2000:]
-    assert current_revision(url) == "0020"
+    assert current_revision(url) == "0021"
     created = tables(url)
     from infrastructure.db.tables import metadata
 
@@ -131,7 +131,7 @@ def test_alembic_forward_0001_to_head_then_backward_to_base_through_the_real_too
     assert current_revision(url) is None
     again = alembic(url, "upgrade", "head")
     assert again.returncode == 0, again.stderr[-2000:]
-    assert current_revision(url) == "0020"
+    assert current_revision(url) == "0021"
 
 
 def test_alembic_downgrade_refuses_populated_0020_and_succeeds_when_empty(cluster):
@@ -153,6 +153,10 @@ def test_alembic_downgrade_refuses_populated_0020_and_succeeds_when_empty(cluste
         "VALUES (:t, NULL, 'legacy_unresolved')",
         t=tenant,
     )
+    # 0021 is structural and reversible; the populated-0020 refusal is measured
+    # one step further back.
+    assert alembic(url, "downgrade", "-1").returncode == 0
+    assert current_revision(url) == "0020"
     blocked = alembic(url, "downgrade", "-1")
     assert blocked.returncode != 0, "populated 0020 downgrade must refuse"
     assert current_revision(url) == "0020"
