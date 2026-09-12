@@ -1468,3 +1468,26 @@ primitive). None is implemented. Legacy files ARCHITECTURE_GAPS.md / FUTURE_IMPR
   kinds are reachable; absent seams still fail validation with a named reason.
 - Follow-up (DEFERRED, ui/ thaw required): add the kind to the console select and a §7 sheet form.
 - Evidence: `evidence/r177_state_ledger.md` row B-03; `evidence/r177/B03_fix03/`.
+
+### R178-ACK — R178 closed and merged (2026-09-11)
+- R178 (`main` f5cbe48c via PR #14): evaluation duplicate contract (FIX-01), immutable promotion evidence (DEC-01), external-evidence subject/receipt (P01), tenant-policy custody with revocations + legacy hold (DEC-03, migration 0020). Acknowledged here as the baseline R179 measured against; no R178 decision is reopened.
+
+### R179-DEC-01 — durability correction = composition seam only (2026-09-12)
+- Context: 4.4 measured with a real SIGKILL (`evidence/r179/durability_measured_before.json`): memory and conversations died with the process; `execute`+`conversation_id` answered 500 in the durable profile (FK to a `conversations` table the runtime never wrote).
+- Decision: bind the EXISTING Postgres repositories (migrations 0002/0007) via `apps/composition/memory.py` in the `DATABASE_URL` branch only; in-memory profile byte-identical. No schema, route, dependency or contract change. Re-measured: P1 memory 1→1, P2 conversation 200/200/200 (`durability_measured.json`). F-R179-01/-03 CLOSED.
+- DEC-B (audit/usage durability) stays DEFERRED and visible: P3 audit 1→0, P4 usage 5.0→2.0 (F-R179-04); `docs/OPERATIONS.md` §13 states it.
+
+### R179-DEC-02 — one authorized shelf widening: `learning.custody_governance` (22 → 23) (2026-09-12)
+- The DEC-03 governance routes were mounted with no shelf row. The row is DERIVED from the same seam variables that mount them (admin + memory + custody port + audit); the pin moved 22→23 with written justification; the shelf coverage test now fails on any mounted `/v1/admin` family without a specific owning row.
+
+### R179-DEC-03 — action discovery is derived from `ACTION_AREA`; payload-schema half stays DEC-A design-only (2026-09-12)
+- `GET /v1/admin/capabilities/actions` is a pure function of `core.contracts.admin.ACTION_AREA` + `FINAL_ACTIVE_ADMIN_AREAS` (one owner per action, no hand-maintained names, drift impossible by construction). Separate route so the V7 row shape `{id,state,evidence}` and the frozen UI/agent consumers stay untouched (route-surface pins 73→74, conscious). The payload-schema half is NOT exposed (imperative checks in `core/admin/service.py` remain the authority; DEC-A).
+
+### R179-DEC-04 — old writers are stopped by procedure, not by schema (F-R179-05) (2026-09-12)
+- Live rolling pair: a pre-0020 binary restarted on a 0020 database lands custody rows under the legacy hold (201) while the new binary is refused (404). A schema-level guard needs a new migration (forbidden this round). Recorded as OPEN in the decision queue; `docs/OPERATIONS.md` §8.1 procedure is the only mitigation today.
+
+### R179-DEC-05 — operator visibility contract (2026-09-12)
+- `GET /v1/admin/learning/custody/holds` is read-only (not audited); `release-legacy-hold` answers `outcome ∈ {released, already_released, no_hold}` derived from durable state before/after + audit history and refuses (409) on contradiction; intake distinguishes a per-row custody refusal (refused row, batch continues, 201) from a durable-layer fault (batch stops, 503 retryable, landed rows + `not_attempted` reported). Conscious pin updates in R178 tests are named in `evidence/r179_state_ledger.md`.
+
+### R179-DEC-06 — change-budget unit for round_r179 = one production FILE; ceiling 6 → 8 → 9 (2026-09-12)
+- Declared 6; elastic 8 when 4.5 triggered; absolute 9 with the 4.7 design note committed (60d09d95) BEFORE the 4.7 production commit (ccfa9a7d). Final 9/9 distinct files; a file edited twice is ONE change with both edits described in its log summary.
