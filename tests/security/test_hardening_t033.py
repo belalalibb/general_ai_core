@@ -217,6 +217,9 @@ class TestAdminCannotBreak:
         )
         assert admin_paths == [
             "GET /v1/admin/capabilities",
+            # R179 4.3 — conscious pin update: action discovery read model
+            # (tests/api/test_action_discovery_r179.py).
+            "GET /v1/admin/capabilities/actions",
             "GET /v1/admin/capabilities/exercisable",
             "GET /v1/admin/changes",
             "GET /v1/admin/changes/{change_id}",

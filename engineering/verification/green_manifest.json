@@ -627,7 +627,9 @@
       ]
     },
     "round_r179": {
-      "ceiling": 6,
+      "ceiling": 9,
+      "budget_unit": "one production FILE under the counted roots (a file edited twice in the round is ONE change; every edit is described in that file's summary)",
+      "ceiling_history": "declared 6 (B7) -> elastic 8 when 4.5 triggered (evidence/r179/durability_measured_before.json) -> absolute 9 with the 4.7 ledger design note committed at 60d09d95 BEFORE the 4.7 production commit ccfa9a7d",
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
       "changes_used": 9,
       "items": [
@@ -651,26 +653,20 @@
         {
           "item": "R179-SD",
           "file": "apps/api/capabilities.py",
-          "loc": "+6/-0",
-          "summary": "The ONE authorized closed-set widening 22 -> 23: id learning.custody_governance for the DEC03 routes /v1/admin/learning/custody/{revoke,sweep,release-legacy-hold} that were mounted without a shelf row. Pin updated with written justification in tests/api/test_capability_catalog_r177.py."
+          "loc": "+6/-0 ; +45/-0 (second edit of the same file, same budget slot)",
+          "summary": "The ONE authorized closed-set widening 22 -> 23: id learning.custody_governance for the DEC03 routes /v1/admin/learning/custody/{revoke,sweep,release-legacy-hold} that were mounted without a shelf row. Pin updated with written justification in tests/api/test_capability_catalog_r177.py. || admin_actions_json(): action discovery derived purely from core.contracts.admin.ACTION_AREA + FINAL_ACTIVE_ADMIN_AREAS (every AdminAction once with its ONE owner area; every AdminArea once with active flag). No hand-maintained names (test scans the producer for enum literals). Payload-schema half NOT exposed (DEC-A design only)."
         },
         {
           "item": "R179-SD",
           "file": "apps/api/app.py",
-          "loc": "+14/-0 (catalog derivation only)",
-          "summary": "Row derived from the SAME seam variables create_admin_router mounts the governance routes with (admin + memory + learning_custody + admin.audit); AVAILABLE iff mounted, INERT otherwise (hermetic proof tests/api/test_capability_shelf_coverage_r179.py). Row shape {id,state,evidence} unchanged (V7 exact-key pins intact)."
-        },
-        {
-          "item": "R179-SD",
-          "file": "apps/api/capabilities.py",
-          "loc": "+45/-0 (second edit of the same file, same budget slot)",
-          "summary": "admin_actions_json(): action discovery derived purely from core.contracts.admin.ACTION_AREA + FINAL_ACTIVE_ADMIN_AREAS (every AdminAction once with its ONE owner area; every AdminArea once with active flag). No hand-maintained names (test scans the producer for enum literals). Payload-schema half NOT exposed (DEC-A design only)."
+          "loc": "+14/-0 (catalog derivation only) ; +1/-1 (evidence string only; same slot)",
+          "summary": "Row derived from the SAME seam variables create_admin_router mounts the governance routes with (admin + memory + learning_custody + admin.audit); AVAILABLE iff mounted, INERT otherwise (hermetic proof tests/api/test_capability_shelf_coverage_r179.py). Row shape {id,state,evidence} unchanged (V7 exact-key pins intact). || [R179-SD/OV] learning.custody_governance evidence names the holds route alongside revoke|sweep|release-legacy-hold."
         },
         {
           "item": "R179-SD",
           "file": "apps/api/admin.py",
-          "loc": "+14/-1",
-          "summary": "GET /v1/admin/capabilities/actions serves the derived read model, admin-gated, serialized once at mount; separate route so the shelf row shape stays frozen for V7 consumers (ui/, apps/admin_agent untouched)."
+          "loc": "+14/-1 ; +66/-4 (second edit, same slot)",
+          "summary": "GET /v1/admin/capabilities/actions serves the derived read model, admin-gated, serialized once at mount; separate route so the shelf row shape stays frozen for V7 consumers (ui/, apps/admin_agent untouched). || [R179-OV] GET /v1/admin/learning/custody/holds (read-only, not audited, admin-gated, mounted with the governance family); release-legacy-hold derives outcome released|already_released|no_hold from durable holds before/after + audit history and REFUSES (409) on contradiction; intake answers 503 retryable with the partial report on a layer fault."
         },
         {
           "item": "R179-OV",
@@ -695,18 +691,6 @@
           "file": "apps/api/intake.py",
           "loc": "+34/-11",
           "summary": "IntakeAdapter.ingest classifies per-row failures: LearningStorageConflict/LearningStorageError => refused row (content-free reason), batch continues; any other exception => layer_fault='durable layer unavailable', stop, remaining rows in not_attempted, landed rows kept in admitted. IntakeReport gains layer_fault + not_attempted."
-        },
-        {
-          "item": "R179-OV",
-          "file": "apps/api/admin.py",
-          "loc": "+66/-4 (second edit, same slot)",
-          "summary": "GET /v1/admin/learning/custody/holds (read-only, not audited, admin-gated, mounted with the governance family); release-legacy-hold derives outcome released|already_released|no_hold from durable holds before/after + audit history and REFUSES (409) on contradiction; intake answers 503 retryable with the partial report on a layer fault."
-        },
-        {
-          "item": "R179-SD/OV",
-          "file": "apps/api/app.py",
-          "loc": "+1/-1 (evidence string only; same slot)",
-          "summary": "learning.custody_governance evidence names the holds route alongside revoke|sweep|release-legacy-hold."
         }
       ],
       "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. FINAL: 9 distinct production files (apps/composition/memory.py, apps/composition/runtime.py, apps/api/capabilities.py, apps/api/app.py, apps/api/admin.py, infrastructure/db/learning.py, apps/composition/learning.py, core/learning/lifecycle.py, apps/api/intake.py); 4.5 triggered (evidence/r179/durability_measured_before.json) and the 4.7 design note was committed at 60d09d95 BEFORE the 4.7 production commit ccfa9a7d. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."
