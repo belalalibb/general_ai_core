@@ -251,7 +251,7 @@ class TestPortParityAndBuilder:
 
 
 class TestRuntimeBinding:
-    def test_runtime_binds_durable_audit_and_usage_only_in_the_database_branch(self) -> None:
+    def test_runtime_binds_durable_audit_only_in_the_database_branch(self) -> None:
         source = RUNTIME_PY.read_text(encoding="utf-8")
         assert (
             "from apps.composition.audit_usage import UsageBinding, build_durable_audit_usage"
@@ -259,16 +259,21 @@ class TestRuntimeBinding:
         )
         # The binding is born inside the FIRST `if settings is not None:` block
         # (the durable connections are built before the execution service that
-        # consumes usage), and the in-memory classes are the ONLY else-branch.
-        bind_at = source.index("audit, usage = build_durable_audit_usage(bindings, bridge)")
+        # consumes usage), and the in-memory audit class is the ONLY else-branch.
+        bind_at = source.index("audit, durable_usage = build_durable_audit_usage(bindings, bridge)")
         durable_branch = source.index("if settings is not None:\n        bridge = AsyncBridge()")
         else_branch = source.index(
             "    else:\n        # In-memory profile: process-local audit + usage, unchanged."
         )
         assert durable_branch < bind_at < else_branch
-        # Exactly one place constructs each in-memory class (no second path).
-        assert source.count("InMemoryUsageAccounting()") == 1
+        # Audit: exactly one in-memory construction (no second path).
         assert source.count("InMemoryAuditLog()") == 1
+        # Usage: F-R179-06 (MEASURED) keeps usage process-local in BOTH
+        # profiles — the durable adapter is composed, then consciously not
+        # bound, with the finding cited at the decision point.
+        assert source.count("InMemoryUsageAccounting()") == 2
+        assert "F-R179-06" in source
+        assert bind_at < source.index("del durable_usage") < else_branch
 
     def test_frozen_agent_tool_surface_uses_only_summary_on_usage(self) -> None:
         """F-R179-07: apps/admin_agent/tools.py (frozen) annotates the concrete

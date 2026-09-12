@@ -741,14 +741,24 @@ def build_runtime_profile(
     durable = settings is not None
     bridge: AsyncBridge | None = None
     bindings: DatabaseBindings | None = None
-    usage: UsageBinding
+    usage: InMemoryUsageAccounting
     audit: AuditLogPort
     if settings is not None:
         bridge = AsyncBridge()
         bindings = build_database_bindings(settings)
-        # F-R179-04 (measured 4.4: audit 1→0, usage 5.0→2.0 across restart):
-        # the EXISTING 0002 repositories replace the process-local logs.
-        audit, usage = build_durable_audit_usage(bindings, bridge)
+        # F-R179-04 (measured 4.4: audit 1→0 across restart): the EXISTING
+        # 0002 audit repository replaces the process-local log.
+        audit, durable_usage = build_durable_audit_usage(bindings, bridge)
+        # F-R179-06 (MEASURED live, evidence/r179/F06_usage_ledger_fk_violation.txt):
+        # binding the durable usage ledger makes EVERY /v1/execute fail 500 —
+        # `usage_ledger.execution_id` is a NOT NULL FK to `executions.id`, but
+        # ExecutionService reserves BEFORE any executions row exists (and the
+        # tool executor reserves under a call_id that never becomes one). The
+        # durable adapter is composed (proving the seam) but NOT bound: usage
+        # stays process-local in this profile until the operator rules on Q6
+        # (reserve-after-row vs. relaxing the FK). Flipping one name binds it.
+        del durable_usage
+        usage = InMemoryUsageAccounting()
     else:
         # In-memory profile: process-local audit + usage, unchanged.
         usage = InMemoryUsageAccounting()
@@ -1135,9 +1145,10 @@ def build_runtime_profile(
             # F-R179-07: the FROZEN apps/admin_agent/tools.py annotates the
             # concrete InMemoryUsageAccounting although it only calls
             # ``.summary`` (pinned by tests/composition/test_durable_audit_usage_r179.py).
-            # Both bindings satisfy that structurally; the annotation is fixed
-            # with the Q5 thaw, not by editing a frozen tree here.
-            usage=usage,  # type: ignore[arg-type]
+            # Any UsageBinding satisfies that structurally; the annotation is
+            # fixed with the Q5 thaw, not by editing a frozen tree here. Until
+            # F-R179-06 is ruled (Q6) the concrete type still matches.
+            usage=usage,
             audit=audit,
             capabilities=app.state.capability_catalog,
             exercise=app.state.exercise_surface,

@@ -647,8 +647,8 @@
         {
           "item": "Q1",
           "file": "apps/composition/runtime.py",
-          "loc": "+24/-11",
-          "summary": "DATABASE_URL decision + bridge/bindings hoisted BEFORE the execution service so audit+usage bind durably in the durable profile (one bridge, one bindings set; the later durable branch reuses them). In-memory profile byte-identical. F-R179-07: frozen apps/admin_agent/tools.py annotates the concrete InMemoryUsageAccounting but only calls .summary — one type: ignore at the call site, pinned by test; annotation fixed with the Q5 thaw."
+          "loc": "+34/-11",
+          "summary": "DATABASE_URL decision + bridge/bindings hoisted BEFORE the execution service so AUDIT binds durably in the durable profile (one bridge, one bindings set; the later durable branch reuses them). USAGE stays process-local in BOTH profiles by MEASURED F-R179-06: binding the durable ledger makes every /v1/execute fail 500 (usage_ledger.execution_id NOT NULL FK -> executions.id; ExecutionService reserves BEFORE the executions row exists; evidence/r179/F06_usage_ledger_fk_violation.txt) — the durable usage adapter is composed then consciously not bound (one-name flip once Q6 is ruled). In-memory profile byte-identical. F-R179-07 (frozen apps/admin_agent/tools.py annotates the concrete InMemoryUsageAccounting, only calls .summary — pinned by test) needs no type: ignore while the concrete type still matches; annotation fixed with the Q5 thaw."
         }
       ],
       "note": "Operator rulings on R179_HANDOFF.md section B (Q1-Q5). Q5 (ui/ thaw) is the NEXT round's opening commit, not this budget. Ceiling declared 8 BEFORE the first production commit; every file logged here before its commit (evidence/r179_state_ledger.md)."
