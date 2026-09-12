@@ -17,9 +17,10 @@ posture the test suite proves):
 
 - a hermetic `local-echo` provider serves `/v1/execute` (honestly labeled —
   it never pretends a real model answered);
-- a **demo principal** with a generous budget is auto-bound, so requests
-  need no Authorization header; its tenant id is printed in the startup
-  banner;
+- **auth only by default** (R168 D-07): a request without a Bearer token is
+  `401` on every `/v1/*` path except the public list. To exercise the API
+  without registering, opt in EXPLICITLY: `DEV_DEMO_PRINCIPAL=1` composes a
+  demo principal (tenant id printed in the startup banner; never admin);
 - async execute works end to end: `{"execution_policy": {"async": true}}`
   → 202 → the in-process worker drains it → poll `/v1/executions/{id}`.
 
@@ -92,11 +93,15 @@ console always authenticates — even on the in-memory profile — because
 
 | Profile | `create_app` identity mode | No `Authorization` header | Valid Bearer | Bad Bearer |
 |---|---|---|---|---|
-| in-memory (no `DATABASE_URL`) | **hybrid** (demo principal + auth) | demo principal (never admin) | real user; admin iff listed | 401 |
+| in-memory (no `DATABASE_URL`) | **auth only** | 401 | real user; admin iff listed | 401 |
+| in-memory + `DEV_DEMO_PRINCIPAL=1` | **hybrid** (dev opt-in) | demo principal (never admin) | real user; admin iff listed | 401 |
 | durable (`DATABASE_URL`) | auth only | 401 | real user; admin iff listed | 401 |
 
 `GET /v1/auth/session` without a token answers `200 {mode:"demo", is_admin:false}`
-on the in-memory profile — both UIs probe this, they never assume.
+ONLY in the `DEV_DEMO_PRINCIPAL=1` hybrid mode; otherwise 401 — both UIs probe
+this, they never assume. An admin is bound by ONE mechanism: a REAL verified
+session whose email is listed in `ADMIN_EMAILS` (`apps/api/auth.py`); there is
+no admin header, role table or token flag.
 
 Zero-config admin walkthrough:
 

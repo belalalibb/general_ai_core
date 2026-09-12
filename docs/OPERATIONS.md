@@ -247,6 +247,52 @@ tested, reviewed, never auto-applied.
 
 ---
 
+## 8.1 Learning custody governance (durable profile; DEC-03, R178)
+
+Custody is composed ONLY when `DATABASE_URL` is set. Every capture then needs
+three explicit references — `policy_id`, `rights_ref`, `idempotency_key` — and
+the tenant's policy must be declared BEFORE boot:
+
+```
+LEARNING_STORAGE_POLICIES='[{"tenant_id":"<uuid>","policy_id":"<uuid>","retention_seconds":3600}]'
+```
+
+`rights_ref` is an **attestation reference** (an opaque id the operator can
+trace outside the platform). It is NOT verified by the platform and does not
+establish ownership, consent or training authorization; the platform stores it
+as lineage only.
+
+Operator acts (admin session; each is audited as `SECURITY_POLICY_CHANGED`
+with `details.act`; all are absent — 404 — when custody is not composed):
+
+```
+POST /v1/admin/learning/custody/revoke               {policy_id}          → {policy_id, revoked_samples}
+POST /v1/admin/learning/custody/sweep                {}                   → {expired_samples, derived_copies:{checked,removed,retained}}
+POST /v1/admin/learning/custody/release-legacy-hold  {reconciliation_ref} → {released:bool, reconciliation_ref}
+```
+
+- **Revoke** records a permanent tenant/policy tombstone and redacts every
+  stored payload of that policy in ONE transaction (lineage rows stay).
+  Further captures under that policy are refused (404) even by a process
+  started with stale configuration.
+- **Sweep** (retention) is an **operator-invoked act, by decision (R179 D2=(a))** —
+  no internal scheduler exists. Recommended deployment form: an external
+  timer (cron/systemd) calling the same endpoint with an admin session.
+  It redacts payloads whose `expires_at` has passed and removes GOLD memory
+  copies that no longer have live custody.
+- **Legacy hold**: migration 0020 stamps every tenant that existed at upgrade
+  with a tenant-wide `legacy_unresolved` hold (unknown historical intent, NOT
+  an inferred policy). A held tenant cannot capture, read, list or save custody
+  (404). Release is an explicit reviewed act and REQUIRES a `reconciliation_ref`
+  (422 without). Before releasing: stop old learning writers, review the
+  tenant's historical samples, record the review under `reconciliation_ref` in
+  your own system, then call the endpoint. `released:false` means no hold was
+  present (already released or never held).
+- Before a production migration to 0020: stop ALL old learning writers; do not
+  resume old binaries afterward (they do not enforce holds/tombstones).
+
+---
+
 ## 9. Observability / audit
 
 - Per-execution: `GET /v1/executions/{id}` (result, artifacts incl.
@@ -260,6 +306,17 @@ tested, reviewed, never auto-applied.
 ---
 
 ## 10. Tests and verification
+
+**Governance truth (R179 B6):** `engineering/verification/check_repo.sh` has
+NO git-diff or git-status awareness. The change budget, the frozen trees and
+the manifest `log` are DECLARED in `green_manifest.json` and cross-checked by a
+human (the round report carries a production-file → manifest-log-line table);
+the gate validates the manifest against itself only. A production file edited
+without a log line is unauthorized work, not "forgiven" work. Proposed for a
+future round: a `git diff --name-only <base>` → manifest-log reconciliation
+check (not implemented).
+
+
 
 | Purpose | Command | Safe in dev? |
 |---|---|---|
@@ -326,7 +383,18 @@ reports missing stubs — a stubs gap, not a defect.
 
 ## 13. Known limitations (honest)
 No email delivery; durable stores exist for executions/identity/workspaces/
-source-change but usage/audit/learning samples remain in-process; no
+source-change/evaluations/learning custody/memory/conversations/audit.
+**Measured on the durable profile with a real process kill (R179,
+`evidence/r179/durability_measured_after_q1.json`):** memory items
+(preferences, GOLD copies), conversations and audit events survive a
+SIGKILL/restart (4.5 + rulings Q1). **Usage accounting is still composed
+IN-PROCESS on both profiles and resets on restart** (`used` 5.0 → 2.0):
+binding the existing `usage_ledger` repository fails at the database because
+`usage_ledger.execution_id` is a NOT NULL FK to `executions.id` while the
+execution service reserves BEFORE the executions row exists (F-R179-06,
+`evidence/r179/F06_usage_ledger_fk_violation.txt`) — decision-gated (Q6), not
+a composition defect; the durable adapter is composed and one name flips it
+once ruled. Billing/quota claims across restarts are therefore NOT made. No
 distributed worker; no token streaming; gateway onboarding is untestable
 end-to-end without a gateway; authoritative self-modification is gated off
 by design (the engineering workspace refuses the platform's own checkout —

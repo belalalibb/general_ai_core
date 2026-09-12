@@ -1,0 +1,89 @@
+{
+  "commit": "6f29873f",
+  "method": "python -m apps.main OS process over TCP; SIGKILL -9 between phases; DATABASE_URL on a fresh real-alembic schema",
+  "arrange": {
+    "p1_admitted": [
+      true,
+      null
+    ],
+    "p1_promote_status": 409,
+    "p1_promote_body": {
+      "error": {
+        "code": "validation_error",
+        "message": "Learning operation refused.",
+        "retryable": false,
+        "details": {},
+        "trace_id": null
+      }
+    },
+    "p2_conversation_execute_status": [
+      500,
+      500
+    ],
+    "p2_conversation_execute_status_after_restart": 500
+  },
+  "P1_knowledge_injected": {
+    "learned_keys_before": {
+      "keys": []
+    },
+    "learned_keys_after": {
+      "keys": []
+    },
+    "gold_blocks_before": 0,
+    "gold_blocks_after": 0,
+    "memory_blocks_before": 1,
+    "memory_blocks_after": 0,
+    "preference_items_before": {
+      "preferences": [
+        {
+          "id": "f6b27717-c76d-4119-84f5-9676aad0d8ed",
+          "key": "preferred_language",
+          "value": "ar",
+          "scope": "tenant",
+          "source": "preference",
+          "user_id": "d2b76383-c93a-4e5a-98fc-08df27f6cfc6",
+          "confidence": 1.0,
+          "evidence_count": 1,
+          "last_seen": "2026-09-12T04:07:08.368102+00:00",
+          "sensitivity": "low"
+        }
+      ]
+    },
+    "preference_items_after": {
+      "preferences": []
+    },
+    "custody_row_after_status": 200,
+    "custody_level_after": "VALIDATED"
+  },
+  "P2_conversation_continuity": {
+    "blocks_total_before": 2,
+    "blocks_total_after": 1,
+    "execute_after_status": 200,
+    "execute_after_error": null
+  },
+  "P3_audit_survivability": {
+    "total_after_login_in_boot_process": 1,
+    "total_before_kill": 0,
+    "total_after_restart": 0
+  },
+  "P4_usage_accounting": {
+    "summary_before_kill": {
+      "plan": "local-default",
+      "task_units": {
+        "limit": 1000000.0,
+        "used": 5.0,
+        "remaining": 999995.0
+      },
+      "modality_limits": {}
+    },
+    "summary_after_restart": {
+      "plan": "local-default",
+      "task_units": {
+        "limit": 1000000.0,
+        "used": 2.0,
+        "remaining": 999998.0
+      },
+      "modality_limits": {}
+    }
+  }
+}

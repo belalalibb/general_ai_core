@@ -36,7 +36,7 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 3127
+      "min_passed": 3504
     },
     "last_measured": {
       "passed": 3127,
@@ -625,6 +625,103 @@
           "summary": "Governed API/runtime custody injection, explicit references, tenant admission and safe refusals; derived-copy and revocation closure remain open."
         }
       ]
+    },
+    "round_r179_rulings": {
+      "ceiling": 10,
+      "ceiling_history": "declared 8 BEFORE the first production commit (5e16d0a6) -> 10 with the Q3 design note in evidence/r179_state_ledger.md committed BEFORE the Q3 production commit: Q3 = 4 files (the designed activation path spans graders.py + policy.py + the app.py composition, and the 201 the ruling names is the promote route in admin.py), Q4 = 2 (rules declared in core/admin/service.py, read by the shelf in apps/api/capabilities.py), Q2 = 2 (migration 0021 + tables.py metadata mirror); 2 + 4 + 2 + 2 = 10, no slack",
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 2,
+      "items": [
+        "Q1 durable audit + usage bound in the DATABASE_URL profile (4.5 seam pattern); measured before/after with a real SIGKILL",
+        "Q3 promote-to-GOLD completable over HTTP: GraderType.SECURITY activated with a real, non-vacuous security check (201 pass / 409 fail)",
+        "Q4 ONE declared source of admin payload field rules read by BOTH the validator and the shelf",
+        "Q2 smallest structural database guard (no trigger, no policy logic in DDL) that makes a pre-0020 writer fail at the database"
+      ],
+      "log": [
+        {
+          "item": "Q1",
+          "file": "apps/composition/audit_usage.py",
+          "loc": "+150/-0 (new)",
+          "summary": "DurableAuditLog / DurableUsageAccounting over the EXISTING 0002 repositories via AsyncBridge.run (4.5 pattern); UsageBinding protocol = accounting port + configure_tenant admin seam, satisfied by both bindings. No schema/route/dependency change."
+        },
+        {
+          "item": "Q1",
+          "file": "apps/composition/runtime.py",
+          "loc": "+34/-11",
+          "summary": "DATABASE_URL decision + bridge/bindings hoisted BEFORE the execution service so AUDIT binds durably in the durable profile (one bridge, one bindings set; the later durable branch reuses them). USAGE stays process-local in BOTH profiles by MEASURED F-R179-06: binding the durable ledger makes every /v1/execute fail 500 (usage_ledger.execution_id NOT NULL FK -> executions.id; ExecutionService reserves BEFORE the executions row exists; evidence/r179/F06_usage_ledger_fk_violation.txt) — the durable usage adapter is composed then consciously not bound (one-name flip once Q6 is ruled). In-memory profile byte-identical. F-R179-07 (frozen apps/admin_agent/tools.py annotates the concrete InMemoryUsageAccounting, only calls .summary — pinned by test) needs no type: ignore while the concrete type still matches; annotation fixed with the Q5 thaw."
+        }
+      ],
+      "note": "Operator rulings on R179_HANDOFF.md section B (Q1-Q5). Q5 (ui/ thaw) is the NEXT round's opening commit, not this budget. Ceiling declared 8 BEFORE the first production commit; every file logged here before its commit (evidence/r179_state_ledger.md)."
+    },
+    "round_r179": {
+      "ceiling": 9,
+      "budget_unit": "one production FILE under the counted roots (a file edited twice in the round is ONE change; every edit is described in that file's summary)",
+      "ceiling_history": "declared 6 (B7) -> elastic 8 when 4.5 triggered (evidence/r179/durability_measured_before.json) -> absolute 9 with the 4.7 ledger design note committed at 60d09d95 BEFORE the 4.7 production commit ccfa9a7d",
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 9,
+      "items": [
+        "R179-SD capability self-description: custody governance ids + action discovery derived from the canonical vocabulary",
+        "R179-OV operator visibility: read-only holds/revocations view; unambiguous legacy-release outcome; intake row-vs-layer fault clarity",
+        "R179-DC durability correction (conditional on the 4.4 measurement)"
+      ],
+      "log": [
+        {
+          "item": "R179-DC",
+          "file": "apps/composition/memory.py",
+          "loc": "+128/-0 (new)",
+          "summary": "DurableMemoryStore / DurableConversationStore: the EXISTING Postgres repositories (migrations 0002/0007, built by DatabaseBindings since V1, never consumed) adapted onto MemoryStorePort / ConversationStorePort over AsyncBridge.run — verbatim workspaces.py pattern. Measured-first: F-R179-01 (execute+conversation_id 500 via FK to an unwritten conversations table) and F-R179-03 (memory dies with the process). No schema, route, dependency or contract change."
+        },
+        {
+          "item": "R179-DC",
+          "file": "apps/composition/runtime.py",
+          "loc": "+13/-4",
+          "summary": "Durable branch binds build_durable_memory_stores(bindings, bridge); in-memory branch keeps InMemoryMemoryStore/InMemoryConversationStore (hoisted into the profile branch so the repo_map tool, composer, preference learner and create_app still share ONE instance). Before/after re-measure recorded in evidence/r179/durability_measured*.json."
+        },
+        {
+          "item": "R179-SD",
+          "file": "apps/api/capabilities.py",
+          "loc": "+6/-0 ; +45/-0 (second edit of the same file, same budget slot)",
+          "summary": "The ONE authorized closed-set widening 22 -> 23: id learning.custody_governance for the DEC03 routes /v1/admin/learning/custody/{revoke,sweep,release-legacy-hold} that were mounted without a shelf row. Pin updated with written justification in tests/api/test_capability_catalog_r177.py. || admin_actions_json(): action discovery derived purely from core.contracts.admin.ACTION_AREA + FINAL_ACTIVE_ADMIN_AREAS (every AdminAction once with its ONE owner area; every AdminArea once with active flag). No hand-maintained names (test scans the producer for enum literals). Payload-schema half NOT exposed (DEC-A design only)."
+        },
+        {
+          "item": "R179-SD",
+          "file": "apps/api/app.py",
+          "loc": "+14/-0 (catalog derivation only) ; +1/-1 (evidence string only; same slot)",
+          "summary": "Row derived from the SAME seam variables create_admin_router mounts the governance routes with (admin + memory + learning_custody + admin.audit); AVAILABLE iff mounted, INERT otherwise (hermetic proof tests/api/test_capability_shelf_coverage_r179.py). Row shape {id,state,evidence} unchanged (V7 exact-key pins intact). || [R179-SD/OV] learning.custody_governance evidence names the holds route alongside revoke|sweep|release-legacy-hold."
+        },
+        {
+          "item": "R179-SD",
+          "file": "apps/api/admin.py",
+          "loc": "+14/-1 ; +66/-4 (second edit, same slot)",
+          "summary": "GET /v1/admin/capabilities/actions serves the derived read model, admin-gated, serialized once at mount; separate route so the shelf row shape stays frozen for V7 consumers (ui/, apps/admin_agent untouched). || [R179-OV] GET /v1/admin/learning/custody/holds (read-only, not audited, admin-gated, mounted with the governance family); release-legacy-hold derives outcome released|already_released|no_hold from durable holds before/after + audit history and REFUSES (409) on contradiction; intake answers 503 retryable with the partial report on a layer fault."
+        },
+        {
+          "item": "R179-OV",
+          "file": "infrastructure/db/learning.py",
+          "loc": "+30/-0",
+          "summary": "LearningCustodyRepository.list_revocations(tenant_id): read-only, tenant-predicated SELECT over learning_policy_revocations; deliberately without _assert_reconciled so a HELD tenant can see its hold. No schema change."
+        },
+        {
+          "item": "R179-OV",
+          "file": "apps/composition/learning.py",
+          "loc": "+26/-0",
+          "summary": "DurableLearningCustody.list_revocations over the bridge; rows validated (tenant match, UUID/None policy, closed reason set) and reduced to plain values; CustodyRepositoryPort gains the read."
+        },
+        {
+          "item": "R179-OV",
+          "file": "core/learning/lifecycle.py",
+          "loc": "+42/-1",
+          "summary": "LearningHoldsReadPort + LearningLifecycleService.custody_holds(tenant_id): tenant-scoped read model {tenant_id, legacy_hold, holds[scope, policy_id, reason, recorded_at]}; refuses rows outside tenant scope; no mutation."
+        },
+        {
+          "item": "R179-OV",
+          "file": "apps/api/intake.py",
+          "loc": "+34/-11",
+          "summary": "IntakeAdapter.ingest classifies per-row failures: LearningStorageConflict/LearningStorageError => refused row (content-free reason), batch continues; any other exception => layer_fault='durable layer unavailable', stop, remaining rows in not_attempted, landed rows kept in admitted. IntakeReport gains layer_fault + not_attempted."
+        }
+      ],
+      "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. FINAL: 9 distinct production files (apps/composition/memory.py, apps/composition/runtime.py, apps/api/capabilities.py, apps/api/app.py, apps/api/admin.py, infrastructure/db/learning.py, apps/composition/learning.py, core/learning/lifecycle.py, apps/api/intake.py); 4.5 triggered (evidence/r179/durability_measured_before.json) and the 4.7 design note was committed at 60d09d95 BEFORE the 4.7 production commit ccfa9a7d. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."
     }
   },
   "baseline": {

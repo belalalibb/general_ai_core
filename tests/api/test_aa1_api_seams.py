@@ -904,6 +904,8 @@ def test_route_surface_delta_is_exactly_the_aa1_set() -> None:
         "GET /healthz",
         "GET /v1/admin/audit",
         "GET /v1/admin/capabilities",
+        # R179 4.3 — conscious pin update (tests/api/test_action_discovery_r179.py).
+        "GET /v1/admin/capabilities/actions",
         "GET /v1/admin/capabilities/exercisable",
         "GET /v1/admin/changes",
         "GET /v1/admin/changes/{change_id}",

@@ -1,0 +1,71 @@
+{
+  "rolling_pair": {
+    "old_writer_commit": "2c197229",
+    "hold_rows_after_0020": 1,
+    "old_writer_booted_on_0020": true,
+    "old_writer_capture_status": 201,
+    "old_writer_capture_body": {
+      "id": "76606831-67da-4b01-9d58-974e58574d01",
+      "source_execution_id": "d328a3c4-d34b-4b10-956a-19de42803f65",
+      "tenant_id": "1cfe42a0-8332-4f2d-9139-da6aade946c9",
+      "eligibility": "pending",
+      "sanitization_state": "pending",
+      "verification_level": "RAW",
+      "dataset_id": null
+    },
+    "new_writer_capture_under_hold_status": 404,
+    "old_writer_stopped_signal": -9,
+    "release_status": 200,
+    "release_body": {
+      "released": true,
+      "reconciliation_ref": "d6511d3c-4d01-4612-8611-c3a9e5fba794",
+      "outcome": "released"
+    },
+    "new_writer_capture_after_release_status": 201,
+    "rows": {
+      "learning_samples": 2,
+      "learning_sample_custody": 2,
+      "orphan_samples_without_custody": 0,
+      "orphan_custody_without_sample": 0,
+      "revocations": 0
+    },
+    "custody_rows_by_key": [
+      "76606831-67da-4b01-9d58-974e58574d01",
+      "ac49c913-96a5-4d89-b132-96c10aad5c44"
+    ],
+    "rows_landed_by_old_writer_under_hold": 1,
+    "old_writer_refused_by_schema": false
+  },
+  "git_head": "482e87b0",
+  "crash_during_write": {
+    "before": {
+      "learning_samples": 0,
+      "learning_sample_custody": 0,
+      "orphan_samples_without_custody": 0,
+      "orphan_custody_without_sample": 0,
+      "revocations": 0
+    },
+    "write_in_flight_when_killed": 1,
+    "kill_signal": -9,
+    "client_outcome": {
+      "error": "RemoteProtocolError"
+    },
+    "after_crash": {
+      "learning_samples": 0,
+      "learning_sample_custody": 0,
+      "orphan_samples_without_custody": 0,
+      "orphan_custody_without_sample": 0,
+      "revocations": 0
+    },
+    "retry_same_key_status": 201,
+    "retry_again_status": 201,
+    "retry_same_id": true,
+    "after_restart": {
+      "learning_samples": 1,
+      "learning_sample_custody": 1,
+      "orphan_samples_without_custody": 0,
+      "orphan_custody_without_sample": 0,
+      "revocations": 0
+    }
+  }
+}
