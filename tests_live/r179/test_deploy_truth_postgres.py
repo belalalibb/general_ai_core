@@ -82,18 +82,24 @@ def sql(database_url, statement, **params):
 
 
 def current_revision(database_url):
-    rows = sql(database_url, "SELECT version_num FROM alembic_version")
+    rows = sql(
+        database_url,
+        "SELECT version_num FROM alembic_version "
+        "WHERE to_regclass('public.alembic_version') IS NOT NULL",
+    ) if "alembic_version" in all_tables(database_url) else []
     return rows[0][0] if rows else None
 
 
-def tables(database_url):
+def all_tables(database_url):
     return {
         r[0] for r in sql(
-            database_url,
-            "SELECT tablename FROM pg_tables "
-            "WHERE schemaname='public' AND tablename<>'alembic_version'",
+            database_url, "SELECT tablename FROM pg_tables WHERE schemaname='public'"
         )
     }
+
+
+def tables(database_url):
+    return all_tables(database_url) - {"alembic_version"}
 
 
 def test_alembic_forward_0001_to_head_then_backward_to_base_through_the_real_tool(cluster):
