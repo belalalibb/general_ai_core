@@ -43,7 +43,8 @@ a tenant) rollback is DENIED (RollbackUnavailable) instead of inventing a
 
 from __future__ import annotations
 
-from typing import Protocol
+from dataclasses import dataclass
+from typing import Final, Protocol
 from uuid import UUID
 
 from pydantic import ValidationError
@@ -87,6 +88,151 @@ from core.skills.sources import InvalidSourceUrl, SkillSourceCatalog, SkillSourc
 from core.tools.errors import ToolNotRegistered
 from core.tools.registry import ToolRegistry
 from core.usage.errors import EntitlementNotConfigured
+
+# --- payload field rules — the ONE declared source (R179 rulings Q4 / DEC-A) --------------
+#
+# Both the validator below (``field_rule_problem`` runs FIRST inside
+# ``_validation_problem``) and the shelf's action discovery
+# (``apps/api/capabilities.py::admin_actions_json`` publishes ``fields`` per
+# action) read THIS table. There is no second list: a UI form and the refusal
+# it receives are projections of the same rows. Presence + shape live here;
+# semantic checks (registered? template? contract parse? duplicate?) stay
+# imperative and run only after every declared rule holds.
+
+#: Closed set of field kinds a rule may declare (data — a form can switch on it).
+PAYLOAD_FIELD_KINDS: Final[frozenset[str]] = frozenset(
+    {"string", "uuid", "number", "object", "list", "bool"}
+)
+
+
+@dataclass(frozen=True)
+class FieldRule:
+    """One payload field: name, closed kind, required flag, owning contract (if any)."""
+
+    name: str
+    kind: str
+    required: bool = True
+    #: Contract class that gives the value its structure (parsed by the
+    #: semantic half), or None for a plain scalar/list field.
+    contract: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.kind not in PAYLOAD_FIELD_KINDS:
+            msg = f"unknown field kind: {self.kind}"
+            raise ValueError(msg)
+
+
+def _proposal_sheet_rules() -> tuple[FieldRule, ...]:
+    """CAPABILITY_PROPOSAL's payload IS the §7 decision sheet — derive from the contract."""
+    rows = []
+    for name, info in CapabilityProposalPayload.model_fields.items():
+        rows.append(
+            FieldRule(
+                name=name,
+                kind="bool" if info.annotation is bool else "string",
+                required=info.is_required(),
+                contract="CapabilityProposalPayload",
+            )
+        )
+    return tuple(rows)
+
+
+_KEY_RULES = {
+    "model": (FieldRule("model_key", "string"),),
+    "provider": (FieldRule("provider_key", "string"),),
+    "skill": (FieldRule("skill_id", "uuid"),),
+    "tool": (FieldRule("tool_id", "uuid"),),
+}
+
+PAYLOAD_FIELD_RULES: Final[dict[AdminAction, tuple[FieldRule, ...]]] = {
+    AdminAction.ENABLE_MODEL: _KEY_RULES["model"],
+    AdminAction.DISABLE_MODEL: _KEY_RULES["model"],
+    AdminAction.ENABLE_PROVIDER: _KEY_RULES["provider"],
+    AdminAction.DISABLE_PROVIDER: _KEY_RULES["provider"],
+    AdminAction.ENABLE_SKILL: _KEY_RULES["skill"],
+    AdminAction.DISABLE_SKILL: _KEY_RULES["skill"],
+    AdminAction.SET_SKILL_SOURCES: (
+        FieldRule("urls", "list"),
+        FieldRule("disabled", "list", required=False),
+    ),
+    AdminAction.ENABLE_TOOL: _KEY_RULES["tool"],
+    AdminAction.DISABLE_TOOL: _KEY_RULES["tool"],
+    AdminAction.REGISTER_PROVIDER: (
+        FieldRule("provider", "object", contract="Provider"),
+        FieldRule("manifest", "object", contract="ProviderManifest"),
+    ),
+    AdminAction.REGISTER_MODEL: (
+        FieldRule("model", "object", contract="Model"),
+        FieldRule("bindings", "list", required=False, contract="ProviderModelBinding"),
+    ),
+    AdminAction.CAPABILITY_PROPOSAL: _proposal_sheet_rules(),
+    AdminAction.SET_PLAN: (
+        FieldRule("target_tenant_id", "uuid"),
+        FieldRule("plan", "string"),
+        FieldRule("task_units_limit", "number"),
+    ),
+    AdminAction.SET_ROUTING_WEIGHTS: (FieldRule("weights", "object", contract="ScoringWeights"),),
+}
+assert set(PAYLOAD_FIELD_RULES) == set(AdminAction)  # closed: every verb declares its fields
+
+
+def field_rules_json(action: AdminAction) -> list[JsonObject]:
+    """Pure projection of one action's declared rules (the shelf's read)."""
+    return [
+        {"name": r.name, "kind": r.kind, "required": r.required, "contract": r.contract}
+        for r in PAYLOAD_FIELD_RULES[action]
+    ]
+
+
+def _shape_problem(rule: FieldRule, value: object) -> str | None:
+    kind = rule.kind
+    if kind == "string" and (not isinstance(value, str) or not value):
+        return f"payload requires a non-empty '{rule.name}'"
+    if kind == "uuid":
+        if not isinstance(value, str) or not value:
+            return f"payload requires a non-empty '{rule.name}'"
+        try:
+            UUID(value)
+        except ValueError:
+            return f"'{rule.name}' is not a UUID"
+    if kind == "number":
+        if isinstance(value, bool) or not isinstance(value, int | float):
+            return f"payload requires a numeric '{rule.name}'"
+        if value < 0:
+            return f"'{rule.name}' must be >= 0"
+    if kind == "object" and not isinstance(value, dict):
+        suffix = f" ({rule.contract} contract)" if rule.contract else ""
+        return f"payload requires a '{rule.name}' object{suffix}"
+    if kind == "list":
+        if not isinstance(value, list):
+            return f"'{rule.name}' must be a list"
+        if rule.required and not value:
+            return f"payload requires a non-empty '{rule.name}' list"
+    if kind == "bool" and not isinstance(value, bool):
+        return f"'{rule.name}' must be a boolean"
+    return None
+
+
+def field_rule_problem(action: AdminAction, payload: JsonObject) -> str | None:
+    """First declared-rule violation for ``payload`` under ``action`` (None = all hold).
+
+    Presence and shape ONLY — the semantic half (registries, contract parse,
+    duplicates) belongs to ``AdminConfigService``. CAPABILITY_PROPOSAL is
+    delegated entirely to its contract parse (the sheet IS the contract), so
+    its rules describe the form but refuse nothing here.
+    """
+    if action is AdminAction.CAPABILITY_PROPOSAL:
+        return None
+    for rule in PAYLOAD_FIELD_RULES[action]:
+        if rule.name not in payload:
+            if rule.required:
+                suffix = " list" if rule.kind == "list" else ""
+                return f"payload requires a non-empty '{rule.name}'{suffix}"
+            continue
+        problem = _shape_problem(rule, payload[rule.name])
+        if problem is not None:
+            return problem
+    return None
 
 
 class AdminPersistencePort(Protocol):
@@ -399,19 +545,21 @@ class AdminConfigService:
     def _validation_problem(self, change: ConfigChange) -> str | None:
         action = change.action
         payload = change.payload
+        # R179 rulings Q4: presence + shape come from the ONE declared table
+        # (PAYLOAD_FIELD_RULES) — the same rows the shelf publishes. Only the
+        # semantic half (registries, contracts, duplicates) is imperative below.
+        declared = field_rule_problem(action, payload)
+        if declared is not None:
+            return declared
         if action in (AdminAction.ENABLE_MODEL, AdminAction.DISABLE_MODEL):
-            model_key = payload.get("model_key")
-            if not isinstance(model_key, str) or not model_key:
-                return "payload requires a non-empty 'model_key'"
+            model_key = str(payload["model_key"])
             try:
                 self._models.get(model_key)
             except ModelNotRegistered:
                 return f"model not registered: {model_key}"
             return None
         if action in (AdminAction.ENABLE_PROVIDER, AdminAction.DISABLE_PROVIDER):
-            provider_key = payload.get("provider_key")
-            if not isinstance(provider_key, str) or not provider_key:
-                return "payload requires a non-empty 'provider_key'"
+            provider_key = str(payload["provider_key"])
             try:
                 entry = self._providers.get(provider_key)
             except ProviderNotRegistered:
@@ -426,9 +574,6 @@ class AdminConfigService:
         if action in (AdminAction.ENABLE_SKILL, AdminAction.DISABLE_SKILL):
             if self._skills is None:
                 return "skills registry seam is not bound in this composition"
-            problem = self._require_uuid_payload(payload, "skill_id")
-            if problem is not None:
-                return problem
             try:
                 skill = self._skills.get(UUID(str(payload["skill_id"])))
             except SkillNotRegistered:
@@ -451,12 +596,9 @@ class AdminConfigService:
         if action is AdminAction.SET_SKILL_SOURCES:
             if self._skill_sources is None:
                 return "skill-source catalog seam is not bound in this composition"
-            urls = payload.get("urls")
-            if not isinstance(urls, list) or not urls:
-                return "payload requires a non-empty 'urls' list (priority order)"
+            urls = payload["urls"]
             disabled = payload.get("disabled", [])
-            if not isinstance(disabled, list):
-                return "'disabled' must be a list of urls when given"
+            assert isinstance(urls, list) and isinstance(disabled, list)  # declared rules held
             # Dry-run the catalog's own admission (https-only, no dupes,
             # disabled ⊆ urls) on a THROWAWAY instance — same rules, one
             # place, zero mutation of the live catalog before publish.
@@ -471,9 +613,6 @@ class AdminConfigService:
         if action in (AdminAction.ENABLE_TOOL, AdminAction.DISABLE_TOOL):
             if self._tools is None:
                 return "tools registry seam is not bound in this composition"
-            problem = self._require_uuid_payload(payload, "tool_id")
-            if problem is not None:
-                return problem
             try:
                 self._tools.get(UUID(str(payload["tool_id"])))
             except ToolNotRegistered:
@@ -486,27 +625,9 @@ class AdminConfigService:
         if action is AdminAction.CAPABILITY_PROPOSAL:
             return self._capability_proposal_problem(payload)
         if action is AdminAction.SET_PLAN:
-            target = payload.get("target_tenant_id")
-            plan = payload.get("plan")
-            limit = payload.get("task_units_limit")
-            if not isinstance(target, str) or not target:
-                return "payload requires 'target_tenant_id'"
-            try:
-                UUID(target)
-            except ValueError:
-                return "'target_tenant_id' is not a UUID"
-            if not isinstance(plan, str) or not plan:
-                return "payload requires a non-empty 'plan'"
-            if isinstance(limit, bool) or not isinstance(limit, int | float):
-                return "payload requires a numeric 'task_units_limit'"
-            if limit < 0:
-                return "'task_units_limit' must be >= 0"
-            return None
-        weights = payload.get("weights")
-        if not isinstance(weights, dict):
-            return "payload requires a 'weights' object"
+            return None  # every SET_PLAN rule is presence/shape — declared above
         try:
-            ScoringWeights.model_validate(weights)
+            ScoringWeights.model_validate(payload["weights"])
         except ValueError:
             return "'weights' is not a valid ScoringWeights object"
         return None
@@ -519,12 +640,8 @@ class AdminConfigService:
         this payload: the contracts hold no secret fields by construction;
         credential custody stays in the secret-manager flow (opaque refs).
         """
-        raw_provider = payload.get("provider")
-        raw_manifest = payload.get("manifest")
-        if not isinstance(raw_provider, dict):
-            return "payload requires a 'provider' object (03 §4 Provider contract)"
-        if not isinstance(raw_manifest, dict):
-            return "payload requires a 'manifest' object (30 §7 ProviderManifest)"
+        raw_provider = payload["provider"]
+        raw_manifest = payload["manifest"]
         try:
             provider = Provider.model_validate(raw_provider)
         except ValueError as exc:
@@ -541,9 +658,7 @@ class AdminConfigService:
 
     def _register_model_problem(self, payload: JsonObject) -> str | None:
         """REGISTER_MODEL validation — contract-parse + duplicate + binding seam."""
-        raw_model = payload.get("model")
-        if not isinstance(raw_model, dict):
-            return "payload requires a 'model' object (03 §4 Model contract)"
+        raw_model = payload["model"]
         try:
             model = Model.model_validate(raw_model)
         except ValueError as exc:
@@ -554,8 +669,7 @@ class AdminConfigService:
         except ModelNotRegistered:
             pass
         raw_bindings = payload.get("bindings", [])
-        if not isinstance(raw_bindings, list):
-            return "'bindings' must be a list when given"
+        assert isinstance(raw_bindings, list)  # declared rule held
         if raw_bindings and self._bindings is None:
             return "bindings registry seam is not bound in this composition"
         for row in raw_bindings:
@@ -592,17 +706,6 @@ class AdminConfigService:
             first = exc.errors()[0]
             location = ".".join(str(part) for part in first.get("loc", ())) or "payload"
             return f"capability proposal sheet invalid at '{location}': {first.get('msg')}"
-        return None
-
-    @staticmethod
-    def _require_uuid_payload(payload: JsonObject, field: str) -> str | None:
-        value = payload.get(field)
-        if not isinstance(value, str) or not value:
-            return f"payload requires a non-empty '{field}'"
-        try:
-            UUID(value)
-        except ValueError:
-            return f"'{field}' is not a UUID"
         return None
 
     def _impact_preview(self, change: ConfigChange) -> str:

@@ -40,6 +40,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+from core.admin.service import field_rules_json
 from core.contracts.admin import ACTION_AREA, FINAL_ACTIVE_ADMIN_AREAS, AdminAction, AdminArea
 from core.contracts.base import JsonObject
 
@@ -146,13 +147,20 @@ def admin_actions_json() -> JsonObject:
     ``AdminAction`` and every ``AdminArea`` value is enumerated from the enums,
     so drift between vocabulary and discovery is impossible by construction.
 
-    Scope (recorded): the ACTION half only. The payload-schema half stays
-    imperative in ``core/admin/service.py`` (DEC-A: design only this round) and
-    is deliberately NOT exposed here. The shelf row shape ``{id,state,evidence}``
-    is untouched — this is a separate read model on its own route.
+    R179 rulings Q4 (DEC-A approved): the payload half is now the SAME
+    declared table the validator reads — ``core.admin.service.PAYLOAD_FIELD_RULES``
+    — projected per action as ``fields`` (name / kind / required / contract).
+    A form built from a row and the refusal the validator answers are two
+    reads of one source; no second list exists. The shelf row shape
+    ``{id,state,evidence}`` is untouched — this is a separate read model on
+    its own route.
     """
     actions = [
-        {"action": action.value, "area": ACTION_AREA[action].value}
+        {
+            "action": action.value,
+            "area": ACTION_AREA[action].value,
+            "fields": field_rules_json(action),
+        }
         for action in sorted(AdminAction, key=lambda a: a.value)
     ]
     areas = [
@@ -167,6 +175,7 @@ def admin_actions_json() -> JsonObject:
         "scope": "process",
         "capability": ADMIN_ACTIONS_CAPABILITY_ID,
         "vocabulary": "core.contracts.admin.ACTION_AREA",
+        "field_rules": "core.admin.service.PAYLOAD_FIELD_RULES",
         "actions": actions,
         "areas": areas,
     }
