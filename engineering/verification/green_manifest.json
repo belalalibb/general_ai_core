@@ -630,14 +630,27 @@
       "ceiling": 8,
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 0,
+      "changes_used": 2,
       "items": [
         "Q1 durable audit + usage bound in the DATABASE_URL profile (4.5 seam pattern); measured before/after with a real SIGKILL",
         "Q3 promote-to-GOLD completable over HTTP: GraderType.SECURITY activated with a real, non-vacuous security check (201 pass / 409 fail)",
         "Q4 ONE declared source of admin payload field rules read by BOTH the validator and the shelf",
         "Q2 smallest structural database guard (no trigger, no policy logic in DDL) that makes a pre-0020 writer fail at the database"
       ],
-      "log": [],
+      "log": [
+        {
+          "item": "Q1",
+          "file": "apps/composition/audit_usage.py",
+          "loc": "+150/-0 (new)",
+          "summary": "DurableAuditLog / DurableUsageAccounting over the EXISTING 0002 repositories via AsyncBridge.run (4.5 pattern); UsageBinding protocol = accounting port + configure_tenant admin seam, satisfied by both bindings. No schema/route/dependency change."
+        },
+        {
+          "item": "Q1",
+          "file": "apps/composition/runtime.py",
+          "loc": "+24/-11",
+          "summary": "DATABASE_URL decision + bridge/bindings hoisted BEFORE the execution service so audit+usage bind durably in the durable profile (one bridge, one bindings set; the later durable branch reuses them). In-memory profile byte-identical. F-R179-07: frozen apps/admin_agent/tools.py annotates the concrete InMemoryUsageAccounting but only calls .summary — one type: ignore at the call site, pinned by test; annotation fixed with the Q5 thaw."
+        }
+      ],
       "note": "Operator rulings on R179_HANDOFF.md section B (Q1-Q5). Q5 (ui/ thaw) is the NEXT round's opening commit, not this budget. Ceiling declared 8 BEFORE the first production commit; every file logged here before its commit (evidence/r179_state_ledger.md)."
     },
     "round_r179": {

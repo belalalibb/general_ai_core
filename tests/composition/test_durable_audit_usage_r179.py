@@ -107,12 +107,18 @@ class FakeUsageRepository:
         return ledger
 
     async def refund(self, execution_id: UUID) -> UsageLedger:
-        ledger = self.ledgers[execution_id].model_copy(update={"status": UsageLedgerStatus.REFUNDED})
+        ledger = self.ledgers[execution_id].model_copy(
+            update={"status": UsageLedgerStatus.REFUNDED}
+        )
         self.ledgers[execution_id] = ledger
         return ledger
 
     async def fail(
-        self, execution_id: UUID, units_settled: float = 0, *, modality_costs: JsonObject | None = None
+        self,
+        execution_id: UUID,
+        units_settled: float = 0,
+        *,
+        modality_costs: JsonObject | None = None,
     ) -> UsageLedger:
         self.calls.append(("fail", execution_id, units_settled, modality_costs))
         ledger = self.ledgers[execution_id].model_copy(
@@ -131,11 +137,7 @@ class FakeUsageRepository:
             raise EntitlementNotConfigured(tenant_id)
         plan, limit = self.plans[tenant_id]
         used = sum(
-            (
-                lg.units_reserved
-                if lg.status is UsageLedgerStatus.RESERVED
-                else lg.units_settled
-            )
+            (lg.units_reserved if lg.status is UsageLedgerStatus.RESERVED else lg.units_settled)
             for lg in self.ledgers.values()
             if lg.tenant_id == tenant_id
         )
@@ -155,7 +157,11 @@ def bridge() -> Iterator[AsyncBridge]:
 
 def _event(tenant: UUID = TENANT, kind: AuditEventType = AuditEventType.LOGIN) -> AuditEvent:
     return AuditEvent(
-        id=uuid4(), tenant_id=tenant, event_type=kind, actor_id=uuid4(), occurred_at=datetime.now(UTC)
+        id=uuid4(),
+        tenant_id=tenant,
+        event_type=kind,
+        actor_id=uuid4(),
+        occurred_at=datetime.now(UTC),
     )
 
 
@@ -217,9 +223,12 @@ class TestDurableUsageAccounting:
 
 class TestPortParityAndBuilder:
     def test_both_bindings_satisfy_the_ports(self, bridge: AsyncBridge) -> None:
-        durable_audit: AuditLogPort = DurableAuditLog(repository=FakeAuditRepository(), bridge=bridge)  # type: ignore[arg-type]
+        durable_audit: AuditLogPort = DurableAuditLog(
+            repository=FakeAuditRepository(), bridge=bridge
+        )  # type: ignore[arg-type]
         durable_usage: UsageAccountingPort = DurableUsageAccounting(
-            repository=FakeUsageRepository(), bridge=bridge  # type: ignore[arg-type]
+            repository=FakeUsageRepository(),
+            bridge=bridge,  # type: ignore[arg-type]
         )
         for port, impls in (
             (AuditLogPort, (durable_audit, InMemoryAuditLog())),
@@ -244,12 +253,32 @@ class TestPortParityAndBuilder:
 class TestRuntimeBinding:
     def test_runtime_binds_durable_audit_and_usage_only_in_the_database_branch(self) -> None:
         source = RUNTIME_PY.read_text(encoding="utf-8")
-        assert "from apps.composition.audit_usage import build_durable_audit_usage" in source
-        bind_at = source.index("build_durable_audit_usage(bindings, bridge)")
+        assert (
+            "from apps.composition.audit_usage import UsageBinding, build_durable_audit_usage"
+            in (source)
+        )
+        # The binding is born inside the FIRST `if settings is not None:` block
+        # (the durable connections are built before the execution service that
+        # consumes usage), and the in-memory classes are the ONLY else-branch.
+        bind_at = source.index("audit, usage = build_durable_audit_usage(bindings, bridge)")
         durable_branch = source.index("if settings is not None:\n        bridge = AsyncBridge()")
-        else_branch = source.index("    else:\n        store = InMemoryExecutionStore()")
+        else_branch = source.index(
+            "    else:\n        # In-memory profile: process-local audit + usage, unchanged."
+        )
         assert durable_branch < bind_at < else_branch
-        assert "InMemoryUsageAccounting()" in source and "InMemoryAuditLog()" in source
+        # Exactly one place constructs each in-memory class (no second path).
+        assert source.count("InMemoryUsageAccounting()") == 1
+        assert source.count("InMemoryAuditLog()") == 1
+
+    def test_frozen_agent_tool_surface_uses_only_summary_on_usage(self) -> None:
+        """F-R179-07: apps/admin_agent/tools.py (frozen) annotates the concrete
+        InMemoryUsageAccounting but only ever calls ``.summary`` — both bindings
+        satisfy that structurally; the annotation waits for the Q5 thaw."""
+        import re
+
+        source = (RUNTIME_PY.parent.parent / "admin_agent" / "tools.py").read_text(encoding="utf-8")
+        uses = set(re.findall(r"surface\.usage\.(\w+)", source))
+        assert uses == {"summary"}, uses
 
     def test_in_memory_profile_is_unchanged(self) -> None:
         from apps.composition.runtime import build_runtime_profile

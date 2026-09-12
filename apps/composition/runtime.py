@@ -72,6 +72,7 @@ from apps.api.worker import ExecutionMessageHandler
 from apps.api.workspaces import InMemoryProjectStore, ProjectStorePort
 from apps.composition.admin_console import attach_admin_console
 from apps.composition.agent import ComposedAgent, build_agent, grant_agent_tenant
+from apps.composition.audit_usage import UsageBinding, build_durable_audit_usage
 from apps.composition.bridge import AsyncBridge
 from apps.composition.database import (
     DatabaseBindings,
@@ -113,6 +114,7 @@ from core.agent import (
     MIN_REASONING_MAX_TOKENS,
 )
 from core.audit.memory import InMemoryAuditLog
+from core.audit.ports import AuditLogPort
 from core.context.composer import ContextComposer
 from core.contracts.admin import FINAL_ACTIVE_ADMIN_AREAS
 from core.contracts.domain import (
@@ -315,7 +317,7 @@ class BudgetGrantingIdentity:
     """
 
     inner: IdentityServicePort
-    usage: InMemoryUsageAccounting
+    usage: UsageBinding
     #: R160: further first-appearance grants (the shared agent firewall's
     #: read-only tenant policy) ride the SAME seam — one derivation of
     #: "tenant appeared", two consumers.
@@ -475,7 +477,7 @@ class RuntimeProfile:
     relay: OutboxRelay
     outbox: OutboxPort
     identity: IdentityServicePort | None
-    usage: InMemoryUsageAccounting
+    usage: UsageBinding
     providers: ProviderRegistry
     models: ModelRegistry
     bindings_registry: BindingRegistry
@@ -731,11 +733,26 @@ def build_runtime_profile(
         _bind_echo_provider(providers, models, binding_registry, adapters, credential_refs)
         provider_keys = ["local_echo"]
 
-    # --- usage / audit (in-memory across both profiles for the control
-    # plane; durable usage remains a later binding — honest scope). The
-    # evaluation store is bound per profile below (R177-FIX-11). ----------
-    usage = InMemoryUsageAccounting()
-    audit = InMemoryAuditLog()
+    # --- durable connections FIRST (R179 rulings Q1): audit + usage are
+    # consumed by the execution service composed right below, so the
+    # DATABASE_URL decision — and the bridge/bindings it implies — happens
+    # here; the durable branch further down reuses these SAME instances.
+    settings = database_settings_from_env(env_dict)
+    durable = settings is not None
+    bridge: AsyncBridge | None = None
+    bindings: DatabaseBindings | None = None
+    usage: UsageBinding
+    audit: AuditLogPort
+    if settings is not None:
+        bridge = AsyncBridge()
+        bindings = build_database_bindings(settings)
+        # F-R179-04 (measured 4.4: audit 1→0, usage 5.0→2.0 across restart):
+        # the EXISTING 0002 repositories replace the process-local logs.
+        audit, usage = build_durable_audit_usage(bindings, bridge)
+    else:
+        # In-memory profile: process-local audit + usage, unchanged.
+        usage = InMemoryUsageAccounting()
+        audit = InMemoryAuditLog()
 
     # --- routing + execution (the SAME instances everywhere) -----------------
     router = SimpleScoringRouter(providers, models, binding_registry)
@@ -747,11 +764,7 @@ def build_runtime_profile(
         max_retries_per_candidate=_provider_retries(env_dict),
     )
 
-    # --- durable branch (DATABASE_URL) ---------------------------------------
-    settings = database_settings_from_env(env_dict)
-    durable = settings is not None
-    bridge: AsyncBridge | None = None
-    bindings: DatabaseBindings | None = None
+    # --- durable branch (DATABASE_URL) — bridge/bindings built above -------
     identity: IdentityServicePort | None = None
     demo_principal: Principal | None = None
 
@@ -785,8 +798,7 @@ def build_runtime_profile(
     memory_store: MemoryStorePort
     conversations: ConversationStorePort
     if settings is not None:
-        bridge = AsyncBridge()
-        bindings = build_database_bindings(settings)
+        assert bridge is not None and bindings is not None  # built above (one set)
         plan_id = ensure_default_plan(bindings, bridge)
         # Gap 1b hydration: replay durably onboarded gateway providers into
         # the SAME registries/maps composed above (the ExecutionService and
@@ -1120,7 +1132,12 @@ def build_runtime_profile(
             execution_service=execution_service,
             execution_store=store,
             admin=admin,
-            usage=usage,
+            # F-R179-07: the FROZEN apps/admin_agent/tools.py annotates the
+            # concrete InMemoryUsageAccounting although it only calls
+            # ``.summary`` (pinned by tests/composition/test_durable_audit_usage_r179.py).
+            # Both bindings satisfy that structurally; the annotation is fixed
+            # with the Q5 thaw, not by editing a frozen tree here.
+            usage=usage,  # type: ignore[arg-type]
             audit=audit,
             capabilities=app.state.capability_catalog,
             exercise=app.state.exercise_surface,
