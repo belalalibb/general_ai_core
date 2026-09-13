@@ -20,7 +20,8 @@ from committed evidence; nothing is claimed that a test or a measurement did not
 | apps/admin_agent/tools.py | +6/−2 | yes | Q5 (F-R179-07) |
 | **total** | **1 file** | **1 entry = changes_used 1 ≤ ceiling 1** | — |
 
-Outside the counted roots (thawed by ruling Q5): `ui/admin/app.js` +43/−19, `ui/admin/index.html` +1/−0.
+Outside the counted roots (thawed by ruling Q5, RATIFIED by R180 ruling 2): `ui/admin/app.js` +43/−19, `ui/admin/index.html` +1/−0.
+`apps/admin_agent/` thaw scope (RATIFIED by R180 ruling 1, R180-DEC-02): exactly `tools.py` — the port annotation and its import; no other file under that tree.
 Frozen this round: `core/tools/gate.py`, `PROJECT_EXECUTION_STATE.md`, `final_docs_v3` (only `60_DECISION_LOG.md` appended, +3 lines) — zero diff otherwise.
 
 ## Part 2 — Findings

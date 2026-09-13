@@ -134,3 +134,25 @@ class TestFR17907:
     def test_runtime_call_site_needs_no_ignore(self) -> None:
         runtime = (ROOT / "apps/composition/runtime.py").read_text(encoding="utf-8")
         assert "type: ignore[arg-type]" not in runtime
+
+
+class TestR180RulingScope:
+    """R180 operator rulings (R180-DEC-02): the ``apps/admin_agent/`` thaw is
+    ratified STRICTLY for the ``UsageAccountingPort`` annotation in ``tools.py``
+    and must not generalize to other files under that tree. Pinned on the
+    source, not on git: every other module under ``apps/admin_agent/`` must not
+    reference the R180 thaw at all, and ``tools.py`` must reference the port in
+    exactly the two places the ruling covers (import + annotation)."""
+
+    def test_tools_py_thaw_is_exactly_the_port_annotation(self) -> None:
+        source = TOOLS_PY.read_text(encoding="utf-8")
+        assert source.count("UsageAccountingPort") == 2, "import + annotation, nothing more"
+        assert "InMemoryUsageAccounting" not in source
+
+    def test_no_other_admin_agent_module_carries_an_r180_edit_marker(self) -> None:
+        tree = TOOLS_PY.parent
+        others = sorted(p for p in tree.glob("*.py") if p.name != "tools.py")
+        assert others, "admin_agent tree unexpectedly empty"
+        for path in others:
+            text = path.read_text(encoding="utf-8")
+            assert "R180" not in text, f"{path.name}: R180 marker outside the ratified scope"
