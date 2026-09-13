@@ -37,6 +37,18 @@ if ! python3 -c "import json;json.load(open('$MANIFEST'))" >/dev/null 2>&1; then
   exit 1
 fi
 
+# 1b. Interpreter guard (F-R175-04, closed R181): the gate needs the project's
+# dev toolchain on the `python3` it invokes. Run outside the venv, pytest reports
+# dozens of collection errors that LOOK like repository failures. Fail closed
+# with the documented install path instead of a misleading verdict.
+if ! python3 -c "import pytest, mypy, ruff" >/dev/null 2>&1; then
+  fail "python3 on PATH lacks the dev toolchain (pytest/mypy/ruff): $(command -v python3)"
+  note "install: python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'"
+  note "run:     env -i PATH=\$PWD/.venv/bin:/usr/bin:/bin HOME=/tmp bash engineering/verification/check_repo.sh"
+  note "RESULT: FAIL"
+  exit 1
+fi
+
 # 2. Single mutable state file — no legacy state scheme
 for legacy in STATE.md PROGRESS.md HANDOFF.md NEXT_PLAN.md \
   FUTURE_IMPROVEMENTS.md ARCHITECTURE_GAPS.md; do

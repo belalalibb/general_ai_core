@@ -1,0 +1,31 @@
+== R181 Q6 live FK verification on commit 7a41caff (postgres (PostgreSQL) 17.11 (Debian 17.11-0+deb13u1)); real alembic chain, disposable cluster, no production claim
+INFO  [alembic.runtime.migration] Running upgrade 0021 -> 0022, R181 Q6 (F-R179-06): the usage ledger key is NOT a foreign key.
+-- alembic current:
+0022 (head)
+-- constraints on usage_ledger @head (contype: p=pk u=unique c=check f=fk):
+ck_usage_ledger_ck_usage_ledger_status_closed_set|c
+ck_usage_ledger_ck_usage_ledger_units_reserved_nonnegative|c
+ck_usage_ledger_ck_usage_ledger_units_settled_nonnegative|c
+fk_usage_ledger_tenant_id_tenants|f
+pk_usage_ledger|p
+uq_usage_ledger_execution_id|u
+-- execution_id attnotnull:
+t
+-- reserve-before-work insert (execution_id with NO executions row):
+INSERT 0 1
+-- duplicate key still refused (UNIQUE kept):
+ERROR:  duplicate key value violates unique constraint "uq_usage_ledger_execution_id"
+-- NULL key still refused (NOT NULL kept):
+ERROR:  null value in column "execution_id" of relation "usage_ledger" violates not-null constraint
+-- downgrade 0022->0021 with an orphan ledger row (fails closed, as documented in 0022):
+asyncpg.exceptions.ForeignKeyViolationError: insert or update on table "usage_ledger" violates foreign key constraint "fk_usage_ledger_execution_id_executions"
+current: 0022 (head)
+-- after deleting the orphan row, downgrade succeeds and the FK is restored:
+INFO  [alembic.runtime.migration] Running downgrade 0022 -> 0021, R181 Q6 (F-R179-06): the usage ledger key is NOT a foreign key.
+current: 0021
+fk_usage_ledger_execution_id_executions
+fk_usage_ledger_tenant_id_tenants
+-- upgrade again to head:
+INFO  [alembic.runtime.migration] Running upgrade 0021 -> 0022, R181 Q6 (F-R179-06): the usage ledger key is NOT a foreign key.
+current: 0022 (head)
+0
