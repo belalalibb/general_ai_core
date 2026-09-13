@@ -166,7 +166,7 @@
   "deferred_out_of_gate": [
     {
       "item": "mypy --strict apps/admin_agent",
-      "disposition": "OUT OF SCOPE (R168): deferred to R169 per mandate §6.7; 'deferred' is not a closed-set NOT EVALUATED reason (conflict ledger C-01), so it is listed here and never printed as a gate line"
+      "disposition": "CLOSED (R181): admitted to the gate — pyproject [tool.mypy].packages += apps.admin_agent after re-measuring 0 errors / 7 files (mypy --strict -p apps.admin_agent; evidence/r181_state_ledger.md). History: OUT OF SCOPE (R168), deferred to R169 per mandate §6.7; 'deferred' is not a closed-set NOT EVALUATED reason (conflict ledger C-01), so it was listed here and never printed as a gate line"
     }
   ],
   "change_budget": {
@@ -725,6 +725,26 @@
     ],
       "note": "R180 opening commit per R179 ruling Q5 (N0=73 arithmetic binding: the /v1/ occurrence count in ui/admin/app.js may not exceed the manifest ceiling). Frozen trees this round: core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only). ui/ and apps/admin_agent/ are THAWED for exactly the Q5 items; any other edit there is a finding."
     },
+    "round_r181_backend_closure": {
+      "ceiling": 3,
+      "ceiling_history": "declared 3 BEFORE the first production commit (operator directive: close every defined, actionable backend carry-over before UI; Q6 named explicitly). Q6 option (b) is the only option that closes F-R179-06 completely: (a) reserve-after-row would change the 03 s7 refuse-before-work ordering AND still leave tool calls (call_id, never an executions row) unbindable. Files: infrastructure/db/migrations/versions/0022_usage_ledger_key.py (new), infrastructure/db/tables.py (metadata mirror), apps/composition/runtime.py (one-name flip to the composed durable adapter)",
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 3,
+      "items": [
+        "Q6 durable usage: migration 0022 drops the FK usage_ledger.execution_id -> executions.id (keeps NOT NULL + UNIQUE: the ledger key stays one row per execution/call id); metadata mirror; runtime binds the already-composed DurableUsageAccounting in the DATABASE_URL profile; measured live with a real SIGKILL (P4 usage survives restart)"
+      ],
+      "log": [
+        {"item": "Q6", "file": "infrastructure/db/migrations/versions/0022_usage_ledger_key.py", "loc": "+45/-0 (new)", "summary": "Drops ONLY fk_usage_ledger_execution_id_executions (op.drop_constraint); execution_id stays NOT NULL + UNIQUE (one ledger row per execution/call id). Downgrade recreates the same constraint (name, target, ondelete=RESTRICT) and fails closed on ledger rows the FK could never represent. No data, column, default or check touched."},
+        {"item": "Q6", "file": "infrastructure/db/tables.py", "loc": "+5/-1", "summary": "Metadata mirror of 0022: usage_ledger.execution_id Column loses ForeignKey('executions.id'); nullable=False and unique=True kept; reason comment at the column (F-R179-06, 03 s7 reserve-before-work, tool call_id keys)."},
+        {"item": "Q6", "file": "apps/composition/runtime.py", "loc": "+6/-12", "summary": "One-name flip documented at the R179 decision point: `audit, usage = build_durable_audit_usage(bindings, bridge)` binds the already-composed DurableUsageAccounting in the DATABASE_URL profile; annotation widened to the structural UsageBinding; `del durable_usage` residue removed. In-memory profile byte-identical (single InMemoryUsageAccounting() remains in the else-branch)."}
+      ],
+      "note": "R181 backend-closure pre-round (NOT the UI phase). Frozen: ui/, apps/admin_agent/, core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only). Q7 and the Provider slice have NO repository definition and are recorded UNDEFINED/deferred, not worked."
+    },
     "round_r179": {
       "ceiling": 9,
       "budget_unit": "one production FILE under the counted roots (a file edited twice in the round is ONE change; every edit is described in that file's summary)",
@@ -810,12 +830,13 @@
     "gate_scope_packages": [
       "core",
       "apps.api",
-      "apps.composition"
+      "apps.composition",
+      "apps.admin_agent"
     ],
     "measured_r168": {
       "apps.api": "0 errors / 22 files",
       "apps.composition": "0 errors / 15 files",
-      "apps.admin_agent": "0 errors / 7 files (measured; out of gate until R169 per §6.7)"
+      "apps.admin_agent": "0 errors / 7 files (measured R168; re-measured clean R180 and R181; ADMITTED to the gate in R181 — deferred_out_of_gate item closed, see evidence/r181_state_ledger.md)"
     },
     "evidence": "evidence/r168/V-02/"
   }

@@ -327,10 +327,13 @@ class TestContractSchemaParity:
 
     def test_usage_ledger_one_entry_per_execution_and_honest_defaults(self) -> None:
         # core/usage/memory.py keys the ledger by execution_id and a
-        # reservation resolves exactly once — execution_id UNIQUE + FK.
+        # reservation resolves exactly once — execution_id UNIQUE + NOT NULL.
+        # R181 Q6 (conscious pin update, migration 0022): the key is NOT a FK —
+        # reserve-before-work (03 s7) and tool call_id keys precede/never have
+        # an executions row (F-R179-06).
         column = usage_ledger.columns["execution_id"]
         assert column.unique
-        assert {fk.column.table.name for fk in column.foreign_keys} == {"executions"}
+        assert not column.nullable and list(column.foreign_keys) == []
         # Deny-by-default: DB defaults equal contract defaults — an
         # unresolved entry claims NO settled consumption.
         assert str(usage_ledger.columns["units_settled"].server_default.arg) == "0"  # type: ignore[union-attr]
@@ -443,7 +446,10 @@ class TestMigrationMetadataParity:
             dropped_ix = set(re.findall(r'op\.drop_index\("(\w+)"', source))
             assert created_ix == dropped_ix, name
             created_fk = set(re.findall(r'op\.create_foreign_key\(\s*"(\w+)"', source))
-            dropped_fk = set(re.findall(r'op\.drop_constraint\("(fk_\w+)"', source))
+            # F-R181-01 (test-only): the drop pattern tolerates the same line
+            # wrap as the create pattern — 0022 is the first revision whose
+            # drop_constraint call is wrapped by the formatter.
+            dropped_fk = set(re.findall(r'op\.drop_constraint\(\s*"(fk_\w+)"', source))
             assert created_fk == dropped_fk, name
 
     def test_revision_chain_is_linear_and_unbroken(self) -> None:

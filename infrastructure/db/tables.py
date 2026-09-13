@@ -680,10 +680,14 @@ usage_ledger = Table(
         ForeignKey("tenants.id", ondelete="RESTRICT"),
         nullable=False,
     ),
+    # R181 Q6 (F-R179-06, migration 0022): the ledger key is NOT a foreign key —
+    # ExecutionService reserves BEFORE the executions row exists (03 s7) and the
+    # tool executor reserves under a call_id that never becomes one. NOT NULL +
+    # UNIQUE keep the one-row-per-execution/call-id keying without claiming a
+    # row-level relationship the reserve-before-work ordering cannot honour.
     Column(
         "execution_id",
         UUID(as_uuid=True),
-        ForeignKey("executions.id", ondelete="RESTRICT"),
         nullable=False,
         unique=True,  # one ledger entry per execution (core/usage/memory.py keying)
     ),

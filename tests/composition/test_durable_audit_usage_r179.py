@@ -260,7 +260,9 @@ class TestRuntimeBinding:
         # The binding is born inside the FIRST `if settings is not None:` block
         # (the durable connections are built before the execution service that
         # consumes usage), and the in-memory audit class is the ONLY else-branch.
-        bind_at = source.index("audit, durable_usage = build_durable_audit_usage(bindings, bridge)")
+        # R181 Q6 (conscious pin update): F-R179-06 CLOSED by migration 0022 —
+        # the composed durable usage adapter is now BOUND in the durable profile.
+        bind_at = source.index("audit, usage = build_durable_audit_usage(bindings, bridge)")
         durable_branch = source.index("if settings is not None:\n        bridge = AsyncBridge()")
         else_branch = source.index(
             "    else:\n        # In-memory profile: process-local audit + usage, unchanged."
@@ -268,12 +270,11 @@ class TestRuntimeBinding:
         assert durable_branch < bind_at < else_branch
         # Audit: exactly one in-memory construction (no second path).
         assert source.count("InMemoryAuditLog()") == 1
-        # Usage: F-R179-06 (MEASURED) keeps usage process-local in BOTH
-        # profiles — the durable adapter is composed, then consciously not
-        # bound, with the finding cited at the decision point.
-        assert source.count("InMemoryUsageAccounting()") == 2
+        # Usage: process-local ONLY in the in-memory profile; the durable
+        # profile binds the ledger (F-R179-06 closure cited at the decision point).
+        assert source.count("InMemoryUsageAccounting()") == 1
         assert "F-R179-06" in source
-        assert bind_at < source.index("del durable_usage") < else_branch
+        assert "del durable_usage" not in source
 
     def test_frozen_agent_tool_surface_uses_only_summary_on_usage(self) -> None:
         """F-R179-07: apps/admin_agent/tools.py (frozen) annotates the concrete

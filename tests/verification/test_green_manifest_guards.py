@@ -289,7 +289,9 @@ def test_mypy_gate_scope_never_shrinks() -> None:
     scope = set(py["tool"]["mypy"]["packages"])
     assert py["tool"]["mypy"]["strict"] is True
     recorded = set(_manifest()["mypy"]["gate_scope_packages"])
-    assert recorded == {"core", "apps.api", "apps.composition"}
+    # R181 (conscious pin update): apps.admin_agent ADMITTED after re-measuring
+    # 0 errors / 7 files — the deferred_out_of_gate item is closed, the pin grows.
+    assert recorded == {"core", "apps.api", "apps.composition", "apps.admin_agent"}
     assert recorded <= scope, sorted(recorded - scope)
 
 
