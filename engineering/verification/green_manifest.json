@@ -719,7 +719,7 @@
       {
         "item": "Q5",
         "file": "apps/admin_agent/tools.py",
-        "loc": "+5/-1",
+        "loc": "+6/-2",
         "summary": "F-R179-07: AgentToolSurface.usage annotated as the UsageAccountingPort (the only call is .summary); import switched from core.usage.memory to core.usage.ports; no behaviour change; the runtime call site needs no type: ignore when Q6 flips the usage binding"
       }
     ],
