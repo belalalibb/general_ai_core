@@ -396,14 +396,15 @@ source-change/evaluations/learning custody/memory/conversations/audit.
 **Measured on the durable profile with a real process kill (R179,
 `evidence/r179/durability_measured_after_q1.json`):** memory items
 (preferences, GOLD copies), conversations and audit events survive a
-SIGKILL/restart (4.5 + rulings Q1). **Usage accounting is still composed
-IN-PROCESS on both profiles and resets on restart** (`used` 5.0 → 2.0):
-binding the existing `usage_ledger` repository fails at the database because
-`usage_ledger.execution_id` is a NOT NULL FK to `executions.id` while the
-execution service reserves BEFORE the executions row exists (F-R179-06,
-`evidence/r179/F06_usage_ledger_fk_violation.txt`) — decision-gated (Q6), not
-a composition defect; the durable adapter is composed and one name flips it
-once ruled. Billing/quota claims across restarts are therefore NOT made. No
+SIGKILL/restart (4.5 + rulings Q1). **Usage accounting is durable on the
+DATABASE_URL profile since R181 (Q6, migration 0022):** `usage_ledger.execution_id`
+is no longer a foreign key to `executions.id` (NOT NULL + UNIQUE kept), so the
+03 §7 reserve-before-work ordering is honoured by the schema and the composed
+`DurableUsageAccounting` is bound (F-R179-06 CLOSED). Measured with a real
+SIGKILL (`evidence/r181/durability_measured_7a41caff.json`, P4): `used`
+6.0 → 8.0 across the restart (R179 baseline reset 6.0 → 2.0). The in-memory
+profile (no `DATABASE_URL`) still resets on restart by design. Quota claims
+across restarts are made ONLY for the durable profile and ONLY as measured. No
 distributed worker; no token streaming; gateway onboarding is untestable
 end-to-end without a gateway; authoritative self-modification is gated off
 by design (the engineering workspace refuses the platform's own checkout —
