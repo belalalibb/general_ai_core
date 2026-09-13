@@ -166,7 +166,7 @@
   "deferred_out_of_gate": [
     {
       "item": "mypy --strict apps/admin_agent",
-      "disposition": "OUT OF SCOPE (R168): deferred to R169 per mandate §6.7; 'deferred' is not a closed-set NOT EVALUATED reason (conflict ledger C-01), so it is listed here and never printed as a gate line"
+      "disposition": "CLOSED (R181): admitted to the gate — pyproject [tool.mypy].packages += apps.admin_agent after re-measuring 0 errors / 7 files (mypy --strict -p apps.admin_agent; evidence/r181_state_ledger.md). History: OUT OF SCOPE (R168), deferred to R169 per mandate §6.7; 'deferred' is not a closed-set NOT EVALUATED reason (conflict ledger C-01), so it was listed here and never printed as a gate line"
     }
   ],
   "change_budget": {
@@ -830,12 +830,13 @@
     "gate_scope_packages": [
       "core",
       "apps.api",
-      "apps.composition"
+      "apps.composition",
+      "apps.admin_agent"
     ],
     "measured_r168": {
       "apps.api": "0 errors / 22 files",
       "apps.composition": "0 errors / 15 files",
-      "apps.admin_agent": "0 errors / 7 files (measured; out of gate until R169 per §6.7)"
+      "apps.admin_agent": "0 errors / 7 files (measured R168; re-measured clean R180 and R181; ADMITTED to the gate in R181 — deferred_out_of_gate item closed, see evidence/r181_state_ledger.md)"
     },
     "evidence": "evidence/r168/V-02/"
   }

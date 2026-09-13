@@ -88,8 +88,10 @@ select = ["E", "F", "W", "I", "UP", "B"]
 python_version = "3.12"
 strict = true
 # R168 §6.7: scope widened after measuring zero errors (evidence/r168/V-02).
-# apps.admin_agent measured clean too but stays out of the gate until R169 (mandate).
-packages = ["core", "apps.api", "apps.composition"]
+# R181: apps.admin_agent admitted to the gate (deferred_out_of_gate item closed):
+# measured 0 errors / 7 files in R168, R180 and R181; the tree itself stays frozen
+# (type-checking reads it, never edits it).
+packages = ["core", "apps.api", "apps.composition", "apps.admin_agent"]
 
 # Architecture boundary tests (40 §6.2): Core / Infrastructure / Providers never mix.
 # Enforced by import-linter; CI runs the same entry point as local (check_repo.sh).
