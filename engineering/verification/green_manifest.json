@@ -702,6 +702,29 @@
       ],
       "note": "Operator rulings on R179_HANDOFF.md section B (Q1-Q5). Q5 (ui/ thaw) is the NEXT round's opening commit, not this budget. Ceiling declared 8 BEFORE the first production commit; every file logged here before its commit (evidence/r179_state_ledger.md)."
     },
+    "round_r180": {
+      "ceiling": 1,
+      "ceiling_history": "declared 1 BEFORE the opening production commit: the Q5 thaw ruling (R179 rulings, recorded in evidence/r179_state_ledger.md 'RULINGS Q1-Q5 received') names ONE production file under the counted roots — apps/admin_agent/tools.py (F-R179-07 annotation); ui/ is outside the counted roots",
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 1,
+      "items": [
+        "Q5 ui/ thaw: the console consumes GET /v1/admin/capabilities/actions and drops the ADMIN_ACTIONS hand-list; F-R179-07 annotation corrected in the same thaw"
+      ],
+      "log": [
+      {
+        "item": "Q5",
+        "file": "apps/admin_agent/tools.py",
+        "loc": "+6/-2",
+        "summary": "F-R179-07: AgentToolSurface.usage annotated as the UsageAccountingPort (the only call is .summary); import switched from core.usage.memory to core.usage.ports; no behaviour change; the runtime call site needs no type: ignore when Q6 flips the usage binding"
+      }
+    ],
+      "note": "R180 opening commit per R179 ruling Q5 (N0=73 arithmetic binding: the /v1/ occurrence count in ui/admin/app.js may not exceed the manifest ceiling). Frozen trees this round: core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only). ui/ and apps/admin_agent/ are THAWED for exactly the Q5 items; any other edit there is a finding."
+    },
     "round_r179": {
       "ceiling": 9,
       "budget_unit": "one production FILE under the counted roots (a file edited twice in the round is ONE change; every edit is described in that file's summary)",

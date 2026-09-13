@@ -1,0 +1,7 @@
+# R180 findings ledger (every measurement that FAILED or contradicted the brief; a finding gets an entry, never an off-books fix)
+
+Precedent: `evidence/r179_findings_ledger.md`. Severities: S1 release-blocking … S4 cosmetic.
+
+| id | finding | evidence | severity | disposition |
+|---|---|---|---|---|
+| F-R180-01 | First Q5 landing (5f59ea33) fired `populateActionSelect()` at module load. The discovery route is admin-gated, so the real console answered **401** on `GET /v1/admin/capabilities/actions` before sign-in (Playwright console capture of `/admin/` against `python -m apps.main`), the error rendered on the login view and the select stayed empty after sign-in — the hermetic static tests could not see this because they never execute the UI. | server log `"GET /v1/admin/capabilities/actions HTTP/1.1" 401 Unauthorized` at page load (before); `evidence/r180/q5_live_dom_probe.txt` (after: module-load calls 0) | S2 (thaw feature unusable in the real console) | CLOSED at 393a9154: the read moved into `loadChanges()` (Changes surface loader, after sign-in) and made idempotent — a re-read replaces the offered set, a refused read clears it BEFORE rendering the error (no stale verb). Pins: `TestReadAfterSignIn` (2). Live DOM probe: signed-in read offers 14, hint renders the Q4 fields, re-read stays 14, refused read → `unauthenticated: Authentication failed.` + 0 offered. Page-load console now shows only the pre-existing `favicon.ico` 404. |

@@ -53,3 +53,4 @@ __pycache__/
 *.pem
 /secrets/
 evidence/**/raw_*
+.gate_tmp/

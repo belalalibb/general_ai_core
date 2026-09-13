@@ -1,0 +1,6 @@
+# R180 Q5 live DOM probe — thaw slice of the SERVED ui/admin/app.js executed against python -m apps.main (in-memory profile, ADMIN_EMAILS bound) with a real verified admin session; module-load call count asserted from source
+module-load populateActionSelect() calls in served source: 0
+signed-in read: offered options = 14 | first = capability_proposal (tools) | error box hidden = true
+fields hint (set_plan): plans · fields (core.admin.service.PAYLOAD_FIELD_RULES): target_tenant_id:uuid, plan:string, task_units_limit:number
+idempotent re-read: offered options = 14
+refused read (bad token): error = "unauthenticated: Authentication failed." | offered options = 0

@@ -970,19 +970,28 @@ class TestUIHonestyChecklist:
         assert match is not None, f"{name} array not found"
         return set(re.findall(r'"([a-z_]+)"', match.group(1)))
 
-    def test_admin_actions_equal_the_admin_action_enum(self) -> None:
-        from core.contracts.admin import AdminAction
+    def test_admin_actions_are_read_from_discovery_not_a_hand_list(self) -> None:
+        """R180 Q5 thaw (conscious pin update, R180-DEC-01): the console no longer
+        carries an ``ADMIN_ACTIONS`` array. The verb set is READ from
+        ``GET /v1/admin/capabilities/actions`` (R179 4.3) and filtered to
+        active areas; the R177-DEC-07 exception (``capability_proposal`` not
+        offered) existed only because ui/ was frozen — with the server as the
+        single source, the console offers exactly what the server publishes.
+        The hand-list regex must therefore find NOTHING."""
+        from apps.api.capabilities import admin_actions_json
+        from core.contracts.admin import ACTION_AREA, FINAL_ACTIVE_ADMIN_AREAS, AdminAction
 
-        # R177-DEC-07: ui/ is a frozen tree this round (R177-DEFER-01 "UI
-        # changes DEFERRED"), so the ONE backend-only kind added by R177-FIX-03
-        # is a recorded, bounded exception — pinned here so it cannot grow
-        # silently. The console must not OFFER it (the server would accept it,
-        # but the operator path for it is the API / admin agent, backend-first).
-        ui_deferred = {"capability_proposal"}
-        offered = self._js_string_array("ADMIN_ACTIONS")
-        assert ui_deferred <= {a.value for a in AdminAction}
-        assert offered.isdisjoint(ui_deferred)
-        assert offered == {a.value for a in AdminAction} - ui_deferred
+        code = _js_code()
+        assert re.search(r"const ADMIN_ACTIONS = \[", code) is None
+        assert 'api("/v1/admin/capabilities/actions")' in code
+        # What the console WILL offer (server rows for active areas) is the
+        # whole enum minus inactive-area verbs — derived, not typed.
+        model = admin_actions_json()
+        active = {a["area"] for a in model["areas"] if a["active"]}
+        offered = {r["action"] for r in model["actions"] if r["area"] in active}
+        assert offered == {
+            a.value for a in AdminAction if ACTION_AREA[a] in FINAL_ACTIVE_ADMIN_AREAS
+        }
 
     def test_scenario_check_names_equal_the_closed_check_set(self) -> None:
         from apps.api.scenarios import SCENARIO_CHECKS
