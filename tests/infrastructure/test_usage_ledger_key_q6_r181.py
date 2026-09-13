@@ -54,8 +54,8 @@ class TestMigrationShape:
 
     def test_structural_only_drop_fk_keep_not_null_and_unique(self) -> None:
         source = MIGRATION.read_text(encoding="utf-8")
-        up = source[source.index("def upgrade"): source.index("def downgrade")]
-        down = source[source.index("def downgrade"):]
+        up = source[source.index("def upgrade") : source.index("def downgrade")]
+        down = source[source.index("def downgrade") :]
         # Upgrade: exactly the named FK is dropped — nothing else changes.
         assert "op.drop_constraint(" in up
         assert f'"{FK_NAME}", "usage_ledger", type_="foreignkey"' in up

@@ -204,7 +204,9 @@ def test_no_new_migration_needed_the_0010_table_is_reused() -> None:
     # the original no-duplicate-evaluations invariant.
     # R179 rulings Q2 (conscious pin update): 0021 adds ONE structural column to
     # learning_sample_custody (no new table) — the closed head pin moves with it.
-    assert versions[-1] == "0021_custody_schema_generation.py", versions[-1]
+    # R181 Q6 (conscious pin update): 0022 drops ONE foreign key on usage_ledger
+    # (no new table, F-R179-06) — the closed head pin moves with it.
+    assert versions[-1] == "0022_usage_ledger_key.py", versions[-1]
     import re
 
     created = []

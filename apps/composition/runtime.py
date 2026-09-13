@@ -741,24 +741,18 @@ def build_runtime_profile(
     durable = settings is not None
     bridge: AsyncBridge | None = None
     bindings: DatabaseBindings | None = None
-    usage: InMemoryUsageAccounting
+    usage: UsageBinding
     audit: AuditLogPort
     if settings is not None:
         bridge = AsyncBridge()
         bindings = build_database_bindings(settings)
         # F-R179-04 (measured 4.4: audit 1→0 across restart): the EXISTING
         # 0002 audit repository replaces the process-local log.
-        audit, durable_usage = build_durable_audit_usage(bindings, bridge)
-        # F-R179-06 (MEASURED live, evidence/r179/F06_usage_ledger_fk_violation.txt):
-        # binding the durable usage ledger makes EVERY /v1/execute fail 500 —
-        # `usage_ledger.execution_id` is a NOT NULL FK to `executions.id`, but
-        # ExecutionService reserves BEFORE any executions row exists (and the
-        # tool executor reserves under a call_id that never becomes one). The
-        # durable adapter is composed (proving the seam) but NOT bound: usage
-        # stays process-local in this profile until the operator rules on Q6
-        # (reserve-after-row vs. relaxing the FK). Flipping one name binds it.
-        del durable_usage
-        usage = InMemoryUsageAccounting()
+        # F-R179-06 CLOSED (R181 Q6, migration 0022): `usage_ledger.execution_id`
+        # is no longer a FK to `executions.id` (NOT NULL + UNIQUE kept), so the
+        # reserve-before-work ordering (03 s7; tool call_id keys) is honoured by
+        # the schema and the durable usage ledger is BOUND in this profile.
+        audit, usage = build_durable_audit_usage(bindings, bridge)
     else:
         # In-memory profile: process-local audit + usage, unchanged.
         usage = InMemoryUsageAccounting()

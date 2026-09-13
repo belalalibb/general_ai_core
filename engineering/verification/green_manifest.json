@@ -734,11 +734,15 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 0,
+      "changes_used": 3,
       "items": [
         "Q6 durable usage: migration 0022 drops the FK usage_ledger.execution_id -> executions.id (keeps NOT NULL + UNIQUE: the ledger key stays one row per execution/call id); metadata mirror; runtime binds the already-composed DurableUsageAccounting in the DATABASE_URL profile; measured live with a real SIGKILL (P4 usage survives restart)"
       ],
-      "log": [],
+      "log": [
+        {"item": "Q6", "file": "infrastructure/db/migrations/versions/0022_usage_ledger_key.py", "loc": "+45/-0 (new)", "summary": "Drops ONLY fk_usage_ledger_execution_id_executions (op.drop_constraint); execution_id stays NOT NULL + UNIQUE (one ledger row per execution/call id). Downgrade recreates the same constraint (name, target, ondelete=RESTRICT) and fails closed on ledger rows the FK could never represent. No data, column, default or check touched."},
+        {"item": "Q6", "file": "infrastructure/db/tables.py", "loc": "+5/-1", "summary": "Metadata mirror of 0022: usage_ledger.execution_id Column loses ForeignKey('executions.id'); nullable=False and unique=True kept; reason comment at the column (F-R179-06, 03 s7 reserve-before-work, tool call_id keys)."},
+        {"item": "Q6", "file": "apps/composition/runtime.py", "loc": "+6/-12", "summary": "One-name flip documented at the R179 decision point: `audit, usage = build_durable_audit_usage(bindings, bridge)` binds the already-composed DurableUsageAccounting in the DATABASE_URL profile; annotation widened to the structural UsageBinding; `del durable_usage` residue removed. In-memory profile byte-identical (single InMemoryUsageAccounting() remains in the else-branch)."}
+      ],
       "note": "R181 backend-closure pre-round (NOT the UI phase). Frozen: ui/, apps/admin_agent/, core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only). Q7 and the Provider slice have NO repository definition and are recorded UNDEFINED/deferred, not worked."
     },
     "round_r179": {

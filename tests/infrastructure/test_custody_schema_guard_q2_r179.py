@@ -41,9 +41,14 @@ def _load_migration() -> ModuleType:
 
 
 class TestMigrationShape:
-    def test_0021_is_the_head_and_follows_0020(self) -> None:
+    def test_0021_follows_0020_and_is_followed_only_by_0022(self) -> None:
+        # R181 Q6 (conscious pin update): 0022 (usage ledger key, F-R179-06) is
+        # the new head; 0021 keeps its place in the chain.
         versions = sorted(p.name for p in VERSIONS.glob("0*.py"))
-        assert versions[-1] == "0021_custody_schema_generation.py", versions[-1]
+        assert versions[-2:] == [
+            "0021_custody_schema_generation.py",
+            "0022_usage_ledger_key.py",
+        ], versions[-2:]
         module = _load_migration()
         assert module.revision == "0021"
         assert module.down_revision == "0020"
