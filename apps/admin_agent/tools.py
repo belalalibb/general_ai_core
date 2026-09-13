@@ -61,7 +61,7 @@ from core.routing.errors import FallbackNotConfigured, NoEligibleCandidates
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
 from core.tools.source_reader import SourceReader, SourceReadRefused
 from core.usage.errors import BudgetExceeded, EntitlementNotConfigured
-from core.usage.memory import InMemoryUsageAccounting
+from core.usage.ports import UsageAccountingPort
 
 #: The metadata key that labels agent-initiated executions (criterion 2).
 AGENT_LABEL_KEY = "admin_agent"
@@ -81,7 +81,11 @@ class AgentToolSurface:
     # and DurableExecutionStore each satisfy this surface verbatim.
     execution_store: ExecutionStorePort
     admin: AdminSurface
-    usage: InMemoryUsageAccounting
+    # R180 Q5 thaw (F-R179-07): the PORT, not the concrete in-memory class —
+    # the only use is ``surface.usage.summary(...)``; both the in-memory and
+    # the durable accounting satisfy it, so the composition root needs no
+    # ``type: ignore`` when the F-R179-06 / Q6 ruling flips the binding.
+    usage: UsageAccountingPort
     audit: AuditLogPort
     #: V7 chunk 1 — the SAME derived catalog create_app hands the admin
     #: route (one derivation, two consumers; read it from

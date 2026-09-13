@@ -711,11 +711,18 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 0,
+      "changes_used": 1,
       "items": [
         "Q5 ui/ thaw: the console consumes GET /v1/admin/capabilities/actions and drops the ADMIN_ACTIONS hand-list; F-R179-07 annotation corrected in the same thaw"
       ],
-      "log": [],
+      "log": [
+      {
+        "item": "Q5",
+        "file": "apps/admin_agent/tools.py",
+        "loc": "+5/-1",
+        "summary": "F-R179-07: AgentToolSurface.usage annotated as the UsageAccountingPort (the only call is .summary); import switched from core.usage.memory to core.usage.ports; no behaviour change; the runtime call site needs no type: ignore when Q6 flips the usage binding"
+      }
+    ],
       "note": "R180 opening commit per R179 ruling Q5 (N0=73 arithmetic binding: the /v1/ occurrence count in ui/admin/app.js may not exceed the manifest ceiling). Frozen trees this round: core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only). ui/ and apps/admin_agent/ are THAWED for exactly the Q5 items; any other edit there is a finding."
     },
     "round_r179": {

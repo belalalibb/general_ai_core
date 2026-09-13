@@ -1021,28 +1021,46 @@ async function lifecycleAct(changeId, step) {
   loadChanges();
 }
 
-/* AdminAction — the CLOSED control-matrix verb set (core/contracts/admin.py).
-   The server refuses anything else at parse time (422); this list is pinned
-   against the enum by test so the UI can never offer a verb that does not
-   exist. */
-const ADMIN_ACTIONS = [
-  "enable_model", "disable_model",
-  "enable_provider", "disable_provider",
-  "set_plan", "set_routing_weights",
-  "enable_skill", "disable_skill", "set_skill_sources",
-  "enable_tool", "disable_tool",
-  "register_provider", "register_model",
-];
+/* AdminAction verbs — READ from the server (R179 4.3 action discovery,
+   R180 Q5 thaw). The capabilities/actions read model is a pure function of the
+   backend vocabulary (ACTION_AREA + FINAL_ACTIVE_ADMIN_AREAS) and the Q4
+   declared PAYLOAD_FIELD_RULES: the console keeps NO second list. Only
+   actions whose area is active are offered; the per-action `fields` rows
+   render as a hint beside the payload box. A failed read renders the unified
+   error verbatim and offers no verb — the UI never guesses. */
+const actionRows = new Map();
 
-(function populateActionSelect() {
+function renderFieldsHint(action) {
+  const hint = document.getElementById("change-fields-hint");
+  const row = actionRows.get(action);
+  if (!row) { hint.textContent = ""; return; }
+  const fields = row.fields || [];
+  hint.textContent = fields.length
+    ? `${row.area} \u00b7 fields (${row.field_rules}): ` +
+      fields.map((f) => `${f.name}:${f.kind}${f.required ? "" : "?"}${f.contract ? `<${f.contract}>` : ""}`).join(", ")
+    : `${row.area} \u00b7 no declared payload fields`;
+}
+
+async function populateActionSelect() {
   const select = document.getElementById("change-action");
-  for (const action of ADMIN_ACTIONS) {
+  const errorBox = document.getElementById("change-form-error");
+  const result = await api("/v1/admin/capabilities/actions");
+  if (!result.ok) {
+    renderError(errorBox, result.body);
+    return;
+  }
+  const activeAreas = new Set((result.body.areas || []).filter((a) => a.active).map((a) => a.area));
+  for (const row of result.body.actions || []) {
+    if (!activeAreas.has(row.area)) continue;
+    actionRows.set(row.action, Object.assign({ field_rules: result.body.field_rules }, row));
     const opt = document.createElement("option");
-    opt.value = action;
-    opt.textContent = action;
+    opt.value = row.action;
+    opt.textContent = `${row.action} (${row.area})`;
     select.appendChild(opt);
   }
-})();
+  select.addEventListener("change", () => renderFieldsHint(select.value));
+}
+populateActionSelect();
 
 document.getElementById("change-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1060,7 +1078,7 @@ document.getElementById("change-form").addEventListener("submit", async (event) 
 });
 
 async function showChangeDetail(changeId) {
-  /* GET /v1/admin/changes/{id}: the full record incl. validation_result and
+  /* GET changes/{id} (same surface as the list read): the full record incl. validation_result and
      impact_preview — rendered verbatim, so a refusal reads as a refusal. */
   const out = document.getElementById("change-detail");
   out.hidden = false;
