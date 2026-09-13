@@ -82,6 +82,24 @@ class TestFieldsHint:
         assert 'id="change-fields-hint"' in html
 
 
+class TestReadAfterSignIn:
+    def test_discovery_read_is_not_fired_at_module_load(self) -> None:
+        """F-R180-01 (live check): the route is admin-gated; a module-load call
+        answers 401 before sign-in and the select stays empty. The read belongs
+        to the Changes surface loader."""
+        code = _strip_js_comments(_js())
+        assert re.search(r"^populateActionSelect\(\);", code, re.M) is None
+        start = code.index("async function loadChanges")
+        body = code[start : code.index("\n}\n", start)]
+        assert "populateActionSelect()" in body
+
+    def test_re_read_replaces_and_refusal_clears(self) -> None:
+        body = _populate_body(_strip_js_comments(_js()))
+        assert "select.remove(1)" in body and "actionRows.clear()" in body
+        # clearing happens BEFORE the ok-check so a refusal leaves no stale verb
+        assert body.index("actionRows.clear()") < body.index("renderError(")
+
+
 class TestRefusalIsContent:
     def test_failed_discovery_renders_error_and_offers_no_verbs(self) -> None:
         body = _populate_body(_strip_js_comments(_js()))

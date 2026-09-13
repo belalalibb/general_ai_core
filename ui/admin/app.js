@@ -1042,9 +1042,14 @@ function renderFieldsHint(action) {
 }
 
 async function populateActionSelect() {
+  /* Admin-gated read: runs when the Changes surface loads (after sign-in),
+     never at module load — F-R180-01. Idempotent: a re-read replaces the
+     offered set; a refused read leaves NO stale verb behind. */
   const select = document.getElementById("change-action");
   const errorBox = document.getElementById("change-form-error");
   const result = await api("/v1/admin/capabilities/actions");
+  while (select.options.length > 1) select.remove(1);
+  actionRows.clear();
   if (!result.ok) {
     renderError(errorBox, result.body);
     return;
@@ -1058,9 +1063,9 @@ async function populateActionSelect() {
     opt.textContent = `${row.action} (${row.area})`;
     select.appendChild(opt);
   }
-  select.addEventListener("change", () => renderFieldsHint(select.value));
+  select.onchange = () => renderFieldsHint(select.value);
+  renderFieldsHint(select.value);
 }
-populateActionSelect();
 
 document.getElementById("change-form").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1090,6 +1095,7 @@ async function loadChanges() {
   const [changes, audit] = await Promise.all([
     api("/v1/admin/changes"),
     api("/v1/admin/audit"),
+    populateActionSelect(),
   ]);
   const changesBody = document.querySelector("#changes-table tbody");
   changesBody.textContent = "";
