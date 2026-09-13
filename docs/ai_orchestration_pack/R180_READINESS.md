@@ -11,7 +11,7 @@ from committed evidence; nothing is claimed that a test or a measurement did not
 | Q5 thaw (ruling) — console consumes `/capabilities/actions` | `ADMIN_ACTIONS` deleted; `populateActionSelect()` reads the R179 4.3 route inside the Changes loader (after sign-in), offers ACTIVE-area rows in server order, renders the Q4 `fields` hint naming `field_rules`; refusal renders verbatim and clears the offered set | `tests/ui/test_q5_thaw_action_discovery_r180.py` (13); conscious pin update in `test_aa2_admin_agent.py`; live: `evidence/r180/q5_live_dom_probe.txt` |
 | N0 arithmetic binding | `/v1/` occurrences in `ui/admin/app.js` = **73 = N0** (one comment-only occurrence gave way to the new served literal); every UI literal served (`tests/ui/test_admin_static_check.py`) | `TestArithmeticBinding` |
 | F-R179-07 | `AgentToolSurface.usage: UsageAccountingPort` (only `.summary` is called); no `type: ignore` anywhere in runtime | `TestFR17907` (2); mypy --strict clean |
-| Exit numbers | see `evidence/r180/final_gate_<head>.txt` (Part 3) | — |
+| Exit numbers | gate on 482df8c7: **3622 / 0 / 0 / 64** (floor 3504); mypy/ruff/import-linter/secret scan clean; budget round_r180 1/1; gateway 194 | `evidence/r180/final_gate_482df8c7.txt`, `gateway_482df8c7.txt` |
 
 ### diff == log table (production files under core/ apps/ infrastructure/, base 5b78f467)
 
