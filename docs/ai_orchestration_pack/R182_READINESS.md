@@ -126,3 +126,59 @@ Current: `ui/admin/index.html:6` `<title>Admin Console — AI Orchestration Plat
 ## 8. Test / live-proof readiness
 
 Static UI checks: `tests/ui` (20) + Q5 pins in slice `rest`; composition UI tests in `tests/composition`. Browser/live: NOT-EVALUATED #1, playwright absent, **not installed in R182**. R182-IMPL acceptance for browser proof: a real Playwright run against the served Command Center over the in-memory profile, evidence committed (tracked, never `raw_*`), which **replaces** NOT-EVALUATED #1 (2→1); dependency declared in the IMPL round under `pyproject [dev]`; no third item; ceiling unchanged. Encoded-asset risk: no base64/binary fixtures enter `ui/` (secret scan covers `*.js *.html *.css *.json`).
+
+## 9. Operator-only decisions (A repository-determined / B governance-determined / C operator-only)
+
+Resolved from evidence (A/B): base = 743e203f (A); ceiling 0 (B); `ui/` outside counted roots (B); N0 73 zero headroom → new tree (B); transport = fetch-only, SSE by fetch, no EventSource/WebSocket (B); browser proof replaces NE #1 (B); Q7/Provider → R183 (B); App Factory MISSING (A).
+
+**D-1 — Front-end stack (ADR-0013)**
+DECISION: accept ADR-0013 with one alternative.
+OPTIONS: A vanilla ES modules · **C vanilla + optional hand-written WebGL2** · B Next/React/three (APEX-identical) · D React/Vite export.
+OPERATING DEFAULT: C.
+BLOCKING EFFECT: R182-IMPL may not write the first production UI file until the ADR is ACCEPTED by operator text. B/D additionally block on toolchain/lockfile/build-proof/guard-frame declarations (ADR-0013 §Decision).
+
+**D-2 — Command Center tree**
+DECISION: which directory holds the Command Center.
+OPTIONS: (a) new `ui/command/` (own manifest guard block, own literal ceiling; needs a mount) · (b) inside `ui/app/` (existing `/app` mount; extend `test_ui_app_pd2` pins; no manifest block today).
+OPERATING DEFAULT: (a) `ui/command/`.
+BLOCKING EFFECT: (a) is served only after D-3; (b) starts immediately but inherits `ui/app`'s weaker guard frame and its 21 unguarded literals — a guard block for `ui/app` must then be declared first.
+
+**D-3 — Serving the new tree under a frozen composition root**
+DECISION: how `ui/command/` is served while `apps/` is frozen (ceiling 0).
+OPTIONS: (a) raise `round_r182` ceiling 0→1 for exactly `apps/composition/runtime.py` (one guarded `StaticFiles` mount, `is_dir()` posture) · (b) keep 0; place the files at `ui/app/command/` — a sub-directory of the already-mounted `/app` tree (`StaticFiles` serves nested paths) — while declaring and guarding it as its own unit · (c) defer the mount to R183.
+OPERATING DEFAULT: (b) — zero production change.
+BLOCKING EFFECT: (a) is a conscious ceiling raise (declared BEFORE the commit, with history); (c) = no served Command Center until R183 (source pins only).
+
+**D-4 — Browser proof dependency**
+DECISION: install Playwright in R182-IMPL.
+OPTIONS: yes (dev-only, declared in `pyproject [dev]`, replaces NE #1) · no (NE #1 stays; proof = ASGI + source pins).
+OPERATING DEFAULT: yes, in R182-IMPL, never in R182.
+BLOCKING EFFECT: without it no browser-rendered proof; NE count stays 2.
+
+**D-5 — Branding switch timing**
+DECISION: apply `QEVION` / `QEVION Control Plane` in R182-IMPL M1.
+OPTIONS: yes (2 html + 3 pins, one commit) · defer.
+OPERATING DEFAULT: yes.
+BLOCKING EFFECT: pins only.
+
+**D-6 — min_passed ratchet 3504 → 3632**
+DECISION: ratchet the floor.
+OPTIONS: yes · no.
+OPERATING DEFAULT: no (reported only).
+BLOCKING EFFECT: none.
+
+## 10. First red test and first milestone
+
+**First red test** — `tests/ui/test_command_center_topology_r182.py::test_capability_nodes_derive_from_served_contract_not_a_roster`
+Invariant: the Command Center's node set equals the `id` set of `GET /v1/admin/capabilities` from the served in-memory profile (admin session), rendered from the response at runtime; the source contains **no quoted `CAPABILITY_IDS` literal, no roster array, no hand-written state machine** (`thinking|speaking|listening` absent); node state classes ⊆ `CapabilityState`; Core state vocabulary ⊆ `ExecutionStatus ∪ {idle, unreachable}`.
+Why first: every other surface depends on it (rows 1, 3, 5); it is exactly what APEX gets structurally wrong (`ROSTER`); it encodes the anti-fabrication rule.
+Expected initial failure: the tree/file does not exist → `FileNotFoundError` on the source read (RED).
+Gates **M1 — "Honest topology"**: Command Center shell + Core (row 1 states) + capability nodes from the served contract (rows 3, 5, 6, 7) + status bar (row 31) + a11y (row 34) + branding (§7); no execution graph or conversation yet. Proof: red test GREEN; `tests/ui` + Q5 pins GREEN; canonical gate PASS with `ui_static_check` unchanged for `ui/admin`, a declared guard block for the new tree, N0 = 73 untouched.
+Not created in R182: the repository's opening convention is declaration-first; the R181 precedent created the RED test as the first act of the implementation step.
+
+## 11. Readiness verdict
+
+Operator-only blockers: **D-1** (ADR-0013 acceptance) and **D-3** (serving under ceiling 0; D-2 follows from it). D-4/D-5/D-6 do not block M1.
+
+- QEVION UI readiness: **no** until D-1 and D-3 are answered — base, budget, guard frame, contracts, inventory, first test and milestone are ready and recorded.
+- AI Apps Factory: **NOT READY** — MISSING (row 24): generated-project persistence, VCS metadata, preview URL, build/deploy state; plus row 25 API keys → **5** missing contracts; owning round undefined until the operator defines the contract (backend, not R182).
