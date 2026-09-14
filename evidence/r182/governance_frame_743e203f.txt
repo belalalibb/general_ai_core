@@ -20,12 +20,12 @@ round_r182: {'ceiling': 0, 'changes_used': 0}
 -- guarded UI trees: ui/admin = manifest ui_static_check + tests/ui (exact-file equality, N0 on app.js only, single fetch in api(), EventSource(/WebSocket(/XMLHttpRequest/axios banned, no hardcoded CAPABILITY_IDS, no provider branching, html/css no wired /v1/)
 -- ui/app = guarded ONLY by its own tests: tests/composition/test_ui_app_pd2.py (11 tests) + tests/composition/test_admin_console_runtime.py title pin; NOT in manifest ui_static_check; no N0
 -- browser/live: manifest non_test_items live-suite = playwright; NOT EVALUATED #1 'missing dependency'; playwright importable in venv? ModuleNotFoundError: No module named 'playwright'
--- secret-scan current hits (manifest regex over include globs):
-./tests/admin_agent/test_aa2_admin_agent.py:533:    "AKIAIOSFODNN7EXAMPLE",
-./tests/memory/test_memory_stores.py:346:            "-----BEGIN RSA PRIVATE KEY-----",
-./tests/memory/test_memory_stores.py:347:            "AKIAIOSFODNN7EXAMPLE",
-./tests/security/test_log_secret_leakage.py:38:_AWS_KEY = "AKIAIOSFODNN7EXAMPLE"
-./tests/security/test_log_secret_leakage.py:74:        rendered = _render({"event": "-----BEGIN RSA PRIVATE KEY-----\nMI
+-- secret-scan current hits (manifest regex over include globs) — sentinel VALUES redacted in this evidence file so the scan does not match its own quotation (F-R182-06):
+./tests/admin_agent/test_aa2_admin_agent.py:533:    "AKIA<redacted-documented-example-key>",
+./tests/memory/test_memory_stores.py:346:            "<redacted PEM private-key header>",
+./tests/memory/test_memory_stores.py:347:            "AKIA<redacted-documented-example-key>",
+./tests/security/test_log_secret_leakage.py:38:_AWS_KEY = "AKIA<redacted-documented-example-key>"
+./tests/security/test_log_secret_leakage.py:74:        rendered = _render({"event": "<redacted PEM private-key header>\nMI
 -- branding: QEVION occurrences in ui/: ui/admin/app.js:0 ui/admin/index.html:0 ui/admin/styles.css:0 ui/app/app.js:0 ui/app/index.html:0 ui/app/styles.css:0 
 ui/admin/index.html:6:<title>Admin Console — AI Orchestration Platform</title>
 ui/admin/index.html:44:    <h1>Admin Console</h1>
