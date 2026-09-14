@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QEVION Control Plane — Command Center</title>
+<link rel="stylesheet" href="command.css">
+</head>
+<body>
+<!-- ============================================================
+     QEVION Command Center — R182-IMPL M1 "Honest topology".
+     ADR-0013 Alternative C: vanilla ES module, no framework, no build,
+     no runtime dependency. Served as a sub-directory of the existing
+     /app StaticFiles mount (D-3 b) — zero production change.
+
+     Honesty posture (R182_HANDOFF §8/§9, non-negotiable):
+       * every node on the graph is a row of GET /v1/admin/capabilities —
+         nothing is drawn that the served contract did not return;
+       * node states are the closed CapabilityState set
+         (available | inert | unavailable) plus a LOUD UNKNOWN;
+       * Core state is derived from ExecutionStatus + reachability
+         (idle | running | waiting_approval | failed | unreachable);
+       * no invented states, no token typing, no voice/waveform, no
+         roster, no clock/weather/social;
+       * the scope badge is the server's own `scope` field, verbatim.
+     ============================================================ -->
+
+<a class="skip-link" href="#topology-list">Skip to the capability list</a>
+
+<header class="cc-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-name">QEVION Control Plane</span>
+    <span class="brand-sep" aria-hidden="true">/</span>
+    <span class="brand-page">Command Center</span>
+  </div>
+  <div class="header-right">
+    <span id="scope-badge" class="badge badge-scope" hidden></span>
+    <span id="session-who" class="muted"></span>
+    <button id="logout" class="btn-ghost" hidden>Sign out</button>
+  </div>
+</header>
+
+<!-- Sign-in: admin session required for GET /v1/admin/* (deny-by-default). -->
+<section id="login-view" class="panel login-panel" aria-labelledby="login-title">
+  <h1 id="login-title">Sign in</h1>
+  <p class="muted">The Command Center reads admin-gated routes. Sign in with an admin account.</p>
+  <form id="login-form">
+    <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
+    <label>Password <input type="password" id="login-password" required autocomplete="current-password"></label>
+    <button type="submit" class="btn-primary">Sign in</button>
+  </form>
+  <p id="login-error" class="error" role="alert" hidden></p>
+</section>
+
+<main id="center-view" class="center" hidden>
+  <!-- Topology: Core in the middle, one node per served capability. -->
+  <section class="topology" aria-labelledby="topology-title">
+    <h2 id="topology-title" class="visually-hidden">Capability topology</h2>
+    <svg id="topology-svg" class="topology-svg" viewBox="0 0 800 800" role="img"
+         aria-labelledby="topology-svg-title topology-svg-desc" focusable="false">
+      <title id="topology-svg-title">Core and capability nodes</title>
+      <desc id="topology-svg-desc">One node per capability returned by the server; the list below mirrors the graph.</desc>
+      <g id="topology-traces" class="traces" aria-hidden="true"></g>
+      <g id="core" class="core" data-state="unreachable">
+        <circle class="core-ring core-ring-outer" cx="400" cy="400" r="118"></circle>
+        <circle class="core-ring core-ring-inner" cx="400" cy="400" r="96"></circle>
+        <circle class="core-body" cx="400" cy="400" r="72"></circle>
+        <text class="core-label" x="400" y="392" text-anchor="middle">CORE</text>
+        <text id="core-state-text" class="core-state" x="400" y="416" text-anchor="middle">unreachable</text>
+      </g>
+      <g id="topology-nodes" class="nodes"></g>
+    </svg>
+
+    <!-- Keyboard / screen-reader mirror of the graph (row 34). -->
+    <ul id="topology-list" class="topology-list" aria-label="Capabilities (mirror of the graph)"></ul>
+  </section>
+
+  <!-- Detail: the selected node's served record, verbatim. -->
+  <aside id="node-detail" class="panel detail" aria-live="polite" hidden>
+    <h2 id="detail-id" class="detail-id"></h2>
+    <p><span class="k">state</span> <span id="detail-state" class="badge"></span></p>
+    <p><span class="k">evidence</span> <code id="detail-evidence" class="evidence"></code></p>
+    <p class="muted small">Rendered from the server record. Inert = machinery exists, seam not composed in this process. Unavailable = work does not exist yet.</p>
+  </aside>
+
+  <p id="center-error" class="error" role="alert" hidden></p>
+</main>
+
+<!-- Status bar (row 31): counts derived from the same responses that drew the graph. -->
+<footer class="status-bar" aria-label="Status">
+  <span id="status-health" class="status-item">health: <b>unreachable</b></span>
+  <span id="status-core" class="status-item">core: <b>—</b></span>
+  <span id="status-nodes" class="status-item">nodes: <b>—</b></span>
+  <span id="status-states" class="status-item">available/inert/unavailable: <b>—</b></span>
+  <span id="status-profile" class="status-item">profile: <b>—</b></span>
+</footer>
+
+<script type="module" src="command.js"></script>
+</body>
+</html>

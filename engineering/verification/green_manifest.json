@@ -155,8 +155,8 @@
       "ui/app/command/command.js",
       "ui/app/command/index.html"
     ],
-    "v1_count_ceiling_command_js": null,
-    "v1_count_ceiling_rule": "null = not yet measured (guard fails closed while null); set ONCE to the /v1/ count of ui/app/command/command.js measured at the first GREEN of M1, then moves DOWN only (D-2)",
+    "v1_count_ceiling_command_js": 12,
+    "v1_count_ceiling_rule": "12 = raw /v1/ occurrence count of ui/app/command/command.js MEASURED at the first GREEN of M1 (R182-IMPL, 2026-09-14: 6 in the contract header comment + 6 api() route literals); set ONCE, moves DOWN only (D-2). History: null (declared before code; guard failed closed)",
     "exception_count_ceiling": 0,
     "transport": "exactly one fetch( inside one async function api(); EventSource( / WebSocket( / XMLHttpRequest / axios banned (inherited ui/admin policy)",
     "forbidden_in_source": "quoted CAPABILITY_IDS, roster arrays, provider branching, fabricated states (thinking|speaking|listening|energized|processing|reasoning)"
