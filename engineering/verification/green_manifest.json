@@ -36,7 +36,8 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 3504
+      "min_passed": 3658,
+      "min_passed_history": "3504 -> 3658 at the R182-IMPL gate of record (operator ruling D-6, R182-DEC-02: raise only at the round's gate of record, by the measured number, with a ledger line): fresh clone of 534649e8, PASS passed=3658 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_534649e8.txt; evidence/r182_impl_state_ledger.md row 16). Not ratcheted in R181/R182 readiness (no authorization then)."
     },
     "last_measured": {
       "passed": 3127,
