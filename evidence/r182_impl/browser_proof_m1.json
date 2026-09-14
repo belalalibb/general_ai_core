@@ -1,0 +1,42 @@
+{
+  "server": "python3 -m apps.main (in-memory profile, ADMIN_EMAILS)",
+  "page": "/app/command/",
+  "served_capabilities": 23,
+  "rendered_graph_nodes": 23,
+  "rendered_list_nodes": 23,
+  "core_state": "idle",
+  "scope_badge": "scope: process",
+  "requests": [
+    "GET /app/command/",
+    "GET /app/command/command.css",
+    "GET /app/command/command.js",
+    "GET /healthz",
+    "GET /v1/admin/capabilities",
+    "GET /v1/admin/system",
+    "GET /v1/agent/executions/118b2014-a12c-4352-8e13-71367ab2a5e3/trace",
+    "GET /v1/auth/session",
+    "GET /v1/executions",
+    "GET /v1/executions/118b2014-a12c-4352-8e13-71367ab2a5e3",
+    "GET /v1/executions/118b2014-a12c-4352-8e13-71367ab2a5e3/events",
+    "POST /v1/auth/login",
+    "POST /v1/execute"
+  ],
+  "console_errors": [],
+  "m2": {
+    "stream_frames_in_order": [
+      "execution_started",
+      "node_started",
+      "node_completed",
+      "final"
+    ],
+    "stage_keys": [
+      "single"
+    ],
+    "stage_states": [
+      "succeeded"
+    ],
+    "execution_status": "succeeded",
+    "progress_percent": "100",
+    "as_recorded_shown": true
+  }
+}

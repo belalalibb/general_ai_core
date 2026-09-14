@@ -337,6 +337,7 @@ check (not implemented).
 | Live provider smoke (**spends real credits**) | run with `GROQ_API_KEY`/`GSK_API_KEY` set: `pytest tests/providers/test_*_live.py` | no — production-readiness only |
 | End-to-end over the wire | start `apps.cli serve` with `ADMIN_EMAILS`, then register → verify (console token) → login → exercise §5–§8 with curl | yes (local) |
 | Durable profile | `DATABASE_URL=... alembic upgrade head && pytest tests/api/test_composition_database_v1.py` | needs Postgres |
+| Browser proof of the served UI (R182-IMPL D-4; replaced NOT-EVALUATED #1; part of the `rest` gate slice) | `PLAYWRIGHT_BROWSERS_PATH=0 .venv/bin/python -m playwright install chromium` (installs INTO the venv so the `env -i` gate finds it; bare hosts also: `sudo .venv/bin/python -m playwright install-deps chromium`), then `pytest tests/ui/test_command_center_browser_r182.py -o addopts="" -q` — it starts `python3 -m apps.main` itself (in-memory, `ADMIN_EMAILS`) and drives a real Chromium against `/app/command/`; a missing browser FAILS with the install command (no skip path — a skip would be the removed NOT-EVALUATED line in disguise); evidence `evidence/r182_impl/` | yes (local) |
 
 Read the pytest summary without the `-q` addopt: `python3 -m pytest -o addopts="" -q | tail -3`.
 
@@ -431,3 +432,7 @@ unknown shape is still caught if it is live in the shell. Lines listed in
 skipped. Bypass (audited, must be justified in the commit message):
 `SECRET_SCAN_BYPASS=1 git commit …`. Canary proof:
 `evidence/r173/00_preflight/precommit_canary_transcript.txt`.
+
+Evidence-quoting rule (F-R182-06, operator-confirmed, in force): any evidence or ledger
+file that cites a secret-scan hit quotes the **FILE:LINE** only — never the matched
+VALUE — because the scan covers `*.txt`/`*.md` and would match its own quotation.

@@ -36,7 +36,8 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 3504
+      "min_passed": 3666,
+      "min_passed_history": "3658 -> 3666 at the R182-IMPL round-close gate of record (operator authorized PR #22 merge; D-6: raise only at the gate of record, by the measured number, with a ledger line): fresh clone of f1d289c2, PASS passed=3666 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_f1d289c2.txt; evidence/r182_impl_state_ledger.md row 33). Earlier: 3504 -> 3658 at the R182-IMPL gate of record (operator ruling D-6, R182-DEC-02: raise only at the round's gate of record, by the measured number, with a ledger line): fresh clone of 534649e8, PASS passed=3658 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_534649e8.txt; evidence/r182_impl_state_ledger.md row 16). Not ratcheted in R181/R182 readiness (no authorization then)."
     },
     "last_measured": {
       "passed": 3127,
@@ -78,7 +79,7 @@
     },
     {
       "name": "live-suite",
-      "command": "browser automation against the running server and real UI (playwright)"
+      "command": "pytest tests/ui/test_command_center_browser_r182.py (declared slice: rest) — starts python3 -m apps.main and drives a real Chromium (playwright, dev extra; browser installed INTO the venv with PLAYWRIGHT_BROWSERS_PATH=0) — EVALUATED since R182-IMPL (D-4); was NOT EVALUATED 'missing dependency' until then"
     }
   ],
   "secret_scan": {
@@ -147,11 +148,21 @@
     "v1_count_ceiling_N0": 73,
     "exception_count_ceiling": 0
   },
+  "ui_command_static_check": {
+    "declared": "R182-IMPL opening (R182-DEC-02 D-2), BEFORE the first Command Center file; governed by R182_HANDOFF §2/§14 (the §9 D-2 line is interpretive)",
+    "serving": "D-3 (b): sub-directory of the existing /app StaticFiles(html=True) mount -> served at /app/command/ with zero production change; round_r182 ceiling stays 0",
+    "files": [
+      "ui/app/command/command.css",
+      "ui/app/command/command.js",
+      "ui/app/command/index.html"
+    ],
+    "v1_count_ceiling_command_js": 12,
+    "v1_count_ceiling_rule": "12 = raw /v1/ occurrence count of ui/app/command/command.js MEASURED at the first GREEN of M1 (R182-IMPL, 2026-09-14: 6 in the contract header comment + 6 api() route literals); set ONCE, moves DOWN only (D-2). History: null (declared before code; guard failed closed)",
+    "exception_count_ceiling": 0,
+    "transport": "exactly one fetch( inside one async function api(); EventSource( / WebSocket( / XMLHttpRequest / axios banned (inherited ui/admin policy)",
+    "forbidden_in_source": "quoted CAPABILITY_IDS, roster arrays, provider branching, fabricated states (thinking|speaking|listening|energized|processing|reasoning)"
+  },
   "not_evaluated": [
-    {
-      "item": "live-suite: browser automation against the real server and real UI",
-      "reason": "missing dependency"
-    },
     {
       "item": "real two-account provider round-trip (D-03 Class-A failover against live providers)",
       "reason": "credential unavailable"
@@ -163,6 +174,7 @@
     "environment unavailable"
   ],
   "not_evaluated_count_ceiling": 2,
+  "not_evaluated_history": "R182-IMPL (R182-DEC-02 D-4): item #1 'live-suite: browser automation against the real server and real UI — missing dependency' REMOVED because it is now EVALUATED — tests/ui/test_command_center_browser_r182.py drives a real Chromium (playwright, dev dependency) against `python3 -m apps.main`; evidence/r182_impl/browser_proof_m1.json. Count 2 -> 1; ceiling left at 2 (a ceiling only moves down by operator authorization; this is a count drop, not a ratchet).",
   "deferred_out_of_gate": [
     {
       "item": "mypy --strict apps/admin_agent",
