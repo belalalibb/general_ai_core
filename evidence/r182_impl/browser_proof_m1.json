@@ -13,9 +13,30 @@
     "GET /healthz",
     "GET /v1/admin/capabilities",
     "GET /v1/admin/system",
+    "GET /v1/agent/executions/3fa2798c-e09f-408d-8e73-edf3d93bbbae/trace",
     "GET /v1/auth/session",
     "GET /v1/executions",
-    "POST /v1/auth/login"
+    "GET /v1/executions/3fa2798c-e09f-408d-8e73-edf3d93bbbae",
+    "GET /v1/executions/3fa2798c-e09f-408d-8e73-edf3d93bbbae/events",
+    "POST /v1/auth/login",
+    "POST /v1/execute"
   ],
-  "console_errors": []
+  "console_errors": [],
+  "m2": {
+    "stream_frames_in_order": [
+      "execution_started",
+      "node_started",
+      "node_completed",
+      "final"
+    ],
+    "stage_keys": [
+      "single"
+    ],
+    "stage_states": [
+      "succeeded"
+    ],
+    "execution_status": "succeeded",
+    "progress_percent": "100",
+    "as_recorded_shown": true
+  }
 }

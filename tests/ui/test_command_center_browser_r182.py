@@ -253,7 +253,66 @@ def test_rendered_nodes_equal_served_capabilities_in_a_real_browser(server: dict
         detail_evidence = page.text_content("#detail-evidence")
 
         page.screenshot(path=str(evidence_dir / "command_center_m1.png"), full_page=True)
+
+        # ---- M2 (HANDOFF §7 rows 8-11): one execute turn through the UI form. ----
+        page.fill("#converse-message", "browser proof m2")
+        page.check("input[name=converse-mode][value=execute]")
+        page.click("#converse-form button[type=submit]")
+        page.wait_for_function(
+            "() => { const l = document.querySelectorAll('#stream-log li'); "
+            "return l.length > 0 && ['final','error'].includes("
+            "l[l.length - 1].getAttribute('data-type')); }",
+            timeout=20000,
+        )
+        m2_frames = page.eval_on_selector_all(
+            "#stream-log li", "els => els.map(e => e.getAttribute('data-type'))"
+        )
+        m2_stage_states = page.eval_on_selector_all(
+            "#execution-graph .exec-stage", "els => els.map(e => e.getAttribute('data-state'))"
+        )
+        m2_stage_keys = page.eval_on_selector_all(
+            "#execution-graph .exec-stage", "els => els.map(e => e.getAttribute('data-node-key'))"
+        )
+        m2_status = page.text_content("#progress-status")
+        m2_percent = page.get_attribute("#progress-bar-track", "aria-valuenow")
+        m2_stage = page.text_content("#progress-stage")
+        m2_execution_id = page.text_content("#progress-execution-id")
+        m2_record = page.text_content("#execution-record")
+        m2_turns = page.eval_on_selector_all(
+            "#converse-turns li", "els => els.map(e => e.className)"
+        )
+        page.screenshot(path=str(evidence_dir / "command_center_m2.png"), full_page=True)
         browser.close()
+
+    # --- M2 assertions: the DOM equals the SERVED execution record ---------------
+    status, m2_login = _http(
+        "POST", f"{base}/v1/auth/login", {"email": ADMIN_EMAIL, "password": PASSWORD}
+    )
+    assert status == 200
+    status, m2_exec = _http(
+        "GET", f"{base}/v1/executions/{m2_execution_id}", token=m2_login["token"]
+    )
+    assert status == 200, (status, m2_exec)
+    status, m2_trace = _http(
+        "GET", f"{base}/v1/agent/executions/{m2_execution_id}/trace", token=m2_login["token"]
+    )
+    assert status == 200, (status, m2_trace)
+    assert set(m2_frames) <= {
+        "execution_started",
+        "node_started",
+        "node_completed",
+        "final",
+        "error",
+    }
+    assert "delta" not in m2_frames and "UNKNOWN_EVENT" not in m2_frames
+    assert m2_frames[0] == "execution_started" and m2_frames[-1] in ("final", "error")
+    assert m2_stage_keys == [s["node_key"] for s in m2_trace["stages"]]
+    assert m2_stage_states == [s["status"] for s in m2_trace["stages"]]
+    assert m2_status == m2_exec["status"]
+    assert m2_stage == m2_exec["progress"]["current_stage"]
+    assert m2_percent == str(m2_exec["progress"]["percent"])
+    assert f"as_recorded: {str(m2_trace['as_recorded']).lower()}" in m2_record
+    assert m2_turns == ["turn turn-request", "turn turn-response"]
 
     # --- assertions -------------------------------------------------------------
     assert len(graph_ids) == len(served_ids), (len(graph_ids), len(served_ids))
@@ -294,6 +353,14 @@ def test_rendered_nodes_equal_served_capabilities_in_a_real_browser(server: dict
                 "scope_badge": scope_badge,
                 "requests": sorted({m + " " + u[len(base) :].split("?")[0] for m, u in requests}),
                 "console_errors": console_errors,
+                "m2": {
+                    "stream_frames_in_order": m2_frames,
+                    "stage_keys": m2_stage_keys,
+                    "stage_states": m2_stage_states,
+                    "execution_status": m2_status,
+                    "progress_percent": m2_percent,
+                    "as_recorded_shown": "as_recorded:" in m2_record,
+                },
             },
             indent=2,
         )
