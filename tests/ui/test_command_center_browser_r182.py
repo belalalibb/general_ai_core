@@ -110,7 +110,22 @@ def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict]:
             "PYTHONUNBUFFERED": "1",
         }
     )
-    env.pop("DATABASE_URL", None)  # in-memory profile: the hermetic proof
+    # Hermetic proof: the in-memory profile with the local_echo provider. The
+    # runtime composes REAL providers when GROQ_API_KEY / GSK_API_KEY are present
+    # (apps/composition/runtime.py), which is exactly what the canonical suite
+    # strips with `env -u` (OPERATIONS §10) — strip the same names here so the
+    # execute turn never reaches a live provider from a test.
+    for name in list(env):
+        if name in ("DATABASE_URL", "REDIS_URL") or name.startswith(
+            (
+                "GROQ_API_KEY",
+                "GSK_API_KEY",
+                "GW_GROQ_API_KEY",
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+            )
+        ):
+            env.pop(name, None)
     # The console log carries the one-time verification token: kept in tmp, never in evidence.
     log_path = tmp_path_factory.mktemp("command-center-server") / "server_stdout.txt"
     with open(log_path, "w", encoding="utf-8") as log:
