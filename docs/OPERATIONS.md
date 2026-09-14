@@ -337,6 +337,7 @@ check (not implemented).
 | Live provider smoke (**spends real credits**) | run with `GROQ_API_KEY`/`GSK_API_KEY` set: `pytest tests/providers/test_*_live.py` | no — production-readiness only |
 | End-to-end over the wire | start `apps.cli serve` with `ADMIN_EMAILS`, then register → verify (console token) → login → exercise §5–§8 with curl | yes (local) |
 | Durable profile | `DATABASE_URL=... alembic upgrade head && pytest tests/api/test_composition_database_v1.py` | needs Postgres |
+| Browser proof of the served UI (R182-IMPL D-4; replaced NOT-EVALUATED #1) | `python3 -m playwright install chromium` (bare hosts also: `sudo python3 -m playwright install-deps chromium`), then `pytest tests/ui/test_command_center_browser_r182.py -o addopts="" -q` — it starts `python3 -m apps.main` itself (in-memory, `ADMIN_EMAILS`) and drives a real Chromium against `/app/command/`; SKIPS loudly (never passes silently) when the browser binary is absent; evidence `evidence/r182_impl/` | yes (local) |
 
 Read the pytest summary without the `-q` addopt: `python3 -m pytest -o addopts="" -q | tail -3`.
 

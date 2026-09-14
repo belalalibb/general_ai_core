@@ -1,0 +1,21 @@
+{
+  "server": "python3 -m apps.main (in-memory profile, ADMIN_EMAILS)",
+  "page": "/app/command/",
+  "served_capabilities": 23,
+  "rendered_graph_nodes": 23,
+  "rendered_list_nodes": 23,
+  "core_state": "idle",
+  "scope_badge": "scope: process",
+  "requests": [
+    "GET /app/command/",
+    "GET /app/command/command.css",
+    "GET /app/command/command.js",
+    "GET /healthz",
+    "GET /v1/admin/capabilities",
+    "GET /v1/admin/system",
+    "GET /v1/auth/session",
+    "GET /v1/executions",
+    "POST /v1/auth/login"
+  ],
+  "console_errors": []
+}

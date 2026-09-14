@@ -77,7 +77,7 @@ def _http(
 
 
 @pytest.fixture(scope="module")
-def server() -> Iterator[dict]:
+def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict]:
     """The operator entrypoint, as a real subprocess; token read from its console."""
     port = _free_port()
     env = dict(os.environ)
@@ -91,8 +91,8 @@ def server() -> Iterator[dict]:
         }
     )
     env.pop("DATABASE_URL", None)  # in-memory profile: the hermetic proof
-    log_path = ROOT / "evidence" / "r182_impl" / "server_stdout.txt"
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+    # The console log carries the one-time verification token: kept in tmp, never in evidence.
+    log_path = tmp_path_factory.mktemp("command-center-server") / "server_stdout.txt"
     with open(log_path, "w", encoding="utf-8") as log:
         proc = subprocess.Popen(
             [sys.executable, "-m", "apps.main"],
@@ -176,6 +176,7 @@ def test_rendered_nodes_equal_served_capabilities_in_a_real_browser(server: dict
     assert served_ids == set(CAPABILITY_IDS)
 
     evidence_dir = ROOT / "evidence" / "r182_impl"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
     console_errors: list[str] = []
     requests: list[tuple[str, str]] = []
 

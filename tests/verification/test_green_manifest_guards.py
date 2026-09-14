@@ -242,8 +242,11 @@ def test_not_evaluated_section_prints_lines_and_summary(tmp_path: Path) -> None:
     repo = _skeleton(tmp_path)
     r = _run_section(repo, _ne_section())
     assert r.returncode == 0, r.stdout + r.stderr
-    assert r.stdout.count("NOT EVALUATED: ") == 2
-    assert "SUMMARY: not_evaluated=2 (counted separately; never green, never FAIL)" in r.stdout
+    # R182-IMPL D-4: item #1 (browser automation — missing dependency) became EVALUATED
+    # (tests/ui/test_command_center_browser_r182.py); count 2 -> 1, pinned exactly.
+    assert r.stdout.count("NOT EVALUATED: ") == 1
+    assert "SUMMARY: not_evaluated=1 (counted separately; never green, never FAIL)" in r.stdout
+    assert "missing dependency" not in r.stdout
     assert "PASS:" not in r.stdout
 
 

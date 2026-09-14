@@ -163,10 +163,6 @@
   },
   "not_evaluated": [
     {
-      "item": "live-suite: browser automation against the real server and real UI",
-      "reason": "missing dependency"
-    },
-    {
       "item": "real two-account provider round-trip (D-03 Class-A failover against live providers)",
       "reason": "credential unavailable"
     }
@@ -177,6 +173,7 @@
     "environment unavailable"
   ],
   "not_evaluated_count_ceiling": 2,
+  "not_evaluated_history": "R182-IMPL (R182-DEC-02 D-4): item #1 'live-suite: browser automation against the real server and real UI — missing dependency' REMOVED because it is now EVALUATED — tests/ui/test_command_center_browser_r182.py drives a real Chromium (playwright, dev dependency) against `python3 -m apps.main`; evidence/r182_impl/browser_proof_m1.json. Count 2 -> 1; ceiling left at 2 (a ceiling only moves down by operator authorization; this is a count drop, not a ratchet).",
   "deferred_out_of_gate": [
     {
       "item": "mypy --strict apps/admin_agent",
