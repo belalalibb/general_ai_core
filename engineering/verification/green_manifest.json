@@ -78,7 +78,7 @@
     },
     {
       "name": "live-suite",
-      "command": "browser automation against the running server and real UI (playwright)"
+      "command": "pytest tests/ui/test_command_center_browser_r182.py (declared slice: rest) — starts python3 -m apps.main and drives a real Chromium (playwright, dev extra; browser installed INTO the venv with PLAYWRIGHT_BROWSERS_PATH=0) — EVALUATED since R182-IMPL (D-4); was NOT EVALUATED 'missing dependency' until then"
     }
   ],
   "secret_scan": {

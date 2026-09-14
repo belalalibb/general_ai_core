@@ -19,8 +19,13 @@ What is proven (R182_HANDOFF §18 "browser proof"):
   * no console errors, and every network request the page made is a GET/POST
     to routes the served OpenAPI exposes (single transport, no CDN, no APEX).
 
-Skips (never fails) ONLY when the browser binary is not installed — that is a
-sandbox condition, recorded loudly in the skip reason, not a silent pass.
+No skip path. NOT-EVALUATED #1 was removed because this proof runs; a skip would be
+that removed line in disguise (and would push the gate's skipped count over its
+ceiling anyway). A missing browser binary FAILS with the install command:
+`python -m playwright install chromium` (+ `install-deps chromium` on bare hosts).
+The canonical gate runs under `env -i … HOME=/tmp`, so the browser is installed INTO
+the venv (`PLAYWRIGHT_BROWSERS_PATH=0 python -m playwright install chromium`) and this
+module selects that venv-local store when the variable is unset (OPERATIONS §10).
 """
 
 from __future__ import annotations
@@ -38,15 +43,30 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from playwright.sync_api import Error as PlaywrightError
+from playwright.sync_api import sync_playwright
 
-playwright_sync = pytest.importorskip(
-    "playwright.sync_api", reason="playwright not installed (D-4 dev dependency)"
-)
-from playwright.sync_api import Error as PlaywrightError  # noqa: E402
-
-from apps.api.capabilities import CAPABILITY_IDS, CapabilityState  # noqa: E402
+from apps.api.capabilities import CAPABILITY_IDS, CapabilityState
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _select_venv_local_browsers() -> None:
+    """Hermetic browser store: `PLAYWRIGHT_BROWSERS_PATH=0` = inside the installed package.
+
+    The gate strips the environment (`env -i`); without this, playwright would look
+    under $HOME/.cache and fail even though the venv carries the browser.
+    """
+    if os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        return
+    import playwright as _pw
+
+    local_store = Path(_pw.__file__).resolve().parent / "driver" / "package" / ".local-browsers"
+    if local_store.is_dir():
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "0"
+
+
+_select_venv_local_browsers()
 ADMIN_EMAIL = "browser-admin@example.test"
 PASSWORD = "correct horse battery staple"  # noqa: S105 — test credential
 CORE_STATES = {"idle", "running", "waiting_approval", "failed", "unreachable"}
@@ -180,11 +200,16 @@ def test_rendered_nodes_equal_served_capabilities_in_a_real_browser(server: dict
     console_errors: list[str] = []
     requests: list[tuple[str, str]] = []
 
-    with playwright_sync.sync_playwright() as p:
+    with sync_playwright() as p:
         try:
             browser = p.chromium.launch()
-        except PlaywrightError as exc:  # browser binary absent in this sandbox
-            pytest.skip(f"chromium not installed for playwright: {str(exc).splitlines()[0]}")
+        except PlaywrightError as exc:  # browser binary absent: FAIL loudly, never skip
+            pytest.fail(
+                "chromium not launchable for playwright — run `python -m playwright install "
+                "chromium` (+ `sudo python -m playwright install-deps chromium`), and pass "
+                "PLAYWRIGHT_BROWSERS_PATH into the gate env; first line: "
+                + str(exc).splitlines()[0]
+            )
         page = browser.new_page(viewport={"width": 1280, "height": 900})
         page.on("console", lambda m: console_errors.append(m.text) if m.type == "error" else None)
         page.on("pageerror", lambda e: console_errors.append(str(e)))
