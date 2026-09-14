@@ -1,0 +1,132 @@
+commit: 743e203f
+openapi paths: 83
+paths: ["/healthz", "/v1/admin/audit", "/v1/admin/capabilities", "/v1/admin/capabilities/actions", "/v1/admin/capabilities/exercisable", "/v1/admin/capabilities/{capability_id}/exercise", "/v1/admin/changes", "/v1/admin/changes/propose", "/v1/admin/changes/{change_id}", "/v1/admin/changes/{change_id}/preview", "/v1/admin/changes/{change_id}/publish", "/v1/admin/changes/{change_id}/rollback", "/v1/admin/changes/{change_id}/validate", "/v1/admin/context-lab/checks", "/v1/admin/context-lab/validate", "/v1/admin/evaluations/{evaluation_id}", "/v1/admin/executions/{execution_id}/evaluations", "/v1/admin/learning/ask", "/v1/admin/learning/capability-retest", "/v1/admin/learning/changes-since-review", "/v1/admin/learning/dashboard", "/v1/admin/learning/intake", "/v1/admin/learning/learned", "/v1/admin/learning/mark-reviewed", "/v1/admin/learning/samples", "/v1/admin/learning/samples/{sample_id}", "/v1/admin/learning/samples/{sample_id}/admit", "/v1/admin/learning/samples/{sample_id}/evaluate", "/v1/admin/learning/samples/{sample_id}/promote", "/v1/admin/learning/samples/{sample_id}/sanitize", "/v1/admin/learning/samples/{sample_id}/scan", "/v1/admin/models", "/v1/admin/notifications", "/v1/admin/notifications/{notification_id}/ack", "/v1/admin/plans/{plan_tenant_id}", "/v1/admin/providers", "/v1/admin/routing/weights", "/v1/admin/scenarios", "/v1/admin/scenarios/regression-pack", "/v1/admin/scenarios/{scenario_id}/replay", "/v1/admin/self-review", "/v1/admin/skills/import", "/v1/admin/skills/imports", "/v1/admin/skills/imports/{skill_id}/activate", "/v1/admin/skills/imports/{skill_id}/approve", "/v1/admin/skills/imports/{skill_id}/review", "/v1/admin/skills/imports/{skill_id}/scan", "/v1/admin/skills/imports/{skill_id}/validate", "/v1/admin/source-changes", "/v1/admin/source-changes/snapshots", "/v1/admin/source-changes/{proposal_id}", "/v1/admin/source-changes/{proposal_id}/apply", "/v1/admin/source-changes/{proposal_id}/approve", "/v1/admin/source-changes/{proposal_id}/reject", "/v1/admin/source-changes/{proposal_id}/rollback", "/v1/admin/source-changes/{proposal_id}/verify", "/v1/admin/system", "/v1/admin/usage", "/v1/agent-tools", "/v1/agent/converse", "/v1/agent/executions/{execution_id}/diagnosis", "/v1/agent/executions/{execution_id}/trace", "/v1/agent/tools", "/v1/auth/login", "/v1/auth/logout", "/v1/auth/register", "/v1/auth/session", "/v1/auth/verify", "/v1/execute", "/v1/executions", "/v1/executions/{execution_id}", "/v1/executions/{execution_id}/events", "/v1/memory/preferences", "/v1/memory/preferences/{memory_id}", "/v1/models", "/v1/projects", "/v1/projects/{project_id}", "/v1/skills", "/v1/usage", "/v1/webhooks", "/v1/webhooks/{subscription_id}", "/v1/workspaces", "/v1/workspaces/{workspace_id}"]
+
+### GET /v1/auth/session -> 200
+{"user_id": "f9daa151-3ec9-4f92-8cc2-0901b44ecfdb", "tenant_id": "7e6457bc-3e0e-4bc6-b017-7b372cfbf4db", "email": "r182-admin-4a75ac@example.com", "is_admin": true}
+
+### GET /v1/admin/system -> 200
+{"profile": "in-memory", "identity_mode": "auth", "provider_keys": ["local_echo"], "admin_emails_configured": 1, "scope": "process"}
+
+### GET /v1/admin/capabilities -> 200
+{"scope": "process", "capabilities": [{"id": "admin.control_plane", "state": "available", "evidence": "admin seam -> /v1/admin/* (T-IMPL-032)"}, {"id": "agent.runtime", "state": "available", "evidence": "agent seam -> GET /v1/agent-tools + execution_policy.strategy=agent (R160)"}, {"id": "auth.sessions", "state": "available", "evidence": "auth seam -> /v1/auth/* (AA-1 IDN-1)"}, {"id": "context.composition", "state": "available", "evidence": "composer seam; core/context (13 \u00a75)"}, {"id": "conversations.persistence", "state": "available", "evidence": "conversations seam; core/memory/ports.py"}, {"id": "dev.publish_modes", "state": "inert", "evidence": "dev_bindings seam -> GET /v1/dev/bindings/{id}/publish-modes (R169 A6 / R172 C7)"}, {"id": "evaluation.records", "state": "available", "evidence": "admin seam -> GET /v1/admin/evaluations/{id} + /executions/{id}/evaluations (22 \u00a77)"}, {"id": "execute.async", "state": "available", "evidence": "outbox seam -> 202 path (V2); core/runtime/outbox.py"}, {"id": "execute.sync", "state": "available", "evidence": "POST /v1/execute (always mounted)"}, {"id": "execute.token_streaming", "state": "unavailable", "evidence": "no streaming provider adapters exist (R115/V6-2 record)"}, {"id": "executions.progress_sse", "state": "available", "evidence": "sse seam -> GET /v1/executions/{id}/events (V6-2)"}, {"id": "health.liveness", "state": "available", "evidence": "healthz seam -> GET /healthz (SYS-1)"}, {"id": "learning.custody_governance", "state": "inert", "evidence": "custody seam (LEARNING_STORAGE_POLICIES + DATABASE_URL) -> /v1/admin/learning/custody/holds|revoke|sweep|release-legacy-hold (R178 DEC03; R179 4.7)"}, {"id": "learning.lifecycle", "state": "available", "evidence": "learning lifecycle seam -> /v1/admin/learning/* (R158; core/learning/lifecycle.py)"}, {"id": "models.listing", "state": "available", "evidence": "models+bindings seams -> GET /v1/models (10 \u00a76)"}, {"id": "rate_limits.execute", "state": "inert", "evidence": "rate_limits seam + configured limit (T-IMPL-070)"}, {"id": "skills.import", "state": "available", "evidence": "skills_import flag: the composition root attaches SkillReviewSurface -> /v1/admin/skills/import* (SKL-1, 14 \u00a73)"}, {"id": "skills.listing", "state": "available", "evidence": "GET /v1/skills over the skill registry"}, {"id": "sourcechange.workflow", "state": "available", "evidence": "admin seam -> /v1/admin/source-changes/* (R3 ADR-0009; authoritative_applier=None)"}, {"id": "usage.reporting", "state": "available", "evidence": "usage seam -> GET /v1/usage (10 \u00a78)"}, {"id": "webhooks.delivery_staging", "state": "available", "evidence": "webhooks+outbox seams -> execution.queued staging (V6-3)"}, {"id": "webhooks.registration", "state": "available", "evidence": "webhooks seam -> POST /v1/webhooks (41 \u00a721)"}, {"id": "workspaces.projects", "state": "available", "evidence": "always mounted -> /v1/workspaces + /v1/projects (closure GAP 1; R168 D-08 one store)"}]}
+
+### GET /v1/admin/capabilities/exercisable -> 200
+{"exercisable": ["execute.sync", "models.listing", "skills.listing", "usage.reporting"]}
+
+### GET /v1/admin/capabilities/actions -> 200
+{"scope": "process", "capability": "admin.control_plane", "vocabulary": "core.contracts.admin.ACTION_AREA", "field_rules": "core.admin.service.PAYLOAD_FIELD_RULES", "actions": [{"action": "capability_proposal", "area": "tools", "fields": [{"name": "proposal_id", "kind": "string", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "capability", "kind": "string", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "target", "kind": "string", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "what", "kind": "string", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "does", "kind": "string", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "why", "kind": "string", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "required", "kind": "bool", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "dependencies", "kind": "string", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "impact", "kind": "string", "required": true, "contract": "CapabilityProposalPayload"}, {"name": "risk", "kind": "string", "required": true, "contract": "CapabilityProp …
+
+### GET /v1/models -> 200
+{"models": [{"id": "d0ee7091-52d5-48a7-a697-214ae2ca2b6e", "name": "local-echo-1", "tier": "medium", "modalities": ["text"], "capabilities": ["reasoning"], "availability": "available"}]}
+
+### GET /v1/admin/models -> 200
+{"models": [{"id": "d0ee7091-52d5-48a7-a697-214ae2ca2b6e", "model_key": "local-echo-1", "display_name": "local-echo-1", "tier": "medium", "modalities": ["text"], "capabilities": ["reasoning"], "quality_score": 0.8, "speed_score": 0.8, "cost_score": 0.8, "reliability_score": 0.8, "status": "active"}]}
+
+### GET /v1/admin/providers -> 200
+{"providers": [{"id": "0f723938-7019-4a8c-9122-34f42b0b6fe4", "provider_key": "local_echo", "display_name": "Local Echo (hermetic)", "status": "active", "auth_types": ["api_key"], "supports_account_pool": false, "is_template": false, "is_routable": true}]}
+
+### GET /v1/admin/routing/weights -> 200
+{"version": "11s6-initial", "quality": 0.35, "reliability": 0.2, "cost": 0.15, "latency": 0.15, "context_fit": 0.1, "policy_preference": 0.05}
+
+### POST /v1/execute -> 200
+{"execution_id": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7", "status": "succeeded", "result": {"type": "message", "content": "{\"context_blocks\": [{\"content\": \"r182 readiness probe\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"r182 readiness probe\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}", "artifacts": [{"type": "context_provenance", "blocks_total": 1, "memory_blocks": [], "gold_blocks": 0, "excluded": 0}]}, "usage": {"units_reserved": 1, "units_settled": 1, "details": {"status": "settled"}}}
+
+### GET /v1/executions/{id} -> 200
+{"execution_id": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7", "status": "succeeded", "progress": {"current_stage": "single", "percent": 100}, "result": {"type": "message", "content": "{\"context_blocks\": [{\"content\": \"r182 readiness probe\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"r182 readiness probe\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}", "artifacts": [{"type": "context_provenance", "blocks_total": 1, "memory_blocks": [], "gold_blocks": 0, "excluded": 0}]}}
+
+### GET /v1/executions/{id}/events -> 200
+"data: {\"execution_id\": \"18a8deb5-9ced-4f6b-92f6-f0401ef613a7\", \"type\": \"execution_started\"}\n\ndata: {\"node\": \"single\", \"type\": \"node_started\"}\n\ndata: {\"node\": \"single\", \"type\": \"node_completed\"}\n\ndata: {\"result\": {\"context_blocks\": [{\"content\": \"r182 readiness probe\", \"source\": \"request\", \"type\": \"as"
+
+### GET /v1/executions -> 200
+{"executions": [{"execution_id": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7", "status": "succeeded", "initiated_by": "f9daa151-3ec9-4f92-8cc2-0901b44ecfdb", "created_at": "2026-09-14T10:44:39.346564+00:00", "progress": {"current_stage": "single", "percent": 100}}]}
+
+### GET /v1/admin/executions/{id}/evaluations -> 200
+{"evaluations": []}
+
+### GET /v1/agent/executions/{id}/trace -> 200
+{"execution_id": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7", "status": "succeeded", "strategy": "single", "created_at": "2026-09-14T10:44:39.346564Z", "completed_at": "2026-09-14T10:44:39.346750Z", "stages": [{"node_key": "single", "status": "succeeded", "attempts": [{"attempt": 1, "model_key": "local-echo-1", "provider_key": "local_echo", "succeeded": true, "latency_ms": 0}]}], "ledger": {"status": "settled", "units_reserved": 1.0, "units_settled": 1.0}, "as_recorded": true}
+
+### GET /v1/agent/executions/{id}/diagnosis -> 200
+{"execution_id": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7", "tier": "proven_cause", "claims": [{"text": "execution succeeded; no failure to diagnose", "evidence": [{"kind": "execution", "ref": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7"}]}], "missing_evidence": []}
+
+### GET /v1/usage -> 200
+{"plan": "local-default", "task_units": {"limit": 1000000.0, "used": 1.0, "remaining": 999999.0}, "modality_limits": {}}
+
+### GET /v1/admin/usage -> 200
+{"usage": [{"execution_id": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7", "status": "succeeded", "created_at": "2026-09-14T10:44:39.346564+00:00", "ledger": {"id": "bd04fce2-df91-4042-ad4e-79ff7f219dbc", "tenant_id": "7e6457bc-3e0e-4bc6-b017-7b372cfbf4db", "execution_id": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7", "units_reserved": 1.0, "units_settled": 1.0, "modality_costs": {"provider_usage": [{"node_key": "single", "usage": {"units": 1}}]}, "status": "settled"}}]}
+
+### GET /v1/admin/learning/dashboard -> 200
+{"placeholder": true, "verified_samples": 0, "gold_samples": 0, "dataset_coverage": {}, "task_coverage": {}, "specialist_models": [], "accuracy_trends": [], "promotion_history": [], "rollback_actions": []}
+
+### GET /v1/admin/learning/learned -> 200
+{"keys": []}
+
+### GET /v1/memory/preferences -> 200
+{"preferences": []}
+
+### GET /v1/projects -> 200
+{"projects": []}
+
+### POST /v1/projects {name} -> 201
+{"project_id": "79b0e558-bc2a-4746-a018-3f56427694aa", "workspace_id": null, "name": "r182-probe", "metadata": {}}
+
+### POST /v1/workspaces {name} -> 201
+{"workspace_id": "3e17078b-def6-4313-853c-84eab85eaecd", "name": "r182-ws"}
+
+### GET /v1/webhooks -> 200
+{"webhooks": []}
+
+### GET /v1/skills -> 200
+{"skills": []}
+
+### GET /v1/agent/tools -> 200
+{"tools": [{"name": "changes_since_review", "class": "r0_read", "arguments": [], "description": "What changed since the last review \u2014 audit/config windows WITH evidence rows; never fabricates metrics."}, {"name": "draft_change", "class": "r2_config_change", "arguments": ["action", "payload"], "description": "Draft a config change through the existing lifecycle (publish is a human UI act, never a tool). 'action' must be one of: capability_proposal, disable_model, disable_provider, disable_skill, disable_tool, enable_model, enable_provider, enable_skill, enable_tool, register_model, register_provider, set_plan, set_routing_weights, set_skill_sources."}, {"name": "exercise_capability", "class": "r1_execute_test", "arguments": ["capability_id"], "description": "Prove a capability by exercising it \u2014 a REAL probe over the real path returning record evidence."}, {"name": "list_capabil …
+
+### GET /v1/agent-tools -> 200
+{"strategy": "agent", "max_steps": 8, "tools": []}
+
+### POST /v1/agent/converse {message} -> 200
+{"claims": [], "tool_calls": [], "reasoning_execution_ids": ["9b132b95-c228-4fc7-8145-c9cc350d588c"], "rounds": 1, "stop_reason": "final", "verification": {"verified": true, "claims_admitted": 0, "claims_refused": 0, "tool_calls_ok": 0, "tool_calls_total": 0}, "reasoning_trace": [{"execution_id": "9b132b95-c228-4fc7-8145-c9cc350d588c", "status": "succeeded", "strategy": "single", "created_at": "2026-09-14T10:44:39.375060Z", "completed_at": "2026-09-14T10:44:39.375204Z", "stages": [{"node_key": "single", "status": "succeeded", "attempts": [{"attempt": 1, "model_key": "local-echo-1", "provider_key": "local_echo", "succeeded": true, "latency_ms": 0}]}], "ledger": {"status": "settled", "units_reserved": 1.0, "units_settled": 1.0}, "as_recorded": true}]}
+
+### GET /v1/admin/self-review -> 200
+{"capabilities": {"available": true, "by_state": {"available": 19, "inert": 3, "unavailable": 1}, "rows": [{"id": "admin.control_plane", "state": "available", "evidence": "admin seam -> /v1/admin/* (T-IMPL-032)"}, {"id": "agent.runtime", "state": "available", "evidence": "agent seam -> GET /v1/agent-tools + execution_policy.strategy=agent (R160)"}, {"id": "auth.sessions", "state": "available", "evidence": "auth seam -> /v1/auth/* (AA-1 IDN-1)"}, {"id": "context.composition", "state": "available", "evidence": "composer seam; core/context (13 \u00a75)"}, {"id": "conversations.persistence", "stat …
+
+### GET /v1/admin/notifications -> 200
+{"notifications": [{"id": "exec:9b132b95-c228-4fc7-8145-c9cc350d588c", "category": "success", "title": "execution succeeded", "occurred_at": "2026-09-14T10:44:39.375060+00:00", "evidence": {"kind": "execution", "ref": "9b132b95-c228-4fc7-8145-c9cc350d588c"}, "read": false}, {"id": "exec:18a8deb5-9ced-4f6b-92f6-f0401ef613a7", "category": "success", "title": "execution succeeded", "occurred_at": "2026-09-14T10:44:39.346564+00:00", "evidence": {"kind": "execution", "ref": "18a8deb5-9ced-4f6b-92f6-f0401ef613a7"}, "read": false}], "unread": 2}
+
+### GET /v1/admin/audit -> 200
+{"events": [], "total_recorded": 0}
+
+### GET /v1/admin/changes -> 200
+{"changes": []}
+
+### GET /v1/admin/source-changes -> 200
+{"proposals": []}
+
+### GET /v1/admin/scenarios -> 200
+{"scenarios": []}
+
+### GET /v1/admin/skills/imports -> 200
+{"imports": [], "allowed_sources": ["https://github.com/mattpocock/skills", "https://www.aihero.dev/skills-wayfinder", "https://github.com/amElnagdy/review-skills"]}
+
+### GET /v1/admin/context-lab/checks -> 200
+{"checks": ["ask_block_present", "budget_respected", "deterministic_composition", "exclusions_named"]}
+
+### GET /v1/api-keys (existence probe) -> 404
+{"detail": "Not Found"}
+
+### GET /v1/keys (existence probe) -> 404
+{"detail": "Not Found"}
+
+### GET /v1/admin/api-keys (existence probe) -> 404
+{"detail": "Not Found"}
+
+### GET /v1/admin/engineering/status (existence probe) -> 404
+{"detail": "Not Found"}
+
+### GET /v1/dev/bindings (existence probe) -> 404
+{"detail": "Not Found"}
+
+### GET /app/ -> 200 text/html; charset=utf-8
+### GET /admin/ -> 200 text/html; charset=utf-8

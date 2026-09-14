@@ -1,0 +1,232 @@
+== APEX reference inspection (R182 readiness; read-only; nothing vendored) ==
+GitHub: https://github.com/RubenM1990/APEX-UI  commit a8732fad1078a809cadfa810cb0d89cf4445dbed (Fri Sep 11 12:38:36 2026 +0300)
+Live: https://apex-ui-xi.vercel.app/ -> HTTP 200, 23259 B (server-rendered HTML inspected below)
+
+-- live <title>: APEX-UI — Autonomous-agent orb interface
+-- live text nodes (server-rendered):
+ | APEX-UI — Autonomous-agent orb interface | OVERVIEW | Chief of staff |  -  | Right hand - runs the day | Memory |  -  | Long-term memory | Strategist |  -  | Big-picture thinking | Researcher |  -  | Deep research | Finance |  -  | Money watch | Editor |  -  | Quality gate | Sales |  -  | Deal closer | Marketing |  -  | Growth engine | Ops |  -  | Business operator | Social |  -  | Voice of the brand | Engineering |  -  | Engineering brain | Design |  -  | Visual workshop | Developer |  -  | Keeper of the build log | Analytics |  -  | Numbers feed | CRM |  -  | Client memory bank | Calendar |  -  | Schedule sense | Email |  -  | Inbox hands | Drive |  -  | File access | STANDBY | TAP THE CORE · CLICK AN AGENT · SCROLL FOR THE STORY | View on GitHub ↗ | 
+live classes: ['apex-orb-wrap', 'apex-overview', 'orb-ambient', 'orb-center', 'orb-center-ring', 'orb-dot-blink', 'orb-orbit-ccw', 'orb-orbit-cw', 'orb-ring-breathe', 'orb-ring-bright', 'orb-ring-glow', 'sb-hint', 'sound-wave', 'visually-hidden']
+live aria-labels: ['Apex agents', 'Apex core - tap to energize', 'Apex reasoning web', 'Toggle overview panel']
+live <svg>: 3 <canvas>: 1 | 'reduced-motion' in served CSS/HTML: False
+
+-- tracked files:
+.gitignore
+CREDITS.md
+LICENSE
+README.md
+app/api/weather/route.ts
+app/globals.css
+app/layout.tsx
+app/page.tsx
+components/ApexCore3D.jsx
+components/ApexHeroOrb.tsx
+components/ApexOrb.jsx
+components/ApexOverviewPanel.tsx
+components/ApexWorld.tsx
+components/OrbStatusBar.jsx
+components/ReasoningWeb.jsx
+components/ShaderBackground.jsx
+components/apex-orb.css
+next.config.mjs
+package-lock.json
+package.json
+tsconfig.json
+
+-- line counts:
+   504 components/ApexCore3D.jsx
+   102 components/ApexHeroOrb.tsx
+   222 components/ApexOrb.jsx
+   167 components/ApexOverviewPanel.tsx
+   349 components/ApexWorld.tsx
+    84 components/OrbStatusBar.jsx
+   319 components/ReasoningWeb.jsx
+   270 components/ShaderBackground.jsx
+   151 components/apex-orb.css
+    40 app/api/weather/route.ts
+  2208 total
+
+-- package.json dependencies:
+{
+ "license": "MIT",
+ "dependencies": {
+  "next": "15.3.8",
+  "react": "^19.0.0",
+  "react-dom": "^19.0.0",
+  "lucide-react": "^0.511.0",
+  "three": "^0.184.0",
+  "@react-three/fiber": "^9.6.1",
+  "@react-three/postprocessing": "^3.0.4"
+ },
+ "devDependencies": {
+  "typescript": "^5",
+  "@types/node": "^20",
+  "@types/react": "^19",
+  "@types/react-dom": "^19",
+  "@types/three": "^0.184.1",
+  "eslint": "^9",
+  "eslint-config-next": "15.3.3"
+ }
+}
+
+-- actual imports (source outranks metadata):
+      2 import { useEffect, useRef, useState } from "react";
+      2 import { useEffect, useRef } from 'react'
+      1 import { useEffect, useState } from "react";
+      1 import { Sparkles, Instagram, Facebook, Linkedin, ArrowUpRight } from "lucide-react";
+      1 import { NextResponse } from "next/server";
+      1 import { EffectComposer, Bloom } from '@react-three/postprocessing'
+      1 import { Canvas, useFrame } from '@react-three/fiber'
+      1 import type { Metadata } from "next";
+      1 import dynamic from "next/dynamic";
+      1 import ShaderBackgroundJs from "./ShaderBackground";
+      1 import ReasoningWebJs from "./ReasoningWeb";
+      1 import React, { useRef, useMemo, useState } from 'react'
+      1 import OrbStatusBar from "./OrbStatusBar";
+      1 import ApexWorld from "@/components/ApexWorld";
+      1 import ApexOverviewPanel from "@/components/ApexOverviewPanel";
+      1 import ApexOrb from "./ApexOrb";
+      1 import ApexHeroOrb, { type OrbState } from "./ApexHeroOrb";
+      1 import * as THREE from 'three'
+      1 import "./globals.css";
+      1 import "./apex-orb.css";
+
+-- external URLs in source:
+http://www.w3.org/2000/svg
+https://api.open-meteo.com/v1/forecast?latitude=
+https://github.com/RubenM1990/APEX-UI
+https://www.facebook.com/profile.php?id=61590746065386
+https://www.instagram.com/reznikov_engineering/
+https://www.linkedin.com/in/ruben-mouradian-150698173
+
+-- transports / timers:
+components/ReasoningWeb.jsx:194:          setTimeout(() => {
+components/ReasoningWeb.jsx:198:            const stream = () => { if (performance.now() < n._until) { spawn(n.spoke, false); setTimeout(stream, 105) 
+components/ReasoningWeb.jsx:200:            setTimeout(() => { n.circ.setAttribute('filter', 'url(#rw-glow)'); n.circ.setAttribute('r', (n.live ? n.r 
+components/ReasoningWeb.jsx:201:            setTimeout(() => {
+components/ReasoningWeb.jsx:219:          setTimeout(() => ln.setAttribute('opacity', 0.6), 560)
+components/ReasoningWeb.jsx:220:          setTimeout(() => ln.remove(), 2400)
+components/ReasoningWeb.jsx:237:        const stream = () => { if (performance.now() < until) { spawn(sp, false); setTimeout(stream, 105) } }
+components/ReasoningWeb.jsx:239:        setTimeout(() => {
+components/ReasoningWeb.jsx:252:        ids.forEach((id, k) => setTimeout(() => bloomOne(id, angs[k], bloomEls), k * 200))
+components/ReasoningWeb.jsx:253:        fadeT = setTimeout(() => {
+components/ReasoningWeb.jsx:255:          setTimeout(() => { bloomEls.forEach((e) => e.remove()); bloomEls.length = 0 }, 650)
+components/ApexWorld.tsx:239:  const showTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+components/ApexWorld.tsx:246:    showTimer.current = setTimeout(() => setShowState("idle"), 8000);
+components/ApexOverviewPanel.tsx:37:    const id = setInterval(() => setNow(new Date()), 30000);
+components/ApexOverviewPanel.tsx:46:      fetch("/api/weather")
+components/ApexOverviewPanel.tsx:51:    const id = setInterval(load, 1200000);
+components/ApexHeroOrb.tsx:26:  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+components/ApexHeroOrb.tsx:63:    timer.current = setTimeout(() => update("idle"), 8000);
+components/ApexCore3D.jsx:32:      this._t = setTimeout(() => this.setState({ dead: false }), 8000)
+app/api/weather/route.ts:34:    const r = await fetch(url, { next: { revalidate: 600 } });
+
+-- state model:
+components/ApexHeroOrb.tsx:18:export type OrbState = "idle" | "thinking" | "speaking";
+components/ApexHeroOrb.tsx:60:    const next: OrbState = state === "idle" ? "thinking" : state === "thinking" ? "speaking" : "idle";
+components/ApexWorld.tsx:33:  status: "online" | "standby" | "integration";
+components/ApexWorld.tsx:243:    const next: OrbState = showState === "idle" ? "thinking" : showState === "thinking" ? "speaking" : "idle";
+components/ApexWorld.tsx:265:  const webState = orbState === "thinking" ? "processing" : orbState === "speaking" ? "speaking" : "standby";
+components/ReasoningWeb.jsx:51:const LEVEL = { standby: 0.32, listening: 0.6, processing: 0.85, reasoning: 0.95, speaking: 0.78 }
+
+-- ROSTER (APEX-specific, must NOT survive):
+export const ROSTER: { key: string; name: string; color: string }[] = [
+  { key: "chief_of_staff", name: "Chief of staff", color: "#00e5ff" },
+  { key: "memory",         name: "Memory",         color: "#00e5ff" },
+  { key: "strategist",     name: "Strategist",     color: "#00e5ff" },
+  { key: "researcher",     name: "Researcher",     color: "#00e5ff" },
+  { key: "finance",        name: "Finance",        color: "#00e5ff" },
+  { key: "editor",         name: "Editor",         color: "#00e5ff" },
+  { key: "sales",          name: "Sales",          color: "#f5a623" },
+  { key: "marketing",      name: "Marketing",      color: "#f5a623" },
+  { key: "ops",            name: "Ops",            color: "#f5a623" },
+  { key: "social_media",   name: "Social",         color: "#f5a623" },
+  { key: "engineering",    name: "Engineering",    color: "#f5a623" },
+  { key: "design",         name: "Design",         color: "#f5a623" },
+  { key: "developer",      name: "Developer",      color: "#f5a623" },
+  { key: "analytics",      name: "Analytics",      color: "#7f9bb3" },
+  { key: "crm",            name: "CRM",            color: "#7f9bb3" },
+  { key: "calendar",       name: "Calendar",       color: "#7f9bb3" },
+  { key: "email",          name: "Email",          color: "#7f9bb3" },
+  { key: "drive",          name: "Drive",          color: "#7f9bb3" },
+];
+
+-- INFO keys + status values (APEX-specific, must NOT survive):
+  chief_of_staff: { role: "Right hand - runs the day", status: "online"
+  memory: { role: "Long-term memory", status: "online"
+  strategist: { role: "Big-picture thinking", status: "online"
+  researcher: { role: "Deep research", status: "online"
+  finance: { role: "Money watch", status: "online"
+  editor: { role: "Quality gate", status: "online"
+  sales: { role: "Deal closer", status: "online"
+  marketing: { role: "Growth engine", status: "online"
+  ops: { role: "Business operator", status: "online"
+  social_media: { role: "Voice of the brand", status: "online"
+  engineering: { role: "Engineering brain", status: "online"
+  design: { role: "Visual workshop", status: "online"
+  developer: { role: "Keeper of the build log", status: "standby"
+  analytics: { role: "Numbers feed", status: "integration"
+  crm: { role: "Client memory bank", status: "integration"
+  calendar: { role: "Schedule sense", status: "integration"
+  email: { role: "Inbox hands", status: "integration"
+  drive: { role: "File access", status: "integration"
+
+-- a11y / reduced motion:
+components/ApexHeroOrb.tsx:31:    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+components/ApexHeroOrb.tsx:75:            tabIndex: 0,
+components/ApexHeroOrb.tsx:76:            "aria-label": "Apex core - tap to energize",
+components/ApexHeroOrb.tsx:97:            Skipped entirely under prefers-reduced-motion (static ring remains). */}
+components/ApexOverviewPanel.tsx:124:        role="button" tabIndex={0} aria-label="Toggle overview panel" aria-expanded={open}
+components/ApexWorld.tsx:37:   it is not edited here). Backs the visually-hidden agent list that gives the
+components/ApexWorld.tsx:162:    <div ref={panelRef} role="dialog" aria-modal="true" aria-label={`${sel.name} overview`} style={{
+components/ApexWorld.tsx:188:        <button onClick={onClose} aria-label="Close"
+components/ApexWorld.tsx:257:    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+components/ApexWorld.tsx:310:      <nav className="visually-hidden" aria-label="Apex agents">
+components/ApexWorld.tsx:331:        tabIndex={0}
+components/ApexWorld.tsx:332:        aria-label="Apex core - tap to energize"
+components/ReasoningWeb.jsx:316:           role="img" aria-label="Apex reasoning web" />
+
+-- LICENSE (first 3 lines):
+MIT License
+
+Copyright (c) 2026 Ruben Mouradian (Reznikov Engineering)
+
+-- README licence caveat:
+73:The **name "Apex" and the Reznikov Engineering branding are not part of this license.**
+74:If you build on this, please use your own product name and branding.
+
+-- CREDITS.md (verbatim):
+# Credits
+
+APEX-UI builds on two excellent **MIT-licensed** community components from
+[21st.dev](https://21st.dev/community/components):
+
+- **Animated shader background** — `components/ShaderBackground.jsx`
+  (the WebGL "plasma waves" backdrop behind the orb).
+- **Overview lamp panel** — the glowing filament HUD in `components/ApexOverviewPanel.tsx`.
+
+Both are used under the MIT license, which permits reuse (including commercial)
+provided attribution is kept — hence this file.
+
+> If you fork APEX-UI, please keep this attribution. And if you know the original
+> authors' 21st.dev handles, add the exact component links below so credit is precise:
+>
+> - Shader background: `<21st.dev component URL / author>`
+> - Overview lamp: `<21st.dev component URL / author>`
+
+Everything else (the SVG orb, reasoning-web graph, status bar, and app wiring) is
+original to this project.
+
+-- ShaderBackground attribution header:
+"use client";
+
+/*
+ * Animated WebGL "plasma waves" background.
+ * Adapted from a community component on 21st.dev (MIT-licensed).
+ * See CREDITS.md for attribution. If you reuse this, keep the credit.
+ */
+
+import { useEffect, useRef } from 'react'
+// Website copy: no voice pipeline here - the calm-render throttle never engages.
+
+-- ApexOverviewPanel: lamp component attribution present in file?
+NONE in file (only CREDITS.md)

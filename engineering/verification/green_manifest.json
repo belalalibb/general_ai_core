@@ -725,6 +725,22 @@
     ],
       "note": "R180 opening commit per R179 ruling Q5 (N0=73 arithmetic binding: the /v1/ occurrence count in ui/admin/app.js may not exceed the manifest ceiling). Frozen trees this round: core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only). ui/ and apps/admin_agent/ are THAWED for exactly the Q5 items; any other edit there is a finding."
     },
+    "round_r182": {
+      "ceiling": 0,
+      "ceiling_history": "declared 0 at the R182 opening (readiness round, no implementation) from post-R181 main 743e203f: the UI round THAWS ui/ only; core/ apps/ infrastructure/ (incl. apps/admin_agent/) are FROZEN for the whole of R182, so no production FILE under the counted roots may change. A UI need that requires a frozen-tree change is a STOP (name the missing contract + owning round), never a ceiling raise",
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R182 readiness (no production change): R181 merge by merge commit, gate on 743e203f, governance frame measured, APEX reference analysed, BACKED/INERT/MISSING inventory, ADR-0013 PROPOSED, first red test + first milestone defined"
+      ],
+      "log": [],
+      "note": "ui/ is OUTSIDE change_budget.counts_production_code_under by design (R168 §2 / R180 note): it is not budgeted by file count but governed by its own guard frame — manifest ui_static_check (exact file list for ui/admin, N0=73 /v1/ ceiling on ui/admin/app.js, exception ceiling 0, single fetch inside api(), EventSource(/WebSocket( banned) and tests/ui + tests/composition UI pins. Any future Command Center tree gets its own declared guard frame BEFORE code (R182_HANDOFF). Frozen this round: core/, apps/ (incl. apps/admin_agent/), infrastructure/, core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines)."
+    },
     "round_r181_backend_closure": {
       "ceiling": 3,
       "ceiling_history": "declared 3 BEFORE the first production commit (operator directive: close every defined, actionable backend carry-over before UI; Q6 named explicitly). Q6 option (b) is the only option that closes F-R179-06 completely: (a) reserve-after-row would change the 03 s7 refuse-before-work ordering AND still leave tool calls (call_id, never an executions row) unbindable. Files: infrastructure/db/migrations/versions/0022_usage_ledger_key.py (new), infrastructure/db/tables.py (metadata mirror), apps/composition/runtime.py (one-name flip to the composed durable adapter)",
