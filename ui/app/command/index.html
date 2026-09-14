@@ -20,7 +20,7 @@
          (available | inert | unavailable) plus a LOUD UNKNOWN;
        * Core state is derived from ExecutionStatus + reachability
          (idle | running | waiting_approval | failed | unreachable);
-       * no invented states, no token typing, no voice/waveform, no
+       * no invented states, no token-by-token text, no voice animation, no
          roster, no clock/weather/social;
        * the scope badge is the server's own `scope` field, verbatim.
      ============================================================ -->
@@ -85,6 +85,48 @@
   </aside>
 
   <p id="center-error" class="error" role="alert" hidden></p>
+
+  <!-- ===== M2 (HANDOFF §7 rows 8-11): execution graph, live progress, conversation.
+       Progress only — the server emits execution_started | node_started |
+       node_completed | final | error; `delta` is never emitted, so nothing here
+       types, streams text or animates a voice. ===== -->
+  <section class="panel execution" aria-labelledby="execution-title">
+    <h2 id="execution-title">Execution</h2>
+
+    <form id="converse-form" class="composer">
+      <label for="converse-message">Message to the platform agent (agent converse) or a plain ask (execute)</label>
+      <textarea id="converse-message" rows="3" required maxlength="100000"></textarea>
+      <div class="composer-row">
+        <label class="inline"><input type="radio" name="converse-mode" value="converse" checked> agent converse</label>
+        <label class="inline"><input type="radio" name="converse-mode" value="execute"> execute</label>
+        <button type="submit" class="btn-primary">Send</button>
+      </div>
+    </form>
+    <p id="converse-error" class="error" role="alert" hidden></p>
+
+    <!-- Turns: request text + server response fields, verbatim; verification as COUNTS. -->
+    <ol id="converse-turns" class="turns" aria-label="Conversation turns (request / response)"></ol>
+
+    <!-- Runtime indicators (row 10): status, progress{current_stage, percent} from the record. -->
+    <div id="execution-progress" class="progress" hidden>
+      <div class="progress-head">
+        <span class="k">execution</span> <code id="progress-execution-id"></code>
+        <span id="progress-status" class="badge"></span>
+        <span class="k">stage</span> <span id="progress-stage"></span>
+        <span id="progress-percent" class="muted"></span>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar-track">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+    </div>
+
+    <!-- Execution graph (row 8): trace.stages[] in recorded order. -->
+    <div id="execution-graph" class="exec-graph" aria-label="Execution stages (from the recorded trace)"></div>
+    <p id="execution-record" class="muted small" hidden></p>
+
+    <!-- Live connections (row 9): SSE frames as received (fetch-read), five types only. -->
+    <ol id="stream-log" class="stream-log" aria-label="Progress events (as emitted)"></ol>
+  </section>
 </main>
 
 <!-- Status bar (row 31): counts derived from the same responses that drew the graph. -->
