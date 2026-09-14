@@ -80,7 +80,7 @@ class TestMount:
             async with _client(profile.app) as c:
                 index = await c.get("/app/")
                 assert index.status_code == 200
-                assert "AI Orchestration Platform" in index.text
+                assert "QEVION Control Plane" in index.text
                 js = await c.get("/app/app.js")
                 assert js.status_code == 200
                 assert "STATUS_CLASSES" in js.text

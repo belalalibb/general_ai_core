@@ -77,7 +77,7 @@ class TestConsoleIsPartOfRuntime:
             async with _client(profile.app) as c:
                 index = await c.get("/admin/")
                 assert index.status_code == 200
-                assert "Admin Console" in index.text
+                assert "Admin Console" in index.text and "QEVION Control Plane" in index.text
                 js = await c.get("/admin/app.js")
                 assert js.status_code == 200
 
@@ -143,7 +143,7 @@ class TestNoShadowing:
                 assert execute.status_code == 200
                 end_user = await c.get("/app/")
                 assert end_user.status_code == 200
-                assert "AI Orchestration Platform" in end_user.text
+                assert "QEVION Control Plane" in end_user.text
 
         run(scenario())
 
