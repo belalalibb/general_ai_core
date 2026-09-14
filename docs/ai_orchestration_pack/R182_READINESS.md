@@ -182,3 +182,12 @@ Operator-only blockers: **D-1** (ADR-0013 acceptance) and **D-3** (serving under
 
 - QEVION UI readiness: **no** until D-1 and D-3 are answered — base, budget, guard frame, contracts, inventory, first test and milestone are ready and recorded.
 - AI Apps Factory: **NOT READY** — MISSING (row 24): generated-project persistence, VCS metadata, preview URL, build/deploy state; plus row 25 API keys → **5** missing contracts; owning round undefined until the operator defines the contract (backend, not R182).
+
+## 12. Verdict update — R182-IMPL opened (operator rulings 2026-09-14; R182-DEC-02)
+
+The operator answered every §9 decision (text recorded verbatim in ADR-0013 §Status and `60_DECISION_LOG.md` R182-DEC-02): D-1 ADR-0013 ACCEPTED on Alternative C; D-2 per §2/§14 of the handoff (the §9 D-2 line is interpretive); D-3 (b) `ui/app/command/` on the existing mount, ceiling stays 0, no R183 deferral; D-4 yes inside R182-IMPL (dependency withdrawn if the environment cannot run it — never left beside a "missing dependency" line, never a third NE line); D-5 yes in M1 (two titles + three pins, one commit; tree title `QEVION Control Plane — Command Center`); D-6 ratchet allowed only at the round's gate of record, with the measured number and a ledger line.
+
+Measurement update, effective at the first R182-IMPL commit (`92baaa21`, the RED test):
+
+- QEVION UI readiness: **yes — blockers: 0** (D-1 and D-3 answered by the operator; base, budget 0/0, guard frame `ui_command_static_check`, contracts, inventory, first red test and M1 all in force).
+- AI Apps Factory: **NOT READY — missing: 5** (unchanged: the Factory contract definition is an operator decision, not R182 work).
