@@ -1,7 +1,7 @@
 # ADR-0013 — UI Front-End Stack and Serving Posture (QEVION Command Center)
 
 ```text
-STATUS: PROPOSED — AWAITING OPERATOR DECISION
+STATUS: ACCEPTED — Alternative C (operator ruling D-1, 2026-09-14, R182-DEC-02)
 DATE: 2026-09-13
 TASK: R182 (UI readiness / round opening) → governs R182-IMPL
 SUPERSEDES: NONE (fulfils the deferral written into ADR-0001: "admin UI / client runtime …
@@ -121,6 +121,27 @@ no silent guard-scope extension; provenance honesty.
 
 ## Status
 
-PROPOSED — AWAITING OPERATOR DECISION (R182, 2026-09-13). Not accepted; nothing installed.
-Acceptance, when given, is recorded here by the operator's explicit text and in
-`60_DECISION_LOG.md`; the implementation round then declares its budget and guard frame.
+**ACCEPTED — Alternative C** (2026-09-14, R182-IMPL opening; recorded as R182-DEC-02 in
+`60_DECISION_LOG.md`). History: PROPOSED — AWAITING OPERATOR DECISION (R182, 2026-09-13).
+The alternatives above are unchanged; acceptance is recorded by the operator's own text:
+
+> D‑1: ADR‑0013 مقبول على Alternative C — vanilla ES modules، من غير framework/build/اعتمادية
+> runtime؛ طبقة الرسم اليدوي اختيارية ولا تدخل M1 إلّا ولها انهيار نظيف مع
+> prefers-reduced-motion/سياق غير مدعوم. B/D مرفوضين النهاردة.
+> D‑3: (b) — ui/app/command/ على الـmount الموجود، ceiling يفضل 0. مفيش رفع سقف، ومفيش defer لـR183.
+
+Binding consequences of the accepted text:
+- Stack: vanilla ES modules; NO framework, NO build step, NO runtime dependency. B and D are
+  REJECTED for now (a later move needs a new ADR, not an edit here).
+- The hand-written drawing layer (2D-canvas/WebGL2) is OPTIONAL and enters M1 only with a
+  clean collapse under `prefers-reduced-motion` and in unsupported contexts (SVG/CSS
+  fallback is the rendering of record).
+- Serving: D-3 (b) — `ui/app/command/` under the EXISTING `/app` `StaticFiles(html=True)`
+  mount; served at `/app/command/`; zero production change; `round_r182` ceiling stays 0.
+  The "one mount line at the composition root" consequence listed above does NOT apply
+  under (b).
+- Guard frame (D-2, governed by R182_HANDOFF §2/§14): `ui_command_static_check` manifest
+  block declared BEFORE the first Command Center file — exact file list; `command.js`
+  `/v1/` ceiling = the count measured at the first GREEN of M1, moving down only; exception
+  ceiling 0; a single `fetch(` inside one `api()`; `EventSource(`/`WebSocket(`/
+  `XMLHttpRequest`/`axios` banned; no quoted `CAPABILITY_IDS`; no provider branching.

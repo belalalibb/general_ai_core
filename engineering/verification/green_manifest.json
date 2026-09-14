@@ -147,6 +147,20 @@
     "v1_count_ceiling_N0": 73,
     "exception_count_ceiling": 0
   },
+  "ui_command_static_check": {
+    "declared": "R182-IMPL opening (R182-DEC-02 D-2), BEFORE the first Command Center file; governed by R182_HANDOFF §2/§14 (the §9 D-2 line is interpretive)",
+    "serving": "D-3 (b): sub-directory of the existing /app StaticFiles(html=True) mount -> served at /app/command/ with zero production change; round_r182 ceiling stays 0",
+    "files": [
+      "ui/app/command/command.css",
+      "ui/app/command/command.js",
+      "ui/app/command/index.html"
+    ],
+    "v1_count_ceiling_command_js": null,
+    "v1_count_ceiling_rule": "null = not yet measured (guard fails closed while null); set ONCE to the /v1/ count of ui/app/command/command.js measured at the first GREEN of M1, then moves DOWN only (D-2)",
+    "exception_count_ceiling": 0,
+    "transport": "exactly one fetch( inside one async function api(); EventSource( / WebSocket( / XMLHttpRequest / axios banned (inherited ui/admin policy)",
+    "forbidden_in_source": "quoted CAPABILITY_IDS, roster arrays, provider branching, fabricated states (thinking|speaking|listening|energized|processing|reasoning)"
+  },
   "not_evaluated": [
     {
       "item": "live-suite: browser automation against the real server and real UI",

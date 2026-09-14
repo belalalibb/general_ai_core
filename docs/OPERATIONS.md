@@ -431,3 +431,7 @@ unknown shape is still caught if it is live in the shell. Lines listed in
 skipped. Bypass (audited, must be justified in the commit message):
 `SECRET_SCAN_BYPASS=1 git commit …`. Canary proof:
 `evidence/r173/00_preflight/precommit_canary_transcript.txt`.
+
+Evidence-quoting rule (F-R182-06, operator-confirmed, in force): any evidence or ledger
+file that cites a secret-scan hit quotes the **FILE:LINE** only — never the matched
+VALUE — because the scan covers `*.txt`/`*.md` and would match its own quotation.
