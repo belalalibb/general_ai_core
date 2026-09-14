@@ -84,3 +84,45 @@ Source of truth for every row: `evidence/r182/served_contract_probe_743e203f.txt
 **Counts** (one primary status per row): BACKED **23** (1,3,4,6,7,8,9,10,11,12,13,14,17,18,19,20,21,22,23,26,28,31,33,34 → 24 rows; row 13's primary is B-read) — recorded as **24 BACKED**; INERT **3** (5, 16, 27); **MISSING 6** (15 Q7-distinction, 24 App Factory, 25 API keys, 35 branding, plus the M-halves of 13 provider-verification and 26 delivery); DECORATIVE-ONLY **4** (2, 29, 30, 32).
 
 Effect classes (brief §16): ambient = 29, 30; structural = 3, 8; reactive = 9, 30-variant; state-driven = 1, 5, 10, 31; interactive = 4, 11, 20, 33. Only state-driven/reactive rows may imply live system state.
+
+## 5. APEX reference analysis (`evidence/r182/apex_reference_inspection.txt`)
+
+Live demo reachable (HTTP 200, 23 259 B; server-rendered HTML inspected: title "APEX-UI — Autonomous-agent orb interface", 18-agent roster text, `STANDBY`, hint "TAP THE CORE · CLICK AN AGENT · SCROLL FOR THE STORY", classes `orb-*`, aria "Apex core - tap to energize", 3 `<svg>`, 1 `<canvas>`). GitHub commit a8732fad (2026-09-11). Source outranks README.
+
+| component | actual dependency | classification | QEVION contract | must NOT survive |
+|---|---|---|---|---|
+| `ApexOrb.jsx` (SVG ring, waveform, orbit dots) | none (SVG/CSS) | **REUSE-CONCEPTUALLY → REBUILD** | row 1 Core state; row 30 ambient | waveform (implies audio) |
+| `ApexCore3D.jsx` (particle core, 504 lines) | `three`, `@react-three/fiber`, `@react-three/postprocessing` | **REBUILD** (hand-written 2D-canvas/WebGL2 under ADR-0013 default C) / **DISCARD** under reduced motion | row 1; ambient otherwise | the library trio (only under ADR-0013 B) |
+| `ApexHeroOrb.tsx` (stack + tap cycle + 8 s timer) | react | **REBUILD** (composition) / **DISCARD** (tap cycle) | row 1 | `idle→thinking→speaking` timer state machine |
+| `ReasoningWeb.jsx` (18-node constellation, circuit traces, `LEVEL`) | none | **REUSE-CONCEPTUALLY → REBUILD** | rows 3, 5, 8, 9 (nodes = served capabilities/stages) | `ROSTER` (18 business agents), `LEVEL{standby,listening,processing,reasoning,speaking}` |
+| `OrbStatusBar.jsx` (equalizer + STANDBY) | none | **REBUILD** | row 31 | equalizer bars |
+| `ShaderBackground.jsx` (WebGL plasma) | none (raw WebGL); 21st.dev MIT, attribution UNRESOLVED | **REBUILD or DISCARD, never copy** | row 29 ambient | the source itself (provenance) |
+| `ApexWorld.tsx` (composer; `ROSTER`, `INFO`) | react | **REBUILD** | rows 3, 6 | `ROSTER`, `INFO` (`status: online/standby/integration`), Apex copy |
+| `ApexOverviewPanel.tsx` (clock, weather, social) | `lucide-react`; 21st.dev lamp, attribution UNRESOLVED | **DISCARD** | row 7 replaces it | `/api/weather` → open-meteo; facebook/instagram/linkedin links; `setInterval` 30 s / 20 min |
+| `apex-orb.css`, `globals.css` | none | **REUSE-CONCEPTUALLY** (dark palette, breathe/orbit keyframes) | rows 29-30 | Apex colour identity as branding |
+| `LICENSE` / `CREDITS.md` | MIT (code); "the name Apex and the Reznikov Engineering branding are not part of this license"; two attribution placeholders | provenance **UNRESOLVED for 2 components** (F-R182-04) | — | Apex name/branding; unattributed components |
+
+Dependency metadata vs imports: `package.json` lists exactly the imported packages (consistent). README claim "no 3D libraries" is contradicted by `ApexCore3D.jsx` imports → README wording recorded as inaccurate/unverified. Live page CSS has no `prefers-reduced-motion` rule; the JS honours `matchMedia` (skips the 3D core) — accessibility claim partially verified.
+
+## 6. Boundary audit (brief §15)
+
+| boundary | measured | UI rule |
+|---|---|---|
+| Learning `placeholder` | `true` | no charts/metrics/progress (row 16) |
+| Evaluation absent | `evaluations: []` for a plain execute | "not evaluated" distinct state; no score (row 15); Q7 → R183 |
+| Usage post-0022 | ledger keyed by `execution_id`, no FK | tolerate missing execution; never fabricate link (row 18) |
+| Attestations | `unverified[]` served | preserve `unverified` (row 19) |
+| Projects | columns id/tenant_id/workspace_id/name/metadata | no VCS/preview metadata (row 23) |
+| API keys/scopes | 404 | no UI (row 25) |
+| Webhooks | registration only | registration ≠ delivery (row 26) |
+| App Factory | no persistence/VCS/preview/deploy contract | MISSING (row 24) |
+| Provider slice | read-only list | no verification/enforcement (row 13) → R183 |
+| Q7 | gap documented | not solved → R183 |
+
+## 7. Branding / pin audit
+
+Current: `ui/admin/index.html:6` `<title>Admin Console — AI Orchestration Platform</title>`, `:44 <h1>Admin Console</h1>`; `ui/app/index.html:6` `<title>AI Orchestration Platform</title>`, `:46 <h1>`. Pins: `tests/composition/test_admin_console_runtime.py:80` ("Admin Console"), `:146` ("AI Orchestration Platform"), `tests/composition/test_ui_app_pd2.py:83` ("AI Orchestration Platform"). `QEVION` in `ui/`: 0. Apex branding in repo: 0 files. Required synchronized change (R182-IMPL M1, not readiness): the 2 html `<title>`/`<h1>` → `QEVION Control Plane` ("Admin Console" may remain a section label) and the 3 pins, one commit; zero counted budget (ui/ + tests/); N0 unaffected.
+
+## 8. Test / live-proof readiness
+
+Static UI checks: `tests/ui` (20) + Q5 pins in slice `rest`; composition UI tests in `tests/composition`. Browser/live: NOT-EVALUATED #1, playwright absent, **not installed in R182**. R182-IMPL acceptance for browser proof: a real Playwright run against the served Command Center over the in-memory profile, evidence committed (tracked, never `raw_*`), which **replaces** NOT-EVALUATED #1 (2→1); dependency declared in the IMPL round under `pyproject [dev]`; no third item; ceiling unchanged. Encoded-asset risk: no base64/binary fixtures enter `ui/` (secret scan covers `*.js *.html *.css *.json`).
