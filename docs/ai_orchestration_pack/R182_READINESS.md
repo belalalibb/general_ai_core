@@ -1,0 +1,86 @@
+# R182 READINESS — QEVION UI inventory and readiness analysis (authoritative)
+
+Round: **R182 — UI readiness / round opening**. NOT implementation. Branch `genspark_ai_developer_r182`, base `main` **743e203f** (merge commit of PR #20 = R181; parents ed61f7e6 + 05e12882). Everything below is derived from committed evidence under `evidence/r182/`; nothing is claimed that a probe, test or measurement did not show. Precedence: repository state > git state > protocol/ADR > manifests/ledgers > operator decisions in the R182 brief > brief defaults > inference.
+
+## 1. Base and boundaries (measured)
+
+| item | observed | evidence |
+|---|---|---|
+| PR #20 before acting | `open`, `mergeable=true`, `mergeable_state=clean`; branch protection 404 (none); status checks 0; check-runs 0; workflows 0; no `.github/` | `evidence/r182_state_ledger.md` row 1 |
+| CI | **none — no CI / no required status checks; the canonical gate is the verification** | same |
+| Merge | `merge_method=merge` (no squash, no force, no rewrite) → `main` **743e203f**, parents `ed61f7e6 05e12882` | row 2 |
+| Gate on merge commit | fresh clone, `env -i`: **3632 / 0 / 0 / 64**, mypy 215 files, ruff, import-linter, secret scan 5/5, budgets incl. r181 3/3, not_evaluated=2, `RESULT: PASS`; gateway **194** | `evidence/r182/gate_merge_743e203f.txt`, `gateway_merge_743e203f.txt` |
+| R181 on main | 0022 migration present; `runtime.py:755` binds durable usage; OPERATIONS §13 "durable on the DATABASE_URL profile"; `evidence/r181/` 9 files; frozen-tree diff 05e12882→HEAD empty | `evidence/r182/governance_frame_743e203f.txt` |
+| PRs #13 #15 #16 #17 | open, untouched | row 5 |
+| THAWED | `ui/` | brief §2 |
+| FROZEN, ceiling **0** | `core/`, `apps/` (incl. `apps/admin_agent/`), `infrastructure/`, `core/tools/gate.py`, `PROJECT_EXECUTION_STATE.md`, `final_docs_v3` (decision log append-only ≤45 lines) | manifest `round_r182` |
+| Frozen-tree collision rule | STOP → name the missing contract → name the owning round (R183) → do not implement | brief §2 |
+
+## 2. Governance frame (values, not paths)
+
+| knob | configured | measured now | R182-IMPL rule |
+|---|---|---|---|
+| `ui_static_check.files` | 3 (ui/admin only; exact equality with the directory) | 3 | adding a file under `ui/admin/` requires the manifest list edit in the same commit |
+| `ui_static_check.v1_count_ceiling_N0` | **73** | `ui/admin/app.js` = **73** (zero headroom); `ui/admin/index.html` 15 (guard = no wired routes; not counted); `ui/app/app.js` 21 (no N0 guard) | N0 may only move DOWN; pay-down = deleting a real call; string tricks = governance finding |
+| `ui_static_check.exception_count_ceiling` | **0** | 0 | unchanged |
+| `baseline.head` / `baseline.ui.v1_count_N0` | 2f1a0e9f… / **73** | manifest and baseline synchronized (73 = 73) | any N0 change is a manifest+baseline PAIR edit, operator-authorized only |
+| `baseline.ui.bytes` | app.js 79351 / index.html 32385 / styles.css 16392 | on disk 80789 / 32456 / 16392 (drift since R180; no test consumes bytes) | recorded as data; NOT mutated (F-R182-03) |
+| `not_evaluated_count_ceiling` | **2** | 2 (`browser automation — missing dependency`; `two-account provider round-trip — credential unavailable`) | browser proof REPLACES #1 (2→1); never a third; never a raise |
+| `secret_scan.exception_count_ceiling` | **5** | 5 (grep reproduces exactly the 5 declared lines) | no growth; new UI assets are scanned — no encoded fixtures with secret-shaped strings |
+| `pytest.gate.min_passed` | **3504** | 3632 measured | candidate ratchet 3632 reported; NOT applied (no authorization) |
+| counted production roots | `core/ apps/ infrastructure/` | `round_r182` 0/0 | `ui/` outside by design (manifest note) |
+| guarded UI trees | `ui/admin` (manifest + `tests/ui` 20 checks + Q5 pins) | `ui/app` guarded ONLY by its own 11 `test_ui_app_pd2` tests + title pin | a new Command Center tree gets its own declared guard block BEFORE code |
+| transport | `ui/admin`: one `fetch(` inside `api()`; `EventSource(`/`WebSocket(`/`XMLHttpRequest`/`axios` banned | `ui/app` reads SSE by `fetch` of `/v1/executions/{id}/events` | inherited unchanged; Command Center follows the `ui/app` pattern (fetch-read SSE); no EventSource/WebSocket |
+| browser dependency | manifest `non_test_items.live-suite` = playwright | `import playwright` → ModuleNotFoundError | not installed in R182 (F-R182-05) |
+
+## 3. Architecture / ADR
+
+`40_ENGINEERING_PROTOCOL.md` §8.1: "No significant architecture change is allowed without an ADR." ADR-0001 (ACCEPTED) deferred the client stack to "a future ADR when those apps start". Introducing Next.js/React/three (the APEX stack) or any build step IS that deferred decision → **`engineering/adr/ADR-0013-ui-front-end-stack-and-serving-posture.md`, status `PROPOSED — AWAITING OPERATOR DECISION`**; index row with the same status. Nothing installed; `package.json`/lockfile/`node_modules` = 0 present. Operating default for this analysis: **Alternative C** (vanilla ES modules + hand-written SVG/CSS + optional hand-written WebGL2; no framework, no build; existing `StaticFiles` posture).
+
+Serving-posture fact: a new tree's mount line lives in `apps/composition/` (frozen, ceiling 0) → **the Command Center cannot get its own `/command` mount in R182**; see decision D-3 (§9).
+
+## 4. Inventory — BACKED / INERT / MISSING / DECORATIVE-ONLY (contract → visual proof)
+
+Source of truth for every row: `evidence/r182/served_contract_probe_743e203f.txt` (hermetic in-memory profile, admin session, 83 OpenAPI paths) and the closed enums in `core/contracts/` and `apps/api/capabilities.py`. Legend: **B** BACKED · **I** INERT · **M** MISSING · **D** DECORATIVE-ONLY.
+
+| # | UI element | status | route / contract → exact field/state | allowed visual behaviour | proof source |
+|---|---|---|---|---|---|
+| 1 | QEVION Core (central orb) — semantic runtime surface | **B** (derived) | `GET /v1/executions` rows `.status` ∈ `ExecutionStatus{queued,running,waiting_approval,succeeded,failed,cancelled}`; `GET /v1/admin/system.profile`; `GET /healthz`; `GET /v1/auth/session` | Core states exactly: `idle` (no running/queued), `running` (≥1 running/queued), `waiting_approval`, `failed` (latest terminal = failed), `unreachable` (healthz/session fetch failed). **No `thinking`/`speaking`/`listening`** — no contract exists | `core/contracts/execute.py:33-41`; probe |
+| 2 | Core tap "energize" cycle (APEX) | **D → DISCARD** | none | a tap may open/focus panels; it may NOT change the Core's runtime state | APEX `ApexWorld.tsx:243` (timer-driven) |
+| 3 | Capability shelf / topology nodes | **B** | `GET /v1/admin/capabilities` → `capabilities[]{id, state, evidence}`, `scope`; ids = closed `CAPABILITY_IDS` (23); `state` ∈ `CapabilityState{available,inert,unavailable}` | one node per served row; label = `id`; ring class = `state` (3 classes + loud `UNKNOWN`); tooltip = `evidence` verbatim. **No manual roster; ids never quoted in source** (existing `tests/ui` guard) | probe: 23 rows {available 19, inert 3, unavailable 1}; `apps/api/capabilities.py:48-60` |
+| 4 | Capability "exercise" affordance | **B** | `GET /v1/admin/capabilities/exercisable` → `exercisable[]` (4 ids); `POST /v1/admin/capabilities/{id}/exercise` | control only on listed ids; result = returned evidence JSON verbatim | probe |
+| 5 | Node states `inert` / `unavailable` | **I** / **B** | `state:"inert"` (dev.publish_modes, learning.custody_governance, rate_limits.execute); `state:"unavailable"` (execute.token_streaming) | inert = dimmed + `evidence` text (names the env gate); unavailable = struck; neither animates as active | probe |
+| 6 | Evidence panel | **B** | `capabilities[].evidence`; `GET /v1/agent/executions/{id}/diagnosis` → `tier`, `claims[]{text, evidence[]{kind,ref}}`, `missing_evidence[]` | strings/refs verbatim; `missing_evidence` shown as missing | probe |
+| 7 | Process scope | **B** | `GET /v1/admin/system` → `profile`, `identity_mode`, `provider_keys[]`, `admin_emails_configured`, `scope:"process"` | badge "scope: process"; never imply fleet scope | probe |
+| 8 | Execution graph (stages) | **B** | `GET /v1/agent/executions/{id}/trace` → `strategy`, `stages[]{node_key, status, attempts[]{attempt, model_key, provider_key, succeeded, latency_ms}}`, `ledger{status,units_reserved,units_settled}`, `as_recorded` | nodes = stages; edges = order; attempt badges; `as_recorded` shown | probe |
+| 9 | Execution connections (live) | **B (progress only)** | `GET /v1/executions/{id}/events` SSE, closed types `execution_started`, `node_started`, `node_completed`, `final`, `error`; `DeltaEvent` exists in the contract but is **never emitted** (`execute.token_streaming` unavailable) | animate edge on `node_started`→`node_completed`; stop on `final`/`error`. **No token typing, no speaking waveform, no partial text** | `apps/api/streaming.py:51,74-103`; probe frames |
+| 10 | Runtime indicators | **B** | `GET /v1/executions/{id}` → `status`, `progress{current_stage, percent}`; `GET /v1/executions` | bar + stage label from these fields only | probe |
+| 11 | Conversation | **B** | `POST /v1/agent/converse {message}` → `claims[]`, `tool_calls[]`, `reasoning_execution_ids[]`, `rounds`, `stop_reason`, `verification{verified, claims_admitted, claims_refused, tool_calls_ok, tool_calls_total}`, `reasoning_trace[]`; `POST /v1/execute {ask}` → `execution_id, status, result{type,content,artifacts[]}, usage` | request/response turns; `verification` as counts; **no streaming transcript** | probe |
+| 12 | Models | **B** | `GET /v1/models` → `models[]{id,name,tier,modalities[],capabilities[],availability∈BindingAvailability{available,unavailable,degraded}}`; `GET /v1/admin/models` adds 4 scores + `status` | cards; availability badge = 3 classes + UNKNOWN | probe; `core/contracts/domain.py:83-89` |
+| 13 | Providers | **B (read)** / **M (verification)** | `GET /v1/admin/providers` → `providers[]{id, provider_key, display_name, status, auth_types[], supports_account_pool, is_template, is_routable}` | list + `is_routable`/`status` badges. **MISSING**: live account verification / selection enforcement — Provider slice, **R183**; no "verified" badge | probe; brief §15 |
+| 14 | Routing | **B** | `GET /v1/admin/routing/weights` → `version` + 6 weights | read-only | probe |
+| 15 | Evaluation | **B (records)** / **M (distinction = Q7)** | `GET /v1/admin/executions/{id}/evaluations` → `evaluations[]` (**`[]` for a plain execute**); `GET /v1/admin/evaluations/{id}` → `EvaluationRecord{level∈{RAW,EVALUATED,VALIDATED,VERIFIED,GOLD}, score|null, confidence|null, graders[]}` | `[]` ⇒ render **"not evaluated"** as its own state; never a score/default bar. Q7 (served field distinguishing "never evaluated" from "evaluated: none") → **R183** | probe; `core/contracts/evaluation.py:55-69` |
+| 16 | Learning / internal education | **I** | `GET /v1/admin/learning/dashboard` → **`placeholder: true`**, zeros, empty arrays | while `placeholder`: one honest placeholder panel; **no charts/trends/progress**; lifecycle `/samples/*` routes are BACKED actions | probe |
+| 17 | Memory | **B** | `GET /v1/memory/preferences` → `preferences[]`; `DELETE …/{id}`; `result.artifacts[type=context_provenance]{blocks_total, memory_blocks[], gold_blocks, excluded}` | list + delete; provenance counts from the artifact only | probe |
+| 18 | Usage | **B** | `GET /v1/usage` → `plan`, `task_units{limit,used,remaining}`, `modality_limits{}`; `GET /v1/admin/usage` → `usage[]{execution_id, status, created_at, ledger{…}}` | numbers verbatim. Post-0022 `ledger.execution_id` is a **key, not an FK**: a ledger row may have no execution (tool `call_id`) — render "no execution record", never fabricate the link | probe; migration 0022 |
+| 19 | Attestations / promotion evidence | **B** | `unverified[]`, `refused_unbacked[]`, `resolved{}` (`apps/api/admin.py:290-316`) | `unverified` rendered as unverified; never promoted | source |
+| 20 | Admin actions | **B** | `GET /v1/admin/capabilities/actions` → `actions[]{action, area, fields[]{name,kind,required,contract}}`; `/v1/admin/changes` lifecycle | verbs from discovery (R180 Q5 posture); forms from `fields[]` | probe |
+| 21 | Notifications | **B** | `GET /v1/admin/notifications` → `notifications[]{id, category, title, occurred_at, evidence{kind,ref}, read}`, `unread`; `POST …/{id}/ack` | list + unread | probe |
+| 22 | Audit | **B** | `GET /v1/admin/audit` → `events[]`, `total_recorded` | list | probe |
+| 23 | Projects / Workspaces | **B (thin)** | `POST/GET /v1/projects` → `{project_id, workspace_id|null, name, metadata{}}`; `/v1/workspaces` → `{workspace_id, name}`; DB columns id/tenant_id/workspace_id/name/metadata | name + free-form `metadata`; **no repository/branch/commit/preview fields exist** — not invented | probe; `core/contracts/identity.py:95-102` |
+| 24 | App Factory | **M** | no route, table, contract or doc defines generated-project state, VCS metadata, preview URLs, build/deploy state (repo search: one unrelated test string) | **no panel may imply generation, preview or deployment**; at most row 23. Owning round undefined — operator-defined contract needed first | governance frame |
+| 25 | API keys / scopes | **M** | `/v1/api-keys`, `/v1/keys`, `/v1/admin/api-keys` → 404; sessions = bearer from `/v1/auth/login` | no key-management UI | probe |
+| 26 | Webhooks | **B (registration)** / **M (delivery)** | `GET/POST /v1/webhooks` → `WebhookSubscription{id, tenant_id, url, events[]}`; no delivery-log route | registration list; **no delivery/attempt status** | probe; `core/contracts/webhooks.py:48-54` |
+| 27 | Engineering workspace | **I** (env-gated) | `/v1/admin/engineering/status` → 404 without `AGENT_WORKSPACE_ROOT` | "route absent" (existing console posture) | probe |
+| 28 | Skills | **B** | `GET /v1/skills` → `skills[]`; `GET /v1/admin/skills/imports` → `imports[]`, `allowed_sources[]` | lists | probe |
+| 29 | Background effects (plasma/particles) | **D (ambient)** | none | decoration only; never varies with a claimed runtime value; off under `prefers-reduced-motion`; APEX ShaderBackground REBUILD/DISCARD (F-R182-04) | APEX inspection |
+| 30 | Orbit dots / ring breathe | **D (ambient)**; reactive variant only bound to rows 1/9 | rows 1, 9 | ambient by default; may speed up ONLY on `node_started` frames | — |
+| 31 | Status bar (APEX STANDBY + equalizer) | **REBUILD as B** | row 1 Core state + `system.profile` | text = row 1 vocabulary; **no equalizer implying audio** | APEX `OrbStatusBar.jsx` |
+| 32 | Overview panel (APEX clock/weather/social) | **D → DISCARD** | none (APEX: `/api/weather` → open-meteo + 3 social links) | no external calls; a QEVION overview = row 7 fields | APEX inspection |
+| 33 | Controls | **B** | only routes in the 83-path OpenAPI; single `api()` transport | every control maps to a served route; 404 ⇒ "route absent" | `tests/ui` route-literal pattern |
+| 34 | Accessibility | **B (requirement)** | n/a | keyboard-navigable node list mirroring the graph (APEX `.visually-hidden` REUSE-CONCEPTUALLY); `aria-label` on Core/nodes; `role="dialog"` on panels; `prefers-reduced-motion` disables ambient motion and WebGL | APEX `ApexHeroOrb.tsx:25-33`, `ApexWorld.tsx:257,312` |
+| 35 | Branding | **M (planned)** | titles `Admin Console — AI Orchestration Platform` / `AI Orchestration Platform`; `QEVION` 0 in `ui/` | canonical `QEVION` / `QEVION Control Plane`; 2 html + 3 pins in one commit (§7); not in readiness | governance frame |
+
+**Counts** (one primary status per row): BACKED **23** (1,3,4,6,7,8,9,10,11,12,13,14,17,18,19,20,21,22,23,26,28,31,33,34 → 24 rows; row 13's primary is B-read) — recorded as **24 BACKED**; INERT **3** (5, 16, 27); **MISSING 6** (15 Q7-distinction, 24 App Factory, 25 API keys, 35 branding, plus the M-halves of 13 provider-verification and 26 delivery); DECORATIVE-ONLY **4** (2, 29, 30, 32).
+
+Effect classes (brief §16): ambient = 29, 30; structural = 3, 8; reactive = 9, 30-variant; state-driven = 1, 5, 10, 31; interactive = 4, 11, 20, 33. Only state-driven/reactive rows may imply live system state.
