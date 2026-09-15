@@ -1,0 +1,6 @@
+{
+  "url": "https://api.groq.com/openai/v1/models",
+  "http": 403,
+  "ms": 65,
+  "body": "error code: 1010\n"
+}

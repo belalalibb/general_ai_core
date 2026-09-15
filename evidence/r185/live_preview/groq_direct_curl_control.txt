@@ -1,0 +1,6 @@
+Direct Groq API control probe (curl, sandbox egress, 2026-09-15T22:19Z). Key values never recorded.
+GET https://api.groq.com/openai/v1/models
+  Authorization: Bearer <operator key, one character altered>   -> HTTP 401 {"error":{"code":"invalid_api_key","type":"invalid_request_error","message":"Invalid API Key"}}
+  Authorization: Bearer <operator key, as supplied>              -> HTTP 400 {"error":{"code":"organization_restricted","type":"invalid_request_error","message":"Organization has been restricted. Please reach out to support if you believe this was in error."}}
+Interpretation: the supplied key is recognized by Groq (not an invalid-key case); the Groq organization owning it is restricted.
+Note: urllib default User-Agent from the probe receives Cloudflare "error code: 1010" (UA block) — not a QEVION or key issue; QEVION's own adapter (httpx) reached Groq and received organization_restricted (see server_groq_error_line.txt).

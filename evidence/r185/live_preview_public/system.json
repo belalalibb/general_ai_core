@@ -1,0 +1,9 @@
+{
+  "profile": "in-memory",
+  "identity_mode": "auth",
+  "provider_keys": [
+    "groq"
+  ],
+  "admin_emails_configured": 1,
+  "scope": "process"
+}
