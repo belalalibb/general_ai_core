@@ -259,10 +259,14 @@ function renderTopology(catalog) {
     g.appendChild(svgEl("circle", { cx: x, cy: y, r: 22, class: "node-hit" }));
     g.appendChild(svgEl("circle", { cx: x, cy: y, r: 16, class: "node-body" }));
     g.appendChild(svgEl("circle", { cx: x, cy: y, r: 5, class: "node-dot" }));
+    /* Labels sit radially OUTSIDE the node (anchor follows the side of the circle) so
+       neighbouring labels at the top/bottom never collide. */
+    const cos = Math.cos(angle);
+    const radial = Math.abs(cos) > 0.35;
     const label = svgEl("text", {
-      x,
-      y: y + (Math.sin(angle) >= 0 ? 34 : -26),
-      "text-anchor": "middle",
+      x: radial ? x + (cos > 0 ? 24 : -24) : x,
+      y: radial ? y + 4 : y + (Math.sin(angle) >= 0 ? 34 : -26),
+      "text-anchor": radial ? (cos > 0 ? "start" : "end") : "middle",
       class: "node-label",
     });
     label.textContent = capability.id;
