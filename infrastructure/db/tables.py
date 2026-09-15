@@ -137,8 +137,12 @@ Design decisions (recorded):
   TENANT-SCOPED: tenant_id FK + index (20 §6). ONE ledger entry per
   execution — the usage port keys the ledger by execution_id
   (core/usage/memory.py) and a reservation resolves exactly once
-  (ReservationAlreadyResolved) — so execution_id is UNIQUE + FK
-  (RESTRICT: accounting records must never dangle). Deny-by-default in
+  (ReservationAlreadyResolved) — so execution_id is NOT NULL + UNIQUE.
+  It is NOT a foreign key (migration 0022, R181 Q6, F-R179-06):
+  ExecutionService reserves BEFORE the executions row exists (03 §7
+  reserve-before-work) and the tool executor reserves under a call_id
+  that never becomes an executions row, so a row-level FK could not be
+  honoured; the key stays one row per execution/call id. Deny-by-default in
   DB defaults: units_settled server_default '0' and modality_costs
   server_default '{}' equal the contract defaults — an unresolved entry
   claims NO settled consumption; ``status`` has NO server_default — the

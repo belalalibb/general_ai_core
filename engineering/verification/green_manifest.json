@@ -763,11 +763,13 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 0,
+      "changes_used": 1,
       "items": [
         "F-R182-01 stale usage_ledger module documentation: infrastructure/db/tables.py module docstring (lines 140-141) must describe execution_id as NOT NULL + UNIQUE with NO foreign key (migration 0022, R181 Q6, F-R179-06) — the column-level comment (lines 683-687) is already correct; pinned by a red test in tests/db BEFORE the edit"
       ],
-      "log": [],
+      "log": [
+        {"item": "F-R182-01", "file": "infrastructure/db/tables.py", "loc": "+6/-2 (module docstring only, lines 137-145)", "summary": "usage_ledger paragraph: 'UNIQUE + FK (RESTRICT: accounting records must never dangle)' -> 'NOT NULL + UNIQUE; NOT a foreign key (migration 0022, R181 Q6, F-R179-06)' with the reserve-before-work / tool call_id reason; no Column, constraint, default or behaviour touched; pinned by tests/db/test_tables_usage_ledger_doc_r183.py (RED 5c7e42ab -> GREEN)"}
+      ],
       "note": "R183 is a CARRY-FORWARD CLOSURE round (backend records), not a UI round and not an implementation of new scope. THAWED for exactly one doc-only edit: infrastructure/db/tables.py. FROZEN: core/, apps/ (incl. apps/admin_agent/), ui/ (R182 Command Center + admin console; ui_static_check / ui_command_static_check guard frames unchanged), core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines). Q7 / Provider slice / App Factory / API keys / webhook delivery / provider verification: UNDEFINED in the repository — STOP for an operator contract; nothing speculative may be created under this round id. Evidence of record under evidence/r183/ (tracked names, never raw_*); the R182 browser proof must not be re-run in the working clone (F-R182I-06) — run it from a fresh clone or restore evidence/r182_impl/ before committing."
     },
     "round_r181_backend_closure": {
