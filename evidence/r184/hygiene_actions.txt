@@ -1,0 +1,5 @@
+# R184 hygiene actions (rule already authorized: R183 row 13 / D-R183-4 — delete only branches fully contained in main); main = 88b94263
+DELETED genspark_ai_developer_r183_close @ 5537fd4d (GitHub compare 5537fd4d...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r184 @ 3647279f (GitHub compare 3647279f...main status=ahead) -> HTTP 204
+KEPT (unmerged, content preservation): feature/platform-capability-assessment 5f543ad0, genspark_ai_developer a2e23547, r178_decisions_verified_units 1b208bd4, r178_p01_subject_verified_units 54c7cd3e, r178_verified_units 7f22abc9
+Open PRs after: none. Re-verified after sandbox resets via `git fetch --prune` + GET /pulls?state=open.
