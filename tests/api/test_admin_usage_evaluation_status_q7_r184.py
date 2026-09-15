@@ -27,6 +27,7 @@ from core.contracts.evaluation import (
     GraderType,
     VerificationLevel,
 )
+from core.contracts.execute import ExecutionStatus
 from tests.api.test_aa1_api_seams import (
     ADMIN_EMAIL,
     USER_EMAIL,
@@ -140,7 +141,11 @@ class TestAdminUsageEvaluationStatus:
                 assert "evaluation_status" not in own_list.text
                 # user read (22 §7): no evaluation field of any kind
                 user_session = identity.resolve_session(user_token)
-                user_exec = _seed_execution(store, tenant_id=user_session.tenant_id)
+                # RUNNING: the by-id read renders status/progress only (a seeded
+                # SUCCEEDED row has no nodes, so final_output cannot be derived).
+                user_exec = _seed_execution(
+                    store, tenant_id=user_session.tenant_id, status=ExecutionStatus.RUNNING
+                )
                 status = await c.get(f"/v1/executions/{user_exec}", headers=bearer(user_token))
                 assert status.status_code == 200
                 assert "evaluation_status" not in status.json()

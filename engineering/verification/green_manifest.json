@@ -781,11 +781,14 @@
         "apps/",
         "infrastructure/"
       ],
-      "changes_used": 0,
+      "changes_used": 2,
       "items": [
         "Q7-A evaluation_status on the execution admin read: closed StrEnum EvaluationStatus {NEVER_EVALUATED, EVALUATED} in core/contracts/evaluation.py; GET /v1/admin/usage rows gain evaluation_status derived from surface.evaluations.list_for_execution (EVALUATED iff any record above RAW, 22 s3); evaluation-list route unchanged; user routes unchanged; RED tests first in tests/api + tests/contract"
       ],
-      "log": [],
+      "log": [
+        {"item": "Q7-A", "file": "core/contracts/evaluation.py", "loc": "+33/-0", "summary": "Closed StrEnum EvaluationStatus {NEVER_EVALUATED, EVALUATED} (operator-accepted values verbatim) placed with the other closed sets; pure evaluation_status_of(records) derives it positionally on VERIFICATION_LEVEL_ORDER (EVALUATED iff any record above RAW, 22 s3); no existing shape, validator, or value changed. RED tests/contract/test_evaluation_status_q7_r184.py (ImportError at 6805515c) -> GREEN"},
+        {"item": "Q7-A", "file": "apps/api/admin.py", "loc": "+9/-0", "summary": "GET /v1/admin/usage rows gain the additive key evaluation_status derived via surface.evaluations.list_for_execution(admitted.tenant_id, report.execution.id) for rows the tenant-scoped store.list already returned; /evaluations/{id}, /executions/{id}/evaluations and every user route byte-identical. RED tests/api/test_admin_usage_evaluation_status_q7_r184.py (4 failed KeyError at 6805515c) -> GREEN"}
+      ],
       "note": "R184 executes the accepted Q7 option (a) and nothing else. THAWED: core/contracts/evaluation.py, apps/api/admin.py (exactly the two budgeted files). FROZEN: the rest of core/ and apps/, infrastructure/, ui/ (ui/admin N0=73 zero headroom; ui/app/command /v1/ ceiling 12 spent — rendering the new field is NOT part of the accepted decision), core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines). Provider slice / App Factory / API keys / webhook delivery: still UNDEFINED — STOP. Evidence of record under evidence/r184/ (tracked names, never raw_*); the R182 browser proof must not be re-run in the working clone before a commit (F-R182I-06)."
     },
     "round_r181_backend_closure": {
