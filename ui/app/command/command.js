@@ -266,7 +266,7 @@ function renderTopology(catalog) {
     const radial = Math.abs(cos) > 0.3;
     const label = svgEl("text", {
       x: radial ? x + (cos > 0 ? 24 : -24) : x,
-      y: radial ? y + 4 + sin * 10 : y + (sin >= 0 ? 36 : -26),
+      y: radial ? y + 4 + sin * 10 : y + (sin >= 0 ? 36 + (i % 2) * 14 : -26 - (i % 2) * 14),
       "text-anchor": radial ? (cos > 0 ? "start" : "end") : "middle",
       class: "node-label",
     });
