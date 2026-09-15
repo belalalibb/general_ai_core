@@ -754,6 +754,22 @@
       "log": [],
       "note": "ui/ is OUTSIDE change_budget.counts_production_code_under by design (R168 §2 / R180 note): it is not budgeted by file count but governed by its own guard frame — manifest ui_static_check (exact file list for ui/admin, N0=73 /v1/ ceiling on ui/admin/app.js, exception ceiling 0, single fetch inside api(), EventSource(/WebSocket( banned) and tests/ui + tests/composition UI pins. Any future Command Center tree gets its own declared guard frame BEFORE code (R182_HANDOFF). Frozen this round: core/, apps/ (incl. apps/admin_agent/), infrastructure/, core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines)."
     },
+    "round_r183": {
+      "ceiling": 1,
+      "ceiling_history": "declared 1 at the R183 opening (2026-09-15, R183-DEC-01) from post-R182 main e23abb23, BEFORE any production commit. Starting inventory = the R183 items already named in the records: F-R182-01 (infrastructure/db/tables.py:140-141 module docstring still says 'UNIQUE + FK (RESTRICT ...)' after migration 0022 dropped the FK; deferred by R182 because infrastructure/ was frozen, owner R183 per evidence/r182_findings_ledger.md and R182-DEC-01), Q7 / Provider slice (recorded UNDEFINED in R181-DEC-01 — no contract, acceptance or files exist in the repository; defining them is an operator act, so they carry NO budget here and are not worked), MISSING contract areas from R182_READINESS s4 rows 13-verification / 15 Q7 / 24 App Factory / 25 API keys / 26-delivery (no repository definition; operator-defined contract first; not worked). The ONLY defined+actionable item is F-R182-01 = exactly one production FILE (doc-only, no behaviour). Ceiling 1 therefore; a second file is a STOP, never a raise",
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "F-R182-01 stale usage_ledger module documentation: infrastructure/db/tables.py module docstring (lines 140-141) must describe execution_id as NOT NULL + UNIQUE with NO foreign key (migration 0022, R181 Q6, F-R179-06) — the column-level comment (lines 683-687) is already correct; pinned by a red test in tests/db BEFORE the edit"
+      ],
+      "log": [],
+      "note": "R183 is a CARRY-FORWARD CLOSURE round (backend records), not a UI round and not an implementation of new scope. THAWED for exactly one doc-only edit: infrastructure/db/tables.py. FROZEN: core/, apps/ (incl. apps/admin_agent/), ui/ (R182 Command Center + admin console; ui_static_check / ui_command_static_check guard frames unchanged), core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines). Q7 / Provider slice / App Factory / API keys / webhook delivery / provider verification: UNDEFINED in the repository — STOP for an operator contract; nothing speculative may be created under this round id. Evidence of record under evidence/r183/ (tracked names, never raw_*); the R182 browser proof must not be re-run in the working clone (F-R182I-06) — run it from a fresh clone or restore evidence/r182_impl/ before committing."
+    },
     "round_r181_backend_closure": {
       "ceiling": 3,
       "ceiling_history": "declared 3 BEFORE the first production commit (operator directive: close every defined, actionable backend carry-over before UI; Q6 named explicitly). Q6 option (b) is the only option that closes F-R179-06 completely: (a) reserve-after-row would change the 03 s7 refuse-before-work ordering AND still leave tool calls (call_id, never an executions row) unbindable. Files: infrastructure/db/migrations/versions/0022_usage_ledger_key.py (new), infrastructure/db/tables.py (metadata mirror), apps/composition/runtime.py (one-name flip to the composed durable adapter)",
