@@ -772,6 +772,22 @@
       ],
       "note": "R183 is a CARRY-FORWARD CLOSURE round (backend records), not a UI round and not an implementation of new scope. THAWED for exactly one doc-only edit: infrastructure/db/tables.py. FROZEN: core/, apps/ (incl. apps/admin_agent/), ui/ (R182 Command Center + admin console; ui_static_check / ui_command_static_check guard frames unchanged), core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines). Q7 / Provider slice / App Factory / API keys / webhook delivery / provider verification: UNDEFINED in the repository — STOP for an operator contract; nothing speculative may be created under this round id. Evidence of record under evidence/r183/ (tracked names, never raw_*); the R182 browser proof must not be re-run in the working clone (F-R182I-06) — run it from a fresh clone or restore evidence/r182_impl/ before committing."
     },
+    "round_r184": {
+      "ceiling": 2,
+      "ceiling_history": "declared 2 at the R184 opening (2026-09-15, R184-DEC-01) from post-R183 main 1dd55934, BEFORE any production commit. Scope = the operator-accepted Q7 option (a) ONLY: serve an ADDITIVE evaluation_status with the closed values NEVER_EVALUATED | EVALUATED on the execution admin read, preserving the evaluation-list anti-enumeration behaviour. Derivations from the records (not new decisions): (1) the only existing admin per-execution read is GET /v1/admin/usage rows (R182_READINESS s4 row 18; no /v1/admin/executions/{id} route exists — evidence/r182/served_contract_probe_743e203f.txt) — no new route; the user-facing GET /v1/executions/{id} cannot carry it (22 s7: 'User sees final result only. Admin sees scores, confidence, evidence'); (2) 22 s3 verbatim: RAW = 'Generated but not evaluated', EVALUATED = 'Scored by one or more graders' (core/contracts/evaluation.py EvaluationRecord validator) => EVALUATED iff at least one stored record above RAW, else NEVER_EVALUATED; (3) the field is computed only over rows the tenant-scoped store.list already returns and the /executions/{id}/evaluations route is byte-identical. Files: core/contracts/evaluation.py (closed set EvaluationStatus — closed sets live in core/contracts, same posture as VerificationLevel) + apps/api/admin.py (derive + serve on the usage rows). A third file is a STOP, never a raise",
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "Q7-A evaluation_status on the execution admin read: closed StrEnum EvaluationStatus {NEVER_EVALUATED, EVALUATED} in core/contracts/evaluation.py; GET /v1/admin/usage rows gain evaluation_status derived from surface.evaluations.list_for_execution (EVALUATED iff any record above RAW, 22 s3); evaluation-list route unchanged; user routes unchanged; RED tests first in tests/api + tests/contract"
+      ],
+      "log": [],
+      "note": "R184 executes the accepted Q7 option (a) and nothing else. THAWED: core/contracts/evaluation.py, apps/api/admin.py (exactly the two budgeted files). FROZEN: the rest of core/ and apps/, infrastructure/, ui/ (ui/admin N0=73 zero headroom; ui/app/command /v1/ ceiling 12 spent — rendering the new field is NOT part of the accepted decision), core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines). Provider slice / App Factory / API keys / webhook delivery: still UNDEFINED — STOP. Evidence of record under evidence/r184/ (tracked names, never raw_*); the R182 browser proof must not be re-run in the working clone before a commit (F-R182I-06)."
+    },
     "round_r181_backend_closure": {
       "ceiling": 3,
       "ceiling_history": "declared 3 BEFORE the first production commit (operator directive: close every defined, actionable backend carry-over before UI; Q6 named explicitly). Q6 option (b) is the only option that closes F-R179-06 completely: (a) reserve-after-row would change the 03 s7 refuse-before-work ordering AND still leave tool calls (call_id, never an executions row) unbindable. Files: infrastructure/db/migrations/versions/0022_usage_ledger_key.py (new), infrastructure/db/tables.py (metadata mirror), apps/composition/runtime.py (one-name flip to the composed durable adapter)",
