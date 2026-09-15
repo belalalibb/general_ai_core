@@ -183,7 +183,7 @@ function deriveCoreState(reachable, executions) {
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CENTER = 400;
-const ORBIT = 300;
+const ORBIT = 272;
 const EXECUTION_ORBIT = 190;
 
 function svgEl(name, attrs) {
@@ -262,10 +262,11 @@ function renderTopology(catalog) {
     /* Labels sit radially OUTSIDE the node (anchor follows the side of the circle) so
        neighbouring labels at the top/bottom never collide. */
     const cos = Math.cos(angle);
-    const radial = Math.abs(cos) > 0.35;
+    const sin = Math.sin(angle);
+    const radial = Math.abs(cos) > 0.3;
     const label = svgEl("text", {
       x: radial ? x + (cos > 0 ? 24 : -24) : x,
-      y: radial ? y + 4 : y + (Math.sin(angle) >= 0 ? 34 : -26),
+      y: radial ? y + 4 + sin * 10 : y + (sin >= 0 ? 36 : -26),
       "text-anchor": radial ? (cos > 0 ? "start" : "end") : "middle",
       class: "node-label",
     });
