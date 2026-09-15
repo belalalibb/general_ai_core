@@ -40,15 +40,15 @@
       "min_passed_history": "3658 -> 3666 at the R182-IMPL round-close gate of record (operator authorized PR #22 merge; D-6: raise only at the gate of record, by the measured number, with a ledger line): fresh clone of f1d289c2, PASS passed=3666 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_f1d289c2.txt; evidence/r182_impl_state_ledger.md row 33). Earlier: 3504 -> 3658 at the R182-IMPL gate of record (operator ruling D-6, R182-DEC-02: raise only at the round's gate of record, by the measured number, with a ledger line): fresh clone of 534649e8, PASS passed=3658 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_534649e8.txt; evidence/r182_impl_state_ledger.md row 16). Not ratcheted in R181/R182 readiness (no authorization then)."
     },
     "last_measured": {
-      "passed": 3127,
+      "passed": 3666,
       "failed": 0,
       "errors": 0,
       "skipped": 64,
-      "at_head": "2b54b87",
+      "at_head": "3590898f",
       "hermetic": true,
-      "command": "env -u <32-name list: §1.4 derived list + GROQ_API_KEY_7 GROQ_API_KEY_8 GW_GROQ_API_KEY> bash engineering/verification/check_repo.sh  (still-set count proven 0 in-env)",
-      "evidence": "evidence/r173/19_closure/check_repo_final.txt",
-      "note": "R173 closure: +1 vs c930963 (3126) = F-15.2 pin test (tests/composition/test_agent_source_seam.py::test_runtime_reader_composes_hardened_denylist); floor 3126->3127; skipped unchanged at 64; production diff for the round = apps/composition/runtime.py +6/-1 only; frozen trees ui/ apps/admin_agent/ core/tools/gate.py zero diff; tests_live/ (env-gated live tests incl. tests_live/r173 recorder) intentionally outside the verifier"
+      "command": "fresh clone of main 3590898f under /home/user/gates/; pip install -e '.[dev]'; PLAYWRIGHT_BROWSERS_PATH=0 .venv/bin/python -m playwright install chromium; env -i PATH=$PWD/.venv/bin:/usr/bin:/bin HOME=/tmp bash engineering/verification/check_repo.sh (env -i: no provider key or DATABASE_URL/REDIS_URL present)",
+      "evidence": "evidence/r182_impl/gate_merge_3590898f.txt",
+      "note": "R182 round close (R182-DEC-03): main 3590898f = merge commit of PR #23 (records only) on f5b89cea = merge commit of PR #22 (R182-IMPL M1+M2); passed 3666 == min_passed 3666 (floor holds exactly), skipped 64 == max_skipped; not_evaluated 1 (provider round-trip); gateway-service pytest 194 (evidence/r182_impl/gateway_merge_3590898f.txt). Previous record (kept for history): R173 closure passed=3127 at 2b54b87, evidence/r173/19_closure/check_repo_final.txt (+1 vs c930963 = F-15.2 pin test tests/composition/test_agent_source_seam.py::test_runtime_reader_composes_hardened_denylist); later floors 3318 (R177), 3504, 3632 (R182 readiness merge 12e83444), 3658 (534649e8), 3666 (f1d289c2). tests_live/ intentionally outside the verifier"
     }
   },
   "non_test_items": [
@@ -739,7 +739,7 @@
     },
     "round_r182": {
       "ceiling": 0,
-      "ceiling_history": "declared 0 at the R182 opening (readiness round, no implementation) from post-R181 main 743e203f: the UI round THAWS ui/ only; core/ apps/ infrastructure/ (incl. apps/admin_agent/) are FROZEN for the whole of R182, so no production FILE under the counted roots may change. A UI need that requires a frozen-tree change is a STOP (name the missing contract + owning round), never a ceiling raise",
+      "ceiling_history": "declared 0 at the R182 opening (readiness round, no implementation) from post-R181 main 743e203f: the UI round THAWS ui/ only; core/ apps/ infrastructure/ (incl. apps/admin_agent/) are FROZEN for the whole of R182, so no production FILE under the counted roots may change. A UI need that requires a frozen-tree change is a STOP (name the missing contract + owning round), never a ceiling raise. Closure (R182-DEC-03): ceiling 0 held for readiness + IMPL M1/M2; changes_used 0 = len(log) 0; frozen-tree diff vs 743e203f empty at every gate of record (evidence/r182_impl_state_ledger.md rows 17, 34, 42)",
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
       "counts_production_code_under": [
         "core/",
@@ -748,7 +748,8 @@
       ],
       "changes_used": 0,
       "items": [
-        "R182 readiness (no production change): R181 merge by merge commit, gate on 743e203f, governance frame measured, APEX reference analysed, BACKED/INERT/MISSING inventory, ADR-0013 PROPOSED, first red test + first milestone defined"
+        "R182 readiness (no production change): R181 merge by merge commit, gate on 743e203f, governance frame measured, APEX reference analysed, BACKED/INERT/MISSING inventory, ADR-0013 PROPOSED, first red test + first milestone defined",
+        "R182-IMPL (same round id, from main 12e83444; no production change, changes_used stays 0): M1 honest topology + M2 execution graph / progress / fetch-read SSE / conversation under ui/app/command/ (ui/ is outside the counted roots); guard frame ui_command_static_check declared before code; ADR-0013 ACCEPTED (C); browser proof replaced NOT-EVALUATED #1; min_passed 3504 -> 3658 -> 3666 at the gates of record (D-6); round CLOSED at M2 by operator merge authorization (R182-DEC-03; PR #22 merge commit f5b89cea, PR #23 merge commit 3590898f); frozen trees core/ apps/ infrastructure/ zero diff across the whole round"
       ],
       "log": [],
       "note": "ui/ is OUTSIDE change_budget.counts_production_code_under by design (R168 §2 / R180 note): it is not budgeted by file count but governed by its own guard frame — manifest ui_static_check (exact file list for ui/admin, N0=73 /v1/ ceiling on ui/admin/app.js, exception ceiling 0, single fetch inside api(), EventSource(/WebSocket( banned) and tests/ui + tests/composition UI pins. Any future Command Center tree gets its own declared guard frame BEFORE code (R182_HANDOFF). Frozen this round: core/, apps/ (incl. apps/admin_agent/), infrastructure/, core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines)."

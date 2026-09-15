@@ -5,6 +5,8 @@ Branch `genspark_ai_developer_r182`, base `main` 743e203f (post-R181 merge commi
 ## 1. Architecture / ADR status
 ADR-0013 `engineering/adr/ADR-0013-ui-front-end-stack-and-serving-posture.md` — **PROPOSED — AWAITING OPERATOR DECISION**. Operating default: **Alternative C** = vanilla ES modules + hand-written SVG/CSS + optional hand-written WebGL2 layer; no framework, no build step, no runtime dependency; served by the existing `StaticFiles(html=True)` posture. **No production UI file may be written until the operator accepts one alternative (D-1).** B/D require the extra declarations listed in ADR-0013 §Decision before code.
 
+> **Superseded 2026-09-14 (R182-DEC-02, `60_DECISION_LOG.md`; ADR-0013 §Status).** The line above is the opening-time state. ADR-0013 is **ACCEPTED — Alternative C** (operator text pasted verbatim in the ADR); D-1 and D-3 (b) were answered, so the write-block in §1 was lifted and `ui/app/command/` was implemented in R182-IMPL (`evidence/r182_impl_state_ledger.md` rows 4, 8, 22). This paragraph is kept as history, not rewritten.
+
 ## 2. Command Center tree / path
 Default (D-2 a + D-3 b): files at **`ui/app/command/`** (`index.html`, `command.js`, `command.css`) — a sub-directory of the already-mounted `/app` tree, served at `/app/command/` with **zero production change** (no mount line; `apps/` stays frozen). Declared and guarded as its own unit (§13/§14). If the operator picks D-3 (a): `ui/command/` + one `StaticFiles` mount in `apps/composition/runtime.py` under a consciously raised ceiling (0→1, declared with history BEFORE the commit).
 
@@ -77,6 +79,8 @@ Any need to edit `core/ apps/ infrastructure/` (other than the D-3 (a) mount) �
 
 ## 20. Unresolved operator-only decisions
 D-1 stack (ADR-0013) · D-2 tree · D-3 serving under ceiling 0 · D-4 Playwright in IMPL · D-5 branding timing · D-6 min_passed ratchet. **D-1 and D-3 block M1**; the rest have operating defaults (`R182_READINESS.md` §9).
+
+> **Resolved 2026-09-14 (R182-DEC-02).** All six were answered by the operator: D-1 ACCEPTED (C); D-2 per §2/§14; D-3 (b) on the existing `/app` mount, ceiling stays 0; D-4 yes (Playwright dev-only, replaced NOT-EVALUATED #1); D-5 branding in one commit (`a3e6ad0e`); D-6 ratchet only at the gate of record by the measured number (3504 → 3658 → 3666). The round closed at M2 (R182-DEC-03). No operator-only decision from this section remains open; the heading is kept as history.
 
 ## Resume mechanism
 Remote branch head is the checkpoint; rebuild `.venv` (`pip install -e '.[dev]'`). Merge posture: merge COMMIT, no squash; gate on the merge commit; evidence under `evidence/r182/` (tracked names, never `raw_*`).
