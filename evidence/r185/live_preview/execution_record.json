@@ -1,0 +1,17 @@
+{
+  "execution_id": "17352f5d-edf9-4fc1-a77b-49c30fd19865",
+  "status": "failed",
+  "progress": {
+    "current_stage": "single",
+    "percent": 100
+  },
+  "error": {
+    "code": "execution_failed",
+    "message": "provider rejected the credential",
+    "retryable": false,
+    "details": {
+      "execution_id": "17352f5d-edf9-4fc1-a77b-49c30fd19865",
+      "provider_error_category": "invalid_credential"
+    }
+  }
+}
