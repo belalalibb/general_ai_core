@@ -8,20 +8,26 @@
 </head>
 <body>
 <!-- ============================================================
-     QEVION Command Center — R182-IMPL M1 "Honest topology".
+     QEVION Command Center — R182-IMPL M1 "Honest topology" + M2 + R185 experience.
      ADR-0013 Alternative C: vanilla ES module, no framework, no build,
      no runtime dependency. Served as a sub-directory of the existing
      /app StaticFiles mount (D-3 b) — zero production change.
 
-     Honesty posture (R182_HANDOFF §8/§9, non-negotiable):
+     Honesty posture (R182_HANDOFF §8/§9, R185_HANDOFF §1, non-negotiable):
        * every node on the graph is a row of GET /v1/admin/capabilities —
          nothing is drawn that the served contract did not return;
        * node states are the closed CapabilityState set
          (available | inert | unavailable) plus a LOUD UNKNOWN;
        * Core state is derived from ExecutionStatus + reachability
          (idle | running | waiting_approval | failed | unreachable);
-       * no invented states, no token-by-token text, no voice animation, no
-         roster, no clock/weather/social;
+       * every execution dot on the orbit is a row of GET /v1/executions;
+       * evaluation_status per execution is the R184 field on the
+         GET /v1/admin/usage row (NEVER_EVALUATED | EVALUATED), joined by
+         execution_id; a missing row is shown as "no usage row", never defaulted;
+       * motion is CSS-only, bound to data-state attributes derived from served
+         fields, and collapses under prefers-reduced-motion; nothing is timer-
+         or random-driven; no invented states, no token-by-token text, no voice
+         animation, no roster, no clock/weather/social;
        * the scope badge is the server's own `scope` field, verbatim.
      ============================================================ -->
 
@@ -35,6 +41,10 @@
     <span class="brand-page">Command Center</span>
   </div>
   <div class="header-right">
+    <!-- Transport indicator: a fact about THIS browser's request, never a Core/runtime state. -->
+    <span id="transport-indicator" class="transport" aria-live="polite" aria-busy="false" hidden>
+      <span class="transport-dot" aria-hidden="true"></span> request in flight
+    </span>
     <span id="scope-badge" class="badge badge-scope" hidden></span>
     <span id="session-who" class="muted"></span>
     <button id="logout" class="btn-ghost" hidden>Sign out</button>
@@ -54,35 +64,96 @@
 </section>
 
 <main id="center-view" class="center" hidden>
-  <!-- Topology: Core in the middle, one node per served capability. -->
+  <!-- Topology: Core in the middle, executions on the inner orbit, one node per served capability outside. -->
   <section class="topology" aria-labelledby="topology-title">
     <h2 id="topology-title" class="visually-hidden">Capability topology</h2>
-    <svg id="topology-svg" class="topology-svg" viewBox="0 0 800 800" role="img"
-         aria-labelledby="topology-svg-title topology-svg-desc" focusable="false">
-      <title id="topology-svg-title">Core and capability nodes</title>
-      <desc id="topology-svg-desc">One node per capability returned by the server; the list below mirrors the graph.</desc>
-      <g id="topology-traces" class="traces" aria-hidden="true"></g>
-      <g id="core" class="core" data-state="unreachable">
-        <circle class="core-ring core-ring-outer" cx="400" cy="400" r="118"></circle>
-        <circle class="core-ring core-ring-inner" cx="400" cy="400" r="96"></circle>
-        <circle class="core-body" cx="400" cy="400" r="72"></circle>
-        <text class="core-label" x="400" y="392" text-anchor="middle">CORE</text>
-        <text id="core-state-text" class="core-state" x="400" y="416" text-anchor="middle">unreachable</text>
-      </g>
-      <g id="topology-nodes" class="nodes"></g>
-    </svg>
+    <div class="stage">
+      <div class="stage-ambient" aria-hidden="true"></div>
+      <svg id="topology-svg" class="topology-svg" viewBox="0 0 800 800" role="group"
+           aria-labelledby="topology-svg-title topology-svg-desc">
+        <title id="topology-svg-title">Core, execution orbit and capability nodes</title>
+        <desc id="topology-svg-desc">One node per capability and one dot per execution returned by the server; the list below mirrors the graph.</desc>
+        <defs>
+          <radialGradient id="core-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="currentColor" stop-opacity="0.55"></stop>
+            <stop offset="60%" stop-color="currentColor" stop-opacity="0.12"></stop>
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+          </radialGradient>
+          <filter id="node-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="blur"></feGaussianBlur>
+            <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Circuit traces: Core -> capability nodes (structural; class = served state). -->
+        <g id="topology-traces" class="traces" aria-hidden="true"></g>
+
+        <!-- Execution orbit (R185): one dot per GET /v1/executions row, class = ExecutionStatus. -->
+        <g class="orbit-guide" aria-hidden="true">
+          <circle class="orbit-track" cx="400" cy="400" r="190"></circle>
+        </g>
+        <g id="execution-orbit" class="execution-orbit" role="group" aria-label="Executions on the inner orbit (one dot per served execution)"></g>
+
+        <!-- The Core: role=button opens the system overview (served fields). It NEVER changes runtime state. -->
+        <g id="core" class="core" data-state="unreachable" role="button" tabindex="0"
+           aria-label="QEVION Core — open the system overview" aria-haspopup="dialog" aria-controls="overview-dialog">
+          <circle class="core-halo" cx="400" cy="400" r="150" fill="url(#core-glow)"></circle>
+          <!-- Layered rings: rotate cw / ccw at 3 speeds (ambient; speed follows data-state). -->
+          <g class="core-ring-layer core-ring-cw"><circle class="core-ring core-ring-outer" cx="400" cy="400" r="118" pathLength="100"></circle></g>
+          <g class="core-ring-layer core-ring-ccw"><circle class="core-ring core-ring-mid" cx="400" cy="400" r="106" pathLength="100"></circle></g>
+          <g class="core-ring-layer core-ring-cw core-ring-slow"><circle class="core-ring core-ring-inner" cx="400" cy="400" r="94"></circle></g>
+          <!-- Orbit dots: decorative satellites; their speed follows the Core state class only. -->
+          <g class="orbit-dots core-ring-cw" aria-hidden="true">
+            <circle class="orbit-dot" cx="400" cy="282" r="3.5"></circle>
+            <circle class="orbit-dot" cx="518" cy="400" r="2.5"></circle>
+            <circle class="orbit-dot" cx="400" cy="518" r="3"></circle>
+          </g>
+          <circle class="core-body" cx="400" cy="400" r="72"></circle>
+          <circle class="core-pulse" cx="400" cy="400" r="72"></circle>
+          <text class="core-label" x="400" y="392" text-anchor="middle">CORE</text>
+          <text id="core-state-text" class="core-state" x="400" y="416" text-anchor="middle">unreachable</text>
+        </g>
+
+        <g id="topology-nodes" class="nodes" role="group" aria-label="Capability nodes"></g>
+      </svg>
+    </div>
+
+    <p class="stage-hint muted small" aria-hidden="true">Enter on the Core opens the system overview · Enter on a node opens its record · Escape closes</p>
 
     <!-- Keyboard / screen-reader mirror of the graph (row 34). -->
     <ul id="topology-list" class="topology-list" aria-label="Capabilities (mirror of the graph)"></ul>
   </section>
 
-  <!-- Detail: the selected node's served record, verbatim. -->
-  <aside id="node-detail" class="panel detail" aria-live="polite" hidden>
-    <h2 id="detail-id" class="detail-id"></h2>
+  <!-- Detail dialog: the selected node's served record, verbatim. -->
+  <aside id="node-detail" class="panel detail dialog" role="dialog" aria-modal="false" aria-labelledby="detail-id" hidden>
+    <div class="dialog-head">
+      <h2 id="detail-id" class="detail-id"></h2>
+      <button id="detail-close" class="btn-ghost btn-close" type="button" aria-label="Close record">×</button>
+    </div>
     <p><span class="k">state</span> <span id="detail-state" class="badge"></span></p>
     <p><span class="k">evidence</span> <code id="detail-evidence" class="evidence"></code></p>
     <p class="muted small">Rendered from the server record. Inert = machinery exists, seam not composed in this process. Unavailable = work does not exist yet.</p>
   </aside>
+
+  <!-- System overview dialog (R185): served fields only — profile, scope, health, session. -->
+  <div id="overview-dialog" class="panel dialog overview" role="dialog" aria-modal="true" aria-labelledby="overview-title" hidden>
+    <div class="dialog-head">
+      <h2 id="overview-title">QEVION Core — system overview</h2>
+      <button id="overview-close" class="btn-ghost btn-close" type="button" aria-label="Close overview">×</button>
+    </div>
+    <dl class="overview-fields">
+      <dt>core</dt><dd id="overview-core"></dd>
+      <dt>health</dt><dd id="overview-health"></dd>
+      <dt>profile</dt><dd id="overview-profile"></dd>
+      <dt>scope</dt><dd id="overview-scope"></dd>
+      <dt>identity_mode</dt><dd id="overview-identity"></dd>
+      <dt>provider_keys</dt><dd id="overview-providers"></dd>
+      <dt>admin_emails_configured</dt><dd id="overview-admins"></dd>
+      <dt>session</dt><dd id="overview-session"></dd>
+      <dt>executions</dt><dd id="overview-executions"></dd>
+    </dl>
+    <p class="muted small">Read from /healthz, the session and the system read model of THIS process. Opening this overview changes nothing.</p>
+  </div>
 
   <p id="center-error" class="error" role="alert" hidden></p>
 
@@ -114,6 +185,9 @@
         <span id="progress-status" class="badge"></span>
         <span class="k">stage</span> <span id="progress-stage"></span>
         <span id="progress-percent" class="muted"></span>
+        <!-- R185: evaluation_status from the GET /v1/admin/usage row for this execution (R184 contract). -->
+        <span class="k">evaluation</span>
+        <span id="execution-evaluation" class="badge" data-evaluation-status="" title="From the admin usage row (R184 evaluation_status)"></span>
       </div>
       <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress-bar-track">
         <div id="progress-bar" class="progress-bar"></div>
@@ -135,6 +209,8 @@
   <span id="status-core" class="status-item">core: <b>—</b></span>
   <span id="status-nodes" class="status-item">nodes: <b>—</b></span>
   <span id="status-states" class="status-item">available/inert/unavailable: <b>—</b></span>
+  <span id="status-executions" class="status-item">executions: <b>—</b></span>
+  <span id="status-evaluation" class="status-item">evaluated/never: <b>—</b></span>
   <span id="status-profile" class="status-item">profile: <b>—</b></span>
 </footer>
 

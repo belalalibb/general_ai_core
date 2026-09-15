@@ -1,33 +1,47 @@
-/* QEVION Command Center — R182-IMPL M1 "Honest topology" + M2 (execution graph / progress / conversation).
+/* QEVION Command Center — R182-IMPL M1 "Honest topology" + M2 (execution graph / progress /
+   conversation) + R185 experience (execution orbit, evaluation_status, layered Core, dialogs,
+   keyboard access, transport indicator).
    ADR-0013 Alternative C: one vanilla ES module. No framework, no build step,
-   no runtime dependency, no drawing layer beyond SVG/CSS (the optional canvas
-   layer is NOT in M1).
+   no runtime dependency, no drawing layer beyond SVG/CSS.
 
-   Contract feeding this file (R182_HANDOFF §7) — every route is an api() literal below,
-   validated against the served OpenAPI by tests/ui/test_command_center_static_check_r182.py
-   (raw `/v1/` occurrences are capped at 12, down only; this comment spends none):
+   Contract feeding this file (R182_HANDOFF §7, R185_HANDOFF §1) — every route is an api()
+   literal below, validated against the served OpenAPI by tests/ui/test_command_center_*.py
+   (raw route-prefix occurrences are capped at 12, down only; this comment spends none):
      healthz                          -> reachability
      auth login / session / logout    -> {token} / {email, tenant_id, is_admin} / 204
-     admin system                     -> {profile, scope, ...}
+     admin system                     -> {profile, scope, identity_mode, provider_keys[], ...}
      admin capabilities               -> {scope, capabilities[]{id,state,evidence}}
-     executions (list)                -> {executions[]{status, created_at, ...}}
-   M2 (HANDOFF §7 rows 8-11):
+     executions (list)                -> {executions[]{execution_id, status, created_at, ...}}
      execute {ask}                    -> {execution_id, status, result, usage}
      agent converse {message}         -> {claims[], tool_calls[], reasoning_execution_ids[],
                                           rounds, stop_reason, verification{...}, reasoning_trace[]}
      executions/{id}                  -> {status, progress{current_stage, percent}}
      executions/{id}/events           -> text/event-stream of the FIVE emitted types
      agent executions/{id}/trace      -> {strategy, stages[]{node_key,status,attempts[]}, ledger, as_recorded}
+     admin usage (R184)               -> {usage[]{execution_id, status, created_at, ledger, evaluation_status}}
 
-   Honesty rules enforced by tests/ui/test_command_center_*_r182.py:
+   Honesty rules enforced by tests/ui/test_command_center_*.py:
      * every node is one served capability record; ids come from `capability.id`;
-     * NODE_STATES is the closed CapabilityState set + a LOUD UNKNOWN;
-     * CORE_STATES is the closed R182_HANDOFF §8 set, derived from ExecutionStatus
-       values + reachability — never invented;
+     * every orbit dot is one served execution row; ids come from `row.execution_id`;
+     * NODE_STATES / CORE_STATES / EXECUTION_STATES / STAGE_STATES / STREAM_EVENTS /
+       EVALUATION_STATUSES are the closed served sets + a LOUD UNKNOWN — never invented;
      * exactly one fetch( inside api(); no EventSource/WebSocket/XHR/axios;
-     * no setInterval; no roster; no provider branching. */
+     * no timers, no randomness, no JS animation loop: motion is CSS bound to data-state;
+     * the transport indicator describes THIS browser's request, never the runtime. */
 
-const state = { token: null, catalog: null, selected: null };
+const state = {
+  token: null,
+  catalog: null,
+  selected: null,
+  health: null,
+  system: null,
+  session: null,
+  executions: [],
+  usageByExecution: new Map(),
+  selectedExecution: null,
+  pendingRequests: 0,
+  dialogOpener: null,
+};
 
 /* --- closed vocabularies ------------------------------------------------------ */
 
@@ -82,6 +96,15 @@ const EXECUTION_STATES = Object.freeze({
   UNKNOWN: { cls: "st-unknown", label: "UNKNOWN" },
 });
 
+/* core/contracts/evaluation.py EvaluationStatus (R184, Q7 a) — verbatim — plus UNKNOWN.
+   Served per execution on the admin usage row; derived server-side (EVALUATED iff at
+   least one stored record above RAW). The UI never derives or defaults it. */
+const EVALUATION_STATUSES = Object.freeze({
+  NEVER_EVALUATED: { cls: "st-pending", label: "NEVER_EVALUATED" },
+  EVALUATED: { cls: "st-available", label: "EVALUATED" },
+  UNKNOWN: { cls: "st-unknown", label: "UNKNOWN" },
+});
+
 function nodeState(value) {
   return Object.prototype.hasOwnProperty.call(NODE_STATES, value) ? value : "UNKNOWN";
 }
@@ -92,11 +115,24 @@ function closedKey(map, value) {
 
 /* --- the single transport ----------------------------------------------------- */
 
+function setTransportPending(step) {
+  /* A fact about this browser's outstanding requests — shown as such (`request in
+     flight`), never written into the Core's data-state. */
+  state.pendingRequests = Math.max(0, state.pendingRequests + step);
+  const indicator = document.getElementById("transport-indicator");
+  const busy = state.pendingRequests > 0;
+  indicator.hidden = !busy;
+  indicator.setAttribute("aria-busy", busy ? "true" : "false");
+  indicator.classList.toggle("is-pending", busy);
+  document.body.classList.toggle("is-pending", busy);
+}
+
 async function api(path, options = {}) {
   const headers = Object.assign({}, options.headers || {});
   if (state.token) headers["Authorization"] = `Bearer ${state.token}`;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   let response;
+  setTransportPending(+1);
   try {
     response = await fetch(path, {
       method: options.method || "GET",
@@ -104,14 +140,17 @@ async function api(path, options = {}) {
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
   } catch (_networkError) {
+    setTransportPending(-1);
     return { ok: false, status: 0, body: null };
   }
   if (options.stream) {
     /* SSE is READ through this same transport (fetch body reader) — no EventSource.
        The caller receives the raw body stream and parses `data:` frames. */
+    setTransportPending(-1);
     return { ok: response.ok, status: response.status, body: null, stream: response.body };
   }
   const body = await response.json().catch(() => null);
+  setTransportPending(-1);
   return { ok: response.ok, status: response.status, body };
 }
 
@@ -145,6 +184,7 @@ function deriveCoreState(reachable, executions) {
 const SVG_NS = "http://www.w3.org/2000/svg";
 const CENTER = 400;
 const ORBIT = 300;
+const EXECUTION_ORBIT = 190;
 
 function svgEl(name, attrs) {
   const el = document.createElementNS(SVG_NS, name);
@@ -152,13 +192,26 @@ function svgEl(name, attrs) {
   return el;
 }
 
+function activate(el, handler) {
+  /* Pointer + keyboard activation for SVG elements exposed as role=button. */
+  el.addEventListener("click", handler);
+  el.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handler(event);
+    }
+  });
+}
+
 function renderCore(coreState) {
   const core = document.getElementById("core");
   const meta = CORE_STATES[coreState];
   core.setAttribute("data-state", coreState);
   core.setAttribute("class", `core ${meta.cls}`);
+  core.setAttribute("aria-label", `QEVION Core — ${meta.label} — open the system overview`);
   document.getElementById("core-state-text").textContent = meta.label;
   document.getElementById("status-core").innerHTML = `core: <b>${meta.label}</b>`;
+  document.getElementById("overview-core").textContent = meta.label;
 }
 
 function renderTopology(catalog) {
@@ -180,18 +233,32 @@ function renderTopology(catalog) {
     const angle = (i / Math.max(n, 1)) * Math.PI * 2 - Math.PI / 2;
     const x = CENTER + Math.cos(angle) * ORBIT;
     const y = CENTER + Math.sin(angle) * ORBIT;
-
+    /* Circuit trace: a radial segment with one elbow, PCB-like, from the Core edge. */
+    const ex = CENTER + Math.cos(angle) * 150;
+    const ey = CENTER + Math.sin(angle) * 150;
+    const mx = CENTER + Math.cos(angle) * 230;
+    const my = CENTER + Math.sin(angle) * 230;
     traces.appendChild(
-      svgEl("line", { x1: CENTER, y1: CENTER, x2: x, y2: y, class: `trace ${meta.cls}` })
+      svgEl("path", {
+        d: `M ${ex} ${ey} L ${mx} ${my} L ${x} ${y}`,
+        class: `trace ${meta.cls}`,
+        "data-for": capability.id,
+        pathLength: "100",
+      })
     );
 
     const g = svgEl("g", {
       class: `node ${meta.cls}`,
       "data-id": capability.id,
       "data-state": stateKey,
-      tabindex: "-1",
+      tabindex: "0",
+      role: "button",
+      "aria-label": `${capability.id} — ${meta.label} — open record`,
+      "aria-haspopup": "dialog",
     });
+    g.appendChild(svgEl("circle", { cx: x, cy: y, r: 22, class: "node-hit" }));
     g.appendChild(svgEl("circle", { cx: x, cy: y, r: 16, class: "node-body" }));
+    g.appendChild(svgEl("circle", { cx: x, cy: y, r: 5, class: "node-dot" }));
     const label = svgEl("text", {
       x,
       y: y + (Math.sin(angle) >= 0 ? 34 : -26),
@@ -203,7 +270,7 @@ function renderTopology(catalog) {
     const title = svgEl("title");
     title.textContent = `${capability.id} — ${meta.label} — ${capability.evidence || ""}`;
     g.appendChild(title);
-    g.addEventListener("click", () => selectNode(capability));
+    activate(g, () => selectNode(capability, g));
     nodesGroup.appendChild(g);
 
     const li = document.createElement("li");
@@ -216,7 +283,7 @@ function renderTopology(catalog) {
     button.querySelector(".list-id").textContent = capability.id;
     button.querySelector(".badge").textContent = meta.label;
     button.title = capability.evidence || "";
-    button.addEventListener("click", () => selectNode(capability));
+    button.addEventListener("click", () => selectNode(capability, button));
     li.appendChild(button);
     list.appendChild(li);
   });
@@ -227,20 +294,72 @@ function renderTopology(catalog) {
     (counts.UNKNOWN ? ` <b class="st-unknown">UNKNOWN ${counts.UNKNOWN}</b>` : "");
 }
 
-function selectNode(capability) {
+/* --- dialogs (focus in, Escape/close out, focus back to the opener) ------------- */
+
+function openDialog(dialog, opener) {
+  state.dialogOpener = opener || document.activeElement;
+  dialog.hidden = false;
+  const closeButton = dialog.querySelector(".btn-close");
+  if (closeButton) closeButton.focus();
+}
+
+function closeDialog(dialog) {
+  if (dialog.hidden) return;
+  dialog.hidden = true;
+  const opener = state.dialogOpener;
+  state.dialogOpener = null;
+  if (opener && document.contains(opener) && typeof opener.focus === "function") opener.focus();
+}
+
+function closeAnyDialog() {
+  const overview = document.getElementById("overview-dialog");
+  const detail = document.getElementById("node-detail");
+  if (!overview.hidden) closeDialog(overview);
+  else if (!detail.hidden) closeDialog(detail);
+}
+
+function selectNode(capability, opener) {
   state.selected = capability.id;
   const stateKey = nodeState(capability.state);
   const meta = NODE_STATES[stateKey];
   document.querySelectorAll("[data-id]").forEach((el) => {
     el.classList.toggle("selected", el.getAttribute("data-id") === capability.id);
   });
+  document.querySelectorAll("#topology-traces .trace").forEach((el) => {
+    el.classList.toggle("selected", el.getAttribute("data-for") === capability.id);
+  });
   const detail = document.getElementById("node-detail");
-  detail.hidden = false;
   document.getElementById("detail-id").textContent = capability.id;
   const badge = document.getElementById("detail-state");
   badge.textContent = meta.label;
   badge.className = `badge ${meta.cls}`;
   document.getElementById("detail-evidence").textContent = capability.evidence || "";
+  if (detail.hidden) openDialog(detail, opener);
+}
+
+function openOverview(opener) {
+  /* Served fields already in hand — opening the overview performs NO request and
+     changes nothing in the runtime (APEX "energize" is not a QEVION state). */
+  const system = state.system || {};
+  const health = state.health;
+  const session = state.session || {};
+  document.getElementById("overview-health").textContent = health
+    ? String(health.status || "ok")
+    : "unreachable";
+  document.getElementById("overview-profile").textContent = system.profile ?? "—";
+  document.getElementById("overview-scope").textContent = system.scope ?? "—";
+  document.getElementById("overview-identity").textContent = system.identity_mode ?? "—";
+  document.getElementById("overview-providers").textContent = Array.isArray(system.provider_keys)
+    ? system.provider_keys.length
+      ? system.provider_keys.join(", ")
+      : "none configured"
+    : "—";
+  document.getElementById("overview-admins").textContent =
+    system.admin_emails_configured === undefined ? "—" : String(system.admin_emails_configured);
+  document.getElementById("overview-session").textContent =
+    `${session.email || "?"} · tenant ${String(session.tenant_id || "?").slice(0, 8)}…`;
+  document.getElementById("overview-executions").textContent = String(state.executions.length);
+  openDialog(document.getElementById("overview-dialog"), opener);
 }
 
 function renderScope(scope, profile) {
@@ -252,6 +371,86 @@ function renderScope(scope, profile) {
   document.getElementById("status-profile").innerHTML = `profile: <b>${profile || "—"}</b>`;
 }
 
+/* --- R185: execution orbit + evaluation_status (R184 contract) ------------------ */
+
+function renderExecutionOrbit(executions) {
+  /* One dot per served execution row (newest first, clockwise from the top); class =
+     ExecutionStatus (closed + UNKNOWN). Selecting a dot loads that record. */
+  const orbit = document.getElementById("execution-orbit");
+  orbit.replaceChildren();
+  const rows = (Array.isArray(executions) ? executions : [])
+    .slice()
+    .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
+  const n = rows.length;
+  rows.forEach((row, i) => {
+    const key = closedKey(EXECUTION_STATES, row.status);
+    const meta = EXECUTION_STATES[key];
+    const angle = (i / Math.max(n, 1)) * Math.PI * 2 - Math.PI / 2;
+    const x = CENTER + Math.cos(angle) * EXECUTION_ORBIT;
+    const y = CENTER + Math.sin(angle) * EXECUTION_ORBIT;
+    const g = svgEl("g", {
+      class: `exec-dot ${meta.cls}` + (row.execution_id === state.selectedExecution ? " selected" : ""),
+      "data-id": row.execution_id,
+      "data-state": key,
+      tabindex: "0",
+      role: "button",
+      "aria-label": `execution ${String(row.execution_id).slice(0, 8)}… — ${meta.label} — open record`,
+    });
+    g.appendChild(svgEl("circle", { cx: x, cy: y, r: 12, class: "exec-dot-hit" }));
+    g.appendChild(svgEl("circle", { cx: x, cy: y, r: 6, class: "exec-dot-body" }));
+    const title = svgEl("title");
+    title.textContent = `${row.execution_id} — ${meta.label} — ${row.created_at || ""}`;
+    g.appendChild(title);
+    activate(g, () => showExecution(row.execution_id));
+    orbit.appendChild(g);
+  });
+  document.getElementById("status-executions").innerHTML = `executions: <b>${n}</b>`;
+}
+
+function renderEvaluationStatus(executionId) {
+  /* The R184 field, from the admin usage row joined by execution_id. Three honest
+     outcomes: a closed value, a LOUD UNKNOWN, or "no usage row" (the join has no row —
+     execution_id is a key, not an FK). Never a default. */
+  const el = document.getElementById("execution-evaluation");
+  const row = state.usageByExecution.get(executionId);
+  if (!row) {
+    el.textContent = "no usage row";
+    el.className = "badge st-inert";
+    el.setAttribute("data-evaluation-status", "");
+    return;
+  }
+  const key = closedKey(EVALUATION_STATUSES, row.evaluation_status);
+  el.textContent = EVALUATION_STATUSES[key].label;
+  el.className = `badge ${EVALUATION_STATUSES[key].cls}`;
+  el.setAttribute("data-evaluation-status", key);
+}
+
+async function loadUsage() {
+  const usage = await api("/v1/admin/usage");
+  state.usageByExecution = new Map();
+  const counts = { EVALUATED: 0, NEVER_EVALUATED: 0, UNKNOWN: 0 };
+  if (usage.ok) {
+    for (const row of Array.isArray(usage.body.usage) ? usage.body.usage : []) {
+      state.usageByExecution.set(row.execution_id, row);
+      counts[closedKey(EVALUATION_STATUSES, row.evaluation_status)] += 1;
+    }
+    document.getElementById("status-evaluation").innerHTML =
+      `evaluation: <b>EVALUATED ${counts.EVALUATED} · NEVER_EVALUATED ${counts.NEVER_EVALUATED}</b>` +
+      (counts.UNKNOWN ? ` <b class="st-unknown">UNKNOWN ${counts.UNKNOWN}</b>` : "");
+  } else {
+    document.getElementById("status-evaluation").innerHTML = "evaluation: <b>—</b>";
+  }
+}
+
+async function refreshExecutions() {
+  const executions = await api("/v1/executions");
+  state.executions = executions.ok && Array.isArray(executions.body.executions)
+    ? executions.body.executions
+    : [];
+  renderExecutionOrbit(state.executions);
+  renderCore(deriveCoreState(state.health !== null, state.executions));
+}
+
 /* --- load sequence (one read per surface; no polling) -------------------------- */
 
 async function loadCenter() {
@@ -260,11 +459,15 @@ async function loadCenter() {
 
   const health = await api("/healthz");
   const reachable = health.ok;
+  state.health = reachable ? health.body || { status: "ok" } : null;
   document.getElementById("status-health").innerHTML =
     `health: <b>${reachable ? (health.body && health.body.status) || "ok" : "unreachable"}</b>`;
 
   const system = await api("/v1/admin/system");
-  if (system.ok) renderScope(system.body.scope, system.body.profile);
+  if (system.ok) {
+    state.system = system.body;
+    renderScope(system.body.scope, system.body.profile);
+  }
 
   const catalog = await api("/v1/admin/capabilities");
   if (!catalog.ok) {
@@ -276,8 +479,8 @@ async function loadCenter() {
   if (!system.ok) renderScope(catalog.body.scope, null);
   renderTopology(catalog.body);
 
-  const executions = await api("/v1/executions");
-  renderCore(deriveCoreState(reachable, executions.ok ? executions.body.executions : []));
+  await refreshExecutions();
+  await loadUsage();
 }
 
 /* --- M2: execution graph / progress / stream / conversation --------------------- */
@@ -356,6 +559,8 @@ function highlightStage(frame, type) {
       el.classList.toggle("live", type === "node_started");
     }
   });
+  /* The Core mirrors the same frame: a stage is live between these two frames. */
+  document.getElementById("core").classList.toggle("stage-live", type === "node_started");
 }
 
 function appendStreamFrame(frame) {
@@ -417,6 +622,7 @@ async function readEvents(executionId) {
       sep = buffer.indexOf("\n\n");
     }
   }
+  document.getElementById("core").classList.remove("stage-live");
 }
 
 async function loadExecutionRecord(executionId) {
@@ -435,10 +641,18 @@ async function loadExecutionRecord(executionId) {
 }
 
 async function showExecution(executionId) {
+  state.selectedExecution = executionId;
+  document.querySelectorAll("#execution-orbit .exec-dot").forEach((el) => {
+    el.classList.toggle("selected", el.getAttribute("data-id") === executionId);
+  });
   await loadExecutionRecord(executionId);
   await readEvents(executionId);
   /* Re-read after the stream closed: the events are a projection of stored truth. */
   await loadExecutionRecord(executionId);
+  /* The orbit, the Core and the evaluation status follow the stored rows. */
+  await refreshExecutions();
+  await loadUsage();
+  renderEvaluationStatus(executionId);
 }
 
 function appendTurn(role, textValue, fields) {
@@ -514,6 +728,20 @@ document.getElementById("converse-form").addEventListener("submit", async (event
   });
   const ids = Array.isArray(r.reasoning_execution_ids) ? r.reasoning_execution_ids : [];
   if (ids.length) await showExecution(ids[ids.length - 1]);
+  else await refreshExecutions();
+});
+
+/* --- Core + dialogs wiring ------------------------------------------------------ */
+
+activate(document.getElementById("core"), (event) => openOverview(event.currentTarget));
+document.getElementById("overview-close").addEventListener("click", () => {
+  closeDialog(document.getElementById("overview-dialog"));
+});
+document.getElementById("detail-close").addEventListener("click", () => {
+  closeDialog(document.getElementById("node-detail"));
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeAnyDialog();
 });
 
 /* --- session ------------------------------------------------------------------- */
@@ -540,6 +768,7 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
     state.token = null;
     return;
   }
+  state.session = session.body;
   document.getElementById("session-who").textContent =
     `${session.body.email || "?"} \u00b7 tenant ${String(session.body.tenant_id || "?").slice(0, 8)}\u2026`;
   document.getElementById("login-view").hidden = true;
@@ -554,6 +783,12 @@ document.getElementById("logout").addEventListener("click", async () => {
   state.token = null;
   state.catalog = null;
   state.selected = null;
+  state.session = null;
+  state.system = null;
+  state.executions = [];
+  state.usageByExecution = new Map();
+  state.selectedExecution = null;
+  closeAnyDialog();
   document.getElementById("session-who").textContent = "";
   document.getElementById("logout").hidden = true;
   document.getElementById("center-view").hidden = true;
