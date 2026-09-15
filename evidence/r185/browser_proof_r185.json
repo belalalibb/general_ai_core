@@ -1,0 +1,40 @@
+{
+  "server": "python3 -m apps.main (in-memory profile, ADMIN_EMAILS)",
+  "page": "/app/command/",
+  "served_executions": 1,
+  "rendered_orbit_dots": 1,
+  "evaluation_status_rendered": "NEVER_EVALUATED",
+  "evaluation_status_served": "NEVER_EVALUATED",
+  "overview": {
+    "profile": "in-memory",
+    "scope": "process",
+    "health": "alive",
+    "focus_in_dialog": true,
+    "focus_returned_to_core": true,
+    "writes_performed_by_core_tap": 0
+  },
+  "node_keyboard": {
+    "detail_id": "admin.control_plane",
+    "focus_returned": true
+  },
+  "responsive_overflow_px_at_390": 0,
+  "running_animations_allowed": 10,
+  "running_animations_reduced_motion": 0,
+  "console_errors": [],
+  "requests": [
+    "GET /app/command/",
+    "GET /app/command/command.css",
+    "GET /app/command/command.js",
+    "GET /healthz",
+    "GET /v1/admin/capabilities",
+    "GET /v1/admin/system",
+    "GET /v1/admin/usage",
+    "GET /v1/agent/executions/b376a878-ef39-46af-b0dd-39362bf999ae/trace",
+    "GET /v1/auth/session",
+    "GET /v1/executions",
+    "GET /v1/executions/b376a878-ef39-46af-b0dd-39362bf999ae",
+    "GET /v1/executions/b376a878-ef39-46af-b0dd-39362bf999ae/events",
+    "POST /v1/auth/login",
+    "POST /v1/execute"
+  ]
+}
