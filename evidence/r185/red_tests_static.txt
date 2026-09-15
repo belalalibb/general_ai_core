@@ -1,0 +1,12 @@
+FAILED tests/ui/test_command_center_experience_r185.py::test_evaluation_status_vocabulary_is_the_r184_contract_plus_loud_unknown
+FAILED tests/ui/test_command_center_experience_r185.py::test_evaluation_status_is_read_from_admin_usage_rows_joined_by_execution_id
+FAILED tests/ui/test_command_center_experience_r185.py::test_evaluation_status_surface_exists_in_the_shell
+FAILED tests/ui/test_command_center_experience_r185.py::test_execution_orbit_is_drawn_from_served_executions
+FAILED tests/ui/test_command_center_experience_r185.py::test_pending_indicator_is_labelled_as_transport_state_not_runtime_state
+FAILED tests/ui/test_command_center_experience_r185.py::test_every_animated_class_collapses_under_reduced_motion
+FAILED tests/ui/test_command_center_experience_r185.py::test_motion_is_bound_to_served_state_attributes
+FAILED tests/ui/test_command_center_experience_r185.py::test_core_is_a_keyboard_button_opening_a_dialog_and_never_mutates_runtime
+FAILED tests/ui/test_command_center_experience_r185.py::test_graph_nodes_are_keyboard_reachable
+FAILED tests/ui/test_command_center_experience_r185.py::test_node_detail_is_a_dialog_with_close_control
+FAILED tests/ui/test_command_center_experience_r185.py::test_responsive_breakpoints_declared
+======================== 11 failed, 14 passed in 0.40s =========================
