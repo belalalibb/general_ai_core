@@ -1,0 +1,17 @@
+F-R185-L01 — Command Center horizontal overflow at 390 px after a FAILED execution (live preview, main 0d35917c)
+Reproduced 4/4 runs against the public preview URL (Chromium via Playwright).
+Measurement: document.documentElement.scrollWidth - clientWidth
+  before any execution ................................. 0 px
+  after execution whose last SSE frame is `error` ...... 513 px (511 px after full-page screenshot)
+Widest leaf (section.execution forced to 1 px to expose min-content):
+  li.frame  scrollWidth=851  white-space=normal
+  text: error {"category":"invalid_credential","provider_code":"organization_restricted","retryable":false,"safe_message":"provider rejected the credential"}
+Cause: ui/app/command/command.css:237 `.frame { padding: 2px 6px; border-left: 2px solid var(--line); animation: rise 160ms ease-out; }`
+       has no wrapping rule; the JSON payload contains no break opportunities, so the min-content width of the
+       execution panel (grid-column 1 / -1) becomes 859 px and widens the whole grid (section.topology → 893 px).
+Candidate fix (verified in-browser via an injected style tag, NOT applied to the repository — R185 is closed, ceiling 0):
+  .stream-log li.frame { overflow-wrap: anywhere; word-break: break-word; }   → overflow 513 px → 0 px
+Test gap: tests/ui/test_command_center_browser_r185.py measures overflow after an echo-provider execution whose
+  last frame is a short `final`; it never renders a long `error` frame, so the guard passes on main while the
+  live failure path overflows. A fix round should extend the browser proof with an error-frame case.
+Classification: REAL DEFECT, UI-only, outside the R185 ceiling → requires a declared round (operator decision).

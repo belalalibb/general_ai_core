@@ -1,0 +1,11 @@
+F-R185-L02 — converse response turn renders the literal string "undefined" for verification.* fields (live preview, main 0d35917c)
+Observed in evidence/r185/live_preview_e2e/04_after_execution.png (response turn): rounds 1 · stop_reason reasoning_failed ·
+  verification.verified undefined · verification.claims_admitted undefined · verification.claims_refused undefined ·
+  verification.tool_calls_ok undefined · verification.tool_calls_total undefined.
+Cause: apps/admin_agent/contracts.py:118-122 — `verification: JsonObject | None = None` ("None only when no final was ever
+  proposed (reasoning_failed / invalid_proposal paths)"). ui/app/command/command.js:723-731 does `const v = r.verification || {}`
+  and `String(v.verified)` etc., so a contract-legal null becomes the text "undefined".
+Not a runtime defect: the backend behaved per contract (reasoning failed because the provider rejected the credential; no final
+  proposed → no verification verdict). It is a UI rendering gap: the honest rendering would be "—" / "not verified (no final proposed)".
+Candidate fix (not applied — R185 closed, ceiling 0): render "n/a" when r.verification is null and say why (stop_reason).
+Classification: COSMETIC UI DEFECT, only visible on failure paths → candidate for the same fix round as F-R185-L01.
