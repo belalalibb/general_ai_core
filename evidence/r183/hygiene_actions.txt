@@ -1,0 +1,35 @@
+# R183 hygiene actions (D-R183-4 accepted); main = 1dd55934
+DELETED feature/admin-agent-aa1-api-seams @ 73a876c2 (contained in main; compare 73a876c2...main status=ahead) -> HTTP 204
+DELETED feature/admin-agent-aa2-agent-service @ 19ace44d (contained in main; compare 19ace44d...main status=ahead) -> HTTP 204
+DELETED feature/admin-agent-aa3-write-path @ 077ebc80 (contained in main; compare 077ebc80...main status=ahead) -> HTTP 204
+DELETED feature/admin-agent-ui-ux-plan @ b4ca4be1 (contained in main; compare b4ca4be1...main status=ahead) -> HTTP 204
+DELETED feature/gateway-first-provider @ 32c7a93b (contained in main; compare 32c7a93b...main status=ahead) -> HTTP 204
+DELETED feature/gateway-operational-hardening @ 5c1410b5 (contained in main; compare 5c1410b5...main status=ahead) -> HTTP 204
+DELETED feature/gateway-platform-adapter @ 05875387 (contained in main; compare 05875387...main status=ahead) -> HTTP 204
+DELETED feature/model-provider-skill-orchestration @ c654a841 (contained in main; compare c654a841...main status=ahead) -> HTTP 204
+DELETED feature/platform-agent-vision @ f575bbfa (contained in main; compare f575bbfa...main status=ahead) -> HTTP 204
+DELETED feature/post-v9-durability-runtime @ 2923b38f (contained in main; compare 2923b38f...main status=ahead) -> HTTP 204
+DELETED feature/provider-gateway @ 5a7f66b4 (contained in main; compare 5a7f66b4...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r178 @ c3276258 (contained in main; compare c3276258...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r179 @ 21556bf1 (contained in main; compare 21556bf1...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r180 @ 312b316a (contained in main; compare 312b316a...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r181 @ 05e12882 (contained in main; compare 05e12882...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r182 @ 7414684b (contained in main; compare 7414684b...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r182_close @ 39e0c9e0 (contained in main; compare 39e0c9e0...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r182_close2 @ f748463f (contained in main; compare f748463f...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r182_close3 @ b25000d1 (contained in main; compare b25000d1...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r182_impl @ 1c8525dc (contained in main; compare 1c8525dc...main status=ahead) -> HTTP 204
+DELETED genspark_ai_developer_r183 @ 5b9e87f6 (contained in main; compare 5b9e87f6...main status=ahead) -> HTTP 204
+CLOSED PR #13 (genspark_ai_developer) comment HTTP 201, close HTTP 200, state=closed, merged=False
+CLOSED PR #15 (r178_verified_units) comment HTTP 201, close HTTP 200, state=closed, merged=False
+CLOSED PR #16 (r178_decisions_verified_units) comment HTTP 201, close HTTP 200, state=closed, merged=False
+CLOSED PR #17 (r178_p01_subject_verified_units) comment HTTP 201, close HTTP 200, state=closed, merged=False
+
+# Remote branch inventory AFTER hygiene (git fetch --prune):
+origin 1dd55934
+origin/feature/platform-capability-assessment 5f543ad0
+origin/genspark_ai_developer a2e23547
+origin/main 1dd55934
+origin/r178_decisions_verified_units 1b208bd4
+origin/r178_p01_subject_verified_units 54c7cd3e
+origin/r178_verified_units 7f22abc9

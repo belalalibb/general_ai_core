@@ -1,0 +1,10 @@
+# RED — R184 Q7-A, before any production edit (head b25000d1+manifest)
+==================================== ERRORS ====================================
+______ ERROR collecting tests/contract/test_evaluation_status_q7_r184.py _______
+ImportError while importing test module '/home/user/webapp/tests/contract/test_evaluation_status_q7_r184.py'.
+      1 4 failed in 1.79s
+      3 E           KeyError: 'evaluation_status'
+      1 FAILED tests/api/test_admin_usage_evaluation_status_q7_r184.py::TestAdminUsageEvaluationStatus::test_evaluation_list_route_and_user_read_are_unchanged
+      1 FAILED tests/api/test_admin_usage_evaluation_status_q7_r184.py::TestAdminUsageEvaluationStatus::test_raw_record_does_not_count_as_evaluated_but_graded_record_does
+      1 FAILED tests/api/test_admin_usage_evaluation_status_q7_r184.py::TestAdminUsageEvaluationStatus::test_rows_carry_the_closed_status_never_evaluated_by_default
+      1 FAILED tests/api/test_admin_usage_evaluation_status_q7_r184.py::TestAdminUsageEvaluationStatus::test_status_is_derived_only_from_the_callers_tenant

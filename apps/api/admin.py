@@ -126,6 +126,7 @@ from core.contracts.admin import AdminDraftRequest, ConfigChange, LearningDashbo
 from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.contracts.errors import ErrorCode
+from core.contracts.evaluation import evaluation_status_of
 from core.evaluation.errors import EvaluationNotFound
 from core.evaluation.ports import EvaluationStorePort
 from core.learning import (
@@ -1318,6 +1319,13 @@ def create_admin_router(
             rows = []
             for report in execution_store.list(admitted.tenant_id):
                 ledger = report.usage
+                # R184 / Q7 (a): additive per-execution evaluation status, derived
+                # ONLY from the caller's tenant-scoped evaluation rows for an
+                # execution the tenant-scoped store already returned — no new
+                # lookup surface; /executions/{id}/evaluations is unchanged.
+                evaluation_status = evaluation_status_of(
+                    surface.evaluations.list_for_execution(admitted.tenant_id, report.execution.id)
+                )
                 rows.append(
                     {
                         "execution_id": str(report.execution.id),
@@ -1330,6 +1338,7 @@ def create_admin_router(
                             if ledger is None
                             else ledger.model_dump(mode="json", exclude_none=True)
                         ),
+                        "evaluation_status": evaluation_status.value,
                     }
                 )
             return _json({"usage": rows})

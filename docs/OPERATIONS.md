@@ -309,7 +309,14 @@ POST /v1/admin/learning/custody/release-legacy-hold  {reconciliation_ref} → {r
   evidence ledger).
 - Audit log: closed event set (`core/audit`), tenant-scoped; learning
   promotions, skill activations, admin changes are audited.
-- Usage: `GET /v1/admin/usage`. System facts: `GET /v1/admin/system`.
+- Usage: `GET /v1/admin/usage`. Each row (per execution of the caller's tenant) carries
+  `evaluation_status` ∈ {`NEVER_EVALUATED`, `EVALUATED`} (R184, Q7 (a)): `EVALUATED` iff at
+  least one stored evaluation record for that execution is above RAW on the 22 §3 ladder;
+  a RAW record ("generated but not evaluated") does not count. Derived, never stored, from the
+  caller's tenant-scoped records only; `GET /v1/admin/executions/{id}/evaluations` still answers
+  `[]` for both "no evaluations" and unknown/foreign ids (anti-enumeration, 20 §6) and the user
+  read `GET /v1/executions/{id}` carries no evaluation field (22 §7). System facts:
+  `GET /v1/admin/system`.
 - Startup banner (stdout JSON): profile, provider keys (names only), section-14 gate.
 
 ---

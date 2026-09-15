@@ -41,6 +41,7 @@ Scope decisions (MVP PHASE 7 SLICING DECISION, R049):
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from enum import StrEnum
 from uuid import UUID, uuid4
 
@@ -77,6 +78,20 @@ VERIFICATION_LEVEL_ORDER: tuple[VerificationLevel, ...] = (
     VerificationLevel.VERIFIED,
     VerificationLevel.GOLD,
 )
+
+
+class EvaluationStatus(StrEnum):
+    """Per-EXECUTION evaluation status served on the admin read (R184, Q7 (a)).
+
+    Closed set, operator-accepted verbatim: ``NEVER_EVALUATED | EVALUATED``.
+    It is derived, never stored: an execution is EVALUATED iff at least one
+    of its records sits ABOVE RAW on the 22 §3 ladder ("EVALUATED — Scored
+    by one or more graders"); a RAW record is "Generated but not evaluated"
+    and therefore does not count. See :func:`evaluation_status_of`.
+    """
+
+    NEVER_EVALUATED = "NEVER_EVALUATED"
+    EVALUATED = "EVALUATED"
 
 
 class GraderType(StrEnum):
@@ -172,3 +187,21 @@ class EvaluationRecord(ContractModel):
             msg = f"level {self.level.value} requires at least one grader result"
             raise ValueError(msg)
         return self
+
+
+def evaluation_status_of(records: Iterable[EvaluationRecord]) -> EvaluationStatus:
+    """Single derivation point for :class:`EvaluationStatus` (R184, Q7 (a)).
+
+    Positional on ``VERIFICATION_LEVEL_ORDER`` like the policy's level
+    assignment — RAW is index 0, anything above it was scored by at least
+    one grader (the ``EvaluationRecord`` validator guarantees ``graders``
+    is non-empty above RAW). Empty input ⇒ NEVER_EVALUATED, which is also
+    what an unknown/foreign execution yields upstream (20 §6): the
+    anti-enumeration posture of ``list_for_execution`` is preserved
+    because this helper adds no information the list did not already carry.
+    """
+    raw_index = VERIFICATION_LEVEL_ORDER.index(VerificationLevel.RAW)
+    for record in records:
+        if VERIFICATION_LEVEL_ORDER.index(record.level) > raw_index:
+            return EvaluationStatus.EVALUATED
+    return EvaluationStatus.NEVER_EVALUATED
