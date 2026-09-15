@@ -191,3 +191,7 @@ Measurement update, effective at the first R182-IMPL commit (`92baaa21`, the RED
 
 - QEVION UI readiness: **yes — blockers: 0** (D-1 and D-3 answered by the operator; base, budget 0/0, guard frame `ui_command_static_check`, contracts, inventory, first red test and M1 all in force).
 - AI Apps Factory: **NOT READY — missing: 5** (unchanged: the Factory contract definition is an operator decision, not R182 work).
+
+## 13. Pointer reconciliation — what "→ R183" meant, as resolved by R183 (2026-09-15; R183-DEC-01)
+
+The "→ R183" pointers in §4 rows 13/15, §6 and §8 named the earliest round that could host those items, not a definition of them. R183 (declared on `main` e23abb23) re-searched the repository and found no contract, acceptance or files for Q7, the Provider slice / provider verification, App Factory (row 24), API keys (row 25) or webhook delivery (row 26) — they remain **UNDEFINED** (R181-DEC-01: "Defining them is an operator act") and were **not worked**. R183 closed the only DEFINED + ACTIONABLE carry-over, F-R182-01 (`infrastructure/db/tables.py` docstring vs migration 0022), under `round_r183` ceiling 1/1. See `R183_HANDOFF.md` §1/§7 and `evidence/r183_state_ledger.md` row 2.

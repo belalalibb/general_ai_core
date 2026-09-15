@@ -1,0 +1,10 @@
+>       assert "UNIQUE + FK" not in flat, "F-R182-01: docstring still claims UNIQUE + FK"
+E       AssertionError: F-R182-01: docstring still claims UNIQUE + FK
+E       assert 'UNIQUE + FK' not in '- ``usage_l...Field(ge=0).'
+tests/db/test_tables_usage_ledger_doc_r183.py:36: AssertionError
+>       assert "NOT NULL" in flat and "UNIQUE" in flat
+E       assert ('NOT NULL' in '- ``usage_ledger`` (FINAL Phase 3, 41 §6 "usage") maps the 03 §7 UsageLedger in ``core/contracts/usage.py`` field-for...cle stage must be explicit (same recorded posture as skills.status). units CHECKs >= 0 match the contract Field(ge=0).')
+FAILED tests/db/test_tables_usage_ledger_doc_r183.py::test_module_docstring_no_longer_claims_execution_id_is_a_foreign_key
+FAILED tests/db/test_tables_usage_ledger_doc_r183.py::test_module_docstring_states_the_0022_keying_posture
+FAILED tests/db/test_tables_usage_ledger_doc_r183.py::test_docstring_and_metadata_agree_on_usage_ledger_execution_id
+3 failed in 0.49s
