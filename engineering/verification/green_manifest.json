@@ -40,15 +40,15 @@
       "min_passed_history": "3666 -> 3669 at the R183 gate of record (D-6: raise only at the gate of record, by the measured number, with a ledger line): fresh clone of 256058bf, PASS passed=3669 failed=0 errors=0 skipped=64 (evidence/r183/gate_head_256058bf.txt:23-24; evidence/r183_state_ledger.md row 6); +3 = tests/db/test_tables_usage_ledger_doc_r183.py. Earlier: 3658 -> 3666 at the R182-IMPL round-close gate of record (operator authorized PR #22 merge; D-6: raise only at the gate of record, by the measured number, with a ledger line): fresh clone of f1d289c2, PASS passed=3666 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_f1d289c2.txt; evidence/r182_impl_state_ledger.md row 33). Earlier: 3504 -> 3658 at the R182-IMPL gate of record (operator ruling D-6, R182-DEC-02: raise only at the round's gate of record, by the measured number, with a ledger line): fresh clone of 534649e8, PASS passed=3658 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_534649e8.txt; evidence/r182_impl_state_ledger.md row 16). Not ratcheted in R181/R182 readiness (no authorization then)."
     },
     "last_measured": {
-      "passed": 3666,
+      "passed": 3669,
       "failed": 0,
       "errors": 0,
       "skipped": 64,
-      "at_head": "3590898f",
+      "at_head": "1dd55934",
       "hermetic": true,
-      "command": "fresh clone of main 3590898f under /home/user/gates/; pip install -e '.[dev]'; PLAYWRIGHT_BROWSERS_PATH=0 .venv/bin/python -m playwright install chromium; env -i PATH=$PWD/.venv/bin:/usr/bin:/bin HOME=/tmp bash engineering/verification/check_repo.sh (env -i: no provider key or DATABASE_URL/REDIS_URL present)",
-      "evidence": "evidence/r182_impl/gate_merge_3590898f.txt",
-      "note": "R182 round close (R182-DEC-03): main 3590898f = merge commit of PR #23 (records only) on f5b89cea = merge commit of PR #22 (R182-IMPL M1+M2); passed 3666 == min_passed 3666 (floor holds exactly), skipped 64 == max_skipped; not_evaluated 1 (provider round-trip); gateway-service pytest 194 (evidence/r182_impl/gateway_merge_3590898f.txt). Previous record (kept for history): R173 closure passed=3127 at 2b54b87, evidence/r173/19_closure/check_repo_final.txt (+1 vs c930963 = F-15.2 pin test tests/composition/test_agent_source_seam.py::test_runtime_reader_composes_hardened_denylist); later floors 3318 (R177), 3504, 3632 (R182 readiness merge 12e83444), 3658 (534649e8), 3666 (f1d289c2). tests_live/ intentionally outside the verifier"
+      "command": "fresh clone of main 1dd55934 under /home/user/gates/; pip install -e '.[dev]'; PLAYWRIGHT_BROWSERS_PATH=0 .venv/bin/python -m playwright install chromium; env -i PATH=$PWD/.venv/bin:/usr/bin:/bin HOME=/tmp bash engineering/verification/check_repo.sh (env -i: no provider key or DATABASE_URL/REDIS_URL present)",
+      "evidence": "evidence/r183/gate_merge_1dd55934.txt",
+      "note": "R183 round close (R183-DEC-02): main 1dd55934 = merge commit of PR #25 (R183: F-R182-01 doc-only + records); passed 3669 == min_passed 3669 (ratcheted at the R183 gate of record 256058bf, D-6), skipped 64 == max_skipped; not_evaluated 1; round_r183 1/1; gateway-service pytest 194 (evidence/r183/gateway_merge_1dd55934.txt). Previous record: R182 close 3666 at 3590898f (evidence/r182_impl/gate_merge_3590898f.txt); earlier floors 3127 (R173, 2b54b87), 3318 (R177), 3504, 3632, 3658, 3666. tests_live/ intentionally outside the verifier"
     }
   },
   "non_test_items": [
@@ -756,7 +756,7 @@
     },
     "round_r183": {
       "ceiling": 1,
-      "ceiling_history": "declared 1 at the R183 opening (2026-09-15, R183-DEC-01) from post-R182 main e23abb23, BEFORE any production commit. Starting inventory = the R183 items already named in the records: F-R182-01 (infrastructure/db/tables.py:140-141 module docstring still says 'UNIQUE + FK (RESTRICT ...)' after migration 0022 dropped the FK; deferred by R182 because infrastructure/ was frozen, owner R183 per evidence/r182_findings_ledger.md and R182-DEC-01), Q7 / Provider slice (recorded UNDEFINED in R181-DEC-01 — no contract, acceptance or files exist in the repository; defining them is an operator act, so they carry NO budget here and are not worked), MISSING contract areas from R182_READINESS s4 rows 13-verification / 15 Q7 / 24 App Factory / 25 API keys / 26-delivery (no repository definition; operator-defined contract first; not worked). The ONLY defined+actionable item is F-R182-01 = exactly one production FILE (doc-only, no behaviour). Ceiling 1 therefore; a second file is a STOP, never a raise",
+      "ceiling_history": "declared 1 at the R183 opening (2026-09-15, R183-DEC-01) from post-R182 main e23abb23, BEFORE any production commit. Starting inventory = the R183 items already named in the records: F-R182-01 (infrastructure/db/tables.py:140-141 module docstring still says 'UNIQUE + FK (RESTRICT ...)' after migration 0022 dropped the FK; deferred by R182 because infrastructure/ was frozen, owner R183 per evidence/r182_findings_ledger.md and R182-DEC-01), Q7 / Provider slice (recorded UNDEFINED in R181-DEC-01 — no contract, acceptance or files exist in the repository; defining them is an operator act, so they carry NO budget here and are not worked), MISSING contract areas from R182_READINESS s4 rows 13-verification / 15 Q7 / 24 App Factory / 25 API keys / 26-delivery (no repository definition; operator-defined contract first; not worked). The ONLY defined+actionable item is F-R182-01 = exactly one production FILE (doc-only, no behaviour). Ceiling 1 therefore; a second file is a STOP, never a raise. Closure (R183-DEC-02): ceiling 1 spent exactly (changes_used 1 = len(log) 1, diff == log); PR #25 merged by merge commit 1dd55934; gate on the merge commit PASS 3669/0/0/64 (evidence/r183/gate_merge_1dd55934.txt); frozen trees zero-diff",
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
       "counts_production_code_under": [
         "core/",

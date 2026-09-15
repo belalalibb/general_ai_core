@@ -1,0 +1,29 @@
+# Remote branch inventory BEFORE hygiene (main = 1dd55934, 2026-09-15T10:47Z); MERGED = git merge-base --is-ancestor <branch> origin/main
+MERGED feature/admin-agent-aa1-api-seams 73a876c2
+MERGED feature/admin-agent-aa2-agent-service 19ace44d
+MERGED feature/admin-agent-aa3-write-path 077ebc80
+MERGED feature/admin-agent-ui-ux-plan b4ca4be1
+MERGED feature/gateway-first-provider 32c7a93b
+MERGED feature/gateway-operational-hardening 5c1410b5
+MERGED feature/gateway-platform-adapter 05875387
+MERGED feature/model-provider-skill-orchestration c654a841
+MERGED feature/platform-agent-vision f575bbfa
+MERGED feature/post-v9-durability-runtime 2923b38f
+MERGED feature/provider-gateway 5a7f66b4
+MERGED genspark_ai_developer_r178 c3276258
+MERGED genspark_ai_developer_r179 21556bf1
+MERGED genspark_ai_developer_r180 312b316a
+MERGED genspark_ai_developer_r181 05e12882
+MERGED genspark_ai_developer_r182 7414684b
+MERGED genspark_ai_developer_r182_close 39e0c9e0
+MERGED genspark_ai_developer_r182_close2 f748463f
+MERGED genspark_ai_developer_r182_close3 b25000d1
+MERGED genspark_ai_developer_r182_impl 1c8525dc
+MERGED genspark_ai_developer_r183 5b9e87f6
+UNMERGED feature/platform-capability-assessment 5f543ad0
+UNMERGED genspark_ai_developer a2e23547
+UNMERGED r178_decisions_verified_units 1b208bd4
+UNMERGED r178_p01_subject_verified_units 54c7cd3e
+UNMERGED r178_verified_units 7f22abc9
+
+# Open PRs before hygiene: #13 genspark_ai_developer (a2e23547, 2026-09-05), #15 r178_verified_units (7f22abc9), #16 r178_decisions_verified_units (1b208bd4), #17 r178_p01_subject_verified_units (54c7cd3e); #5 already closed unmerged (feature/platform-capability-assessment)

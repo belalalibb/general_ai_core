@@ -30,5 +30,8 @@ PR open/mergeable/clean; branch protection 404; 0 statuses / check-runs / workfl
 ## 7. Unresolved operator-only decisions
 D-R183-1 merge of the R183 PR · D-R183-2 definition (or explicit closure as out-of-scope) of Q7, Provider slice, App Factory, API keys, webhook delivery · D-R183-3 baseline re-capture authorization (F-R182-03) · D-R183-4 deletion of merged remote branches / disposition of stale PRs #13/#15/#16/#17 · D-R183-5 GitHub token rotation (overdue since "after R182-IMPL").
 
+> **Resolved 2026-09-15 (R183-DEC-02).** D-R183-1 DONE — PR #25 merged by merge commit → `main` **1dd55934**, gate on the merge commit PASS 3669/0/0/64, gateway 194. D-R183-4 DONE — 21 fully-contained branches deleted, 5 unmerged kept, PRs #13/#15/#16/#17 closed (`evidence/r183/hygiene_actions.txt`). D-R183-3 — operator chose "leave" (no test consumes `ui.bytes`); unchanged. D-R183-2 — Q7 examined against the existing contract: **not executable without a new contract** (`evidence/r183_state_ledger.md` row 15: the `[]` list is anti-enumeration by design, 20 §6); Provider / App Factory / API keys / webhook delivery unchanged (UNDEFINED). D-R183-5 — still an operator act; overdue. **R183 is CLOSED.** The ledger rows 11-15 and this note live on `genspark_ai_developer_r183_close` (from `main` 1dd55934) and reach `main` with the next declared work branch (R182-IMPL row 43 rule).
+
+
 ## Resume mechanism
 Remote branch head is the checkpoint; rebuild `.venv` (`pip install -e '.[dev]'` + chromium into the venv); gate clones under `/home/user/gates/` (F-R182I-04).
