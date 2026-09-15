@@ -38,5 +38,7 @@ D-R185-1 merge of the R185 PR · D-R185-2 whether a runtime-level "thinking / re
 - **Live cross-tenant / fleet view**: `scope: "process"` only.
 - **Agent roster with personas**: no such contract; nodes are the 23 served capability ids.
 
+**Resolved 2026-09-15 (R185-DEC-02):** D-R185-1 resolved — PR #27 merged by merge commit `0d35917c`; post-merge fresh-clone gate PASS 3703/0/0/64, gateway 194 (`evidence/r185/gate_merge_0d35917c.txt`); no further ratchet (floor 3703 holds exactly); hygiene under the authorized rule (2 branches, 0 open PRs). R185 CLOSED. D-R185-2, D-R185-3, D-R185-4 remain open and untouched.
+
 ## Resume mechanism
 `git fetch --prune`; checkout `origin/genspark_ai_developer_r185`; read the last row of `evidence/r185_state_ledger.md`; re-run `pytest tests/ui tests/verification tests/engineering/test_budget_rounds_r177.py -p no:cacheprovider`; continue from the first unchecked ledger row. After a sandbox reset: install Chromium system libraries (F-R182I-03) before any browser proof or gate.
