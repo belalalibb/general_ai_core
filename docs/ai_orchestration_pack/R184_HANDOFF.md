@@ -26,5 +26,7 @@ PR open/mergeable/clean; branch protection 404; 0 statuses / check-runs / workfl
 ## 6. Operator-only decisions after R184
 D-R184-1 merge of the R184 PR · D-R184-2 whether the Command Center / admin console should RENDER `evaluation_status` (a `ui/` thaw with its own guard-frame declaration; `ui/admin` N0 is at 73/73) · D-R184-3 Provider slice / App Factory / API keys / webhook delivery — still UNDEFINED (contract first) · D-R184-4 GitHub token rotation (overdue).
 
+**Resolved 2026-09-15 (R184-DEC-02):** D-R184-1 resolved — PR #26 merged by merge commit `88b94263`; post-merge fresh-clone gate PASS 3677/0/0/64, gateway 194 (`evidence/r184/gate_merge_88b94263.txt`); no ratchet (floor 3677 holds exactly); hygiene under the authorized rule (2 branches, 0 open PRs). R184 CLOSED. D-R184-2, D-R184-3, D-R184-4 remain open and untouched.
+
 ## Resume mechanism
 Remote branch head is the checkpoint; rebuild `.venv` (`pip install -e '.[dev]'` + chromium into the venv); gate clones under `/home/user/gates/` (F-R182I-04); never run `tests/ui` in the working clone before a commit (F-R182I-06).
