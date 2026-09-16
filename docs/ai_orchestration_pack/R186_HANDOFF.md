@@ -24,6 +24,9 @@ Merge commit (never squash), preconditions verified by API (open, mergeable clea
 ## 6. Operator-only decisions after R186
 D-R186-1 merge of the R186 PR · carried: D-R185-2 (runtime "thinking" contract), D-R185-3 (UNDEFINED areas), D-R185-4 (token rotation, overdue), F-R185-L03 (Groq organization restricted — external).
 
+
+**Resolved 2026-09-16 (R186-DEC-02):** D-R186-1 resolved — PR #28 merged by merge commit `1028212c`; post-merge fresh-clone gate PASS 3712/0/0/64, gateway 194 (`evidence/r186/gate_merge_1028212c.txt`); no further ratchet; hygiene done; R186 CLOSED. Remaining operator decisions: Groq organization (F-R185-L03), D-R185-2/3/4, hosting target.
+
 ## 7. State of QEVION as it exists TODAY (main 1028212c) — Phase 5 gap analysis
 Evidence: `evidence/r186_state_ledger.md` rows 8-11, `evidence/r186/{live_preview,live_preview_public,live_preview_e2e}/`. Environment: fresh clone of `main` run with `python3 -m apps.main` (in-memory profile, `GROQ_API_KEY` + `ADMIN_EMAILS` from the caller env only) behind a sandbox-lifetime public URL. Nothing below is called READY unless it was demonstrated.
 

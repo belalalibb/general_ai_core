@@ -1,0 +1,8 @@
+Hygiene (2026-09-16, rule R183 row 13 / D-R183-4: delete only when compare/<b>...main status in {ahead, identical})
+compare/genspark_ai_developer_r185_close...main status=ahead -> DELETE refs/heads/genspark_ai_developer_r185_close -> HTTP 204
+compare/genspark_ai_developer_r186...main status=ahead -> DELETE refs/heads/genspark_ai_developer_r186 -> HTTP 204
+(both executed in the previous session; verified now:)
+GET refs/heads/genspark_ai_developer_r185_close -> HTTP 404
+GET refs/heads/genspark_ai_developer_r186 -> HTTP 200 (prefix match: the API returns [genspark_ai_developer_r186_close] only; `git ls-remote --heads` confirms genspark_ai_developer_r186 is gone)
+open PRs: []
+remote heads: feature/platform-capability-assessment genspark_ai_developer genspark_ai_developer_r186_close main r178_decisions_verified_units r178_p01_subject_verified_units r178_verified_units 
