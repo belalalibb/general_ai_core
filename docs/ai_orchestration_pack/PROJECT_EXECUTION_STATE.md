@@ -606,3 +606,33 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
            of evidence/r186_state_ledger.md; does NOT open a round without an operator
            declaration recorded in 60_DECISION_LOG.md.
 ```
+
+---
+
+## R187 RESUME POINTER (append-only, 2026-09-16 — R187-DEC-02; round closed)
+
+```text
+AUTHORITY: operator plan (verbatim): "1. Merge PR #31 · 2. UI round → fix F-CS1-01 +
+           F-CS1-02 · 3. Re-run full relevant regression/browser proof · 4. Resolve
+           credential rotation · 5. بعدها نكمّل Provider / Learning closure · 6. Contract
+           Freeze · 7. App Factory". Items 1 and 2 are DONE by this pointer.
+RESUME_POINTER: evidence/r187_state_ledger.md rows 1-10 (PR #31 merge d6f45198; R187
+           declaration; RED 6 failed; GREEN tests/ui 105/0; browser proof 0 px / 0 px;
+           gate of record 460694bc 3719/0/0/64 + gateway 194; D-6 ratchet 3712 -> 3719;
+           PR #32 merge -> main 8b52c5db; post-merge gate 3719/0/0/64; closure records).
+DECISION_RECORD: docs/ai_orchestration_pack/final_docs_v3/60_DECISION_LOG.md
+           R187-DEC-01 (declaration) / R187-DEC-02 (closure).
+WORK_STATUS: R187 CLOSED. main = merge of PR #32 + this records-only closure.
+           Open engineering PRs 0. round_r187 0/0. Five legacy branches preserved.
+CS1_FINDINGS: F-CS1-01 FIXED+VERIFIED; F-CS1-02 FIXED+VERIFIED; F-CS1-03 by design (no
+           action); F-CS1-04 OPEN — AssemblyAI key exposed in public history since
+           521d8850 (2026-09-07), rotation is an operator action (plan item 4). GitHub
+           token rotation likewise operator-owned.
+NEXT_PER_OPERATOR_PLAN: item 3 = regression (post-merge gate DONE) + live-preview browser
+           proof of merged main (sandbox-lifetime URL); item 4 = operator rotation; items
+           5-7 (Provider/Learning closure, Contract Freeze, App Factory) each need a
+           declaration recorded in 60_DECISION_LOG.md BEFORE any code — STOP point.
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row of
+           evidence/r187_state_ledger.md; does NOT open a round without an operator
+           declaration recorded in 60_DECISION_LOG.md.
+```
