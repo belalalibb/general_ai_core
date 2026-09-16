@@ -763,6 +763,36 @@ document.addEventListener("keydown", (event) => {
 
 /* --- session ------------------------------------------------------------------- */
 
+/* R187 (F-CS1-01): the bearer token is kept in sessionStorage — tab-scoped, gone when
+   the tab closes, never localStorage — so a reload keeps the admin session. Boot and
+   login share ONE probe of the served session route; a failed probe clears custody. */
+const TOKEN_KEY = "qevion.command.session";
+
+function rememberToken(token) {
+  state.token = token;
+  if (token) sessionStorage.setItem(TOKEN_KEY, token);
+  else sessionStorage.removeItem(TOKEN_KEY);
+}
+
+async function probeSession() {
+  const session = await api("/v1/auth/session");
+  if (!session.ok || !session.body || session.body.is_admin !== true) {
+    rememberToken(null);
+    return null;
+  }
+  return session.body;
+}
+
+async function enterCenter(session) {
+  state.session = session;
+  document.getElementById("session-who").textContent =
+    `${session.email || "?"} \u00b7 tenant ${String(session.tenant_id || "?").slice(0, 8)}\u2026`;
+  document.getElementById("login-view").hidden = true;
+  document.getElementById("center-view").hidden = false;
+  document.getElementById("logout").hidden = false;
+  await loadCenter();
+}
+
 document.getElementById("login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const errorBox = document.getElementById("login-error");
@@ -778,26 +808,19 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
     showError(errorBox, result.body);
     return;
   }
-  state.token = result.body.token;
-  const session = await api("/v1/auth/session");
-  if (!session.ok || session.body.is_admin !== true) {
+  rememberToken(result.body.token);
+  const session = await probeSession();
+  if (!session) {
     showError(errorBox, { error: { code: "unauthorized", message: "Admin access required." } });
-    state.token = null;
     return;
   }
-  state.session = session.body;
-  document.getElementById("session-who").textContent =
-    `${session.body.email || "?"} \u00b7 tenant ${String(session.body.tenant_id || "?").slice(0, 8)}\u2026`;
-  document.getElementById("login-view").hidden = true;
-  document.getElementById("center-view").hidden = false;
-  document.getElementById("logout").hidden = false;
-  await loadCenter();
+  await enterCenter(session);
 });
 
 document.getElementById("logout").addEventListener("click", async () => {
   const result = await api("/v1/auth/logout", { method: "POST" });
   if (!result.ok) return;
-  state.token = null;
+  rememberToken(null);
   state.catalog = null;
   state.selected = null;
   state.session = null;
@@ -812,3 +835,13 @@ document.getElementById("logout").addEventListener("click", async () => {
   document.getElementById("login-view").hidden = false;
   document.getElementById("login-password").value = "";
 });
+
+/* boot: resume a session this tab already holds (F-CS1-01). One probe, no timers;
+   when the stored token is stale the probe clears it and the login view stays. */
+(async function boot() {
+  const stored = sessionStorage.getItem(TOKEN_KEY);
+  if (!stored) return;
+  state.token = stored;
+  const session = await probeSession();
+  if (session) await enterCenter(session);
+})();
