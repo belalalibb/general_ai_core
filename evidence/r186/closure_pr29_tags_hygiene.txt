@@ -24,7 +24,7 @@ Tags (annotated; targets verified with git cat-file -t / rev-parse before push; 
 
 Hygiene
   open PRs: 0
-  genspark_ai_developer_r186_close vs main: compare status "ahead" at merge time; after this evidence commit it is "diverged" (carries
+  genspark_ai_developer_r186_close vs main: compare status "ahead" at merge time; after this evidence commit the API reports "behind" (main behind the branch by 1: it carries
         rows 17-19 + gate outputs not on main) -> deletion NOT permitted by D-R183-4; branch KEPT as the R186 closure-evidence carrier
         (same posture as R185 closure). It is not an engineering branch and carries no implementation change.
   preserved unmerged branches (5, all "diverged", NOT deleted): feature/platform-capability-assessment, genspark_ai_developer, r178_decisions_verified_units, r178_p01_subject_verified_units, r178_verified_units
