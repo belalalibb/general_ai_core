@@ -1,0 +1,34 @@
+{
+  "round": "R187",
+  "base": "http://127.0.0.1:36727",
+  "checks": [
+    {
+      "id": "F-CS1-01/reload_keeps_session",
+      "storage": {
+        "session": [
+          "qevion.command.session"
+        ],
+        "local": []
+      }
+    },
+    {
+      "id": "F-CS1-02/desktop_1440",
+      "core_offset_closed_px": 0,
+      "core_offset_open_px": 0,
+      "overflow_px": 0
+    },
+    {
+      "id": "F-CS1-01/logout_clears",
+      "storage": {
+        "session": [],
+        "local": []
+      }
+    },
+    {
+      "id": "F-CS1-02/mobile_390",
+      "core_offset_px": 0,
+      "overflow_px": 0
+    }
+  ],
+  "result": "PASS"
+}

@@ -99,7 +99,9 @@ button { cursor: pointer; font: inherit; }
 .st-running { color: var(--running); }
 
 /* center layout */
-.center { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; padding: 16px; }
+/* R187 (F-CS1-02): one centred column — no width is reserved for the detail panel,
+   so the Core sits on the viewport centre whether the panel is closed or open. */
+.center { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
 .topology { min-width: 0; }
 .stage { position: relative; max-width: 760px; margin: 0 auto; }
 .stage-ambient {
@@ -109,7 +111,10 @@ button { cursor: pointer; font: inherit; }
 }
 .topology-svg { width: 100%; display: block; position: relative; }
 .stage-hint { text-align: center; margin: 4px 0 0; }
-.detail { align-self: start; position: sticky; top: 16px; }
+.detail {
+  position: fixed; top: 72px; right: 16px; z-index: 5;
+  width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 88px); overflow: auto;
+}
 .detail-id { margin: 0; font-size: 16px; word-break: break-all; }
 .evidence { word-break: break-word; color: var(--text); }
 
@@ -257,12 +262,8 @@ label.inline input { width: auto; margin: 0; display: inline; }
 @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
 /* ===== responsive ===== */
-@media (max-width: 1100px) {
-  .center { grid-template-columns: minmax(0, 1fr) 300px; }
-}
 @media (max-width: 900px) {
-  .center { grid-template-columns: 1fr; }
-  .detail { position: static; }
+  .detail { position: static; width: auto; max-height: none; }
   .stage-hint { display: none; }
 }
 @media (max-width: 600px) {

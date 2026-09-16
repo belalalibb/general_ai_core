@@ -66,7 +66,7 @@ def _css() -> str:
 
 def test_f01_token_is_kept_in_session_storage_never_local_storage() -> None:
     code = _strip_js_comments(_js())
-    assert "sessionStorage" in code, "F-CS1-01: token custody must survive a reload (sessionStorage)"
+    assert "sessionStorage" in code, "F-CS1-01: token custody must survive a reload"
     assert "localStorage" not in code, "F-CS1-01: never persist the bearer token beyond the tab"
 
 
@@ -75,9 +75,7 @@ def test_f01_boot_probes_the_existing_session_route_through_one_shared_function(
     assert re.search(r"sessionStorage\.getItem\(", code), "boot must read the stored token"
     # exactly one literal keeps the ui_command_static_check /v1/ ceiling (12) intact
     assert code.count('"/v1/auth/session"') == 1
-    match = re.search(
-        r"async function (\w+)\([^)]*\)\s*\{[^}]*\"/v1/auth/session\"", code
-    )
+    match = re.search(r"async function (\w+)\([^)]*\)\s*\{[^}]*\"/v1/auth/session\"", code)
     assert match, "the session probe must be a named async function"
     probe = match.group(1)
     calls = re.findall(rf"\b{probe}\(", code)
@@ -127,7 +125,15 @@ def test_ui_command_static_check_frame_untouched() -> None:
     assert js.count("/v1/") <= 12
     assert js.count("fetch(") == 2  # one in the header comment, one inside api()
     assert _strip_js_comments(js).count("fetch(") == 1
-    for banned in ("EventSource", "WebSocket", "XMLHttpRequest", "axios", "setInterval", "setTimeout"):
+    banned_tokens = (
+        "EventSource",
+        "WebSocket",
+        "XMLHttpRequest",
+        "axios",
+        "setInterval",
+        "setTimeout",
+    )
+    for banned in banned_tokens:
         assert banned not in _strip_js_comments(js), banned
     round_block = manifest["change_budget"]["round_r187"]
     assert int(round_block["ceiling"]) == 0
@@ -184,7 +190,14 @@ def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict]:
     )
     for name in list(env):
         if name in ("DATABASE_URL", "REDIS_URL") or name.startswith(
-            ("GROQ_API_KEY", "GSK_API_KEY", "GW_", "GATEWAY_", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+            (
+                "GROQ_API_KEY",
+                "GSK_API_KEY",
+                "GW_",
+                "GATEWAY_",
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+            )
         ):
             env.pop(name, None)
     log_path = tmp_path_factory.mktemp("command-center-r187") / "server_stdout.txt"
