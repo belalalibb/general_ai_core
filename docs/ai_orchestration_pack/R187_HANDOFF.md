@@ -20,3 +20,11 @@ Any need to touch a counted root, a served contract, or the guard-frame ceilings
 
 ## 6. Operator-only after R187
 Item 4 (credential rotation: AssemblyAI key F-CS1-04 + GitHub token) is operator-owned. Items 5–7 (Provider / Learning closure, Contract Freeze, App Factory) need their own declarations/contracts after R187 closes.
+
+## 7. Resolution (R187-DEC-02, 2026-09-16)
+
+- F-CS1-01 → FIXED + VERIFIED (`sessionStorage` custody + shared `probeSession()` boot probe; reload keeps the admin session; logout clears). 
+- F-CS1-02 → FIXED + VERIFIED (single centred column, overlay detail; Core offset 0 px at 1440 closed/open, 0 px at 390).
+- Gate of record `460694bc`: PASS 3719/0/0/64, gateway 194; `min_passed` 3712 → 3719 (D-6). PR #32 → `main 8b52c5db`; post-merge gate PASS 3719/0/0/64, gateway 194.
+- `round_r187` 0/0. Evidence: `evidence/r187/**`, `evidence/r187_state_ledger.md` rows 1–10.
+- Still open, not R187's to close: F-CS1-04 credential rotation (operator, plan item 4).
