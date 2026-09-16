@@ -1,0 +1,16 @@
+{
+  "providers": [
+    {
+      "id": "4a09c2ee-4c24-4fc4-bff5-2158a25f2a6e",
+      "provider_key": "groq",
+      "display_name": "Groq",
+      "status": "active",
+      "auth_types": [
+        "api_key"
+      ],
+      "supports_account_pool": false,
+      "is_template": false,
+      "is_routable": true
+    }
+  ]
+}

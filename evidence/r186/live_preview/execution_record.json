@@ -1,0 +1,17 @@
+{
+  "execution_id": "dc93bddb-18e5-4c7d-9804-02f1114f10c9",
+  "status": "failed",
+  "progress": {
+    "current_stage": "single",
+    "percent": 100
+  },
+  "error": {
+    "code": "execution_failed",
+    "message": "provider rejected the credential",
+    "retryable": false,
+    "details": {
+      "execution_id": "dc93bddb-18e5-4c7d-9804-02f1114f10c9",
+      "provider_error_category": "invalid_credential"
+    }
+  }
+}

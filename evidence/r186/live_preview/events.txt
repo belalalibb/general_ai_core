@@ -1,0 +1,8 @@
+data: {"execution_id": "dc93bddb-18e5-4c7d-9804-02f1114f10c9", "type": "execution_started"}
+
+data: {"node": "single", "type": "node_started"}
+
+data: {"node": "single", "type": "node_completed"}
+
+data: {"error": {"category": "invalid_credential", "provider_code": "organization_restricted", "retryable": false, "safe_message": "provider rejected the credential"}, "type": "error"}
+

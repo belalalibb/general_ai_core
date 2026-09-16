@@ -1,0 +1,52 @@
+{
+  "http": 200,
+  "ms": 76,
+  "response": {
+    "claims": [],
+    "tool_calls": [],
+    "reasoning_execution_ids": [
+      "7d752f67-b987-4b53-aa51-a69c21d4d09a"
+    ],
+    "note": "reasoning execution failed; nothing to report",
+    "rounds": 1,
+    "stop_reason": "reasoning_failed",
+    "reasoning_trace": [
+      {
+        "execution_id": "7d752f67-b987-4b53-aa51-a69c21d4d09a",
+        "status": "failed",
+        "strategy": "single",
+        "created_at": "2026-09-16T03:15:03.138478Z",
+        "completed_at": "2026-09-16T03:15:03.208190Z",
+        "stages": [
+          {
+            "node_key": "single",
+            "status": "failed",
+            "attempts": [
+              {
+                "attempt": 1,
+                "model_key": "allam-2-7b",
+                "provider_key": "groq",
+                "succeeded": false,
+                "error_category": "invalid_credential",
+                "safe_message": "provider rejected the credential",
+                "latency_ms": 69
+              }
+            ],
+            "error": {
+              "category": "invalid_credential",
+              "retryable": false,
+              "provider_code": "organization_restricted",
+              "safe_message": "provider rejected the credential"
+            }
+          }
+        ],
+        "ledger": {
+          "status": "failed",
+          "units_reserved": 1.0,
+          "units_settled": 0.0
+        },
+        "as_recorded": true
+      }
+    ]
+  }
+}

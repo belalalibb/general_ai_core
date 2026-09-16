@@ -1,0 +1,171 @@
+{
+  "base": "http://127.0.0.1:8080",
+  "steps": [
+    {
+      "step": "healthz",
+      "http": 200,
+      "ms": 3,
+      "note": "{'status': 'alive', 'scope': 'process', 'time': '2026-09-16T03:15:02.628556+00:00'}"
+    },
+    {
+      "step": "register",
+      "http": 422,
+      "ms": 2,
+      "note": "{'error': {'code': 'validation_error', 'message': 'Registration rejected.', 'retryable': False, 'details': {'field': 'email'}, 'trace_id': None}}"
+    },
+    {
+      "step": "verify",
+      "http": 422,
+      "ms": 1,
+      "note": "{'error': {'code': 'validation_error', 'message': 'Verification failed.', 'retryable': False, 'details': {'field': 'token'}, 'trace_id': None}}"
+    },
+    {
+      "step": "login_wrong_password",
+      "http": 401,
+      "ms": 194,
+      "note": "{'error': {'code': 'unauthenticated', 'message': 'Authentication failed.', 'retryable': False, 'details': {}, 'trace_id': None}}"
+    },
+    {
+      "step": "login",
+      "http": 200,
+      "ms": 209,
+      "note": "keys=token"
+    },
+    {
+      "step": "session",
+      "http": 200,
+      "ms": 1,
+      "note": "{'user_id': 'e105638f-bf97-4338-aae8-4af01b82ea8a', 'tenant_id': 'bda14302-f51e-4ecc-b59b-70eb99863e4f', 'email': 'operator-admin@qevion.test', 'is_admin': True}"
+    },
+    {
+      "step": "providers",
+      "http": 200,
+      "ms": 1,
+      "note": ""
+    },
+    {
+      "step": "models",
+      "http": 200,
+      "ms": 1,
+      "note": ""
+    },
+    {
+      "step": "routing_weights",
+      "http": 200,
+      "ms": 1,
+      "note": ""
+    },
+    {
+      "step": "system",
+      "http": 200,
+      "ms": 1,
+      "note": ""
+    },
+    {
+      "step": "capabilities",
+      "http": 200,
+      "ms": 1,
+      "note": ""
+    },
+    {
+      "step": "execute",
+      "http": 502,
+      "ms": 66,
+      "note": "{\"error\": {\"code\": \"execution_failed\", \"message\": \"provider rejected the credential\", \"retryable\": false, \"details\": {\"execution_id\": \"dc93bddb-18e5-4c7d-9804-02f1114f10c9\", \"provider_error_category\": \"invalid_credential\"}}}"
+    },
+    {
+      "step": "executions",
+      "http": 200,
+      "ms": 3,
+      "note": ""
+    },
+    {
+      "step": "execution_record",
+      "http": 200,
+      "ms": 2,
+      "note": ""
+    },
+    {
+      "step": "trace",
+      "http": 200,
+      "ms": 3,
+      "note": ""
+    },
+    {
+      "step": "events",
+      "http": 200,
+      "ms": 1,
+      "note": "8 lines"
+    },
+    {
+      "step": "usage",
+      "http": 200,
+      "ms": 3,
+      "note": ""
+    },
+    {
+      "step": "converse",
+      "http": 200,
+      "ms": 76,
+      "note": "{\"stop_reason\": \"reasoning_failed\", \"verification\": null, \"rounds\": 1}"
+    },
+    {
+      "step": "groq_direct_models",
+      "http": 400,
+      "ms": 134,
+      "note": "{\"error\":{\"message\":\"Organization has been restricted. Please reach out to support if you believe this was in error.\",\"type\":\"invalid_request_error\",\"code\":\"organization_restricted\"}}\n"
+    }
+  ],
+  "session": {
+    "user_id": "e105638f-bf97-4338-aae8-4af01b82ea8a",
+    "tenant_id": "bda14302-f51e-4ecc-b59b-70eb99863e4f",
+    "email": "operator-admin@qevion.test",
+    "is_admin": true
+  },
+  "providers": {
+    "http": 200
+  },
+  "models": {
+    "http": 200
+  },
+  "routing_weights": {
+    "http": 200
+  },
+  "system": {
+    "profile": "in-memory",
+    "identity_mode": "auth",
+    "provider_keys": [
+      "groq"
+    ],
+    "admin_emails_configured": 1,
+    "scope": "process"
+  },
+  "capabilities": {
+    "http": 200
+  },
+  "execute": {
+    "http": 502,
+    "ms": 66,
+    "response": {
+      "error": {
+        "code": "execution_failed",
+        "message": "provider rejected the credential",
+        "retryable": false,
+        "details": {
+          "execution_id": "dc93bddb-18e5-4c7d-9804-02f1114f10c9",
+          "provider_error_category": "invalid_credential"
+        }
+      }
+    }
+  },
+  "execution_id": "dc93bddb-18e5-4c7d-9804-02f1114f10c9",
+  "converse": {
+    "http": 200,
+    "stop_reason": "reasoning_failed",
+    "verification": null
+  },
+  "groq_direct": {
+    "http": 400,
+    "body": "{\"error\":{\"message\":\"Organization has been restricted. Please reach out to support if you believe this was in error.\",\"type\":\"invalid_request_error\",\"code\":\"organization_restricted\"}}\n"
+  }
+}

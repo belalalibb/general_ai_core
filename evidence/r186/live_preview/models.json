@@ -1,0 +1,64 @@
+{
+  "models": [
+    {
+      "id": "843f0483-3fd1-4db8-8543-a0fc01acdece",
+      "name": "allam-2-7b",
+      "tier": "medium",
+      "modalities": [
+        "text"
+      ],
+      "capabilities": [
+        "reasoning"
+      ],
+      "availability": "available"
+    },
+    {
+      "id": "5b0f45bb-f08d-4ca1-ac9b-00037c770541",
+      "name": "openai/gpt-oss-120b",
+      "tier": "medium",
+      "modalities": [
+        "text"
+      ],
+      "capabilities": [
+        "reasoning"
+      ],
+      "availability": "available"
+    },
+    {
+      "id": "0f19e373-ae39-469f-be47-a5b1695796e2",
+      "name": "openai/gpt-oss-20b",
+      "tier": "medium",
+      "modalities": [
+        "text"
+      ],
+      "capabilities": [
+        "reasoning"
+      ],
+      "availability": "available"
+    },
+    {
+      "id": "5c245be5-8e72-4366-99fe-0c20ba0545ed",
+      "name": "qwen/qwen3.6-27b",
+      "tier": "medium",
+      "modalities": [
+        "text"
+      ],
+      "capabilities": [
+        "reasoning"
+      ],
+      "availability": "available"
+    },
+    {
+      "id": "c3190f2a-e420-43fc-a6be-f72245bf0c2a",
+      "name": "qwen/qwen3.8-27b",
+      "tier": "medium",
+      "modalities": [
+        "text"
+      ],
+      "capabilities": [
+        "reasoning"
+      ],
+      "availability": "available"
+    }
+  ]
+}
