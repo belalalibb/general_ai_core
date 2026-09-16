@@ -1,0 +1,32 @@
+R186 final closure — records-only PR #29, tags, post-merge verification, hygiene (2026-09-16)
+
+PR #29 (records-only; row-43 exception explicitly authorized by the operator's final closure directive)
+  head  : genspark_ai_developer_r186_close @ 73d9d8fb316f3e4e957fe0bec16f2b504177ff6c (8 commits / 48 files; top-level dirs docs, engineering, evidence only)
+  checks: state open, mergeable true, mergeable_state clean; /branches/main/protection 404; statuses 0, check-runs 0, workflow runs 0
+  merge : PUT /pulls/29/merge {merge_method: merge, sha: 73d9d8fb…} -> merged true
+  result: main = 329a37b4d0b96b0468de71bf0f8125cfd3bfe54e  (parents 1028212c + 73d9d8fb; merge commit, no squash)
+  impl diff 1028212c..329a37b4 -- core apps infrastructure providers ui : EMPTY (0 lines)
+
+Post-merge fresh-clone gate on main 329a37b4 (/home/user/gates/g_329a37b4, Chromium libs first, env -i)
+  check_repo.sh : RESULT: PASS ; pytest passed=3712 (>= 3712) failed=0 errors=0 skipped=64 (<= 64); mypy --strict clean; ruff clean; secret scan clean 5/5; 5 state fields present
+  gateway-service pytest : 194 passed
+  evidence : evidence/r186/gate_merge_329a37b4.txt , evidence/r186/gateway_merge_329a37b4.txt
+  regenerated clone proofs under evidence/r182_impl, evidence/r185 discarded (git checkout -- evidence/) — not committed
+  closure records reachable from main: r186_state_ledger.md, gate_merge_1028212c.txt, proof_semantics_L01_L02.txt, PROJECT_EXECUTION_STATE.md (R186 RESUME POINTER), ADR-0013 (reconciled), 60_DECISION_LOG.md R186-DEC-03
+
+Tags (annotated; targets verified with git cat-file -t / rev-parse before push; verified remotely via ls-remote and /git/ref/tags)
+  r185-ui-live-freeze -> 0d35917c9abc5211dd2ff82d124256d79ca923fc (= main after PR #27 merge; tag object e7c86ab8)
+  r186-close          -> 329a37b4d0b96b0468de71bf0f8125cfd3bfe54e (= main after PR #29 merge = final closure commit; tag object f76faa84)
+  NOTE: the post-merge gate evidence for 329a37b4 itself (this file + gate/gateway outputs + ledger rows 17-19) is ONE further
+        records commit on the closure branch genspark_ai_developer_r186_close, NOT on main: the directive authorized exactly ONE
+        records-only PR and no direct push to main is on record as an allowed path; the row-43 rule carries it forward.
+        The tag marks the closure commit produced by the authorized records-only PR, as directed. No re-tag.
+
+Hygiene
+  open PRs: 0
+  genspark_ai_developer_r186_close vs main: compare status "ahead" at merge time; after this evidence commit it is "diverged" (carries
+        rows 17-19 + gate outputs not on main) -> deletion NOT permitted by D-R183-4; branch KEPT as the R186 closure-evidence carrier
+        (same posture as R185 closure). It is not an engineering branch and carries no implementation change.
+  preserved unmerged branches (5, all "diverged", NOT deleted): feature/platform-capability-assessment, genspark_ai_developer, r178_decisions_verified_units, r178_p01_subject_verified_units, r178_verified_units
+  no new engineering branch; no R187
+  credential: used transiently in push URL / API header only; .git/config ghp_ count 0; not present in any committed file (the only historical "ghp_" string in PROJECT_EXECUTION_STATE.md is the R161 fake test sample, pre-existing)
