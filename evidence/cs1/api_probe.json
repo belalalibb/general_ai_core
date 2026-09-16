@@ -1,0 +1,554 @@
+{
+ "platform": "http://127.0.0.1:8080",
+ "build_main": "a99e254520a693099b2e39b7cdb1e6f5c6c0f610",
+ "branch_head": "4259a1030435918cf04859df427be6c9890032c3",
+ "session_a_sha256_12": "1338ed55788a",
+ "results": [
+  {
+   "item": "register admin -> 201",
+   "status": "VERIFIED",
+   "http": 201,
+   "note": ""
+  },
+  {
+   "item": "verify via console-delivered token (design: no real email)",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": ""
+  },
+  {
+   "item": "login correct -> 200 opaque token",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "keys=token"
+  },
+  {
+   "item": "login wrong password -> 401 constant message",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": "{\"error\":{\"code\":\"unauthenticated\",\"message\":\"Authentication failed.\",\"retryable\":false,\"details\":{},\"trace_id\":null}}"
+  },
+  {
+   "item": "login unknown email -> same 401 body (no user-enumeration oracle)",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": ""
+  },
+  {
+   "item": "duplicate register -> generic rejection (no enumeration)",
+   "status": "VERIFIED",
+   "http": 422,
+   "note": "{\"error\":{\"code\":\"validation_error\",\"message\":\"Registration rejected.\",\"retryable\":false,\"details\":{\"field\":\"email\"},\"tr"
+  },
+  {
+   "item": "session is_admin true (ADMIN_EMAILS)",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": ""
+  },
+  {
+   "item": "tenant B session is_admin false",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": ""
+  },
+  {
+   "item": "anonymous admin route -> 401",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": ""
+  },
+  {
+   "item": "non-admin on admin route -> 403",
+   "status": "VERIFIED",
+   "http": 403,
+   "note": "{\"error\":{\"code\":\"unauthorized\",\"message\":\"Admin access required.\",\"retryable\":false,\"details\":{},\"t"
+  },
+  {
+   "item": "garbage bearer -> 401",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": ""
+  },
+  {
+   "item": "wrong auth scheme -> 401 same message (no scheme oracle)",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": "{\"error\":{\"code\":\"unauthenticated\",\"message\":\"Authentication failed.\",\"retryable\":false,\"details\":{}"
+  },
+  {
+   "item": "non-admin /v1/admin/providers -> 403/404/405",
+   "status": "VERIFIED",
+   "http": 403,
+   "note": ""
+  },
+  {
+   "item": "non-admin /v1/admin/usage -> 403/404/405",
+   "status": "VERIFIED",
+   "http": 403,
+   "note": ""
+  },
+  {
+   "item": "non-admin /v1/admin/audit -> 403/404/405",
+   "status": "VERIFIED",
+   "http": 403,
+   "note": ""
+  },
+  {
+   "item": "non-admin /v1/admin/changes -> 403/404/405",
+   "status": "VERIFIED",
+   "http": 403,
+   "note": ""
+  },
+  {
+   "item": "non-admin /v1/admin/engineering/status -> 403/404/405",
+   "status": "VERIFIED",
+   "http": 403,
+   "note": ""
+  },
+  {
+   "item": "non-admin /v1/admin/providers/onboard -> 403/404/405",
+   "status": "VERIFIED",
+   "http": 403,
+   "note": ""
+  },
+  {
+   "item": "execute default routing (local_echo) tenant A -> 200",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "{\"execution_id\":\"bb0a845b-7ebf-4bb4-87f0-7825b7143dcd\",\"status\":\"succeeded\",\"result\":{\"type\":\"message\",\"content\":\"{\\\"con"
+  },
+  {
+   "item": "cross-tenant read by B -> 404 (anti-enumeration)",
+   "status": "VERIFIED",
+   "http": 404,
+   "note": "{\"error\":{\"code\":\"validation_error\",\"message\":\"Unknown execution id.\",\"retryable\":false,\"details\":{\""
+  },
+  {
+   "item": "cross-tenant events stream by B -> 404",
+   "status": "VERIFIED",
+   "http": 404,
+   "note": ""
+  },
+  {
+   "item": "cross-tenant admin evaluations by B -> 403",
+   "status": "VERIFIED",
+   "http": 403,
+   "note": ""
+  },
+  {
+   "item": "owner read -> 200",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": ""
+  },
+  {
+   "item": "anonymous read -> 401",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": ""
+  },
+  {
+   "item": "B's list excludes A's execution",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "count=0"
+  },
+  {
+   "item": "tenant_id query param cannot re-scope list (ignored/422)",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": ""
+  },
+  {
+   "item": "malformed JSON -> 422 envelope, no traceback",
+   "status": "VERIFIED",
+   "http": 422,
+   "note": "{\"error\":{\"code\":\"validation_error\",\"message\":\"Request body failed contract validation.\",\"retryable\":false,\"details\":{\"e"
+  },
+  {
+   "item": "unknown field -> 422 (extra=forbid)",
+   "status": "VERIFIED",
+   "http": 422,
+   "note": ""
+  },
+  {
+   "item": "oversized ask -> 4xx not 5xx",
+   "status": "VERIFIED",
+   "http": 422,
+   "note": ""
+  },
+  {
+   "item": "path-like model_id -> honest 4xx/5xx envelope",
+   "status": "VERIFIED",
+   "http": 503,
+   "note": "{\"error\":{\"code\":\"model_unavailable\",\"message\":\"No eligible model candidates for this request.\",\"retryable\":false,\"detai"
+  },
+  {
+   "item": "non-uuid path param -> 422",
+   "status": "VERIFIED",
+   "http": 422,
+   "note": ""
+  },
+  {
+   "item": "/docs disabled",
+   "status": "VERIFIED",
+   "http": 404,
+   "note": ""
+  },
+  {
+   "item": "/openapi.json served (informational: route inventory exposed, no secrets)",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "served=True size=75090"
+  },
+  {
+   "item": "no CORS allow for foreign origin",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": ""
+  },
+  {
+   "item": "static path traversal refused",
+   "status": "VERIFIED",
+   "http": 404,
+   "note": ""
+  },
+  {
+   "item": "Command Center static served 200",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": ""
+  },
+  {
+   "item": "security headers (informational: absent = hardening gap, not a defect of contract)",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "x-content-type-options=None csp=no x-frame-options=None hsts=no"
+  },
+  {
+   "item": "unknown route -> 404 (no stack)",
+   "status": "VERIFIED",
+   "http": 404,
+   "note": "{\"detail\":\"Not Found\"}"
+  },
+  {
+   "item": "admin change for unknown provider -> refusal, not 500",
+   "status": "VERIFIED",
+   "http": 201,
+   "note": "{\"id\":\"e4117e9c-d88f-40bf-a94d-c1dcde0cc25f\",\"tenant_id\":\"cd207df1-fb0d-413d-8426-98df36407b51\",\"actor_id\":\"f535a44e-3ce"
+  },
+  {
+   "item": "logout 204 then session 401 (revoked)",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": "logout=204"
+  },
+  {
+   "item": "logout of revoked token -> 204 (no liveness oracle)",
+   "status": "VERIFIED",
+   "http": 204,
+   "note": ""
+  },
+  {
+   "item": "/v1/admin/system shows provider keys as names only",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "{\"profile\":\"in-memory\",\"identity_mode\":\"auth\",\"provider_keys\":[\"local_echo\"],\"admin_emails_configured\":1,\"scope\":\"process\"}",
+   "body": {
+    "profile": "in-memory",
+    "identity_mode": "auth",
+    "provider_keys": [
+     "local_echo"
+    ],
+    "admin_emails_configured": 1,
+    "scope": "process"
+   }
+  },
+  {
+   "item": "onboard assemblyai (refs only) -> 201 registered DISABLED",
+   "status": "VERIFIED",
+   "http": 201,
+   "note": "[\"step-3-real-manifest\", \"step-4-declared-operations\", \"step-11-register-provider\", \"step-13-provider-kept-disabled\", \"step-12-register-bindings\"]",
+   "body": {
+    "provider_id": "d9e44764-7389-47e9-8097-882225333929",
+    "provider_key": "assemblyai",
+    "steps_passed": [
+     "step-3-real-manifest",
+     "step-4-declared-operations",
+     "step-11-register-provider",
+     "step-13-provider-kept-disabled",
+     "step-12-register-bindings"
+    ],
+    "unverified": [
+     "step-1-provider-type-identified (human)",
+     "step-2-capabilities-documented (human)",
+     "step-7-error-normalization-authored (verified only via manifest.errors)",
+     "step-8-rate-limit-behavior (verified only via manifest.rate_limits)",
+     "step-9-contract-tests (CI evidence, not runtime)",
+     "step-10-security-checks (CI evidence, not runtime)",
+     "step-5-credential-validation (adapter has no check surface: gateway v1 exposes no credential-validation surface)",
+     "step-6-health-check (adapter has no check surface: gateway performed no health check for this provider (health_supported=false: status UNKNOWN, checked_at null))"
+    ],
+    "discovered_models": [
+     "qwen3.5-4b-32k-fast",
+     "gemini-2.5-flash-lite"
+    ],
+    "registered_model_keys": [
+     "assemblyai/qwen3.5-4b-32k-fast",
+     "assemblyai/gemini-2.5-flash-lite"
+    ],
+    "enable_draft_payload": {
+     "provider_key": "assemblyai"
+    },
+    "scope": "canonical-gateway providers only; foreign/native-API providers require their own adapter/shim and cannot be onboarded here"
+   }
+  },
+  {
+   "item": "onboard with unresolvable route_token_ref -> refusal not 500 (R174 F-3)",
+   "status": "VERIFIED",
+   "http": 409,
+   "note": "{\"error\":{\"code\":\"validation_error\",\"message\":\"onboarding refused at step-11-register-provider: provider already registered: assemblyai\",\"re"
+  },
+  {
+   "item": "execute on DISABLED provider refused (no upstream call)",
+   "status": "VERIFIED",
+   "http": 503,
+   "note": "{\"error\":{\"code\":\"model_unavailable\",\"message\":\"No eligible model candidates for this request.\",\"retryable\":false,\"detai"
+  },
+  {
+   "item": "enable via change lifecycle draft->validate->preview->publish",
+   "status": "VERIFIED",
+   "http": 201,
+   "note": "{\"validate\": 200, \"preview\": 200, \"publish\": 200}"
+  },
+  {
+   "item": "providers after enable",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "{\"providers\":[{\"id\":\"d9e44764-7389-47e9-8097-882225333929\",\"provider_key\":\"assemblyai\",\"display_name\":\"AssemblyAI LLM Gateway\",\"status\":\"active\",\"auth_types\":[\"custom\"],\"supports_account_pool\":false,\"",
+   "body": {
+    "providers": [
+     {
+      "id": "d9e44764-7389-47e9-8097-882225333929",
+      "provider_key": "assemblyai",
+      "display_name": "AssemblyAI LLM Gateway",
+      "status": "active",
+      "auth_types": [
+       "custom"
+      ],
+      "supports_account_pool": false,
+      "is_template": false,
+      "is_routable": true
+     },
+     {
+      "id": "ca82c656-c41d-4728-9db6-265ae5db1f55",
+      "provider_key": "local_echo",
+      "display_name": "Local Echo (hermetic)",
+      "status": "active",
+      "auth_types": [
+       "api_key"
+      ],
+      "supports_account_pool": false,
+      "is_template": false,
+      "is_routable": true
+     }
+    ]
+   }
+  },
+  {
+   "item": "/v1/models lists assemblyai/qwen3.5-4b-32k-fast",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "",
+   "body": {
+    "models": [
+     {
+      "id": "dbcc29a7-5a8a-4963-80ca-b3066ec965e8",
+      "name": "assemblyai/gemini-2.5-flash-lite",
+      "tier": "medium",
+      "modalities": [
+       "text"
+      ],
+      "capabilities": [],
+      "availability": "available"
+     },
+     {
+      "id": "5e2db8b3-ee68-4cfa-9aaa-e43fd46dffd6",
+      "name": "assemblyai/qwen3.5-4b-32k-fast",
+      "tier": "medium",
+      "modalities": [
+       "text"
+      ],
+      "capabilities": [],
+      "availability": "available"
+     },
+     {
+      "id": "cfbb750a-3345-4473-be34-c48da6ba5a6a",
+      "name": "local-echo-1",
+      "tier": "medium",
+      "modalities": [
+       "text"
+      ],
+      "capabilities": [
+       "reasoning"
+      ],
+      "availability": "available"
+     }
+    ]
+   }
+  },
+  {
+   "item": "REAL execute assemblyai/qwen3.5-4b-32k-fast (paid call #1)",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "462ms status=succeeded content=\"chain verified\" usage={'units_reserved': 1, 'units_settled': 1, 'details': {'status': 'settled'}}",
+   "body": {
+    "execution_id": "28b54a91-e645-4167-ab96-f4509fa1d9b3",
+    "status": "succeeded",
+    "result": {
+     "type": "message",
+     "content": "chain verified",
+     "artifacts": [
+      {
+       "type": "context_provenance",
+       "blocks_total": 1,
+       "memory_blocks": [],
+       "gold_blocks": 0,
+       "excluded": 0
+      }
+     ]
+    },
+    "usage": {
+     "units_reserved": 1,
+     "units_settled": 1,
+     "details": {
+      "status": "settled"
+     }
+    }
+   }
+  },
+  {
+   "item": "provider execution record readable",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "{\"execution_id\":\"28b54a91-e645-4167-ab96-f4509fa1d9b3\",\"status\":\"succeeded\",\"progress\":{\"current_stage\":\"single\",\"percen",
+   "body": {
+    "execution_id": "28b54a91-e645-4167-ab96-f4509fa1d9b3",
+    "status": "succeeded",
+    "progress": {
+     "current_stage": "single",
+     "percent": 100
+    },
+    "result": {
+     "type": "message",
+     "content": "chain verified",
+     "artifacts": [
+      {
+       "type": "context_provenance",
+       "blocks_total": 1,
+       "memory_blocks": [],
+       "gold_blocks": 0,
+       "excluded": 0
+      }
+     ]
+    }
+   }
+  },
+  {
+   "item": "events stream for completed execution",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "frames=0"
+  },
+  {
+   "item": "usage ledger row settled for provider execution",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "[{\"execution_id\": \"28b54a91-e645-4167-ab96-f4509fa1d9b3\", \"status\": \"succeeded\", \"created_at\": \"2026-09-16T13:30:22.231319+00:00\", \"ledger\": {\"id\": \"c75dce5a-7b11-46b8-865b-e0cc097de917\", \"tenant_id\":",
+   "body": [
+    {
+     "execution_id": "28b54a91-e645-4167-ab96-f4509fa1d9b3",
+     "status": "succeeded",
+     "created_at": "2026-09-16T13:30:22.231319+00:00",
+     "ledger": {
+      "id": "c75dce5a-7b11-46b8-865b-e0cc097de917",
+      "tenant_id": "cd207df1-fb0d-413d-8426-98df36407b51",
+      "execution_id": "28b54a91-e645-4167-ab96-f4509fa1d9b3",
+      "units_reserved": 1.0,
+      "units_settled": 1.0,
+      "modality_costs": {
+       "provider_usage": [
+        {
+         "node_key": "single",
+         "usage": {
+          "input_tokens": 66,
+          "output_tokens": 3,
+          "units": 1
+         }
+        }
+       ]
+      },
+      "status": "settled"
+     },
+     "evaluation_status": "NEVER_EVALUATED"
+    }
+   ]
+  },
+  {
+   "item": "evaluation_status read (admin)",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "{\"evaluations\":[]}",
+   "body": {
+    "evaluations": []
+   }
+  },
+  {
+   "item": "audit log readable after provider onboarding/enable/execute",
+   "status": "VERIFIED",
+   "http": 200,
+   "note": "events=2"
+  },
+  {
+   "item": "unknown model on assemblyai -> 503 model_unavailable envelope (no upstream call)",
+   "status": "VERIFIED",
+   "http": 503,
+   "note": "{\"error\":{\"code\":\"model_unavailable\",\"message\":\"No eligible model candidates for this request.\",\"retryable\":false,\"details\":{\"excluded\":[{\"m",
+   "body": {
+    "error": {
+     "code": "model_unavailable",
+     "message": "No eligible model candidates for this request.",
+     "retryable": false,
+     "details": {
+      "excluded": [
+       {
+        "model_key": "assemblyai/no-such-model",
+        "reason": "explicit model not registered or not active"
+       }
+      ]
+     },
+     "trace_id": null
+    }
+   }
+  },
+  {
+   "item": "gateway without shared secret -> 401",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": ""
+  },
+  {
+   "item": "gateway wrong secret -> 401",
+   "status": "VERIFIED",
+   "http": 401,
+   "note": ""
+  },
+  {
+   "item": "secret scan of recorded evidence (admin pw, 32-hex)",
+   "status": "VERIFIED",
+   "http": null,
+   "note": ""
+  }
+ ]
+}
