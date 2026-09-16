@@ -1,9 +1,9 @@
 {
-  "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+  "execution_id": "97c09638-f45f-4b7a-a9d2-4183f9a8d685",
   "status": "failed",
   "strategy": "single",
-  "created_at": "2026-09-16T03:24:49.856144Z",
-  "completed_at": "2026-09-16T03:24:49.984421Z",
+  "created_at": "2026-09-16T03:25:07.593459Z",
+  "completed_at": "2026-09-16T03:25:07.659721Z",
   "stages": [
     {
       "node_key": "single",
@@ -16,7 +16,7 @@
           "succeeded": false,
           "error_category": "invalid_credential",
           "safe_message": "provider rejected the credential",
-          "latency_ms": 127
+          "latency_ms": 65
         }
       ],
       "error": {

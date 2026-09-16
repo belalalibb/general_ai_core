@@ -1,0 +1,138 @@
+{
+  "base": "https://8080-iyv42asqe4bk1wyxe1zrv-02b9cc79.sandbox.novita.ai",
+  "steps": [
+    {
+      "step": "page_load_login_view",
+      "status": "REAL/VERIFIED",
+      "http": 200,
+      "title": "QEVION Control Plane \u2014 Command Center"
+    },
+    {
+      "step": "login_wrong_password_shows_error",
+      "status": "REAL/VERIFIED",
+      "login_error_text": "unauthenticated: Authentication failed.",
+      "login_error_overflow_px": 0
+    },
+    {
+      "step": "login_and_command_center_render",
+      "status": "REAL/VERIFIED",
+      "session_who": "operator-admin@qevion.test \u00b7 tenant 789d3f0b\u2026",
+      "core_state": "failed",
+      "nodes": 23,
+      "scope_badge": "scope: process",
+      "status_health": "health: alive",
+      "transport": "request in flight",
+      "running_animations": 7
+    },
+    {
+      "step": "core_overview_dialog_keyboard_focus_return",
+      "status": "REAL/VERIFIED",
+      "profile": "in-memory",
+      "scope": "process",
+      "health": "alive",
+      "identity": "auth",
+      "providers": "groq",
+      "admins": "1",
+      "executions": "4",
+      "session": "operator-admin@qevion.test \u00b7 tenant 789d3f0b\u2026",
+      "focus_in_dialog": true,
+      "focus_back_on_core": true
+    },
+    {
+      "step": "node_detail_dialog_keyboard_focus_return",
+      "status": "REAL/VERIFIED",
+      "detail_id": "admin.control_plane",
+      "detail_state": "available",
+      "focus_back_on_node": true
+    },
+    {
+      "step": "keyboard_tab_order_after_core",
+      "status": "REAL/VERIFIED",
+      "tab_sequence_from_core": [
+        "admin.control_plane",
+        "agent.runtime",
+        "auth.sessions",
+        "context.composition"
+      ]
+    },
+    {
+      "step": "execute_mode_via_ui_provider_backed",
+      "status": "REAL/VERIFIED",
+      "elapsed_ms": 813,
+      "converse_error": "execution_failed: provider rejected the credential",
+      "response_turns": 0,
+      "core_state": "failed",
+      "orbit_dots": 4,
+      "orbit_states": [
+        "failed",
+        "failed",
+        "failed",
+        "failed"
+      ]
+    },
+    {
+      "step": "provider_backed_successful_execution",
+      "status": "UNAVAILABLE/BLOCKED",
+      "reason": "Groq organization_restricted (external, F-R185-L03)"
+    },
+    {
+      "step": "converse_mode_live_progress_evaluation_status_and_verification_rendering",
+      "status": "REAL/VERIFIED",
+      "execution_id": "dc08e343-4af6-4e74-bcac-dc3ce6aed5ae",
+      "progress_status": "failed",
+      "progress_stage": "single",
+      "progress_percent": "100%",
+      "evaluation_status_attr": "NEVER_EVALUATED",
+      "status_evaluation": "evaluation: EVALUATED 0 \u00b7 NEVER_EVALUATED 6",
+      "stream_log": [
+        "execution_started: execution_started dc08e343-4af6-4e74-bcac-dc3ce6aed5ae",
+        "node_started: node_started single",
+        "node_completed: node_completed single",
+        "error: error {\"category\":\"invalid_credential\",\"provider_code\":\"organization_restricted\",\"retryable\":false,\"safe_messa"
+      ],
+      "response_fields": {
+        "rounds": "1",
+        "stop_reason": "reasoning_failed",
+        "verification": "no verification verdict \u2014 no final was proposed (stop_reason: reasoning_failed)",
+        "reasoning_execution_ids": "dc08e343-4af6-4e74-bcac-dc3ce6aed5ae"
+      },
+      "core_state": "failed"
+    },
+    {
+      "step": "r186_L02_null_verification_on_the_REAL_reasoning_failed_path",
+      "status": "REAL/VERIFIED",
+      "verification": "no verification verdict \u2014 no final was proposed (stop_reason: reasoning_failed)"
+    },
+    {
+      "step": "orbit_dot_keyboard_select",
+      "status": "REAL/VERIFIED",
+      "selected": true,
+      "record_text": "strategy single \u00b7 ledger failed (1 reserved / 0 settled) \u00b7 as_recorded: true"
+    },
+    {
+      "step": "responsive_390_after_REAL_failed_execution_with_error_frame",
+      "status": "REAL/VERIFIED",
+      "horizontal_overflow_px": 0,
+      "error_frame_scroll_width_px": 334
+    },
+    {
+      "step": "r186_L01_390px_on_the_REAL_live_error_frame",
+      "status": "REAL/VERIFIED"
+    },
+    {
+      "step": "reduced_motion_collapses_animations",
+      "status": "REAL/VERIFIED",
+      "running_before": 11,
+      "running_reduced": 0
+    },
+    {
+      "step": "logout_returns_to_login",
+      "status": "REAL/VERIFIED",
+      "login_view_visible": true
+    }
+  ],
+  "console": [
+    "error: Failed to load resource: the server responded with a status of 401 ()",
+    "error: Failed to load resource: the server responded with a status of 502 ()"
+  ]
+}

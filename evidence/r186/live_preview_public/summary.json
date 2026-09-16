@@ -1,118 +1,118 @@
 {
-  "base": "http://127.0.0.1:8080",
+  "base": "https://8080-iyv42asqe4bk1wyxe1zrv-02b9cc79.sandbox.novita.ai",
   "steps": [
     {
       "step": "healthz",
       "http": 200,
-      "ms": 6,
-      "note": "{'status': 'alive', 'scope': 'process', 'time': '2026-09-16T03:24:49.070264+00:00'}"
+      "ms": 24,
+      "note": "{'status': 'alive', 'scope': 'process', 'time': '2026-09-16T03:25:06.849574+00:00'}"
     },
     {
       "step": "register",
-      "http": 201,
-      "ms": 285,
-      "note": "{'user_id': '5ebf9047-371e-4d31-b861-61a44b17d858', 'tenant_id': '789d3f0b-afbd-4a6b-955d-31fe32ff41f8', 'email': 'operator-admin@qevion.test', 'status': 'pending', 'verification': 'sent'}"
+      "http": 422,
+      "ms": 18,
+      "note": "{'error': {'code': 'validation_error', 'message': 'Registration rejected.', 'retryable': False, 'details': {'field': 'email'}, 'trace_id': None}}"
     },
     {
       "step": "verify",
-      "http": 200,
-      "ms": 3,
-      "note": "{'user_id': '5ebf9047-371e-4d31-b861-61a44b17d858', 'email': 'operator-admin@qevion.test', 'email_verified': True, 'status': 'active'}"
+      "http": 422,
+      "ms": 21,
+      "note": "{'error': {'code': 'validation_error', 'message': 'Verification failed.', 'retryable': False, 'details': {'field': 'token'}, 'trace_id': None}}"
     },
     {
       "step": "login_wrong_password",
       "http": 401,
-      "ms": 204,
+      "ms": 277,
       "note": "{'error': {'code': 'unauthenticated', 'message': 'Authentication failed.', 'retryable': False, 'details': {}, 'trace_id': None}}"
     },
     {
       "step": "login",
       "http": 200,
-      "ms": 218,
+      "ms": 280,
       "note": "keys=token"
     },
     {
       "step": "session",
       "http": 200,
-      "ms": 3,
+      "ms": 22,
       "note": "{'user_id': '5ebf9047-371e-4d31-b861-61a44b17d858', 'tenant_id': '789d3f0b-afbd-4a6b-955d-31fe32ff41f8', 'email': 'operator-admin@qevion.test', 'is_admin': True}"
     },
     {
       "step": "providers",
       "http": 200,
-      "ms": 40,
+      "ms": 17,
       "note": ""
     },
     {
       "step": "models",
       "http": 200,
-      "ms": 2,
+      "ms": 21,
       "note": ""
     },
     {
       "step": "routing_weights",
       "http": 200,
-      "ms": 2,
+      "ms": 19,
       "note": ""
     },
     {
       "step": "system",
       "http": 200,
-      "ms": 2,
+      "ms": 21,
       "note": ""
     },
     {
       "step": "capabilities",
       "http": 200,
-      "ms": 2,
+      "ms": 18,
       "note": ""
     },
     {
       "step": "execute",
       "http": 502,
-      "ms": 144,
-      "note": "{\"error\": {\"code\": \"execution_failed\", \"message\": \"provider rejected the credential\", \"retryable\": false, \"details\": {\"execution_id\": \"f678bb35-8f14-49cd-a225-31abdae13604\", \"provider_error_category\": \"invalid_credential\"}}}"
+      "ms": 86,
+      "note": "{\"error\": {\"code\": \"execution_failed\", \"message\": \"provider rejected the credential\", \"retryable\": false, \"details\": {\"execution_id\": \"97c09638-f45f-4b7a-a9d2-4183f9a8d685\", \"provider_error_category\": \"invalid_credential\"}}}"
     },
     {
       "step": "executions",
       "http": 200,
-      "ms": 4,
+      "ms": 24,
       "note": ""
     },
     {
       "step": "execution_record",
       "http": 200,
-      "ms": 3,
+      "ms": 18,
       "note": ""
     },
     {
       "step": "trace",
       "http": 200,
-      "ms": 8,
+      "ms": 22,
       "note": ""
     },
     {
       "step": "events",
       "http": 200,
-      "ms": 1,
+      "ms": 0,
       "note": "8 lines"
     },
     {
       "step": "usage",
       "http": 200,
-      "ms": 3,
+      "ms": 19,
       "note": ""
     },
     {
       "step": "converse",
       "http": 200,
-      "ms": 56,
+      "ms": 128,
       "note": "{\"stop_reason\": \"reasoning_failed\", \"verification\": null, \"rounds\": 1}"
     },
     {
       "step": "groq_direct_models",
       "http": 400,
-      "ms": 120,
+      "ms": 123,
       "note": "{\"error\":{\"message\":\"Organization has been restricted. Please reach out to support if you believe this was in error.\",\"type\":\"invalid_request_error\",\"code\":\"organization_restricted\"}}\n"
     }
   ],
@@ -145,20 +145,20 @@
   },
   "execute": {
     "http": 502,
-    "ms": 144,
+    "ms": 86,
     "response": {
       "error": {
         "code": "execution_failed",
         "message": "provider rejected the credential",
         "retryable": false,
         "details": {
-          "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+          "execution_id": "97c09638-f45f-4b7a-a9d2-4183f9a8d685",
           "provider_error_category": "invalid_credential"
         }
       }
     }
   },
-  "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+  "execution_id": "97c09638-f45f-4b7a-a9d2-4183f9a8d685",
   "converse": {
     "http": 200,
     "stop_reason": "reasoning_failed",

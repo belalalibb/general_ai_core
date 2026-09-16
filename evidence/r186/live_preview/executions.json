@@ -1,30 +1,10 @@
 {
   "executions": [
     {
-      "execution_id": "dc93bddb-18e5-4c7d-9804-02f1114f10c9",
+      "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
       "status": "failed",
-      "initiated_by": "e105638f-bf97-4338-aae8-4af01b82ea8a",
-      "created_at": "2026-09-16T03:15:03.051080+00:00",
-      "progress": {
-        "current_stage": "single",
-        "percent": 100
-      }
-    },
-    {
-      "execution_id": "115ca4c2-0698-407d-b0ae-547dc2304ace",
-      "status": "failed",
-      "initiated_by": "e105638f-bf97-4338-aae8-4af01b82ea8a",
-      "created_at": "2026-09-16T03:14:45.201579+00:00",
-      "progress": {
-        "current_stage": "single",
-        "percent": 100
-      }
-    },
-    {
-      "execution_id": "da0bee19-efb1-4e21-a624-b0996e393faf",
-      "status": "failed",
-      "initiated_by": "e105638f-bf97-4338-aae8-4af01b82ea8a",
-      "created_at": "2026-09-16T03:14:45.082156+00:00",
+      "initiated_by": "5ebf9047-371e-4d31-b861-61a44b17d858",
+      "created_at": "2026-09-16T03:24:49.856144+00:00",
       "progress": {
         "current_stage": "single",
         "percent": 100

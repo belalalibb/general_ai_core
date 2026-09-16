@@ -1,0 +1,55 @@
+{
+  "usage": [
+    {
+      "execution_id": "97c09638-f45f-4b7a-a9d2-4183f9a8d685",
+      "status": "failed",
+      "created_at": "2026-09-16T03:25:07.593459+00:00",
+      "ledger": {
+        "id": "efa8daf5-09cf-404e-9423-4c9000448352",
+        "tenant_id": "789d3f0b-afbd-4a6b-955d-31fe32ff41f8",
+        "execution_id": "97c09638-f45f-4b7a-a9d2-4183f9a8d685",
+        "units_reserved": 1.0,
+        "units_settled": 0.0,
+        "modality_costs": {
+          "provider_usage": []
+        },
+        "status": "failed"
+      },
+      "evaluation_status": "NEVER_EVALUATED"
+    },
+    {
+      "execution_id": "6357a98d-7fa0-4c41-ab69-c3d5ad4d357f",
+      "status": "failed",
+      "created_at": "2026-09-16T03:24:50.018678+00:00",
+      "ledger": {
+        "id": "71a8b580-c0cd-43b1-9c40-8e83420e0470",
+        "tenant_id": "789d3f0b-afbd-4a6b-955d-31fe32ff41f8",
+        "execution_id": "6357a98d-7fa0-4c41-ab69-c3d5ad4d357f",
+        "units_reserved": 1.0,
+        "units_settled": 0.0,
+        "modality_costs": {
+          "provider_usage": []
+        },
+        "status": "failed"
+      },
+      "evaluation_status": "NEVER_EVALUATED"
+    },
+    {
+      "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+      "status": "failed",
+      "created_at": "2026-09-16T03:24:49.856144+00:00",
+      "ledger": {
+        "id": "2e65f888-96ba-4a2b-8b46-cfaaf8127c1e",
+        "tenant_id": "789d3f0b-afbd-4a6b-955d-31fe32ff41f8",
+        "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+        "units_reserved": 1.0,
+        "units_settled": 0.0,
+        "modality_costs": {
+          "provider_usage": []
+        },
+        "status": "failed"
+      },
+      "evaluation_status": "NEVER_EVALUATED"
+    }
+  ]
+}
