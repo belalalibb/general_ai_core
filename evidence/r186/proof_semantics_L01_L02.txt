@@ -1,0 +1,36 @@
+R186 — proof semantics for F-R185-L01 / F-R185-L02 (records-only note, 2026-09-16)
+
+Two different claims were proven for each finding. They must not be conflated.
+
+A. PROOF OF RENDERING (deterministic, repeatable, committed as tests)
+   tests/ui/test_command_center_fix_r186.py (9 tests, on main 1028212c):
+   - L01: the RECORDED live Groq `error` frame (evidence/r185/live_preview/events.txt)
+     is replayed into the page through Playwright `page.route` (network-layer
+     substitution). Measured: 855 px token -> 511 px horizontal overflow BEFORE the
+     fix, 0 px AFTER (evidence/r186/browser_proof_r186.json, error_frame_390.png,
+     live_error_frame_390.png).
+   - L02: a converse body with `verification: null` is injected through `page.route`.
+     Measured: literal `undefined` count 0 after the fix; the null verdict is rendered
+     by name citing `stop_reason` (null_verification_390.png).
+   - A REAL failed execution on the hermetic profile (`execution_policy.strategy=agent`
+     -> `invalid_proposal` -> SSE `error` frame) proves the code PATH is exercised, but
+     its payload contains spaces and therefore never reaches the width condition.
+   What this proves: given the exact inputs that produced the findings, the UI now
+   renders them correctly. What it does NOT prove by itself: that a live runtime
+   naturally emits those inputs again.
+
+B. PROOF OF NATURAL LIVE OCCURRENCE (observed once, on the merged build)
+   evidence/r186/live_preview_e2e/preview_e2e.json (merged main 1028212c served by
+   `python3 -m apps.main`, real Groq key bound, browser at 390 px):
+   - L02: the runtime itself returned `reasoning_failed` with `verification: null`
+     (no injection); the page rendered the named null verdict, 0 x `undefined`.
+   - L01: the runtime itself emitted a live `invalid_credential` `error` frame
+     (Groq `organization_restricted` mapped by the adapter); the page showed 0 px
+     horizontal overflow at 390 px.
+   What this proves: on that run, the failure conditions occurred naturally and the
+   fixes held. What it does NOT prove: any statistical statement about frequency, or
+   behaviour of a SUCCESSFUL Groq execution (BLOCKED, F-R185-L03).
+
+Classification: F-R185-L01 FIXED and VERIFIED (A + B). F-R185-L02 FIXED and VERIFIED
+(A + B). Both proofs are recorded; A is the regression guard of record, B is a
+single observed live confirmation, not a guarantee of recurrence.

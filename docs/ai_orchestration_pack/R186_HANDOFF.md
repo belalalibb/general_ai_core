@@ -24,5 +24,34 @@ Merge commit (never squash), preconditions verified by API (open, mergeable clea
 ## 6. Operator-only decisions after R186
 D-R186-1 merge of the R186 PR · carried: D-R185-2 (runtime "thinking" contract), D-R185-3 (UNDEFINED areas), D-R185-4 (token rotation, overdue), F-R185-L03 (Groq organization restricted — external).
 
+
+**Resolved 2026-09-16 (R186-DEC-02):** D-R186-1 resolved — PR #28 merged by merge commit `1028212c`; post-merge fresh-clone gate PASS 3712/0/0/64, gateway 194 (`evidence/r186/gate_merge_1028212c.txt`); no further ratchet; hygiene done; R186 CLOSED. Remaining operator decisions: Groq organization (F-R185-L03), D-R185-2/3/4, hosting target.
+
+## 7. State of QEVION as it exists TODAY (main 1028212c) — Phase 5 gap analysis
+Evidence: `evidence/r186_state_ledger.md` rows 8-11, `evidence/r186/{live_preview,live_preview_public,live_preview_e2e}/`. Environment: fresh clone of `main` run with `python3 -m apps.main` (in-memory profile, `GROQ_API_KEY` + `ADMIN_EMAILS` from the caller env only) behind a sandbox-lifetime public URL. Nothing below is called READY unless it was demonstrated.
+
+**1. Working and verified (REAL/VERIFIED, on the merged build, browser + API):** register/verify/login/session (wrong password 401, correct 200, `is_admin`); Admin Command Center render (23 served capability nodes, scope/health/transport); central Core keyboard → system overview dialog (== `/v1/admin/system` + `/healthz`), Escape → focus return; capability constellation nodes keyboard → record dialog, close → focus return; Tab order; execution orbit (one dot per served execution, state-colored, keyboard select → record/trace/events replay); execution interaction in both modes (execute / agent converse) with live SSE progress (`execution_started → node_started → node_completed → error`), progress bar, stage, percent; `evaluation_status` rendered per execution from `/v1/admin/usage` (`NEVER_EVALUATED`); failure/error path end-to-end (502 `execution_failed`, record `failed`, trace attempt with category, usage row, UI `failed` everywhere, no secret leakage); 390 px layout including the REAL live error frame (0 px overflow); reduced motion (11 → 0); logout; all API interactions the Command Center uses (`/v1/auth/*`, `/v1/admin/system`, `/v1/admin/capabilities`, `/v1/admin/usage`, `/v1/executions`, `/v1/executions/{id}`, `/v1/executions/{id}/events`, `/v1/agent/executions/{id}/trace`, `/v1/execute`, `/v1/agent/converse`) plus `/v1/admin/providers`, `/v1/models`, `/v1/admin/routing/weights`.
+
+**2. Fixed during R186 (proved RED → GREEN and re-verified live):** F-R185-L01 (390 px overflow on the unwrapped `error` frame: 511 px → 0 px) and F-R185-L02 (literal `undefined` for `verification.*` on the `reasoning_failed` path → named "no verification verdict — no final was proposed (stop_reason: reasoning_failed)"). Both verified on the REAL live failure path produced by the runtime (not only by the injected test fixtures).
+
+**3. Still failing:** none observed on the tested surface (0 FAILED in the Phase 3 E2E). Known-but-unfixed: none recorded.
+
+**4. Externally blocked:** provider-backed SUCCESSFUL execution and therefore the entire success path (final answer text, `EVALUATED` status, settled usage units, a `final` frame, converse claims/tool calls with a verification verdict) — Groq HTTP 400 `organization_restricted` for the supplied key (recognized key, restricted organization; F-R185-L03). Not resolvable from the repository or the environment.
+
+**5. Unavailable by current contract (HANDOFF R185 §7):** runtime "thinking / speaking / responding" Core state; token-by-token response text (`execute.token_streaming` unavailable, `delta` never emitted); fleet / cross-tenant scope (`scope: process` only); agent personas / roster.
+
+**6. Not implemented (UNDEFINED areas, operator contract first):** Provider slice / provider onboarding UX beyond env binding, App Factory, API keys, webhook delivery; real e-mail delivery (console sender by design in this phase); any deployment/hosting configuration (the repository defines a process, not a deployment).
+
+**7. Not tested:** Postgres/Redis profile and multi-process scope (the preview ran the in-memory profile); the success path in the browser (blocked by 4); other real providers (none other is wired); load/concurrency; browsers other than Chromium.
+
+**Testability verdicts (demonstrated only):**
+- Core/backend testable — **YES** (canonical gate 3712/0/0/64 + gateway 194 on the branch head; live API surface exercised).
+- Admin UI testable — **YES** (Command Center: 13/14 E2E items REAL/VERIFIED via the public URL; `ui/admin` and `/app/` served 200 but NOT exercised end-to-end in this pass → their interaction depth is NOT TESTED).
+- Live-provider testable — **PARTIALLY**: the binding, routing and failure handling are testable and tested; the success path is BLOCKED (external) — not testable until an unrestricted Groq key is supplied.
+- End-to-end testable — **YES for the failure path, NO for the success path** (same blocker).
+- Deployment/hosting ready — **NO**: no deployment configuration exists; the preview is a sandbox process with a sandbox-lifetime URL. This is a recorded fact, not a defect of the code.
+
 ## Resume mechanism
 `git fetch --prune`; checkout `origin/genspark_ai_developer_r186`; read the last row of `evidence/r186_state_ledger.md`; re-run `pytest tests/ui tests/verification tests/engineering/test_budget_rounds_r177.py`; continue from the row's "next" column.
+
+**Closure reconciliation (2026-09-16, R186-DEC-03):** `origin/genspark_ai_developer_r186` no longer exists (deleted under the hygiene rule after merge, compare status `ahead`); the closure records were carried to `main` by ONE records-only PR under the operator-authorized row-43 exception. Resume from `main`: read `docs/ai_orchestration_pack/PROJECT_EXECUTION_STATE.md` (appended R186 resume pointer) → `evidence/r186_state_ledger.md` rows 8–14 and the closure rows after them. Work is STOPPED at the operator decision boundary; no R187 is declared. Remaining operator decisions are exactly those listed in R186-DEC-03 (Groq organization BLOCKED external; runtime "thinking" state NOT AUTHORIZED; Provider/App Factory/API keys/webhooks/email UNDEFINED; hosting/deployment OUT OF SCOPE; token rotation = operator security action).

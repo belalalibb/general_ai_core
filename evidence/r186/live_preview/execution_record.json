@@ -1,0 +1,17 @@
+{
+  "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+  "status": "failed",
+  "progress": {
+    "current_stage": "single",
+    "percent": 100
+  },
+  "error": {
+    "code": "execution_failed",
+    "message": "provider rejected the credential",
+    "retryable": false,
+    "details": {
+      "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+      "provider_error_category": "invalid_credential"
+    }
+  }
+}

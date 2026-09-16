@@ -1,0 +1,120 @@
+{
+  "scope": "process",
+  "capabilities": [
+    {
+      "id": "admin.control_plane",
+      "state": "available",
+      "evidence": "admin seam -> /v1/admin/* (T-IMPL-032)"
+    },
+    {
+      "id": "agent.runtime",
+      "state": "available",
+      "evidence": "agent seam -> GET /v1/agent-tools + execution_policy.strategy=agent (R160)"
+    },
+    {
+      "id": "auth.sessions",
+      "state": "available",
+      "evidence": "auth seam -> /v1/auth/* (AA-1 IDN-1)"
+    },
+    {
+      "id": "context.composition",
+      "state": "available",
+      "evidence": "composer seam; core/context (13 \u00a75)"
+    },
+    {
+      "id": "conversations.persistence",
+      "state": "available",
+      "evidence": "conversations seam; core/memory/ports.py"
+    },
+    {
+      "id": "dev.publish_modes",
+      "state": "inert",
+      "evidence": "dev_bindings seam -> GET /v1/dev/bindings/{id}/publish-modes (R169 A6 / R172 C7)"
+    },
+    {
+      "id": "evaluation.records",
+      "state": "available",
+      "evidence": "admin seam -> GET /v1/admin/evaluations/{id} + /executions/{id}/evaluations (22 \u00a77)"
+    },
+    {
+      "id": "execute.async",
+      "state": "available",
+      "evidence": "outbox seam -> 202 path (V2); core/runtime/outbox.py"
+    },
+    {
+      "id": "execute.sync",
+      "state": "available",
+      "evidence": "POST /v1/execute (always mounted)"
+    },
+    {
+      "id": "execute.token_streaming",
+      "state": "unavailable",
+      "evidence": "no streaming provider adapters exist (R115/V6-2 record)"
+    },
+    {
+      "id": "executions.progress_sse",
+      "state": "available",
+      "evidence": "sse seam -> GET /v1/executions/{id}/events (V6-2)"
+    },
+    {
+      "id": "health.liveness",
+      "state": "available",
+      "evidence": "healthz seam -> GET /healthz (SYS-1)"
+    },
+    {
+      "id": "learning.custody_governance",
+      "state": "inert",
+      "evidence": "custody seam (LEARNING_STORAGE_POLICIES + DATABASE_URL) -> /v1/admin/learning/custody/holds|revoke|sweep|release-legacy-hold (R178 DEC03; R179 4.7)"
+    },
+    {
+      "id": "learning.lifecycle",
+      "state": "available",
+      "evidence": "learning lifecycle seam -> /v1/admin/learning/* (R158; core/learning/lifecycle.py)"
+    },
+    {
+      "id": "models.listing",
+      "state": "available",
+      "evidence": "models+bindings seams -> GET /v1/models (10 \u00a76)"
+    },
+    {
+      "id": "rate_limits.execute",
+      "state": "inert",
+      "evidence": "rate_limits seam + configured limit (T-IMPL-070)"
+    },
+    {
+      "id": "skills.import",
+      "state": "available",
+      "evidence": "skills_import flag: the composition root attaches SkillReviewSurface -> /v1/admin/skills/import* (SKL-1, 14 \u00a73)"
+    },
+    {
+      "id": "skills.listing",
+      "state": "available",
+      "evidence": "GET /v1/skills over the skill registry"
+    },
+    {
+      "id": "sourcechange.workflow",
+      "state": "available",
+      "evidence": "admin seam -> /v1/admin/source-changes/* (R3 ADR-0009; authoritative_applier=None)"
+    },
+    {
+      "id": "usage.reporting",
+      "state": "available",
+      "evidence": "usage seam -> GET /v1/usage (10 \u00a78)"
+    },
+    {
+      "id": "webhooks.delivery_staging",
+      "state": "available",
+      "evidence": "webhooks+outbox seams -> execution.queued staging (V6-3)"
+    },
+    {
+      "id": "webhooks.registration",
+      "state": "available",
+      "evidence": "webhooks seam -> POST /v1/webhooks (41 \u00a721)"
+    },
+    {
+      "id": "workspaces.projects",
+      "state": "available",
+      "evidence": "always mounted -> /v1/workspaces + /v1/projects (closure GAP 1; R168 D-08 one store)"
+    }
+  ]
+}

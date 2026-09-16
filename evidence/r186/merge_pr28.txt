@@ -1,0 +1,9 @@
+PR #28 merge (2026-09-15) — merge posture unchanged (merge commit, never squash)
+Preconditions (GitHub API, immediately before the merge):
+  PR #28 state=open mergeable=true mergeable_state=clean base=0d35917c head=1f3875ec72a32dc1e87ebd517f8b4d6e8627d02a (12 commits / 62 files)
+  GET /branches/main/protection -> 404 (no protection rules)
+  GET /commits/1f3875ec/status -> total_count 0 ; /check-runs -> 0 ; /actions/runs?head_sha= -> 0
+Action: PUT /pulls/28/merge {"merge_method":"merge","sha":"1f3875ec72a32dc1e87ebd517f8b4d6e8627d02a"}
+Result: merged=true sha=1028212ca0153efbf2add283275f615d3bbb367a "Pull Request successfully merged"
+main after merge: 1028212c  parents 0d35917c + 1f3875ec
+Authorization derivation (R186-DEC-02): operator directive "Continue QEVION … Execute the next work in the following order, without unnecessary stops … PHASE 3 … obtain a real browser-accessible preview of the RESULTING MERGED QEVION build … AUTONOMY RULE: Do not stop for … merge/closure mechanics" + the reply "تابع" (continue) to the explicit D-R186-1 stop message that named merge as the next action and its recommendation.

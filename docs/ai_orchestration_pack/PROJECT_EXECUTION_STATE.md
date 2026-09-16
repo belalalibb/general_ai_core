@@ -577,3 +577,32 @@ Then continue to the next authorized task in the same session.
 At session end: report all commit hashes and the next task. Stop.
 Phase boundaries still hold: do not start Phase 2 in the session that verifies Phase 1.
 ```
+
+---
+
+## R186 RESUME POINTER (append-only, 2026-09-16 — R186-DEC-03; records-only closure)
+
+```text
+AUTHORITY: operator final closure directive ("R186 is accepted as CLOSED in substance.
+           Do not start R187 or any new engineering round.") — this section was
+           appended under that explicit authorization; nothing above it was edited.
+RESUME_POINTER: evidence/r186_state_ledger.md rows 8-14 (live preview of the merged
+           build, real-provider test, post-merge gate 3712/0/0/64 + gateway 194,
+           manifest last_measured = 3712@1028212c, hygiene) and the closure rows
+           appended after row 14 (records-only PR under the row-43 exception,
+           reconciliation, tags r185-ui-live-freeze -> 0d35917c / r186-close).
+DECISION_RECORD: docs/ai_orchestration_pack/final_docs_v3/60_DECISION_LOG.md
+           R186-DEC-01 / R186-DEC-02 / R186-DEC-03.
+WORK_STATUS: STOPPED at the operator decision boundary. No R187 declared. No new
+           engineering branch. Open PRs 0. Five unmerged legacy branches preserved.
+OPERATOR_DECISIONS_ON_RECORD (R186-DEC-03): live Groq success = BLOCKED (external
+           organization restriction, not architectural); runtime "thinking/responding"
+           state = NOT AUTHORIZED / NO (contract limitation remains); Provider
+           onboarding / App Factory / API keys / webhook delivery / real email =
+           UNDEFINED BY OPERATOR; hosting/deployment = OUT OF SCOPE until a deployment
+           round is declared; F-R185-L01/L02 = FIXED and VERIFIED; GitHub token
+           rotation = operator security action (pending).
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row
+           of evidence/r186_state_ledger.md; does NOT open a round without an operator
+           declaration recorded in 60_DECISION_LOG.md.
+```

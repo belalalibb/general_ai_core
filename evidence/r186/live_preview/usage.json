@@ -1,0 +1,21 @@
+{
+  "usage": [
+    {
+      "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+      "status": "failed",
+      "created_at": "2026-09-16T03:24:49.856144+00:00",
+      "ledger": {
+        "id": "2e65f888-96ba-4a2b-8b46-cfaaf8127c1e",
+        "tenant_id": "789d3f0b-afbd-4a6b-955d-31fe32ff41f8",
+        "execution_id": "f678bb35-8f14-49cd-a225-31abdae13604",
+        "units_reserved": 1.0,
+        "units_settled": 0.0,
+        "modality_costs": {
+          "provider_usage": []
+        },
+        "status": "failed"
+      },
+      "evaluation_status": "NEVER_EVALUATED"
+    }
+  ]
+}
