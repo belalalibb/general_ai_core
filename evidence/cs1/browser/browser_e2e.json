@@ -1,0 +1,179 @@
+{
+ "url": "https://8080-irhv94xu4wkpio37143ab-ecea8f22.sandbox.novita.ai",
+ "results": [
+  {
+   "item": "1 page load /app/command/",
+   "status": "VERIFIED",
+   "note": "http=200"
+  },
+  {
+   "item": "1 login view before auth",
+   "status": "VERIFIED",
+   "note": ""
+  },
+  {
+   "item": "1 wrong password -> visible error",
+   "status": "VERIFIED",
+   "note": "unauthenticated: Authentication failed."
+  },
+  {
+   "item": "1 login -> Command Center (admin)",
+   "status": "VERIFIED",
+   "note": "operator-admin@qevion.test \u00b7 tenant 3446"
+  },
+  {
+   "item": "2 session persistence across reload",
+   "status": "FAILED",
+   "note": "token in memory only -> login view after reload (F-CS1-01)"
+  },
+  {
+   "item": "5 Command Center render 1440",
+   "status": "VERIFIED",
+   "note": "nodes=23 orbit=2 animations=10"
+  },
+  {
+   "item": "LAYOUT core centered 1440 (<=5% vw)",
+   "status": "FAILED",
+   "note": "core_cx_offset=178px (F-CS1-02 reserved 340px detail column)"
+  },
+  {
+   "item": "LAYOUT core dominant anchor",
+   "status": "VERIFIED",
+   "note": "core_w=248 svg_w=760"
+  },
+  {
+   "item": "LAYOUT no horizontal overflow 1440",
+   "status": "VERIFIED",
+   "note": "overflowX=0"
+  },
+  {
+   "item": "LAYOUT execution section placement",
+   "status": "VERIFIED",
+   "note": "topology_bottom=1154 execution_top=1170 vh=900 below_fold=True"
+  },
+  {
+   "item": "status bar derived counts",
+   "status": "VERIFIED",
+   "note": "health: alive core: idle nodes: 23 available/inert/unavailable: 19/3/1 executions: 2 evaluation: EVA"
+  },
+  {
+   "item": "6 Core Enter -> overview dialog",
+   "status": "VERIFIED",
+   "note": "QEVION Core \u2014 system overview \u00d7 core idle health alive profile in-memory scope process ide"
+  },
+  {
+   "item": "12 dialog focus moved in",
+   "status": "VERIFIED",
+   "note": ""
+  },
+  {
+   "item": "14 Escape -> focus returns to Core",
+   "status": "VERIFIED",
+   "note": ""
+  },
+  {
+   "item": "7 node Enter -> record dialog",
+   "status": "VERIFIED",
+   "note": "admin.control_plane \u00d7  state available  evidence admin seam -> /v1/adm"
+  },
+  {
+   "item": "14 node Escape -> focus back to node",
+   "status": "VERIFIED",
+   "note": ""
+  },
+  {
+   "item": "7 node pointer click + close",
+   "status": "VERIFIED",
+   "note": ""
+  },
+  {
+   "item": "interaction feedback (cursor/focus-visible)",
+   "status": "VERIFIED",
+   "note": "{\"cursor\": \"pointer\", \"focusVisibleRule\": true}"
+  },
+  {
+   "item": "8 execution orbit dots",
+   "status": "VERIFIED",
+   "note": "dots=2"
+  },
+  {
+   "item": "8 orbit dot Enter -> execution record",
+   "status": "VERIFIED",
+   "note": ""
+  },
+  {
+   "item": "9 execute success path (default routing)",
+   "status": "VERIFIED",
+   "note": "execution 6a9c85a1-37ed-4960-bfb6-2591dd8c4dcf succeeded stage single 100% evaluation NEVER_EVALUATED | reques"
+  },
+  {
+   "item": "11 evaluation_status badge",
+   "status": "VERIFIED",
+   "note": "NEVER_EVALUATED"
+  },
+  {
+   "item": "execution graph + stream log",
+   "status": "VERIFIED",
+   "note": "graph=5 frames=4"
+  },
+  {
+   "item": "16 390px no overflow, core centered",
+   "status": "VERIFIED",
+   "note": "overflowX=0 core_cx_off=0"
+  },
+  {
+   "item": "10 failure/limit path rendered honestly",
+   "status": "VERIFIED",
+   "note": "request hello mode converse response {   \"claims\": [],   \"tool_calls\": [] } rounds 1 stop_reason final verific"
+  },
+  {
+   "item": "16 390px no 'undefined', no overflow after",
+   "status": "VERIFIED",
+   "note": "overflowX=0"
+  },
+  {
+   "item": "15 responsive 820px",
+   "status": "VERIFIED",
+   "note": "overflowX=0 core_cx_off=0"
+  },
+  {
+   "item": "15 responsive 600px",
+   "status": "VERIFIED",
+   "note": "overflowX=0 core_cx_off=0"
+  },
+  {
+   "item": "17 reduced motion collapses animations",
+   "status": "VERIFIED",
+   "note": "running=0 normal=10"
+  },
+  {
+   "item": "core state in closed set",
+   "status": "VERIFIED",
+   "note": "idle"
+  },
+  {
+   "item": "18 console: no page exceptions",
+   "status": "VERIFIED",
+   "note": "pageerrors=[]"
+  },
+  {
+   "item": "18 console: resource errors",
+   "status": "FAILED",
+   "note": "['error: Failed to load resource: the server responded with a status of 401 ()'] (F-CS1-03 by-design probe 401)"
+  },
+  {
+   "item": "no secret shapes in DOM/web storage",
+   "status": "VERIFIED",
+   "note": "storage_keys=[]"
+  },
+  {
+   "item": "3 logout -> login view",
+   "status": "VERIFIED",
+   "note": ""
+  }
+ ],
+ "console": [
+  "error: Failed to load resource: the server responded with a status of 401 ()"
+ ],
+ "pageerrors": []
+}
