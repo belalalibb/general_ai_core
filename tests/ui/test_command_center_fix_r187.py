@@ -274,6 +274,18 @@ def _open_detail(page) -> None:
     else:  # no served capability to select — measure the panel geometry only
         page.evaluate("() => { document.getElementById('node-detail').hidden = false; }")
     page.wait_for_selector("#node-detail:not([hidden])", timeout=5000)
+    # the .dialog `rise` animation is 220 ms; wait until the panel is fully painted
+    page.wait_for_function(
+        "() => getComputedStyle(document.getElementById('node-detail')).opacity === '1'",
+        timeout=5000,
+    )
+
+
+DETAIL_RECT_JS = """() => {
+  const r = document.getElementById('node-detail').getBoundingClientRect();
+  return {x: r.x, y: r.y, width: r.width, height: r.height,
+          right_gap: document.documentElement.clientWidth - r.right};
+}"""
 
 
 @pytest.mark.skipif(not _HAS_PLAYWRIGHT, reason="playwright not installed")
@@ -301,6 +313,7 @@ def test_session_survives_reload_and_core_is_centred_in_a_real_browser(server: d
         _open_detail(page)
         offset_open = page.evaluate(CORE_OFFSET_JS)
         overflow_1440 = page.evaluate(OVERFLOW_JS)
+        detail_rect = page.evaluate(DETAIL_RECT_JS)
         page.screenshot(path=str(out_dir / "desktop_1440_detail_open.png"))
         proof["checks"].append(
             {
@@ -308,8 +321,11 @@ def test_session_survives_reload_and_core_is_centred_in_a_real_browser(server: d
                 "core_offset_closed_px": offset_closed,
                 "core_offset_open_px": offset_open,
                 "overflow_px": overflow_1440,
+                "detail_panel_rect": detail_rect,
             }
         )
+        assert detail_rect["width"] > 0 and detail_rect["height"] > 0, "detail panel painted"
+        assert 0 <= detail_rect["right_gap"] <= 32, "detail panel sits inside the right edge"
         assert abs(offset_closed) <= 8, f"Core off-centre (closed): {offset_closed:.1f}px"
         assert abs(offset_open) <= 8, f"Core off-centre (detail open): {offset_open:.1f}px"
         assert overflow_1440 == 0

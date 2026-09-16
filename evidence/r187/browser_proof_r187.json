@@ -1,6 +1,6 @@
 {
   "round": "R187",
-  "base": "http://127.0.0.1:36727",
+  "base": "http://127.0.0.1:52849",
   "checks": [
     {
       "id": "F-CS1-01/reload_keeps_session",
@@ -15,7 +15,14 @@
       "id": "F-CS1-02/desktop_1440",
       "core_offset_closed_px": 0,
       "core_offset_open_px": 0,
-      "overflow_px": 0
+      "overflow_px": 0,
+      "detail_panel_rect": {
+        "x": 1084,
+        "y": 72,
+        "width": 340,
+        "height": 232.15625,
+        "right_gap": 16
+      }
     },
     {
       "id": "F-CS1-01/logout_clears",
