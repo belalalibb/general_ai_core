@@ -9,9 +9,15 @@ SUPERSEDES: NONE (fulfils the deferral written into ADR-0001: "admin UI / client
 ```
 
 Format authority: `docs/ai_orchestration_pack/final_docs_v3/40_ENGINEERING_PROTOCOL.md` §8.1.
-No significant architecture change is allowed without an ADR. **This ADR is not accepted.
-Preparing it authorizes nothing**: no dependency installation, no `package.json`/lockfile,
-no build-system change, no UI implementation. The agent may not mark it ACCEPTED.
+No significant architecture change is allowed without an ADR.
+
+> **Historical wording (R182 proposal stage, 2026-09-13 — SUPERSEDED by the operator
+> ruling D-1 recorded as R182-DEC-02, see `## Status`):** "This ADR is not accepted.
+> Preparing it authorizes nothing: no dependency installation, no `package.json`/lockfile,
+> no build-system change, no UI implementation. The agent may not mark it ACCEPTED."
+> The status was set to ACCEPTED by the operator's own text, not by the agent; the
+> paragraph is kept for provenance only. Wording reconciled at the R186 closure
+> (2026-09-16, records-only; no alternative changed).
 
 ---
 
@@ -85,8 +91,10 @@ no build-system change, no UI implementation. The agent may not mark it ACCEPTED
 
 ## Decision
 
-**NOT TAKEN — operator decision required.** The operating default used by the R182
-readiness analysis and by `R182_HANDOFF.md` is **Alternative C**, because it alone
+**TAKEN — Alternative C** (operator ruling D-1, 2026-09-14, R182-DEC-02; full text and
+binding consequences under `## Status`). Historical wording at proposal stage: "NOT TAKEN —
+operator decision required." The operating default used by the R182
+readiness analysis and by `R182_HANDOFF.md` was **Alternative C**, because it alone
 (1) keeps source == served artifact so every existing UI guard applies verbatim,
 (2) adds zero licence/provenance surface while the reference's own attribution is
 unresolved, (3) needs no second server process and no deployment change, and (4) is
