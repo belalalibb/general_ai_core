@@ -826,6 +826,24 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r187": {
+      "ceiling": 0,
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R187-FIX (ui/ only, outside the counted roots) - exactly the two CS1 findings recorded in evidence/cs1_state_ledger.md rows 5/7 and evidence/cs1/CS1_CURRENT_STATE_CERTIFICATION.md §C: F-CS1-01 (session lost on page reload: token held in JS memory only -> sessionStorage-scoped token + boot probe via the EXISTING GET /v1/auth/session) and F-CS1-02 (desktop Core 178 px off-centre: .center reserves a 340 px detail column while #node-detail is hidden -> single centred column, detail panel does not reserve width). Proof: tests/ui/test_command_center_fix_r187.py RED first, then GREEN; existing tests/ui guards kept."
+      ],
+      "log": [],
+      "note": "ui/ is OUTSIDE change_budget.counts_production_code_under by design (R168 §2 / R180 note) and is governed by its guard frames (ui_command_static_check + tests/ui for ui/app/command). R187 spends no counted change; ceiling 0 is the declaration that core/ apps/ infrastructure/ stay frozen.",
+      "ceiling_history": [
+        "declared 0 at the R187 opening (2026-09-16, R187-DEC-01) from post-CS1 main d6f45198 (PR #31 merged, records only), BEFORE any production commit. Operator plan item 2: 'UI round -> fix F-CS1-01 + F-CS1-02'."
+      ]
+    },
     "round_r181_backend_closure": {
       "ceiling": 3,
       "ceiling_history": "declared 3 BEFORE the first production commit (operator directive: close every defined, actionable backend carry-over before UI; Q6 named explicitly). Q6 option (b) is the only option that closes F-R179-06 completely: (a) reserve-after-row would change the 03 s7 refuse-before-work ordering AND still leave tool calls (call_id, never an executions row) unbindable. Files: infrastructure/db/migrations/versions/0022_usage_ledger_key.py (new), infrastructure/db/tables.py (metadata mirror), apps/composition/runtime.py (one-name flip to the composed durable adapter)",
