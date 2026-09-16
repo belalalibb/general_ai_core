@@ -1,0 +1,23 @@
+{
+  "failed_execution_id": "cbd09391-ada6-40e0-9d87-e5d3c0156ffc",
+  "failed_execution_status": "failed",
+  "error_frame_text": "error {\"detail\":\"action must be one of ['final', 'tool_call'], got None\",\"reason\":\"invalid_proposal\"}",
+  "error_frame_scroll_width_px": 334,
+  "recorded_live_error_frame_text": "error {\"category\":\"invalid_credential\",\"provider_code\":\"organization_restricted\",\"retryable\":false,\"safe_message\":\"provider rejected the credential\"}",
+  "recorded_live_error_frame_scroll_width_px": 334,
+  "recorded_live_error_frame_source": "evidence/r185/live_preview/events.txt replayed through the events route (network-layer substitution) \u2014 the hermetic invalid_proposal payload has break opportunities and does not reach the width condition",
+  "overflow_px": {
+    "before": 0,
+    "after_real_invalid_proposal_frame": 0,
+    "after_recorded_live_invalid_credential_frame": 0,
+    "after_null_verification_turn": 0
+  },
+  "null_verification_fields": {
+    "rounds": "1",
+    "stop_reason": "reasoning_failed",
+    "verification": "no verification verdict \u2014 no final was proposed (stop_reason: reasoning_failed)",
+    "reasoning_execution_ids": "\u2014"
+  },
+  "null_verification_source": "network-layer substitution of ONE /v1/agent/converse response with the served AgentAnswer shape (verification: null, stop_reason reasoning_failed) \u2014 RENDERING proof; the hermetic echo profile always proposes a final",
+  "console_errors": []
+}

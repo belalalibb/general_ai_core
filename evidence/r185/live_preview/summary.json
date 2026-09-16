@@ -1,0 +1,178 @@
+{
+  "base": "http://127.0.0.1:8080",
+  "steps": [
+    {
+      "step": "healthz",
+      "http": 200,
+      "ms": 5,
+      "note": "{'status': 'alive', 'scope': 'process', 'time': '2026-09-15T22:15:43.706088+00:0"
+    },
+    {
+      "step": "register",
+      "http": 422,
+      "ms": 4,
+      "note": "{'error': {'code': 'validation_error', 'message': 'Registration rejected.', 'retryable': False, 'details': {'field': 'em"
+    },
+    {
+      "step": "verify",
+      "http": 200,
+      "ms": 5,
+      "note": "{'user_id': '7544a19f-b607-409d-8245-254ca6efe079', 'email': 'operator-admin@qevion.test', 'email_verified': True, 'stat"
+    },
+    {
+      "step": "login_wrong_password",
+      "http": 401,
+      "ms": 203,
+      "note": "{'error': {'code': 'unauthenticated', 'message': 'Authentication failed.', 'retryable': False, 'details': {}, 'trace_id'"
+    },
+    {
+      "step": "login",
+      "http": 200,
+      "ms": 145,
+      "note": "keys=token"
+    },
+    {
+      "step": "session",
+      "http": 200,
+      "ms": 1,
+      "note": "{'user_id': '7544a19f-b607-409d-8245-254ca6efe079', 'tenant_id': '30602756-3957-4646-8838-915bb976b9bf', 'email': 'operator-admin@qevion.test', 'is_admin': True}"
+    },
+    {
+      "step": "providers",
+      "http": 200,
+      "ms": 31,
+      "note": ""
+    },
+    {
+      "step": "models",
+      "http": 200,
+      "ms": 1,
+      "note": ""
+    },
+    {
+      "step": "routing_weights",
+      "http": 200,
+      "ms": 1,
+      "note": ""
+    },
+    {
+      "step": "system",
+      "http": 200,
+      "ms": 1,
+      "note": ""
+    },
+    {
+      "step": "execute",
+      "http": 502,
+      "ms": 100,
+      "note": "{\"error\": {\"code\": \"execution_failed\", \"message\": \"provider rejected the credential\", \"retryable\": false, \"details\": {\"execution_id\": \"17352f5d-edf9-4fc1-a77b-49c30fd19865\", \"provider_error_category\": \"invalid_credential\"}}}"
+    },
+    {
+      "step": "executions",
+      "http": 200,
+      "ms": 5,
+      "note": ""
+    },
+    {
+      "step": "execution_record",
+      "http": 200,
+      "ms": 4,
+      "note": ""
+    },
+    {
+      "step": "trace",
+      "http": 200,
+      "ms": 9,
+      "note": ""
+    },
+    {
+      "step": "events",
+      "http": 200,
+      "ms": 1,
+      "note": "8 lines"
+    },
+    {
+      "step": "usage",
+      "http": 200,
+      "ms": 3,
+      "note": ""
+    },
+    {
+      "step": "groq_direct_models",
+      "http": 403,
+      "ms": 75,
+      "note": "error code: 1010\n"
+    }
+  ],
+  "verification_token_found_in_log": true,
+  "session": {
+    "user_id": "7544a19f-b607-409d-8245-254ca6efe079",
+    "tenant_id": "30602756-3957-4646-8838-915bb976b9bf",
+    "email": "operator-admin@qevion.test",
+    "is_admin": true
+  },
+  "providers": {
+    "providers": [
+      {
+        "id": "9409a092-edd4-417e-bdc6-aa868f60ebbb",
+        "provider_key": "groq",
+        "display_name": "Groq",
+        "status": "active",
+        "auth_types": [
+          "api_key"
+        ],
+        "supports_account_pool": false,
+        "is_template": false,
+        "is_routable": true
+      }
+    ]
+  },
+  "models": {
+    "count": 5
+  },
+  "routing_weights": {
+    "version": "11s6-initial",
+    "quality": 0.35,
+    "reliability": 0.2,
+    "cost": 0.15,
+    "latency": 0.15,
+    "context_fit": 0.1,
+    "policy_preference": 0.05
+  },
+  "system": {
+    "profile": "in-memory",
+    "identity_mode": "auth",
+    "provider_keys": [
+      "groq"
+    ],
+    "admin_emails_configured": 1,
+    "scope": "process"
+  },
+  "execute": {
+    "http": 502,
+    "ms": 100,
+    "response": {
+      "error": {
+        "code": "execution_failed",
+        "message": "provider rejected the credential",
+        "retryable": false,
+        "details": {
+          "execution_id": "17352f5d-edf9-4fc1-a77b-49c30fd19865",
+          "provider_error_category": "invalid_credential"
+        }
+      }
+    }
+  },
+  "execution_id": "17352f5d-edf9-4fc1-a77b-49c30fd19865",
+  "execution_record": {
+    "http": 200
+  },
+  "trace": {
+    "http": 200
+  },
+  "groq_direct": {
+    "http": 403,
+    "body": "error code: 1010\n"
+  },
+  "server_groq_error_lines": 1
+}

@@ -55,7 +55,7 @@ body {
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 .k { color: var(--muted); margin-right: 6px; }
-.error { color: var(--failed); }
+.error { color: var(--failed); overflow-wrap: anywhere; }
 
 /* header / footer */
 .cc-header, .status-bar {
@@ -234,7 +234,10 @@ label.inline input { width: auto; margin: 0; display: inline; }
 .attempts { list-style: none; padding: 0; margin: 6px 0 0; font-size: 11px; color: var(--muted); }
 
 .stream-log { list-style: none; padding: 0; margin: 8px 0 0; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-.frame { padding: 2px 6px; border-left: 2px solid var(--line); animation: rise 160ms ease-out; }
+/* R186 (F-R185-L01): served frame payloads (error JSON) carry no break opportunity —
+   without a wrapping rule the min-content width of one frame widened the whole grid
+   (511-513 px overflow at 390 px on the live failure path). */
+.frame { padding: 2px 6px; border-left: 2px solid var(--line); animation: rise 160ms ease-out; overflow-wrap: anywhere; }
 .ev-started { border-left-color: var(--brand); }
 .ev-node { border-left-color: var(--running); }
 .ev-final { border-left-color: var(--available); }

@@ -720,15 +720,27 @@ document.getElementById("converse-form").addEventListener("submit", async (event
     return;
   }
   const r = result.body;
-  const v = r.verification || {};
+  /* R186 (F-R185-L02): AgentAnswer.verification is `JsonObject | None` — null ONLY when no
+     final was ever proposed (reasoning_failed / invalid_proposal). Render that case by
+     name, citing the served stop_reason, instead of stringifying missing fields. */
+  const verificationFields = {};
+  if (r.verification === null || r.verification === undefined) {
+    verificationFields["verification"] =
+      `no verification verdict — no final was proposed (stop_reason: ${String(r.stop_reason)})`;
+  } else {
+    const v = r.verification;
+    /* The five served counters, verbatim (R182 pin), never a derived score. */
+    const served = (value) => (value === undefined || value === null ? "—" : String(value));
+    verificationFields["verification.verified"] = served(v.verified);
+    verificationFields["verification.claims_admitted"] = served(v.claims_admitted);
+    verificationFields["verification.claims_refused"] = served(v.claims_refused);
+    verificationFields["verification.tool_calls_ok"] = served(v.tool_calls_ok);
+    verificationFields["verification.tool_calls_total"] = served(v.tool_calls_total);
+  }
   appendTurn("response", JSON.stringify({ claims: r.claims, tool_calls: r.tool_calls }, null, 2), {
     rounds: String(r.rounds),
     stop_reason: String(r.stop_reason),
-    "verification.verified": String(v.verified),
-    "verification.claims_admitted": String(v.claims_admitted),
-    "verification.claims_refused": String(v.claims_refused),
-    "verification.tool_calls_ok": String(v.tool_calls_ok),
-    "verification.tool_calls_total": String(v.tool_calls_total),
+    ...verificationFields,
     reasoning_execution_ids: (r.reasoning_execution_ids || []).join(", ") || "—",
   });
   const ids = Array.isArray(r.reasoning_execution_ids) ? r.reasoning_execution_ids : [];

@@ -38,5 +38,29 @@ D-R185-1 merge of the R185 PR · D-R185-2 whether a runtime-level "thinking / re
 - **Live cross-tenant / fleet view**: `scope: "process"` only.
 - **Agent roster with personas**: no such contract; nodes are the 23 served capability ids.
 
+**Resolved 2026-09-15 (R185-DEC-02):** D-R185-1 resolved — PR #27 merged by merge commit `0d35917c`; post-merge fresh-clone gate PASS 3703/0/0/64, gateway 194 (`evidence/r185/gate_merge_0d35917c.txt`); no further ratchet (floor 3703 holds exactly); hygiene under the authorized rule (2 branches, 0 open PRs). R185 CLOSED. D-R185-2, D-R185-3, D-R185-4 remain open and untouched.
+
+## 8. Live preview + real-provider test of main 0d35917c (2026-09-15, post-close, records only)
+Serving path: the repository ships no deployment configuration (no Dockerfile/Procfile/compose/wrangler/pages); the only supported run path is `python3 -m apps.main` with env-var configuration (OPERATIONS §0-2). The preview is therefore a fresh clone of `main` **0d35917c** run in the sandbox (in-memory profile, `GROQ_API_KEY` + `ADMIN_EMAILS` supplied ONLY via the caller environment, other provider env stripped) behind the sandbox's public URL — a test environment with sandbox lifetime, **not a deployment**. Ledger rows 18-24; evidence `evidence/r185/{live_preview,live_preview_public,live_preview_e2e}/`.
+
+| Item (directive E) | Classification | Live result |
+|---|---|---|
+| Login / session (register → verify → wrong pw → login → session) | REAL/VERIFIED | 201 / 200 / 401 / 200 / `is_admin true` (local and public URL) |
+| Command Center loads with real data | REAL/VERIFIED | 23 nodes, `scope: process`, health alive, providers `groq`, transport indicator |
+| Core overview dialog (keyboard: Enter/Escape, focus return) | REAL/VERIFIED | profile in-memory · scope process · health alive · identity auth · providers groq · admins 1 |
+| Constellation node detail dialog (Tab/Enter, close, focus return) | REAL/VERIFIED | `admin.control_plane available` |
+| Execution orbit (dots, keyboard select) | REAL/VERIFIED | 1 dot per execution, `data-state failed` |
+| Real execution through the UI (SSE frames, live progress) | REAL/VERIFIED (failure path) | `execution_started → node_started → node_completed → error`; progress `failed / single / 100 %` in ~250 ms |
+| `evaluation_status` rendering | REAL/VERIFIED | `#execution-evaluation[data-evaluation-status="NEVER_EVALUATED"]`, status bar `EVALUATED 0 · NEVER_EVALUATED 3` |
+| Provider-backed SUCCESSFUL execution | UNAVAILABLE/BLOCKED (external) | Groq HTTP 400 `organization_restricted` → QEVION 502 `execution_failed / invalid_credential` (F-R185-L03) |
+| Error handling (auth 401, provider 502, record/trace/usage consistency, no secret leakage) | REAL/VERIFIED | 0 `gsk_` hits in logs/responses/evidence |
+| Reduced motion | REAL/VERIFIED | 7 → 0 running animations |
+| Responsive 390 px | **FAILED after a failed execution** | 513 px horizontal overflow from the unwrapped `error` frame (F-R185-L01); 0 px before execution |
+| Logout | REAL/VERIFIED | returns to login view |
+| Thinking/responding Core state, token streaming, personas, fleet scope, App Factory, API keys, webhook delivery | NOT IMPLEMENTED (§7 / UNDEFINED) | not tested, not claimed |
+| Postgres/Redis profile, multi-process scope, real e-mail delivery | NOT TESTED | preview ran the in-memory profile only |
+
+**Currently testable vs fully ready:** everything above the blocker line is testable today on a sandbox preview with an operator-supplied key. "Fully ready" additionally requires (1) a Groq key whose organization is not restricted (or another real provider — none other is wired), (2) a fix round for F-R185-L01/L02 with an error-frame browser proof, (3) a hosting decision (the repository defines a process, not a deployment), (4) D-R185-2/3 contracts if those experiences are wanted, (5) D-R185-4 token rotation.
+
 ## Resume mechanism
 `git fetch --prune`; checkout `origin/genspark_ai_developer_r185`; read the last row of `evidence/r185_state_ledger.md`; re-run `pytest tests/ui tests/verification tests/engineering/test_budget_rounds_r177.py -p no:cacheprovider`; continue from the first unchecked ledger row. After a sandbox reset: install Chromium system libraries (F-R182I-03) before any browser proof or gate.

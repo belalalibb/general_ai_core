@@ -1,0 +1,5 @@
+R185 post-merge hygiene (2026-09-15) — rule: R183 row 13 / D-R183-4 (delete only when GitHub compare/<branch>...main status in {ahead, identical})
+genspark_ai_developer_r184_close (64720867): compare...main status=ahead -> DELETE /git/refs/heads/... -> HTTP 204
+genspark_ai_developer_r185 (ffd47ae3): compare...main status=ahead -> DELETE /git/refs/heads/... -> HTTP 204
+kept (unmerged): feature/platform-capability-assessment, genspark_ai_developer, r178_decisions_verified_units, r178_p01_subject_verified_units, r178_verified_units
+open PRs after hygiene: none

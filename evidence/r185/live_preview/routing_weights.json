@@ -1,0 +1,9 @@
+{
+  "version": "11s6-initial",
+  "quality": 0.35,
+  "reliability": 0.2,
+  "cost": 0.15,
+  "latency": 0.15,
+  "context_fit": 0.1,
+  "policy_preference": 0.05
+}

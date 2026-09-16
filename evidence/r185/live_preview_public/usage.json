@@ -1,0 +1,38 @@
+{
+  "usage": [
+    {
+      "execution_id": "4c2738fe-a628-4fe1-afc1-390ef7315734",
+      "status": "failed",
+      "created_at": "2026-09-15T22:18:49.139814+00:00",
+      "ledger": {
+        "id": "ebf0100d-cba6-4bd5-b581-1ab3484bbdd6",
+        "tenant_id": "30602756-3957-4646-8838-915bb976b9bf",
+        "execution_id": "4c2738fe-a628-4fe1-afc1-390ef7315734",
+        "units_reserved": 1.0,
+        "units_settled": 0.0,
+        "modality_costs": {
+          "provider_usage": []
+        },
+        "status": "failed"
+      },
+      "evaluation_status": "NEVER_EVALUATED"
+    },
+    {
+      "execution_id": "17352f5d-edf9-4fc1-a77b-49c30fd19865",
+      "status": "failed",
+      "created_at": "2026-09-15T22:15:44.115386+00:00",
+      "ledger": {
+        "id": "ec4a6787-543a-4d4f-ad62-7acc9fbd9a8e",
+        "tenant_id": "30602756-3957-4646-8838-915bb976b9bf",
+        "execution_id": "17352f5d-edf9-4fc1-a77b-49c30fd19865",
+        "units_reserved": 1.0,
+        "units_settled": 0.0,
+        "modality_costs": {
+          "provider_usage": []
+        },
+        "status": "failed"
+      },
+      "evaluation_status": "NEVER_EVALUATED"
+    }
+  ]
+}

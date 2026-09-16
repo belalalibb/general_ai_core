@@ -1,0 +1,36 @@
+{
+  "execution_id": "17352f5d-edf9-4fc1-a77b-49c30fd19865",
+  "status": "failed",
+  "strategy": "single",
+  "created_at": "2026-09-15T22:15:44.115386Z",
+  "completed_at": "2026-09-15T22:15:44.206311Z",
+  "stages": [
+    {
+      "node_key": "single",
+      "status": "failed",
+      "attempts": [
+        {
+          "attempt": 1,
+          "model_key": "allam-2-7b",
+          "provider_key": "groq",
+          "succeeded": false,
+          "error_category": "invalid_credential",
+          "safe_message": "provider rejected the credential",
+          "latency_ms": 90
+        }
+      ],
+      "error": {
+        "category": "invalid_credential",
+        "retryable": false,
+        "provider_code": "organization_restricted",
+        "safe_message": "provider rejected the credential"
+      }
+    }
+  ],
+  "ledger": {
+    "status": "failed",
+    "units_reserved": 1.0,
+    "units_settled": 0.0
+  },
+  "as_recorded": true
+}

@@ -1,0 +1,22 @@
+{
+  "request": {
+    "ask": "Reply with exactly the word: OK",
+    "model_policy": {
+      "type": "auto",
+      "allow_fallback": true
+    }
+  },
+  "http": 502,
+  "ms": 100,
+  "response": {
+    "error": {
+      "code": "execution_failed",
+      "message": "provider rejected the credential",
+      "retryable": false,
+      "details": {
+        "execution_id": "17352f5d-edf9-4fc1-a77b-49c30fd19865",
+        "provider_error_category": "invalid_credential"
+      }
+    }
+  }
+}
