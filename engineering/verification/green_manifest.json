@@ -807,6 +807,24 @@
       "log": [],
       "note": "ui/ is OUTSIDE change_budget.counts_production_code_under by design (R168 §2 / R180 note) and is governed by its guard frames (ui_static_check for ui/admin, ui_command_static_check + tests/ui for ui/app/command). R185 spends no counted budget; the round's proof is the guard suites + browser proof + canonical gate."
     },
+    "round_r186": {
+      "ceiling": 0,
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R186-FIX (ui/ only, outside the counted roots) - exactly the two findings recorded in evidence/r185_findings_ledger.md and R185_HANDOFF §8: F-R185-L01 (390 px horizontal overflow after a FAILED execution: the `error` stream frame's JSON has no break opportunity; ui/app/command/command.css `.frame` has no wrapping rule) and F-R185-L02 (converse response renders the literal `undefined` for verification.* when the served AgentAnswer.verification is the contract-legal null - apps/admin_agent/contracts.py:118-122 - on reasoning_failed / invalid_proposal). No new served field/route/state; no unrelated UI work."
+      ],
+      "log": [],
+      "note": "ui/ is OUTSIDE change_budget.counts_production_code_under by design (R168 §2 / R180 note) and is governed by its guard frames (ui_command_static_check + tests/ui for ui/app/command). R186 spends no counted budget; the round's proof is the R186 static guard (RED first) + the extended browser proof that EXERCISES the original failure conditions (a real FAILED execution with an `error` frame at 390 px; a verification:null converse response) + the canonical gate.",
+      "ceiling_history": [
+        "declared 0 at the R186 opening (2026-09-15, R186-DEC-01) from post-R185 main 0d35917c (branch from the R185 closure branch 53432dd1, row 43 rule), BEFORE any production commit. Operator declaration: R186 only for the already-recorded findings F-R185-L01 and F-R185-L02; findings + R185_HANDOFF §8 are the authority; no unrelated UI work. The round THAWS exactly ui/app/command/ (command.css, command.js, index.html; file list unchanged). FROZEN: core/, apps/ (incl. apps/admin_agent/), infrastructure/, core/tools/gate.py, PROJECT_EXECUTION_STATE.md, ui/admin (N0 73 unchanged), ui/app/{app.js,index.html,styles.css}, final_docs_v3 (60_DECISION_LOG.md append-only). A fix that needs a frozen-tree change or a new served field is a STOP, never a ceiling raise. Guard frame (declared here, enforced by tests/ui/test_command_center_fix_r186.py, RED first): ui_command_static_check unchanged (/v1/ <= 12, no new route literal); the R185 guard suite unchanged and still GREEN; L01 rule = the stream frame (.frame) and every element that renders served JSON/text as one token (.error, .turn-fields dd, .evidence, .detail-id) declares a wrapping rule (overflow-wrap:anywhere or word-break:break-all|break-word); L02 rule = command.js never stringifies a possibly-null verification field (the String(v.<field>) pattern is absent) and renders a named 'not available' value that cites stop_reason when verification is null; the token `undefined` never reaches a rendered field. Browser proof rule: the failure condition itself is exercised - (a) a REAL failed execution on the hermetic profile (execution_policy.strategy=agent: the echo adapter cannot produce a valid proposal, stop_reason invalid_proposal, ExecutionStatus FAILED, SSE `error` frame carrying a JSON payload) measured at 390 px (scrollWidth - clientWidth == 0 required); (b) a converse response with verification:null (the hermetic echo profile always proposes a final, so this one /v1/agent/converse response body is substituted at the browser network layer, shape = AgentAnswer with stop_reason reasoning_failed; recorded as a RENDERING proof, not a runtime proof) asserting no rendered `undefined`."
+      ]
+    },
     "round_r181_backend_closure": {
       "ceiling": 3,
       "ceiling_history": "declared 3 BEFORE the first production commit (operator directive: close every defined, actionable backend carry-over before UI; Q6 named explicitly). Q6 option (b) is the only option that closes F-R179-06 completely: (a) reserve-after-row would change the 03 s7 refuse-before-work ordering AND still leave tool calls (call_id, never an executions row) unbindable. Files: infrastructure/db/migrations/versions/0022_usage_ledger_key.py (new), infrastructure/db/tables.py (metadata mirror), apps/composition/runtime.py (one-name flip to the composed durable adapter)",
