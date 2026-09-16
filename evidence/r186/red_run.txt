@@ -1,0 +1,211 @@
+FF...FF.F                                                                [100%]
+=================================== FAILURES ===================================
+______ test_l01_token_rendering_elements_declare_a_wrapping_rule[.frame] _______
+
+selector = '.frame'
+
+    @pytest.mark.parametrize("selector", TOKEN_RENDERING_SELECTORS)
+    def test_l01_token_rendering_elements_declare_a_wrapping_rule(selector: str) -> None:
+        css = _css()
+        rules = _rules_for(selector, css)
+        assert rules, f"{selector} has no rule in command.css"
+>       assert WRAP_RULE.search(rules), (
+            f"{selector} renders served text as one token but declares no wrapping rule "
+            "(F-R185-L01: the error frame JSON overflowed 513 px at 390 px)"
+        )
+E       AssertionError: .frame renders served text as one token but declares no wrapping rule (F-R185-L01: the error frame JSON overflowed 513 px at 390 px)
+E       assert None
+E        +  where None = <built-in method search of re.Pattern object at 0x5610ea5651e0>(' padding: 2px 6px; border-left: 2px solid var(--line); animation: rise 160ms ease-out; ')
+E        +    where <built-in method search of re.Pattern object at 0x5610ea5651e0> = re.compile('overflow-wrap\\s*:\\s*anywhere|word-break\\s*:\\s*(break-all|break-word)').search
+
+tests/ui/test_command_center_fix_r186.py:107: AssertionError
+______ test_l01_token_rendering_elements_declare_a_wrapping_rule[.error] _______
+
+selector = '.error'
+
+    @pytest.mark.parametrize("selector", TOKEN_RENDERING_SELECTORS)
+    def test_l01_token_rendering_elements_declare_a_wrapping_rule(selector: str) -> None:
+        css = _css()
+        rules = _rules_for(selector, css)
+        assert rules, f"{selector} has no rule in command.css"
+>       assert WRAP_RULE.search(rules), (
+            f"{selector} renders served text as one token but declares no wrapping rule "
+            "(F-R185-L01: the error frame JSON overflowed 513 px at 390 px)"
+        )
+E       AssertionError: .error renders served text as one token but declares no wrapping rule (F-R185-L01: the error frame JSON overflowed 513 px at 390 px)
+E       assert None
+E        +  where None = <built-in method search of re.Pattern object at 0x5610ea5651e0>(' color: var(--failed); ')
+E        +    where <built-in method search of re.Pattern object at 0x5610ea5651e0> = re.compile('overflow-wrap\\s*:\\s*anywhere|word-break\\s*:\\s*(break-all|break-word)').search
+
+tests/ui/test_command_center_fix_r186.py:107: AssertionError
+___________ test_l02_no_stringified_field_of_a_nullable_verification ___________
+
+    def test_l02_no_stringified_field_of_a_nullable_verification() -> None:
+        js = _js()
+>       assert not re.search(r"String\(\s*v\.\w+\s*\)", js), (
+            "command.js stringifies a field of `verification` that the contract allows to "
+            "be null (apps/admin_agent/contracts.py:118-122) — this rendered the literal "
+            "`undefined` (F-R185-L02)"
+        )
+E       AssertionError: command.js stringifies a field of `verification` that the contract allows to be null (apps/admin_agent/contracts.py:118-122) — this rendered the literal `undefined` (F-R185-L02)
+E       assert not <re.Match object; span=(24973, 24991), match='String(v.verified)'>
+E        +  where <re.Match object; span=(24973, 24991), match='String(v.verified)'> = <function search at 0x7fe6ee724360>('String\\(\\s*v\\.\\w+\\s*\\)', '\n\nconst state = {\n  token: null,\n  catalog: null,\n  selected: null,\n  health: null,\n  system: null,\n  session... document.getElementById("login-view").hidden = false;\n  document.getElementById("login-password").value = "";\n});\n')
+E        +    where <function search at 0x7fe6ee724360> = re.search
+
+tests/ui/test_command_center_fix_r186.py:115: AssertionError
+__________ test_l02_null_verification_is_named_and_cites_stop_reason ___________
+
+    def test_l02_null_verification_is_named_and_cites_stop_reason() -> None:
+        js = _js()
+        # The rendering names the case instead of leaking `undefined`, and says why
+        # (stop_reason is the served reason: reasoning_failed / invalid_proposal).
+>       assert re.search(r"verification\s*(===|==)\s*null|verification\s*==\s*null|!r\.verification", js), (
+            "command.js does not branch on a null verification"
+        )
+E       AssertionError: command.js does not branch on a null verification
+E       assert None
+E        +  where None = <function search at 0x7fe6ee724360>('verification\\s*(===|==)\\s*null|verification\\s*==\\s*null|!r\\.verification', '\n\nconst state = {\n  token: null,\n  catalog: null,\n  selected: null,\n  health: null,\n  system: null,\n  session... document.getElementById("login-view").hidden = false;\n  document.getElementById("login-password").value = "";\n});\n')
+E        +    where <function search at 0x7fe6ee724360> = re.search
+
+tests/ui/test_command_center_fix_r186.py:126: AssertionError
+___________ test_error_frame_and_null_verification_in_a_real_browser ___________
+
+server = {'base': 'http://127.0.0.1:56713', 'log': PosixPath('/tmp/pytest-of-user/pytest-4/command-center-r1860/server_stdout.txt')}
+
+    def test_error_frame_and_null_verification_in_a_real_browser(server: dict) -> None:
+        base = server["base"]
+        evidence_dir = ROOT / "evidence" / "r186"
+        evidence_dir.mkdir(parents=True, exist_ok=True)
+        token = _admin_token(base)
+    
+        # ---- (a) a REAL failed execution with an `error` frame carrying JSON -------------
+        status, body = _http(
+            "POST",
+            f"{base}/v1/execute",
+            {"ask": "r186 error-frame proof", "execution_policy": {"strategy": "agent"}},
+            token=token,
+        )
+        assert status == 502, (status, body)
+        assert body["error"]["code"] == "execution_failed", body
+        failed_id = body["error"]["details"]["execution_id"]
+        status, record = _http("GET", f"{base}/v1/executions/{failed_id}", token=token)
+        assert status == 200 and record["status"] == "failed", record
+    
+        console_errors: list[str] = []
+        with sync_playwright() as p:
+            try:
+                browser = p.chromium.launch()
+            except PlaywrightError as exc:
+                pytest.fail(
+                    "chromium not launchable for playwright — run `python -m playwright install "
+                    "chromium`; first line: " + str(exc).splitlines()[0]
+                )
+            page = browser.new_page(viewport={"width": 390, "height": 844})
+            page.on("console", lambda m: console_errors.append(m.text) if m.type == "error" else None)
+            page.on("pageerror", lambda e: console_errors.append(str(e)))
+    
+            page.goto(f"{base}/app/command/", wait_until="load")
+            page.fill("#login-email", ADMIN_EMAIL)
+            page.fill("#login-password", PASSWORD)
+            page.click("#login-form button[type=submit]")
+            page.wait_for_selector("#center-view:not([hidden])", timeout=15000)
+            page.wait_for_function(
+                "() => document.querySelectorAll('#execution-orbit .exec-dot').length > 0",
+                timeout=15000,
+            )
+            overflow_before = page.evaluate(OVERFLOW_JS)
+    
+            # Select the failed execution from the orbit → the events stream is replayed.
+            dot = page.locator(f"#execution-orbit .exec-dot[data-id='{failed_id}']")
+            assert dot.count() == 1, "failed execution not in the orbit"
+            assert dot.get_attribute("data-state") == "failed"
+            dot.focus()
+            page.keyboard.press("Enter")
+            page.wait_for_function(
+                "() => { const l = document.querySelectorAll('#stream-log li'); "
+                "return l.length > 0 && l[l.length - 1].getAttribute('data-type') === 'error'; }",
+                timeout=20000,
+            )
+            error_frame_text = page.text_content("#stream-log li[data-type=error]") or ""
+            assert error_frame_text.startswith("error {"), error_frame_text
+            assert "invalid_proposal" in error_frame_text, error_frame_text
+            error_frame_width = page.evaluate(
+                "() => document.querySelector('#stream-log li[data-type=error]').scrollWidth"
+            )
+            overflow_after_error_frame = page.evaluate(OVERFLOW_JS)
+            page.screenshot(path=str(evidence_dir / "error_frame_390.png"), full_page=True)
+    
+            # The hermetic invalid_proposal payload contains spaces (break opportunities), so
+            # it proves the PATH but not the WIDTH condition. Replay the RECORDED live error
+            # frame (evidence/r185/live_preview/events.txt — the served Groq
+            # invalid_credential frame that produced the 513 px overflow) through the same
+            # stream reader: the longest token is ~120 characters without a break.
+            def _recorded_events(route):  # type: ignore[no-untyped-def]
+                route.fulfill(status=200, content_type="text/event-stream", body=RECORDED_LIVE_EVENTS)
+    
+            page.route("**/v1/executions/*/events", _recorded_events)
+            dot.focus()
+            page.keyboard.press("Enter")
+            page.wait_for_function(
+                "() => { const l = document.querySelector('#stream-log li[data-type=error]'); "
+                "return l && l.textContent.includes('organization_restricted'); }",
+                timeout=20000,
+            )
+            page.unroute("**/v1/executions/*/events")
+            live_frame_text = page.text_content("#stream-log li[data-type=error]") or ""
+            live_frame_width = page.evaluate(
+                "() => document.querySelector('#stream-log li[data-type=error]').scrollWidth"
+            )
+            overflow_after_live_frame = page.evaluate(OVERFLOW_JS)
+            page.screenshot(path=str(evidence_dir / "live_error_frame_390.png"), full_page=True)
+    
+            # ---- (b) verification: null rendering (network-layer substitution) ----------
+            def _null_verification(route):  # type: ignore[no-untyped-def]
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps(NULL_VERIFICATION_ANSWER),
+                )
+    
+            page.route("**/v1/agent/converse", _null_verification)
+            page.fill("#converse-message", "r186 null-verification rendering proof")
+            page.click("#converse-form button[type=submit]")
+            page.wait_for_function(
+                "() => document.querySelectorAll('#converse-turns .turn-response').length > 0",
+                timeout=15000,
+            )
+            page.unroute("**/v1/agent/converse")
+            fields = page.evaluate(
+                "() => { const dl = document.querySelector('#converse-turns .turn-response dl');"
+                " const out = {}; if (!dl) return out; const dts = dl.querySelectorAll('dt');"
+                " dts.forEach(dt => { out[dt.textContent] = dt.nextElementSibling.textContent; });"
+                " return out; }"
+            )
+            overflow_after_turn = page.evaluate(OVERFLOW_JS)
+            page.screenshot(path=str(evidence_dir / "null_verification_390.png"), full_page=True)
+            browser.close()
+    
+        # ---- assertions: the ORIGINAL failure conditions -----------------------------------
+        assert overflow_before == 0, overflow_before
+        undefined_fields = {k: v for k, v in fields.items() if "undefined" in v}
+        problems = []
+        if overflow_after_error_frame != 0 or overflow_after_live_frame != 0:
+            problems.append(
+                f"F-R185-L01 still present: {overflow_after_error_frame}px overflow at 390px after "
+                f"the real invalid_proposal frame (scrollWidth {error_frame_width}px); "
+                f"{overflow_after_live_frame}px after the recorded live invalid_credential frame "
+                f"(scrollWidth {live_frame_width}px)"
+            )
+        if undefined_fields:
+            problems.append(f"F-R185-L02 still present: {undefined_fields}")
+>       assert not problems, "; ".join(problems)
+E       AssertionError: F-R185-L01 still present: 0px overflow at 390px after the real invalid_proposal frame (scrollWidth 334px); 511px after the recorded live invalid_credential frame (scrollWidth 855px); F-R185-L02 still present: {'verification.verified': 'undefined', 'verification.claims_admitted': 'undefined', 'verification.claims_refused': 'undefined', 'verification.tool_calls_ok': 'undefined', 'verification.tool_calls_total': 'undefined'}
+E       assert not ['F-R185-L01 still present: 0px overflow at 390px after the real invalid_proposal frame (scrollWidth 334px); 511px aft...laims_refused': 'undefined', 'verification.tool_calls_ok': 'undefined', 'verification.tool_calls_total': 'undefined'}"]
+
+tests/ui/test_command_center_fix_r186.py:401: AssertionError
+=========================== short test summary info ============================
+FAILED tests/ui/test_command_center_fix_r186.py::test_l01_token_rendering_elements_declare_a_wrapping_rule[.frame]
+FAILED tests/ui/test_command_center_fix_r186.py::test_l01_token_rendering_elements_declare_a_wrapping_rule[.error]
+FAILED tests/ui/test_command_center_fix_r186.py::test_l02_no_stringified_field_of_a_nullable_verification
+FAILED tests/ui/test_command_center_fix_r186.py::test_l02_null_verification_is_named_and_cites_stop_reason
+FAILED tests/ui/test_command_center_fix_r186.py::test_error_frame_and_null_verification_in_a_real_browser
