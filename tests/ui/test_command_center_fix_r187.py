@@ -245,7 +245,7 @@ STORAGE_JS = """() => ({
 
 
 def _login(page, base: str) -> None:
-    page.goto(f"{base}/ui/app/command/", wait_until="networkidle")
+    page.goto(f"{base}/app/command/", wait_until="load")
     page.fill("#login-email", ADMIN_EMAIL)
     page.fill("#login-password", PASSWORD)
     page.click("#login-form button[type=submit]")
@@ -275,7 +275,7 @@ def test_session_survives_reload_and_core_is_centred_in_a_real_browser(server: d
         _login(page, base)
 
         # F-CS1-01 — reload keeps the admin session (token custody in sessionStorage only)
-        page.reload(wait_until="networkidle")
+        page.reload(wait_until="load")
         page.wait_for_selector("#center-view:not([hidden])", timeout=15000)
         storage = page.evaluate(STORAGE_JS)
         proof["checks"].append({"id": "F-CS1-01/reload_keeps_session", "storage": storage})
@@ -305,7 +305,7 @@ def test_session_survives_reload_and_core_is_centred_in_a_real_browser(server: d
         # logout clears custody; a reload must land on the login view
         page.click("#logout")
         page.wait_for_selector("#login-view:not([hidden])", timeout=10000)
-        page.reload(wait_until="networkidle")
+        page.reload(wait_until="load")
         page.wait_for_selector("#login-view:not([hidden])", timeout=10000)
         storage_after = page.evaluate(STORAGE_JS)
         proof["checks"].append({"id": "F-CS1-01/logout_clears", "storage": storage_after})
