@@ -123,9 +123,8 @@ def test_l02_null_verification_is_named_and_cites_stop_reason() -> None:
     js = _js()
     # The rendering names the case instead of leaking `undefined`, and says why
     # (stop_reason is the served reason: reasoning_failed / invalid_proposal).
-    assert re.search(r"verification\s*(===|==)\s*null|verification\s*==\s*null|!r\.verification", js), (
-        "command.js does not branch on a null verification"
-    )
+    null_branch = re.compile(r"verification\s*(===|==)\s*null|!r\.verification")
+    assert null_branch.search(js), "command.js does not branch on a null verification"
     assert re.search(r"no verification|not verified|verification unavailable", js, re.I), (
         "command.js does not NAME the null-verification case"
     )
@@ -196,7 +195,13 @@ def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict]:
     )
     for name in list(env):
         if name in ("DATABASE_URL", "REDIS_URL") or name.startswith(
-            ("GROQ_API_KEY", "GSK_API_KEY", "GW_GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")
+            (
+                "GROQ_API_KEY",
+                "GSK_API_KEY",
+                "GW_GROQ_API_KEY",
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+            )
         ):
             env.pop(name, None)
     log_path = tmp_path_factory.mktemp("command-center-r186") / "server_stdout.txt"
