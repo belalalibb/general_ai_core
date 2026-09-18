@@ -7,6 +7,7 @@ Architecture invariant: Router decides; Execution executes (02).
 """
 
 from core.routing.bootstrap import BootstrapRouter
+from core.routing.capacity import Eligibility, ResourceSignalBoard, ResourceSignalPort
 from core.routing.errors import (
     BootstrapNotConfigured,
     FallbackNotConfigured,
@@ -19,6 +20,9 @@ from core.routing.resources import ResourceSelector
 from core.routing.router import SimpleScoringRouter, UnsupportedPolicyType
 
 __all__ = [
+    "Eligibility",
+    "ResourceSignalBoard",
+    "ResourceSignalPort",
     "BootstrapNotConfigured",
     "BootstrapRouter",
     "FallbackNotConfigured",

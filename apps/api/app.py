@@ -126,7 +126,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Awaitable, Callable, MutableMapping
+from collections.abc import Awaitable, Callable, Mapping, MutableMapping
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Annotated
@@ -197,6 +197,7 @@ from core.contracts.execute import (
     WebhookEventType,
 )
 from core.contracts.execution import Execution, ExecutionNodeStatus, ExecutionStrategy
+from core.contracts.execution_strategy import ExecutionStrategySpec
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
 from core.contracts.model_policy import (
     AgentNodeMappingPolicy,
@@ -233,13 +234,15 @@ from core.execution.service import (
     ExecutionService,
     PipelineStage,
 )
+from core.execution.strategy import StrategyExecutor, UnknownTemplate
 from core.identity.errors import SessionInvalid
 from core.learning import LearningError, LearningLifecycleService, TrainingEligibilityGate
 from core.learning.lifecycle import LearningCustodyPort
 from core.learning.storage import LearningStorageConflict, LearningStorageError
 from core.memory.errors import ConversationNotFound
 from core.memory.ports import ConversationStorePort, MemoryStorePort
-from core.providers.registry import BindingRegistry, ModelRegistry
+from core.providers.errors import ProviderNotRegistered
+from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.roles.errors import RoleNotRegistered, RoleNotSelectable
 from core.roles.registry import RoleRegistry, SkillRegistry
 from core.routing.errors import (
@@ -476,6 +479,8 @@ def create_app(
     admin: AdminSurface | None = None,
     models: ModelRegistry | None = None,
     bindings: BindingRegistry | None = None,
+    providers: ProviderRegistry | None = None,
+    strategy_templates: Mapping[str, ExecutionStrategySpec] | None = None,
     usage: UsageAccountingPort | None = None,
     webhooks: bool = False,
     rate_limits: RateLimitPort | None = None,
@@ -611,6 +616,11 @@ def create_app(
     # 10 §13.4 explicit_models seam — composed over the SAME router and
     # execution service (Router still decides every branch; 02 inv. 5).
     multi_model_executor = MultiModelExecutor(router=router, execution=execution_service)
+    # R188 C3 execution-strategy seam — composed over the SAME router and
+    # execution service (every stage is a routed, stored child execution).
+    strategy_executor = StrategyExecutor(
+        router=router, execution=execution_service, templates=strategy_templates
+    )
     skill_registry = skills if skills is not None else SkillRegistry()
     role_registry = roles if roles is not None else RoleRegistry()
     # Idempotency index (10 §10): (tenant_id, key) -> execution_id.
@@ -863,6 +873,44 @@ def create_app(
                     f"slice: {policy.strategy!r} (supported: "
                     f"{', '.join(sorted(_RUNNABLE_STRATEGIES))})",
                     details={"field": "execution_policy.strategy"},
+                )
+        # --- R188 C3: caller-defined execution structure (sync only) ---------
+        # Present ⇒ the StrategyExecutor runs the plan through the ONE router
+        # and ONE execution service. It composes with request-level
+        # ``model_policy`` only when that policy is a NODE policy (it becomes
+        # the AUTO plan's / policy-less stages' default); agent_node_mapping,
+        # the agent strategy and the async path each already define HOW the
+        # request executes — two structures at once is refused loudly.
+        strategy_spec = body.execution_strategy
+        if strategy_spec is not None:
+            if policy is not None and policy.async_ is True:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "execution_strategy runs synchronously in this slice.",
+                    details={"field": "execution_policy.async"},
+                )
+            if policy is not None and policy.strategy == AGENT_STRATEGY:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "execution_strategy cannot be combined with execution_policy.strategy=agent.",
+                    details={"field": "execution_strategy"},
+                )
+            if isinstance(body.model_policy, AgentNodeMappingPolicy):
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "execution_strategy cannot be combined with "
+                    "model_policy.type=agent_node_mapping.",
+                    details={"field": "execution_strategy"},
+                )
+            try:
+                strategy_spec = strategy_executor.resolve(
+                    strategy_spec, request_model_policy=body.model_policy
+                )
+            except UnknownTemplate as exc:
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    str(exc),
+                    details={"field": "execution_strategy.template_id"},
                 )
         # --- agent strategy (R160): the SHARED core.agent runtime ------------
         # Absent seam ⇒ loud rejection (never a silent single-shot). Present
@@ -1141,6 +1189,14 @@ def create_app(
         # request loudly, named by node — never a silent downgrade.
         decision = None
         node_decisions: list[tuple[str, RoutingDecision]] = []
+        # R188 A5: the caller's explicit capability/modality requirements ride
+        # into EVERY RoutingRequest of this call (11 §2 → 11 §5); absent ⇒ [].
+        required_capabilities = (
+            list(body.requirements.capabilities) if body.requirements is not None else []
+        )
+        required_modalities = (
+            list(body.requirements.modalities) if body.requirements is not None else []
+        )
         if node_sequence:
             for node_key, node_policy in node_sequence:
                 try:
@@ -1151,6 +1207,8 @@ def create_app(
                                 RoutingRequest(
                                     operation=ProviderOperation.GENERATE_TEXT,
                                     model_policy=node_policy,
+                                    required_capabilities=required_capabilities,
+                                    required_modalities=required_modalities,
                                 )
                             ),
                         )
@@ -1175,10 +1233,12 @@ def create_app(
                     )
                 except FallbackNotConfigured as exc:
                     return error_response(ErrorCode.MODEL_UNAVAILABLE, str(exc))
-        elif multi_model_policy is None:
+        elif multi_model_policy is None and strategy_spec is None:
             routing_request = RoutingRequest(
                 operation=ProviderOperation.GENERATE_TEXT,
                 model_policy=effective_policy,
+                required_capabilities=required_capabilities,
+                required_modalities=required_modalities,
             )
             try:
                 decision = router.route(routing_request)
@@ -1189,15 +1249,20 @@ def create_app(
                     details={"field": "model_policy"},
                 )
             except NoEligibleCandidates as exc:
+                # R188 A2/A5: when runtime resource signals emptied the pool,
+                # the router names the earliest moment a candidate may be
+                # eligible again — surfaced as WAIT data (additive detail key).
+                unavailable_details: JsonObject = {
+                    "excluded": [
+                        record.model_dump(mode="json", exclude_none=True) for record in exc.excluded
+                    ]
+                }
+                if exc.retry_after_ms is not None:
+                    unavailable_details["retry_after_ms"] = exc.retry_after_ms
                 return error_response(
                     ErrorCode.MODEL_UNAVAILABLE,
                     "No eligible model candidates for this request.",
-                    details={
-                        "excluded": [
-                            record.model_dump(mode="json", exclude_none=True)
-                            for record in exc.excluded
-                        ]
-                    },
+                    details=unavailable_details,
                 )
             except FallbackNotConfigured as exc:
                 return error_response(ErrorCode.MODEL_UNAVAILABLE, str(exc))
@@ -1367,6 +1432,26 @@ def create_app(
                     idempotency_key=idempotency_key,
                     conversation_id=conversation_id,
                 )
+            elif strategy_spec is not None:
+                # R188 C3: stages route+execute inside the StrategyExecutor
+                # (Router decides every stage; each stage is its own stored
+                # child execution). The API persists the projected report.
+                strategy_report = await strategy_executor.execute(
+                    spec=strategy_spec,
+                    tenant_id=caller.tenant_id,
+                    user_id=caller.user_id,
+                    ask=body.ask,
+                    base_payload={k: v for k, v in payload.items() if k != "ask"},
+                    operation=ProviderOperation.GENERATE_TEXT,
+                    required_capabilities=required_capabilities,
+                    request_hash=_request_hash(body),
+                    idempotency_key=idempotency_key,
+                    conversation_id=conversation_id,
+                )
+                for stage_outcome in strategy_report.outcomes:
+                    if stage_outcome.report is not None:
+                        execution_store.put(stage_outcome.report)
+                report = strategy_report.report
             elif multi_model_policy is not None:
                 # 10 §13.4: branches route+execute inside the executor; the
                 # API responds with the strategy's final report (winner or
@@ -1526,6 +1611,21 @@ def create_app(
     if models is not None and bindings is not None:
         model_registry = models
         binding_registry = bindings
+        provider_registry = providers
+        # R188 C4: provider keys ride the row ONLY when the provider registry
+        # seam is bound (row shape unchanged otherwise); an unknown id is
+        # omitted, never a fabricated key.
+        _provider_key: Callable[[UUID], str | None] | None = None
+        if provider_registry is not None:
+            bound_registry = provider_registry
+
+            def _lookup_provider_key(provider_id: UUID) -> str | None:
+                try:
+                    return bound_registry.get_by_id(provider_id).provider.provider_key
+                except ProviderNotRegistered:
+                    return None
+
+            _provider_key = _lookup_provider_key
 
         @app.get("/v1/models")
         async def list_models() -> Response:
@@ -1537,7 +1637,11 @@ def create_app(
             """
             response = ModelsListResponse(
                 models=[
-                    ModelListEntry.from_model(model, binding_registry.bindings_for_model(model.id))
+                    ModelListEntry.from_model(
+                        model,
+                        binding_registry.bindings_for_model(model.id),
+                        provider_keys=_provider_key,
+                    )
                     for model in model_registry.active_models()
                 ]
             )

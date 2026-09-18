@@ -20,9 +20,19 @@ class NoEligibleCandidates(RoutingError):
     without re-running the router ("fail clearly", 11 §14).
     """
 
-    def __init__(self, message: str, excluded: list[ExclusionRecord]) -> None:
+    def __init__(
+        self,
+        message: str,
+        excluded: list[ExclusionRecord],
+        *,
+        retry_after_ms: int | None = None,
+    ) -> None:
         super().__init__(message)
         self.excluded = excluded
+        # R188 A2: when runtime resource signals emptied the pool, the earliest
+        # moment a candidate may become eligible again — WAIT data for the
+        # caller (never a busy loop inside the router). None = no such hint.
+        self.retry_after_ms = retry_after_ms
 
 
 class FallbackNotConfigured(RoutingError):

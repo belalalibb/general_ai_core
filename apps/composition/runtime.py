@@ -156,6 +156,7 @@ from core.memory.preferences import PreferenceLearningGate
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.roles.registry import RoleRegistry, SkillRegistry
+from core.routing.capacity import ResourceSignalBoard
 from core.routing.router import SimpleScoringRouter
 from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
 from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
@@ -759,13 +760,19 @@ def build_runtime_profile(
         audit = InMemoryAuditLog()
 
     # --- routing + execution (the SAME instances everywhere) -----------------
-    router = SimpleScoringRouter(providers, models, binding_registry)
+    # R188 A6: ONE runtime resource-signal board shared by the router (reads
+    # eligibility) and every ExecutionService (writes normalized outcomes) —
+    # sync path AND the async worker factory below — so a rate-limited or
+    # unavailable (provider, model) stops receiving work until it recovers.
+    resource_signals = ResourceSignalBoard()
+    router = SimpleScoringRouter(providers, models, binding_registry, signals=resource_signals)
     execution_service = ExecutionService(
         adapters=adapters,
         credential_refs=credential_refs,
         bindings=binding_registry,
         usage=usage,
         max_retries_per_candidate=_provider_retries(env_dict),
+        signals=resource_signals,
     )
 
     # --- durable branch (DATABASE_URL) — bridge/bindings built above -------
@@ -1039,6 +1046,10 @@ def build_runtime_profile(
             "identity_mode": "auth" if demo_principal is None else "hybrid",
             "provider_keys": list(provider_keys),
             "admin_emails_configured": len(admin_emails),
+            # R188 A6: served truth of the runtime resource signals (normalized
+            # vocabulary only — see core/routing/capacity.py). Empty list = no
+            # (provider, model) has reported a capacity/availability signal.
+            "resource_signals": resource_signals.snapshot(),
         }
 
     # --- context composition (13 §5) — same registry/store instances ---------
@@ -1092,6 +1103,7 @@ def build_runtime_profile(
         admin=admin,
         models=models,
         bindings=binding_registry,
+        providers=providers,  # R188 C4: /v1/models rows name their providers
         usage=usage,
         webhooks=True,
         rate_limits=InMemoryRateLimiter(),
@@ -1201,6 +1213,7 @@ def build_runtime_profile(
             bindings=binding_registry,
             usage=usage,
             id_factory=lambda: execution_id,
+            signals=resource_signals,
         )
 
     handler = ExecutionMessageHandler(

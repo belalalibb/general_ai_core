@@ -118,6 +118,7 @@ from core.execution.errors import (
 )
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry
+from core.routing.capacity import ResourceSignalPort
 from core.usage.ports import UsageAccountingPort
 
 # Categories that indict the REQUEST itself: no retry, no failover — another
@@ -252,6 +253,7 @@ class ExecutionService:
         clock: Callable[[], datetime] = utc_now,
         account_credentials: Mapping[UUID, str] | None = None,
         audit: AuditLogPort | None = None,
+        signals: ResourceSignalPort | None = None,
     ) -> None:
         if max_retries_per_candidate < 0:
             msg = "max_retries_per_candidate must be >= 0"
@@ -275,6 +277,11 @@ class ExecutionService:
         )
         # R168 D-04: optional PROVIDER_ACCOUNT_USED emitter (40 §audit).
         self._audit = audit
+        # R188 A3: optional runtime resource-signal sink. Every attempt outcome
+        # is reported as NORMALIZED data (category / retry_after / success) so
+        # the ONE router stops sending work into a known-exhausted resource.
+        # The failover walk below is unchanged — this only closes the loop.
+        self._signals = signals
         self._bindings = bindings
         self._max_retries = max_retries_per_candidate
         self._sleeper = sleeper if sleeper is not None else _default_sleeper
@@ -533,8 +540,15 @@ class ExecutionService:
                     payload=payload,
                     timeout_ms=timeout_ms,
                 )
+                if self._signals is not None:
+                    self._signals.record_attempt(
+                        provider_id=candidate.provider_id,
+                        model_id=candidate.model_id,
+                        limits=binding.limits_metadata,
+                    )
                 response, error = await self._attempt(adapter, request)
                 succeeded = response is not None and response.succeeded
+                self._report_signal(candidate, succeeded=succeeded, error=error)
                 attempts.append(
                     AttemptRecord(
                         node_key=stage.node_key,
@@ -576,6 +590,21 @@ class ExecutionService:
                 break  # provider failover: next candidate in Router order
 
         return _NodeRun(attempts=tuple(attempts), response=None, error=last_error)
+
+    def _report_signal(
+        self, candidate: CandidateScore, *, succeeded: bool, error: ProviderError | None
+    ) -> None:
+        """R188 A3: fold one attempt outcome into the shared resource signals."""
+        if self._signals is None:
+            return
+        if succeeded:
+            self._signals.record_success(
+                provider_id=candidate.provider_id, model_id=candidate.model_id
+            )
+        elif error is not None:
+            self._signals.record_error(
+                provider_id=candidate.provider_id, model_id=candidate.model_id, error=error
+            )
 
     async def _attempt(
         self, adapter: ProviderAdapterPort, request: ProviderGenerateRequest

@@ -23,9 +23,19 @@ availability is a per-binding fact (never inferred).
 
 Filters this slice does NOT implement (they require services that do not
 exist yet and are deferred to their own phases, never faked): tenant/plan
-entitlement, rate-limit budget, data-boundary, tool permissions (11 §5).
-The eligibility pipeline is ordered so those filters slot in ahead of
-scoring without contract changes.
+entitlement, data-boundary, tool permissions (11 §5). The eligibility
+pipeline is ordered so those filters slot in ahead of scoring without
+contract changes.
+
+R188 A2 — the previously deferred RATE-LIMIT / CAPACITY filter is now real:
+an optional :class:`~core.routing.capacity.ResourceSignalPort` (the ONE
+signal board the execution service writes to) answers per (provider, model)
+whether the resource is eligible NOW (cooldown from a normalized
+rate_limited/quota error, provider-scope unavailability, declared RPM budget
+consumed). Ineligible candidates are EXCLUDED with an explainable record —
+the same deny-by-default posture as every other 11 §5 filter. When the
+filter empties the pool, :class:`NoEligibleCandidates` carries the earliest
+``retry_after_ms`` so callers can wait instead of failing blindly.
 """
 
 from __future__ import annotations
@@ -54,6 +64,7 @@ from core.providers.registry import (
     ProviderRegistry,
     RegisteredProvider,
 )
+from core.routing.capacity import ResourceSignalPort
 from core.routing.errors import (
     FallbackNotConfigured,
     NoEligibleCandidates,
@@ -104,6 +115,7 @@ class SimpleScoringRouter:
         *,
         default_weights: ScoringWeights | None = None,
         admin_fallback_chain: tuple[str, ...] | None = None,
+        signals: ResourceSignalPort | None = None,
     ) -> None:
         self._providers = providers
         self._models = models
@@ -111,6 +123,8 @@ class SimpleScoringRouter:
         self._default_weights = default_weights or ScoringWeights()
         # 11 §8 admin_defined_chain: ordered model_keys, admin-configured.
         self._admin_fallback_chain = admin_fallback_chain
+        # R188 A2: runtime resource signals (None ⇒ static eligibility only).
+        self._signals = signals
 
     # -- admin seam (21 §6 routing-policy weights) ----------------------------------
 
@@ -144,11 +158,14 @@ class SimpleScoringRouter:
 
         weights = request.weights if request.weights is not None else self._default_weights
         excluded: list[ExclusionRecord] = []
-        candidates = self._eligible_candidates(request, policy, excluded)
+        retry_hints: list[int] = []
+        candidates = self._eligible_candidates(request, policy, excluded, retry_hints)
 
         if not candidates:
             msg = "no eligible model/provider candidates (11 §5: unknown = ineligible)"
-            raise NoEligibleCandidates(msg, excluded)
+            raise NoEligibleCandidates(
+                msg, excluded, retry_after_ms=min(retry_hints) if retry_hints else None
+            )
 
         ranked = self._rank(candidates, policy, weights)
         fallback_policy = self._resolve_fallback_scope(policy)
@@ -163,7 +180,7 @@ class SimpleScoringRouter:
             widened_excluded: list[ExclusionRecord] = []
             others = [
                 c
-                for c in self._eligible_candidates(request, _AUTO_POLICY, widened_excluded)
+                for c in self._eligible_candidates(request, _AUTO_POLICY, widened_excluded, [])
                 if c.model.model_key != policy.model_id
             ]
             pool = ranked + self._rank(others, policy, weights)
@@ -204,6 +221,7 @@ class SimpleScoringRouter:
         request: RoutingRequest,
         policy: ModelPolicy,
         excluded: list[ExclusionRecord],
+        retry_hints: list[int],
     ) -> list[_Candidate]:
         required_caps = self._required_capabilities(request)
         required_modalities = self._required_modalities(request)
@@ -222,7 +240,9 @@ class SimpleScoringRouter:
             if exclusion is not None:
                 excluded.append(ExclusionRecord(model_key=model.model_key, reason=exclusion))
                 continue
-            candidates.extend(self._provider_candidates(model, policy, providers_by_id, excluded))
+            candidates.extend(
+                self._provider_candidates(model, policy, providers_by_id, excluded, retry_hints)
+            )
         return candidates
 
     def _candidate_models(
@@ -287,6 +307,7 @@ class SimpleScoringRouter:
         policy: ModelPolicy,
         providers_by_id: dict[UUID, RegisteredProvider],
         excluded: list[ExclusionRecord],
+        retry_hints: list[int],
     ) -> list[_Candidate]:
         """Bind an eligible model to its eligible providers (per-binding facts)."""
         out: list[_Candidate] = []
@@ -336,6 +357,23 @@ class SimpleScoringRouter:
                     )
                 )
                 continue
+            if self._signals is not None:
+                # R188 A2: runtime capacity/availability filter (11 §5 position
+                # the module docstring had recorded as deferred). O(1) lookup.
+                signal = self._signals.eligibility(
+                    binding.provider_id, binding.model_id, limits=binding.limits_metadata
+                )
+                if not signal.eligible:
+                    excluded.append(
+                        ExclusionRecord(
+                            model_key=model.model_key,
+                            provider_key=provider_key,
+                            reason=f"resource signal: {signal.reason}",
+                        )
+                    )
+                    if signal.retry_after_ms is not None:
+                        retry_hints.append(signal.retry_after_ms)
+                    continue
 
             reasons = [
                 f"model '{model.model_key}' active in tier '{model.tier.value}'",
