@@ -826,6 +826,26 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r188": {
+      "ceiling": 24,
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "A. Provider/Model/Routing closure: capacity-aware eligibility (RPM first, extensible dimensions) consumed by the EXISTING SimpleScoringRouter; runtime health/rate-limit signals fed back from ExecutionService outcomes (no second health system); model-only requests keep resolving providers dynamically; same-model-different-provider stays the default fallback; explicit provider+model preserved; capability requirements carried additively from the API edge into RoutingRequest.",
+        "B. Learning/Evaluation closure: verify and close the carry-overs that the CURRENT tree still leaves open (gate-before-answer, feedback signal-only separation, GOLD promotion custody/provenance, tenant isolation, poisoned-input regression); anything needing a training consumer stays an explicit deferred item.",
+        "C. Agent execution customization foundation: an ADDITIVE caller-defined execution strategy (stages with per-stage NodeModelPolicy, sequential/parallel where the execution model permits, review/retest stages) resolved by the ONE router and executed by the ONE ExecutionService; AUTO stays a real bounded strategy; templates optional, never enforced."
+      ],
+      "log": [],
+      "note": "Operator directive R188 (2026-09-16): 'NO ARTIFICIAL CHANGE CEILING ... The safety boundary is architectural, not numerical.' The number 24 is therefore NOT a budget the operator set; it is the guard's bookkeeping ceiling so that check_repo.sh step 6 (changes_used <= ceiling, log consistent) keeps counting every production file touched. Every counted file MUST still appear in `log` with loc + summary. If the coherent slice genuinely needs more files, raise this number in the same commit that adds the log rows and say so in ceiling_history — never leave a file unlogged.",
+      "ceiling_history": [
+        "declared 24 (bookkeeping, see note) at the R188 opening (2026-09-16, R188-DEC-01) from post-R187 main cc6c3537, BEFORE any production commit."
+      ]
+    },
     "round_r187": {
       "ceiling": 0,
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
