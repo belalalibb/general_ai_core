@@ -1448,9 +1448,9 @@ def create_app(
                     idempotency_key=idempotency_key,
                     conversation_id=conversation_id,
                 )
-                for outcome in strategy_report.outcomes:
-                    if outcome.report is not None:
-                        execution_store.put(outcome.report)
+                for stage_outcome in strategy_report.outcomes:
+                    if stage_outcome.report is not None:
+                        execution_store.put(stage_outcome.report)
                 report = strategy_report.report
             elif multi_model_policy is not None:
                 # 10 §13.4: branches route+execute inside the executor; the
