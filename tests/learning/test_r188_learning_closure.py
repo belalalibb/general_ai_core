@@ -42,6 +42,7 @@ from core.evaluation.policy import EvaluationPolicyService
 from core.learning import (
     GOLD_KNOWLEDGE_SOURCE,
     EligibilitySignals,
+    LearningError,
     LearningLifecycleService,
     NotEligibleForTraining,
     PromotionDenied,
@@ -109,9 +110,7 @@ class TestGateBeforeAnswer:
         assert service.ask_learned(TENANT, KEY)["found"] is False
         assert service.learned_keys(TENANT) == ()
 
-    def test_one_failed_promotion_gate_keeps_the_answer_closed(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_one_failed_promotion_gate_keeps_the_answer_closed(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         sample = _captured_and_evaluated(service)
         service.admit_to_training(TENANT, sample.id, ALL_ELIGIBLE)
@@ -145,8 +144,11 @@ class TestPoisonedInputRegression:
         after = service.get(TENANT, sample.id)
         assert after.eligibility is not LearningEligibility.ELIGIBLE
         assert after.dataset_id is None
-        with pytest.raises((PromotionDenied, NotEligibleForTraining)):
+        # The lifecycle refuses BEFORE the promotion gate runs (22 §8 order):
+        # no eligibility ⇒ no promotion, named as a LearningError.
+        with pytest.raises(LearningError) as blocked:
             service.promote_to_gold(TENANT, sample.id, ALL_PROMOTABLE, actor_id=ADMIN)
+        assert "eligibility" in str(blocked.value)
         assert service.ask_learned(TENANT, KEY)["found"] is False
 
 
@@ -180,9 +182,7 @@ class TestGoldCustodyAndProvenance:
 
 
 class TestTenantIsolationOnRetrieval:
-    def test_neighbour_asking_same_key_gets_explicit_not_found(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_neighbour_asking_same_key_gets_explicit_not_found(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         sample = _captured_and_evaluated(service)
         service.admit_to_training(TENANT, sample.id, ALL_ELIGIBLE)
@@ -198,9 +198,7 @@ class TestTenantIsolationOnRetrieval:
 
 
 class TestMeasuredNotAsserted:
-    def test_capability_delta_reports_gained_and_still_missing(
-        self, world: dict[str, Any]
-    ) -> None:
+    def test_capability_delta_reports_gained_and_still_missing(self, world: dict[str, Any]) -> None:
         service: LearningLifecycleService = world["service"]
         probes = [KEY, "never.learned"]
         before = service.capability_snapshot(TENANT, probes)
