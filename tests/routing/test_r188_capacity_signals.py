@@ -392,7 +392,9 @@ def test_two_thousand_bindings_route_in_bounded_time() -> None:
             w.board.record_error(
                 provider_id=w.by_key[key].id,
                 model_id=w.model.id,
-                error=_err(ProviderErrorCategory.RATE_LIMITED, retryable=True, retry_after_ms=60_000),
+                error=_err(
+                    ProviderErrorCategory.RATE_LIMITED, retryable=True, retry_after_ms=60_000
+                ),
             )
     started = time.perf_counter()
     decision = w.route(AutoModelPolicy(type="auto", allow_fallback=False))

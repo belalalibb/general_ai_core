@@ -1,0 +1,13 @@
+# RED — tests/routing/test_r188_capacity_signals.py
+# Tree: core/routing/router.py, core/routing/errors.py, core/execution/service.py at 6d72bf5d (BEFORE A2/A3),
+#       with the new core/routing/capacity.py present so the module imports.
+# At 6d72bf5d WITHOUT capacity.py the module fails at import (ModuleNotFoundError: core.routing.capacity) —
+#       verified: `git ls-tree 6d72bf5d core/routing/ | grep -c capacity` = 0.
+# Result: 1 passed (model-only routing already worked on the old tree) / 6 FAILED —
+#         the router ignored runtime signals and the execution service reported nothing.
+FAILED tests/routing/test_r188_capacity_signals.py::test_rate_limited_provider_fails_over_same_model_and_is_excluded_next_time
+FAILED tests/routing/test_r188_capacity_signals.py::test_declared_rpm_is_a_real_eligibility_constraint_and_traffic_distributes
+FAILED tests/routing/test_r188_capacity_signals.py::test_all_candidates_cooling_reports_earliest_retry_after_instead_of_blind_failure
+FAILED tests/routing/test_r188_capacity_signals.py::test_explicit_provider_and_model_still_work_and_never_outrank_availability
+FAILED tests/routing/test_r188_capacity_signals.py::test_board_holds_only_normalized_signals_never_provider_internals
+FAILED tests/routing/test_r188_capacity_signals.py::test_two_thousand_bindings_route_in_bounded_time
