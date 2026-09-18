@@ -1,0 +1,6 @@
+# R188 slice C — RED (test against tree ead7a2c3: no core/contracts/execution_strategy.py, no core/execution/strategy.py)
+# date: 2026-09-18T22:20Z
+# cmd: pytest -p no:cacheprovider tests/execution/test_r188_strategy_executor.py -q --no-header
+ImportError while importing test module '/home/user/webapp/tests/execution/test_r188_strategy_executor.py'.
+E   ModuleNotFoundError: No module named 'core.contracts.execution_strategy'
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
