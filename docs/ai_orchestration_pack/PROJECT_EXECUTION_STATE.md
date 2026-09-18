@@ -636,3 +636,30 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
            evidence/r187_state_ledger.md; does NOT open a round without an operator
            declaration recorded in 60_DECISION_LOG.md.
 ```
+
+## R188 RESUME POINTER (append-only, 2026-09-18 — R188-DEC-02; round closed)
+
+```text
+AUTHORITY: operator "QEVION — R188 EXECUTION DIRECTIVE · Provider + Learning Closure /
+           Agent Execution Customization Foundation" (declared R188-DEC-01 before code).
+RESUME_POINTER: evidence/r188_state_ledger.md rows 1-15 (declaration; RED/GREEN A 7/7,
+           C 11/11, API 13/13, B 8/8; manifest round_r188 11/24; gate of record 3524b00e
+           3758/0/0/64 + gateway 194; D-6 ratchet 3719 -> 3758; PR #34 merge -> main
+           7cc1c6bc; post-merge gate; closure records).
+DECISION_RECORD: docs/ai_orchestration_pack/final_docs_v3/60_DECISION_LOG.md
+           R188-DEC-01 (declaration) / R188-DEC-02 (closure with L.1-L.10).
+WORK_STATUS: R188 CLOSED. main = merge of PR #34 + this records-only closure.
+           Open engineering PRs 0. Five legacy branches preserved.
+DEFERRED: B-D1 training consumer; B-D2 feedback intake surface; B-D3 strategy-output
+           evaluation (each with REMAINING/WHY/DEPENDENCIES/NEXT/RECOMMENDATION in
+           R188-DEC-02 L.3).
+PROPOSALS_PENDING_OPERATOR: P-R188-01 onboarded model identity (recommend (a)
+           model_key_prefix); P-R188-02 Contract Freeze candidate list; P-R188-03 strategy
+           on the async path; P-R188-04 durable (Redis) ResourceSignalPort.
+CS1_FINDINGS: F-CS1-04 OPEN — operator-owned credential rotation; untouched by R188.
+NEXT_PER_OPERATOR_PLAN: item 6 Contract Freeze (declaration first, using P-R188-02);
+           item 7 App Factory (declaration first). STOP point.
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row of
+           evidence/r188_state_ledger.md; does NOT open a round without an operator
+           declaration recorded in 60_DECISION_LOG.md.
+```

@@ -21,3 +21,6 @@ Only for the material decisions listed in the directive §F (recorded as P-R188-
 
 ## 6. Ledger
 `evidence/r188_state_ledger.md`.
+
+## 7. Resolution (2026-09-18)
+R188 CLOSED — see R188-DEC-02 (L.1–L.10). Gate of record `3524b00e` PASS 3758/0/0/64 + gateway 194; D-6 ratchet 3719 → 3758; PR #34 merged by merge commit → `main 7cc1c6bc`. Deferred: B-D1 training consumer, B-D2 feedback intake, B-D3 strategy-output evaluation. Proposals: P-R188-01…04. Operator-owned: F-CS1-04 rotation.
