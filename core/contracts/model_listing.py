@@ -31,6 +31,9 @@ Recorded derivation decisions (no doc states these explicitly):
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from uuid import UUID
+
 from pydantic import Field
 
 from core.contracts.base import BoundedStr, ContractModel
@@ -62,10 +65,25 @@ class ModelListEntry(ContractModel):
     modalities: list[BoundedStr] = Field(default_factory=list)
     capabilities: list[BoundedStr] = Field(default_factory=list)
     availability: BindingAvailability
+    # R188 C4 (additive): the provider keys this model is bound to — the
+    # caller can see WHICH fuel serves the engine (model-only asks are
+    # first-class; the router still decides). Absent when no key resolver
+    # is supplied so the pre-R188 row shape is unchanged.
+    providers: list[BoundedStr] | None = None
 
     @classmethod
-    def from_model(cls, model: Model, bindings: list[ProviderModelBinding]) -> ModelListEntry:
+    def from_model(
+        cls,
+        model: Model,
+        bindings: list[ProviderModelBinding],
+        *,
+        provider_keys: Callable[[UUID], str | None] | None = None,
+    ) -> ModelListEntry:
         """Project a registry Model + its bindings onto the 10 §6 row."""
+        providers: list[str] | None = None
+        if provider_keys is not None:
+            resolved = {provider_keys(binding.provider_id) for binding in bindings}
+            providers = sorted(key for key in resolved if key is not None)
         return cls(
             id=str(model.id),
             name=model.model_key,
@@ -73,6 +91,7 @@ class ModelListEntry(ContractModel):
             modalities=[modality.value for modality in model.modalities],
             capabilities=list(model.capabilities),
             availability=derive_model_availability(bindings),
+            providers=providers,
         )
 
 

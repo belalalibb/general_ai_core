@@ -28,6 +28,7 @@ from pydantic import Field
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.contracts.domain import Modality
 from core.contracts.errors import ErrorDetail
+from core.contracts.execution_strategy import ExecutionStrategySpec
 from core.contracts.model_policy import AgentPolicy, ModelPolicy
 
 
@@ -134,6 +135,9 @@ class ExecuteRequest(ContractModel):
     agent_policy: AgentPolicy | None = None
     # R188 A5 (additive): capability-first routing input; None ⇒ unchanged.
     requirements: CapabilityRequirements | None = None
+    # R188 C3 (additive): caller-defined execution structure (stages / roles /
+    # per-stage model policy / DAG / review-retest). None ⇒ unchanged paths.
+    execution_strategy: ExecutionStrategySpec | None = None
     execution_policy: ExecutionPolicy | None = None
     tools: ToolsPolicy | None = None
     context: RequestContext | None = None

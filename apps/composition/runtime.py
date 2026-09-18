@@ -1103,6 +1103,7 @@ def build_runtime_profile(
         admin=admin,
         models=models,
         bindings=binding_registry,
+        providers=providers,  # R188 C4: /v1/models rows name their providers
         usage=usage,
         webhooks=True,
         rate_limits=InMemoryRateLimiter(),
