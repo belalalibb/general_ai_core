@@ -1206,8 +1206,7 @@ def create_app(
                 # eligible again — surfaced as WAIT data (additive detail key).
                 unavailable_details: JsonObject = {
                     "excluded": [
-                        record.model_dump(mode="json", exclude_none=True)
-                        for record in exc.excluded
+                        record.model_dump(mode="json", exclude_none=True) for record in exc.excluded
                     ]
                 }
                 if exc.retry_after_ms is not None:

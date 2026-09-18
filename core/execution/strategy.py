@@ -89,10 +89,7 @@ class StageOutcome:
 
     @property
     def succeeded(self) -> bool:
-        return (
-            self.report is not None
-            and self.report.execution.status is ExecutionStatus.SUCCEEDED
-        )
+        return self.report is not None and self.report.execution.status is ExecutionStatus.SUCCEEDED
 
     @property
     def output(self) -> JsonObject | None:
@@ -226,8 +223,17 @@ class StrategyExecutor:
                     failed = True
 
         ordered = tuple(outcomes[stage.key] for stage in plan.stages)
-        report = self._project(plan, ordered, strategy_id, tenant_id, user_id, request_hash,
-                               created_at, idempotency_key, conversation_id)
+        report = self._project(
+            plan,
+            ordered,
+            strategy_id,
+            tenant_id,
+            user_id,
+            request_hash,
+            created_at,
+            idempotency_key,
+            conversation_id,
+        )
         return StrategyReport(spec=plan, outcomes=ordered, report=report)
 
     # -- one stage = one routed, stored execution ------------------------------------
