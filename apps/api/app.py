@@ -1141,6 +1141,14 @@ def create_app(
         # request loudly, named by node — never a silent downgrade.
         decision = None
         node_decisions: list[tuple[str, RoutingDecision]] = []
+        # R188 A5: the caller's explicit capability/modality requirements ride
+        # into EVERY RoutingRequest of this call (11 §2 → 11 §5); absent ⇒ [].
+        required_capabilities = (
+            list(body.requirements.capabilities) if body.requirements is not None else []
+        )
+        required_modalities = (
+            list(body.requirements.modalities) if body.requirements is not None else []
+        )
         if node_sequence:
             for node_key, node_policy in node_sequence:
                 try:
@@ -1151,6 +1159,8 @@ def create_app(
                                 RoutingRequest(
                                     operation=ProviderOperation.GENERATE_TEXT,
                                     model_policy=node_policy,
+                                    required_capabilities=required_capabilities,
+                                    required_modalities=required_modalities,
                                 )
                             ),
                         )
@@ -1179,6 +1189,8 @@ def create_app(
             routing_request = RoutingRequest(
                 operation=ProviderOperation.GENERATE_TEXT,
                 model_policy=effective_policy,
+                required_capabilities=required_capabilities,
+                required_modalities=required_modalities,
             )
             try:
                 decision = router.route(routing_request)
@@ -1189,15 +1201,21 @@ def create_app(
                     details={"field": "model_policy"},
                 )
             except NoEligibleCandidates as exc:
+                # R188 A2/A5: when runtime resource signals emptied the pool,
+                # the router names the earliest moment a candidate may be
+                # eligible again — surfaced as WAIT data (additive detail key).
+                unavailable_details: JsonObject = {
+                    "excluded": [
+                        record.model_dump(mode="json", exclude_none=True)
+                        for record in exc.excluded
+                    ]
+                }
+                if exc.retry_after_ms is not None:
+                    unavailable_details["retry_after_ms"] = exc.retry_after_ms
                 return error_response(
                     ErrorCode.MODEL_UNAVAILABLE,
                     "No eligible model candidates for this request.",
-                    details={
-                        "excluded": [
-                            record.model_dump(mode="json", exclude_none=True)
-                            for record in exc.excluded
-                        ]
-                    },
+                    details=unavailable_details,
                 )
             except FallbackNotConfigured as exc:
                 return error_response(ErrorCode.MODEL_UNAVAILABLE, str(exc))

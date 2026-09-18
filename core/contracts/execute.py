@@ -26,6 +26,7 @@ from typing import Annotated, Literal
 from pydantic import Field
 
 from core.contracts.base import BoundedStr, ContractModel, JsonObject
+from core.contracts.domain import Modality
 from core.contracts.errors import ErrorDetail
 from core.contracts.model_policy import AgentPolicy, ModelPolicy
 
@@ -89,6 +90,22 @@ class RequestContext(ContractModel):
     language: BoundedStr | None = None
 
 
+class CapabilityRequirements(ContractModel):
+    """``requirements`` object (R188 A5, ADDITIVE): what the routed model must
+    declare (11 §2 "Capability Requirements" → 11 §5 hard filters).
+
+    Carries the caller's explicit capability / modality needs into
+    ``RoutingRequest.required_capabilities`` / ``required_modalities`` — the
+    fields the Router already honours (deny-by-default: a model that does not
+    DECLARE a required capability is ineligible, 30 §7). Absent ⇒ no
+    requirement ⇒ behaviour identical to before this field existed. This is
+    NOT a task-analysis system: values are the caller's words, never inferred.
+    """
+
+    capabilities: list[BoundedStr] = Field(default_factory=list)
+    modalities: list[Modality] = Field(default_factory=list)
+
+
 class OutputSpec(ContractModel):
     """``output`` object: requested format/language/schema of the result."""
 
@@ -115,6 +132,8 @@ class ExecuteRequest(ContractModel):
     skills: list[BoundedStr] | None = None
     model_policy: ModelPolicy | None = None
     agent_policy: AgentPolicy | None = None
+    # R188 A5 (additive): capability-first routing input; None ⇒ unchanged.
+    requirements: CapabilityRequirements | None = None
     execution_policy: ExecutionPolicy | None = None
     tools: ToolsPolicy | None = None
     context: RequestContext | None = None
