@@ -186,8 +186,14 @@ class TestRoutingOverTheSharedModel:
     def test_f_model_only_routing_sees_both_providers(self) -> None:
         world, _, router, _ = self._routed_world()
         decision = router.route(self._model_only())
-        seen = {decision.selected.provider_id, *(c.provider_id for c in decision.fallback_candidates)}
-        assert seen == {world.providers.get("prov_a").provider.id, world.providers.get("prov_b").provider.id}
+        seen = {
+            decision.selected.provider_id,
+            *(c.provider_id for c in decision.fallback_candidates),
+        }
+        assert seen == {
+            world.providers.get("prov_a").provider.id,
+            world.providers.get("prov_b").provider.id,
+        }
         model = world.models.get(KEY)
         assert decision.selected.model_id == model.id
         assert all(c.model_id == model.id for c in decision.fallback_candidates)
@@ -257,6 +263,7 @@ class TestRoutingOverTheSharedModel:
         assert any(r.provider_key == cooled_key and "cooldown" in r.reason for r in second.excluded)
         clock["now"] = T0 + timedelta(seconds=31)
         third = router.route(self._model_only())
-        assert {third.selected.provider_id, *(c.provider_id for c in third.fallback_candidates)} == set(
-            by_key.values()
-        )
+        assert {
+            third.selected.provider_id,
+            *(c.provider_id for c in third.fallback_candidates),
+        } == set(by_key.values())

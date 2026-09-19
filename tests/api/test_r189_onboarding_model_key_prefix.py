@@ -11,10 +11,9 @@ After the change (GREEN) the SAME test module proves additivity:
   ``<provider_key>/<provider_model_name>`` and the identical persisted
   definition semantics (the field is simply absent / None);
 - a payload WITH ``model_key_prefix`` yields ``<prefix>/<provider_model_name>``;
-- REPOSITORY FACT (wins over the directive's expectation): a SECOND provider
-  onboarded with the same prefix is refused at step 12 (duplicate model key,
-  full rollback) — the exposure alone does not bind one model to two
-  providers; that is PROPOSAL P-R189-01 (model identity), not R189 work;
+- R189 FACT (superseded in R190 by P-R189-01 YES): a SECOND provider
+  onboarded with the same explicit prefix WAS refused at step 12; since R190
+  it binds to the EXISTING logical Model (one Model, two bindings);
 - explicit Provider + Model selection through the ONE router is unchanged:
   an ``explicit_model`` policy naming the shared key with ``provider_id``
   narrows to that provider exactly as before;
@@ -65,14 +64,16 @@ class TestAdditiveField:
 
 
 class TestPrefixAndRoutingOnCurrentTree:
-    """Repository fact (R189 disagreement recorded in R189-DEC-02): the walker's
-    step 12 registers a NEW Model per key and refuses a duplicate key with full
-    rollback (pinned by tests/providers/test_onboarding_service.py). So the
-    additive API exposure does NOT by itself bind one model to two onboarded
-    providers — that needs a model-identity change (PROPOSAL P-R189-01, not
-    implemented). These pins freeze what the tree actually does today."""
+    """R189 recorded the repository fact that step 12 refused a shared explicit
+    prefix (R189-DEC-02 §4). R190 closed P-R189-01: an explicit prefix that
+    resolves to an existing logical Model binds the new provider to it. These
+    pins now freeze the R190 behavior through the served route."""
 
-    def test_second_provider_with_same_prefix_is_refused_and_rolled_back(self) -> None:
+    def test_second_provider_with_same_prefix_binds_to_the_existing_model(self) -> None:
+        """R190 (P-R189-01 YES) inverted the R189 pin. BEFORE (R189 tree): this
+        request was refused with 409 ``step-12-register-bindings`` and rolled
+        back (old pin preserved in evidence/r190/before_pins_now_fail_7a846a46.txt).
+        AFTER: 201; ONE logical Model ``shared/cand-1`` bound to BOTH providers."""
         world = RouteWorld()
         first = world.post(_body(model_key_prefix="shared"))
         assert first.status_code == 201, first.text
@@ -86,13 +87,17 @@ class TestPrefixAndRoutingOnCurrentTree:
                 model_key_prefix="shared",
             )
         )
-        assert second.status_code == 409
-        assert "step-12-register-bindings" in second.text
-        # Rolled back completely: only the first provider owns shared/cand-1.
+        assert second.status_code == 201, second.text
+        assert tuple(second.json()["registered_model_keys"]) == ("shared/cand-1",)
         model = world.models.get("shared/cand-1")
+        assert [m.model_key for m in world.models.all_models()] == ["shared/cand-1"]
         providers = {b.provider_id for b in world.bindings.bindings_for_model(model.id)}
-        assert providers == {world.providers.get("gw_alpha").provider.id}
-        assert "gw_beta" not in world.providers.all_keys()
+        assert providers == {
+            world.providers.get("gw_alpha").provider.id,
+            world.providers.get("gw_beta").provider.id,
+        }
+        # Both registrations persisted (durable hydration replays both).
+        assert len(world.persisted) == 2
 
     def test_explicit_provider_plus_model_selection_is_unchanged(self) -> None:
         world = RouteWorld()
