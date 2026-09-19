@@ -682,3 +682,23 @@ PROPOSALS_PENDING_OPERATOR: P-R189-01 (bind to existing Model when explicit mode
 RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r189_state_ledger.md;
        does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
 ```
+
+```
+R190_POINTER (2026-09-19) — R190 CLOSED (P-R189-01 logical Model identity across providers)
+MAIN: 8808e5cf (PR #38 merge commit) + records-only closure PR.
+GATE: gate of record 7ef3b15b PASS 3779/0/0/64 + gateway 194; post-merge 8808e5cf PASS 3779/0/0/64 + gateway 194.
+       min_passed 3769 -> 3779 (D-6). not_evaluated = 1 (D-03; operator-owned F-CS1-04).
+PRODUCTION: 2 files (core/providers/onboarding.py step-12 reuse under explicit prefix; apps/composition/provider_onboarding.py
+       hydration registers a shared Model once). Router / execution / admin / infrastructure untouched.
+BEHAVIOR: BEFORE same explicit prefix across providers -> 409 duplicate-key refusal. AFTER -> binds to the EXISTING Model
+       (one logical Model, many ProviderModelBindings). Default prefix unchanged. Modality mismatch -> loud refusal.
+CONTRACT: shape baseline unchanged (contract_freeze_derive.py --check MATCHES); freeze update in
+       evidence/r190/CONTRACT_FREEZE_RECORD_R190_UPDATE.md (R189 record preserved).
+DEFERRED: R189 set unchanged (modality_limits, admin_fallback_chain, account pool OPTIONAL, D-03, P-R188-03/-04 NO,
+       training consumer, feedback intake, strategy-output evaluation) + R190: modality-mismatch relaxation;
+       tenant ownership of Models NOT IN SCOPE; admin REGISTER_MODEL rollback on a shared Model NOT IN SCOPE.
+PROPOSALS_PENDING_OPERATOR: none.
+NEXT_PER_OPERATOR_PLAN: App Factory (item 7) — NOT started; requires its own declaration. STOP point.
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r190_state_ledger.md;
+       does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
+```

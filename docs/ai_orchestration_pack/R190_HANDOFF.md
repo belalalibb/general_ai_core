@@ -17,3 +17,6 @@ Third production file needed → STOP and record. Contract SHAPE change needed �
 
 ## 6. Ledger
 `evidence/r190_state_ledger.md`.
+
+## 7. Resolution (2026-09-19)
+R190 CLOSED — see R190-DEC-02 (14-point report). P-R189-01 IMPLEMENTED + VERIFIED (2/2 production files; contract shape unchanged, `--check` MATCHES). Gate of record `7ef3b15b` PASS 3779/0/0/64 + gateway 194; D-6 ratchet 3769 → 3779; PR #38 merged by merge commit → `main 8808e5cf`; post-merge gate PASS 3779/0/0/64 + gateway 194. Freeze update: `evidence/r190/CONTRACT_FREEZE_RECORD_R190_UPDATE.md`. New deferred: modality-mismatch relaxation. App Factory NOT started.
