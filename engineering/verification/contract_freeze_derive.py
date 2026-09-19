@@ -58,7 +58,11 @@ FROZEN_MODULES: tuple[str, ...] = (
 #: Closed-set constants frozen by NAME (module-level values).
 FROZEN_CONSTANTS: dict[str, tuple[str, ...]] = {
     "core.learning.gates": ("TRAINING_ELIGIBILITY_CONDITIONS", "PROMOTION_CONDITIONS"),
-    "core.routing.capacity": ("DEFAULT_COOLDOWN_MS", "DEFAULT_UNAVAILABLE_MS", "RPM_WINDOW_SECONDS"),
+    "core.routing.capacity": (
+        "DEFAULT_COOLDOWN_MS",
+        "DEFAULT_UNAVAILABLE_MS",
+        "RPM_WINDOW_SECONDS",
+    ),
     "core.contracts.execution_strategy": ("MAX_STAGES", "MAX_PARALLEL"),
     "core.contracts.evaluation": ("VERIFICATION_LEVEL_ORDER",),
 }
@@ -248,7 +252,10 @@ def strip_volatile(doc: dict[str, Any]) -> dict[str, Any]:
 def main(argv: list[str]) -> int:
     current = derive()
     if "--write" in argv:
-        frozen_at: dict[str, Any] = {"round": "r189", "note": "baseline derived at the R189 gate of record"}
+        frozen_at: dict[str, Any] = {
+            "round": "r189",
+            "note": "baseline derived at the R189 gate of record",
+        }
         if BASELINE.exists():
             frozen_at = json.loads(BASELINE.read_text()).get("frozen_at", frozen_at)
         for arg in argv:

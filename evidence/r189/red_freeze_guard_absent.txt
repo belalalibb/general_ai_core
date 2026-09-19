@@ -1,0 +1,10 @@
+# R189 freeze guard — RED 1/3: baseline absent at 879a9022
+# cmd: pytest -p no:cacheprovider tests/verification/test_contract_freeze_baseline.py -q --no-header
+E       AssertionError: contract_freeze_baseline.json is missing — derive it in a declared round
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/user/webapp/engineering/verification/contract_freeze_baseline.json').exists
+E       AssertionError: contract_freeze_baseline.json is missing — derive it in a declared round
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/user/webapp/engineering/verification/contract_freeze_baseline.json').exists

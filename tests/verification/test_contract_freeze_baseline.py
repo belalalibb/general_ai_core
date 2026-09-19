@@ -52,7 +52,9 @@ def _diff(expected: Any, actual: Any, path: str, out: list[str]) -> None:
             if key not in actual:
                 out.append(f"REMOVED  {sub}")
             elif key not in expected:
-                out.append(f"ADDED    {sub} (not in committed baseline — declare a round and re-derive)")
+                out.append(
+                    f"ADDED    {sub} (not in committed baseline — declare a round and re-derive)"
+                )
             else:
                 _diff(expected[key], actual[key], sub, out)
     elif isinstance(expected, list) and isinstance(actual, list):
@@ -76,7 +78,9 @@ def derived() -> dict[str, Any]:
 
 @pytest.fixture(scope="module")
 def committed() -> dict[str, Any]:
-    assert BASELINE.exists(), "contract_freeze_baseline.json is missing — derive it in a declared round"
+    assert BASELINE.exists(), (
+        "contract_freeze_baseline.json is missing — derive it in a declared round"
+    )
     return json.loads(BASELINE.read_text())
 
 
@@ -117,7 +121,16 @@ def test_served_surface_contains_the_execute_read_paths(derived: dict[str, Any])
 def test_resource_signal_vocabulary_is_closed(derived: dict[str, Any]) -> None:
     snapshot = derived["resource_signal_snapshot"]
     assert snapshot["keys"] == sorted(
-        ["provider_id", "model_id", "state", "reason", "cooldown_until", "rpm_used", "rpm_limit", "last_category"]
+        [
+            "provider_id",
+            "model_id",
+            "state",
+            "reason",
+            "cooldown_until",
+            "rpm_used",
+            "rpm_limit",
+            "last_category",
+        ]
     )
     assert set(snapshot["states"]) == {"available", "unavailable", "cooldown", "limited"}
 

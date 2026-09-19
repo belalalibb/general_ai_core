@@ -1,0 +1,4 @@
+# R189 freeze guard — GREEN after derivation at 879a9022
+# cmd: pytest -p no:cacheprovider tests/verification/test_contract_freeze_baseline.py -v --no-header
+FAILED test_frozen_contract_set_matches_committed_baseline
+========================= 1 failed, 5 passed in 0.97s ==========================
