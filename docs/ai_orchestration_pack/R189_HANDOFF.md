@@ -19,3 +19,6 @@ Material decision outside boundary → PROPOSAL block; third production file nee
 
 ## 6. Ledger
 `evidence/r189_state_ledger.md`.
+
+## 7. Resolution (2026-09-19)
+R189 CLOSED — see R189-DEC-02 (13-point report). Gate of record `7af925d4` PASS 3769/0/0/64 + gateway 194; D-6 ratchet 3758 → 3769; PR #36 merged by merge commit → `main 64e23c22`; post-merge gate PASS 3769/0/0/64 + gateway 194. Frozen: 15 modules / 116 contracts / 44 `/v1/` routes (`engineering/verification/contract_freeze_baseline.json`, guarded). Dispositions A/B/C recorded in `evidence/r189/CONTRACT_FREEZE_RECORD.md`. Deferred (6-field blocks §6.1–§6.10). Proposal: P-R189-01. Operator-owned: F-CS1-04; D-03 NOT EVALUATED.
