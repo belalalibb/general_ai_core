@@ -77,3 +77,101 @@ Guard `test_served_surface_contains_the_execute_read_paths` additionally pins th
 **NOT frozen (deliberately):** `core/execution/*` implementations, `core/routing/router.py` internals (scoring), adapters,
 composition, `apps/admin_agent/*` (its own R185 freeze), `ui/*` (R185 freeze), gateway-service. Behaviour there is
 protected by the regression gate, not by shape pinning.
+
+---
+
+## 3. Required dispositions (repository truth; directive expectations checked against the tree)
+
+### Disposition A — `modality_limits`
+- **Where it exists:** `core/contracts/plan.py:PlanLimits.modality_limits: JsonObject` (declared; per-modality caps such
+  as `image_generations`); carried through `core/admin/service.py` (plan read/write, :292, :829-835, :953).
+- **Where it is consumed on the execute path:** NOWHERE. Reservation is scalar — `core/usage/estimation.py`
+  (`estimated_units`) and `core/usage/memory.py` (`task_units_limit`). No filter, no refusal, no accounting keyed by
+  modality.
+- **Disposition:** **FROZEN AS-IS (shape only) — VERIFIED as declared-but-unenforced.** The field stays in the frozen
+  `PlanLimits` shape because the admin surface already serves it; its *semantics* are NOT frozen and NOT claimed.
+  Anyone reading the plan must treat `modality_limits` as advisory metadata until a declared round adds a consumer.
+  Recorded as DEFERRED (§6.1). Nothing was implemented for it in R189.
+
+### Disposition B — `admin_fallback_chain`
+- **Where it exists:** `SimpleScoringRouter(admin_fallback_chain: tuple[str, ...] | None = None)`
+  (`core/routing/router.py:117,125`); `FallbackScope.ADMIN_DEFINED_CHAIN` resolves to `FallbackNotConfigured` when the
+  chain is absent (`router.py:495-499`).
+- **Producer:** the ONLY caller that passes a chain is a test (`tests/routing/test_router_scoring.py:557`).
+  Composition (`apps/composition/runtime.py`) never passes one; no admin surface stores or serves an ordered chain.
+- **Disposition:** **FROZEN AS-IS — the scope value and the loud refusal are the contract; the source is DEFERRED.**
+  `FallbackScope.ADMIN_DEFINED_CHAIN` remains a legal, guarded enum member whose served behaviour on main is
+  `FallbackNotConfigured` (explicit, not silent). Recorded as DEFERRED (§6.2). Nothing was implemented for it in R189.
+
+### Disposition C — Account pool / lease / fencing = OPTIONAL in v1
+- **Spec citations (repository):** `docs/ai_orchestration_pack/final_docs_v3/30_PROVIDER_ARCHITECTURE_AND_PLUGIN_SPEC.md`
+  §10.1 "Account Pool Is Optional" (line 440); §10.4 "If a provider uses account pools, concurrent execution must use
+  leases" (lines 512-514) — the lease/fencing obligation is CONDITIONAL on a provider opting into pools.
+- **Contract defaults (repository):** `core/contracts/provider.py:77-86 ManifestAccountPool(supported: bool [required],
+  lease_required: bool = False, fencing_required: bool = False)`. Runtime-profile providers declare
+  `supports_account_pool=False` (`apps/composition/runtime.py:594,689`).
+- **Consumers:** `core/routing/resources.py ResourceSelector`, `core/providers/accounts.py AccountPool/AccountPoolManager`
+  exist and are hermetically tested; no composition call site (`grep -rn ResourceSelector apps/` → none); no producer of
+  `RateLimitStatus`.
+- **Disposition (restated as frozen policy):** **OPTIONAL IN V1 — VERIFIED against spec + contract + composition.**
+  Consequences:
+  1. A provider manifest with `account_pool.supported=false` is complete; the Core must not require pools, leases or
+     fencing from it (it does not — `supports_account_pool=False` is the served default profile).
+  2. `lease_required` / `fencing_required` are provider-declared obligations; a provider that sets them true and is
+     executed concurrently WITHOUT a lease path is a v1 limitation of the composition, not a Core defect, and must be
+     recorded when such a provider is onboarded (none exists on main).
+  3. The account-pool code path is NOT part of the served surface today and is NOT frozen as behaviour — only the
+     manifest shape (`ManifestAccountPool`) is frozen.
+  4. **D-03 (credential unavailable) stays NOT EVALUATED and SEPARATE** — it is a credential-rotation dependency
+     (F-CS1-04, operator-owned), not an account-pool question. `green_manifest.json.not_evaluated` is unchanged (1 item).
+  Recorded as DEFERRED (§6.3, §6.4).
+
+---
+
+## 4. Operator decisions carried out (APPROVED → IMPLEMENTED / VERIFIED / recorded)
+
+### P-R188-01 — YES (additive `model_key_prefix` on the existing onboarding request)
+- **APPROVED:** operator YES (R189 directive). **IMPLEMENTED:** `apps/api/provider_onboarding.py` (+9/-0, commit
+  9b2ce91e; `round_r189.log` item `P-R188-01`, 1 of ceiling 2). `GatewayOnboardRequest.model_key_prefix: str | None =
+  Field(default=None, min_length=1, max_length=512)`; route passes `model_key_prefix=body.model_key_prefix` into the
+  EXISTING `ProviderOnboardingService.onboard(model_key_prefix=…)` (`core/providers/onboarding.py:167`). Hydration
+  re-validates the persisted definition with the SAME request model (`apps/composition/provider_onboarding.py:253`), so
+  no second production file was needed.
+- **VERIFIED:** RED at f83d0ca3 (4 failed, `extra_forbidden` 422 — `evidence/r189/red_p_r188_01.txt`) → GREEN 40/40
+  (`green_p_r188_01.txt`): served OpenAPI schema declares the field as optional; old payload (field absent) → stored key
+  `gw_alpha/cand-1`, persisted `model_key_prefix is None` (identical to pre-R189 behaviour); payload with prefix
+  `"shared"` → `shared/cand-1`, prefix persisted; explicit provider+model routing unchanged.
+- **Repository disagreement recorded (THE REPOSITORY WINS):** the directive's motivating expectation — "same model,
+  different provider" for onboarded providers via a shared prefix — does NOT hold on the tree: onboarding step 12
+  registers a NEW `Model` per key and refuses a duplicate key with full rollback
+  (`OnboardingRefused("step-12-register-bindings", "duplicate model key …")` → HTTP 409; pinned by
+  `TestPrefixAndRoutingOnCurrentTree::test_same_prefix_second_provider_is_refused_and_rolled_back`). The field is
+  therefore a correct, additive, served input whose cross-provider use case needs a further decision:
+  **PROPOSAL P-R189-01 (RECOMMENDED, not implemented):** at step 12, when a `Model` with the computed key already exists
+  AND the caller supplied an explicit `model_key_prefix`, bind the new provider to the EXISTING model instead of
+  refusing (additive behaviour; keeps `Model.key` as the identity; no aliases). Alternatives: (b) `Model.aliases`
+  (contract change — refused after freeze without a declared round); (c) keep refusing (status quo). Requires operator
+  YES/NO before any code.
+
+### P-R188-03 — NO (async execution strategy)
+- **APPROVED (NO):** `execution_strategy` stays sync-only; `POST /v1/execute` with `execution_strategy` + async mode is
+  refused loudly with 422 "execution_strategy runs synchronously in this slice." (`apps/api/app.py:884-889`).
+- **Continuation recorded (not scheduled):** a worker-side `StrategyExecutor` invocation becomes possible once the
+  outbox/worker payload carries the resolved `ExecutionStrategySpec` (today the worker path resolves a single routing
+  decision). See §6.5.
+
+### P-R188-04 — NO (durable / shared resource signals)
+- **APPROVED (NO):** `ResourceSignalBoard` remains process-local (`core/routing/capacity.py`; ONE instance wired at
+  `apps/composition/runtime.py:767`).
+- **Dependency recorded:** shared/durable signals are needed ONLY when multiple independent replicas serve
+  `/v1/execute` concurrently against the same providers; a single replica is fully served by the in-process board.
+  See §6.6.
+
+---
+
+## 5. What this round did NOT do (boundary statement)
+- No new served contract (44 `/v1/` routes before and after; the only served change is one OPTIONAL body field on an
+  EXISTING route — additive, backward-compatible, proven by the old-payload test).
+- No provider calls; no App Factory work; no UI change; no change under `infrastructure/`; `core/` untouched
+  (`git diff origin/main -- core/ infrastructure/` is empty).
+- Nothing hand-listed: the baseline and the served-route set are derived.
