@@ -76,13 +76,14 @@ def _annotation(obj: Any) -> str:
 
 
 def _jsonable(value: Any) -> Any:
+    """Default values normalised through a JSON round-trip so the derived
+    document compares equal to its committed (JSON) form (tuple -> list)."""
     if isinstance(value, enum.Enum):
         return value.value
     try:
-        json.dumps(value)
+        return json.loads(json.dumps(value))
     except TypeError:
         return repr(value)
-    return value
 
 
 def _pydantic_model(cls: Any) -> dict[str, Any]:
