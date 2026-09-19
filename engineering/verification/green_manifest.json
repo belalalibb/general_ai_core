@@ -826,6 +826,21 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r189": {
+      "ceiling": 2,
+      "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 0,
+      "items": [
+        "P-R188-01 (operator YES, R189 directive): additive `model_key_prefix: str | None = None` on the EXISTING onboarding request body `apps/api/provider_onboarding.py:GatewayOnboardRequest` (extra=forbid, so the field must be declared) threaded verbatim into the EXISTING `ProviderOnboardingService.onboard(model_key_prefix=...)` parameter that the service already accepts. No model-identity redesign, no Model.aliases. Old payloads (field absent) produce the identical stored model key `<provider_key>/<name>`.",
+        "FREEZE (records + guards only; no production code): `engineering/verification/contract_freeze_baseline.json` DERIVED from the current contract modules by `engineering/verification/contract_freeze_derive.py` (repo-local tooling under engineering/, outside the counted roots) + `tests/verification/test_contract_freeze_baseline.py` guard (RED on deliberate mutation -> GREEN on revert). No new served endpoint."
+      ],
+      "log": [],
+      "note": "R189 is a stabilization + disposition round (Contract Freeze preparation). The only approved production edit is P-R188-01. Expected impact inspected before this declaration: exactly ONE production file (apps/api/provider_onboarding.py); ceiling 2 leaves one file of headroom in case the hydration path (apps/composition/provider_onboarding.py) needs an explicit pass-through of the persisted field — if it does, it is logged; if a THIRD production file becomes necessary the round STOPS before crossing (directive: name the change that needs the next round). Documentation, tests, evidence and engineering/verification/* are outside the counted roots.",
+      "ceiling_history": [
+        "declared 2 at the R189 opening (2026-09-19, R189-DEC-01) from post-R188 main 9831c81b, BEFORE any production commit: 1 file for P-R188-01 + 1 file headroom for hydration pass-through."
+      ]
+    },
     "round_r188": {
       "ceiling": 24,
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
