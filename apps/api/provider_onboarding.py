@@ -72,6 +72,14 @@ class GatewayOnboardRequest(BaseModel):
     #: capabilities, static_models). Explicit declarations always win; the
     #: persisted definition is the FILLED one (deterministic hydration).
     discover: bool = False
+    #: R189 / P-R188-01 (operator YES, additive): the model-key prefix under
+    #: which this provider's discovered models are registered
+    #: (``{prefix}/{provider_model_name}``). ``None`` keeps the pre-R189
+    #: behaviour verbatim — the walker defaults the prefix to ``provider_key``.
+    #: NOTE (repository fact, R189-DEC-02): step 12 of the walker registers a
+    #: NEW Model per key and refuses a duplicate key with full rollback, so a
+    #: shared prefix across two providers is refused today (P-R189-01).
+    model_key_prefix: str | None = Field(default=None, min_length=1, max_length=512)
 
     @model_validator(mode="after")
     def _operations_or_discover(self) -> GatewayOnboardRequest:
@@ -249,6 +257,7 @@ def create_provider_onboarding_router(
                 display_name=body.display_name,
                 auth_types=list(manifest.auth.types),
                 credential_ref=body.credential_ref,
+                model_key_prefix=body.model_key_prefix,
             )
         except OnboardingRefused as exc:
             # The walker's refusal, verbatim (409 — state conflict, the
