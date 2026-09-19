@@ -17,7 +17,7 @@ Order: RED tests → A1–A4 (routing feedback loop) → A5/A6 → C1–C3 → C
 `tests/routing/test_r188_capacity_signals.py`, `tests/execution/test_r188_strategy_executor.py`, `tests/api/test_r188_execute_strategy_requirements.py`, `tests/learning/test_r188_learning_closure.py`; fresh-clone gate; gateway suite; evidence under `evidence/r188/`.
 
 ## 5. Stop conditions
-Only for the material decisions listed in the directive §F (recorded as P-R188-xx).
+Only for the material decisions recorded as P-R188-xx in `final_docs_v3/60_DECISION_LOG.md` (R188-DEC-01 proposals; R188-DEC-02 L.7; dispositions in R189-DEC-02).
 
 ## 6. Ledger
 `evidence/r188_state_ledger.md`.
