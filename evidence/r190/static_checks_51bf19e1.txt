@@ -1,0 +1,6 @@
+mypy:
+Success: no issues found in 218 source files
+ruff check .:
+All checks passed!
+contract_freeze_derive.py --check:
+contract freeze baseline: MATCHES current tree

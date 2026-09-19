@@ -1,0 +1,43 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+___________ TestGates.test_duplicate_model_key_rolls_back_everything ___________
+
+self = <tests.providers.test_onboarding_service.TestGates object at 0x7fdf0e862750>
+
+    def test_duplicate_model_key_rolls_back_everything(self) -> None:
+        world = World()
+        # Pre-register the model key the onboarding will collide with.
+        world.onboard(FakeAdapter(), key="first")
+        # Second provider whose model produces the SAME key via prefix.
+        adapter = FakeAdapter(models=[{"provider_model_name": "cand-1", "modalities": ["text"]}])
+>       with pytest.raises(OnboardingRefused) as exc:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE OnboardingRefused
+
+tests/providers/test_onboarding_service.py:263: Failed
+_ TestPrefixAndRoutingOnCurrentTree.test_second_provider_with_same_prefix_is_refused_and_rolled_back _
+
+self = <tests.api.test_r189_onboarding_model_key_prefix.TestPrefixAndRoutingOnCurrentTree object at 0x7fdf0c085810>
+
+    def test_second_provider_with_same_prefix_is_refused_and_rolled_back(self) -> None:
+        world = RouteWorld()
+        first = world.post(_body(model_key_prefix="shared"))
+        assert first.status_code == 201, first.text
+        world.adapter = FakeAdapter(manifest=_manifest(id="gw_beta", name="Gateway Beta"))
+        second = world.post(
+            _body(
+                provider_key="gw_beta",
+                display_name="Gateway Beta",
+                credential_ref="credref_beta",
+                route_token_ref="credref_route_beta",
+                model_key_prefix="shared",
+            )
+        )
+>       assert second.status_code == 409
+E       assert 201 == 409
+E        +  where 201 = <Response [201 Created]>.status_code
+
+tests/api/test_r189_onboarding_model_key_prefix.py:89: AssertionError
+=========================== short test summary info ============================
+FAILED tests/providers/test_onboarding_service.py::TestGates::test_duplicate_model_key_rolls_back_everything
+FAILED tests/api/test_r189_onboarding_model_key_prefix.py::TestPrefixAndRoutingOnCurrentTree::test_second_provider_with_same_prefix_is_refused_and_rolled_back

@@ -55,7 +55,11 @@ from core.contracts.provider import (
     ProviderHealthState,
     ProviderManifest,
 )
-from core.providers.errors import DuplicateRegistration, ProviderNotRegistered
+from core.providers.errors import (
+    DuplicateRegistration,
+    ModelNotRegistered,
+    ProviderNotRegistered,
+)
 from core.providers.ports import ProviderAdapterPort
 from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
 
@@ -267,23 +271,55 @@ class ProviderOnboardingService:
             self._credential_refs[provider.id] = credential_ref
 
         # --- step 12: register models + bindings ------------------------------
+        # R190 (P-R189-01, operator YES): ONE logical Model, MANY provider
+        # bindings. When the caller supplied an EXPLICIT ``model_key_prefix``
+        # and the computed logical key already names a registered Model, this
+        # provider is BOUND to that existing Model instead of being refused.
+        # The Model record is never rewritten from provider facts (the
+        # provider's own name stays on the binding); a modality disagreement
+        # is refused loudly rather than silently widening/narrowing routing
+        # eligibility. Without an explicit prefix the pre-R190 rule holds: the
+        # default prefix is the provider key, so a collision is foreign state
+        # and stays a refusal.
         prefix = model_key_prefix if model_key_prefix is not None else provider_key
         registered_keys: list[str] = []
+        created_model_keys: list[str] = []
+        refusal: str = (
+            "duplicate model key during binding registration — onboarding rolled back completely"
+        )
         try:
             for dm, modalities in normalized:
                 model_key = f"{prefix}/{dm.provider_model_name}"
-                model = Model(
-                    id=uuid4(),
-                    model_key=model_key,
-                    display_name=dm.provider_model_name,
-                    tier=model_tier,
-                    modalities=modalities,
-                    # Per-model capability facts are not invented (30 §4.3);
-                    # capability eligibility stays a manifest question.
-                    capabilities=[],
-                    status=ModelStatus.ACTIVE,
-                )
-                self._models.register(model)
+                existing: Model | None = None
+                if model_key_prefix is not None:
+                    try:
+                        existing = self._models.get(model_key)
+                    except ModelNotRegistered:
+                        existing = None
+                if existing is not None:
+                    if sorted(existing.modalities) != sorted(modalities):
+                        refusal = (
+                            f"logical model modality mismatch for {model_key}: "
+                            f"registered {sorted(m.value for m in existing.modalities)}, "
+                            f"provider declares {sorted(m.value for m in modalities)} — "
+                            "onboarding rolled back completely"
+                        )
+                        raise DuplicateRegistration(model_key)
+                    model = existing
+                else:
+                    model = Model(
+                        id=uuid4(),
+                        model_key=model_key,
+                        display_name=dm.provider_model_name,
+                        tier=model_tier,
+                        modalities=modalities,
+                        # Per-model capability facts are not invented (30 §4.3);
+                        # capability eligibility stays a manifest question.
+                        capabilities=[],
+                        status=ModelStatus.ACTIVE,
+                    )
+                    self._models.register(model)
+                    created_model_keys.append(model_key)
                 self._bindings.register(
                     ProviderModelBinding(
                         provider_id=provider.id,
@@ -294,34 +330,36 @@ class ProviderOnboardingService:
                 )
                 registered_keys.append(model_key)
         except DuplicateRegistration:
-            # Roll the WHOLE onboarding back — a half-registered provider
-            # would be parallel state (P2). Remove in reverse order.
+            # Roll THIS onboarding back completely — a half-registered
+            # provider would be parallel state (P2). Only what this call
+            # created is removed: its bindings and the Models it created;
+            # a pre-existing shared Model and other providers' bindings are
+            # never touched.
             for key in registered_keys:
                 model = self._models.get(key)
                 self._bindings.remove(provider.id, model.id)
+            for key in created_model_keys:
                 self._models.remove(key)
             self._providers.remove(provider_key)
             if self._adapters is not None:
                 self._adapters.pop(provider.id, None)
             if self._credential_refs is not None:
                 self._credential_refs.pop(provider.id, None)
-            raise OnboardingRefused(
-                "step-12-register-bindings",
-                "duplicate model key during binding registration — "
-                "onboarding rolled back completely",
-            ) from None
+            raise OnboardingRefused("step-12-register-bindings", refusal) from None
         if registered_keys:
             steps.append("step-12-register-bindings")
 
         # --- durability (Gap 1b): write-through AFTER in-memory success --------
         # Rows are the durable truth hydration replays at startup; writing
         # them only after every registry registration succeeded means a
-        # refused/rolled-back onboarding never leaves a durable row.
+        # refused/rolled-back onboarding never leaves a durable row. Only
+        # Models CREATED here are written; a reused Model's row already exists.
         if self._persistence is not None:
             self._persistence.persist_provider(provider)
+            for key in created_model_keys:
+                self._persistence.persist_model(self._models.get(key))
             for key in registered_keys:
                 model = self._models.get(key)
-                self._persistence.persist_model(model)
                 self._persistence.persist_binding(self._bindings.get(provider.id, model.id))
             steps.append("step-durable-persistence")
 

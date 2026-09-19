@@ -260,7 +260,12 @@ def hydrate_gateway_providers(
             if model is None:
                 msg = f"binding without model row: {binding.model_id}"
                 raise RuntimeError(msg)
-            models.register(model)
+            # R190 (P-R189-01): one logical Model may be bound to several
+            # gateway providers; its row is registered once, on first sight.
+            try:
+                models.get_by_id(model.id)
+            except ModelNotRegistered:
+                models.register(model)
             bindings.register(binding)
         if gateway_settings is not None and secrets is not None:
             adapters[provider.id] = adapter_from_definition(

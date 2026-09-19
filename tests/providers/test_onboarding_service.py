@@ -8,7 +8,8 @@ Hermetic; a configurable fake adapter drives every gate. Pins:
 - each gate refuses loudly AT its step: template manifest (3), bad
   credential (5), unhealthy provider (6), zero declared operations (4),
   duplicate provider (11), unknown modality (12);
-- a duplicate model key mid-registration rolls the WHOLE onboarding back
+- a duplicate model key under the DEFAULT prefix rolls the WHOLE onboarding back;
+  an EXPLICIT prefix resolving to an existing logical Model binds to it (R190)
   (no half-registered provider — parallel-state ban);
 - the disabled registration is NOT routable until admin enables it, and
   the prepared draft publishes through the REAL AdminConfigService making
@@ -254,31 +255,62 @@ class TestGates:
         # Refused BEFORE any registration happened.
         assert world.providers.all_keys() == []
 
-    def test_duplicate_model_key_rolls_back_everything(self) -> None:
+    def test_explicit_prefix_binds_second_provider_to_existing_model_r190(self) -> None:
+        """R190 (P-R189-01, operator YES) — BEFORE: this exact scenario was
+        refused at step 12 (duplicate model key, full rollback; see
+        evidence/r190/before_pins_now_fail_7a846a46.txt for the old pin).
+        AFTER: an EXPLICIT prefix that resolves to an existing logical Model
+        binds the new provider to that Model — one Model, two bindings."""
         world = World()
-        # Pre-register the model key the onboarding will collide with.
         world.onboard(FakeAdapter(), key="first")
-        # Second provider whose model produces the SAME key via prefix.
         adapter = FakeAdapter(models=[{"provider_model_name": "cand-1", "modalities": ["text"]}])
-        with pytest.raises(OnboardingRefused) as exc:
-            run(
-                world.service.onboard(
-                    adapter=adapter,
-                    provider_key="second",
-                    display_name="Second",
-                    auth_types=[AuthType.API_KEY],
-                    credential_ref="secret-ref://second",
-                    model_key_prefix="first",  # collide with first/cand-1
-                )
+        report = run(
+            world.service.onboard(
+                adapter=adapter,
+                provider_key="second",
+                display_name="Second",
+                auth_types=[AuthType.API_KEY],
+                credential_ref="secret-ref://second",
+                model_key_prefix="first",  # explicit: resolves to first/cand-1
             )
+        )
+        assert report.registered_model_keys == ("first/cand-1",)
+        model = world.models.get("first/cand-1")
+        assert [m.model_key for m in world.models.all_models()] == ["first/cand-1"]
+        bound = {b.provider_id for b in world.bindings.bindings_for_model(model.id)}
+        assert bound == {
+            world.providers.get("first").provider.id,
+            world.providers.get("second").provider.id,
+        }
+
+    def test_default_prefix_collision_is_still_refused_and_rolled_back(self) -> None:
+        """Pre-R190 rule preserved: WITHOUT an explicit prefix the default
+        prefix is the provider key, so a collision is foreign state and the
+        whole onboarding is refused at step 12 with full rollback."""
+        world = World()
+        # Seed "third/cand-1" under another owner via an explicit prefix.
+        run(
+            world.service.onboard(
+                adapter=FakeAdapter(),
+                provider_key="seed",
+                display_name="Seed",
+                auth_types=[AuthType.API_KEY],
+                credential_ref="secret-ref://seed",
+                model_key_prefix="third",
+            )
+        )
+        with pytest.raises(OnboardingRefused) as exc:
+            world.onboard(FakeAdapter(), key="third")
         assert exc.value.step == "step-12-register-bindings"
-        # The second provider is fully rolled back.
         from core.providers.errors import ProviderNotRegistered
 
         with pytest.raises(ProviderNotRegistered):
-            world.providers.get("second")
-        # First provider untouched.
-        assert world.providers.get("first").provider.provider_key == "first"
+            world.providers.get("third")
+        # Seed provider and its model untouched.
+        model = world.models.get("third/cand-1")
+        assert {b.provider_id for b in world.bindings.bindings_for_model(model.id)} == {
+            world.providers.get("seed").provider.id
+        }
 
 
 class TestStep14AdminEnable:

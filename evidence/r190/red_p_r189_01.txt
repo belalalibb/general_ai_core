@@ -1,0 +1,1049 @@
+FF..FFFF                                                                 [100%]
+=================================== FAILURES ===================================
+_ TestOneLogicalModelManyBindings.test_a_b_c_second_provider_binds_to_the_existing_model _
+
+self = <tests.providers.test_r190_logical_model_identity.TestOneLogicalModelManyBindings object at 0x7f42fd17c910>
+
+    def test_a_b_c_second_provider_binds_to_the_existing_model(self) -> None:
+        world = World()
+>       pid_a, pid_b = _two_providers(world)
+                       ^^^^^^^^^^^^^^^^^^^^^
+
+tests/providers/test_r190_logical_model_identity.py:84: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/providers/test_r190_logical_model_identity.py:70: in _two_providers
+    b = _onboard(world, "prov_b", prefix=SHARED)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/providers/test_r190_logical_model_identity.py:56: in _onboard
+    return run(
+tests/providers/test_onboarding_service.py:58: in run
+    return asyncio.run(coro)
+           ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:196: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:119: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <core.providers.onboarding.ProviderOnboardingService object at 0x7f42fa901160>
+adapter = <tests.providers.test_onboarding_service.FakeAdapter object at 0x7f42fe6747d0>
+provider_key = 'prov_b', display_name = 'prov_b'
+auth_types = [<AuthType.API_KEY: 'api_key'>]
+credential_ref = 'secret-ref://prov_b'
+model_tier = <ModelTier.MEDIUM: 'medium'>, model_key_prefix = 'logical'
+
+    async def onboard(
+        self,
+        *,
+        adapter: ProviderAdapterPort,
+        provider_key: str,
+        display_name: str,
+        auth_types: list[AuthType],
+        credential_ref: str,
+        model_tier: ModelTier = ModelTier.MEDIUM,
+        model_key_prefix: str | None = None,
+    ) -> OnboardingReport:
+        """Run the checklist; return the report or raise OnboardingRefused.
+    
+        ``credential_ref`` is the opaque secret-manager reference (20 §5) —
+        never the key itself. ``model_key_prefix`` defaults to provider_key,
+        producing model keys ``{prefix}/{provider_model_name}``.
+        """
+        steps: list[str] = []
+    
+        # --- step 3: manifest is real, not template (31 §22) -----------------
+        manifest = adapter.get_manifest()
+        problem = self._manifest_problem(manifest)
+        if problem is not None:
+            raise OnboardingRefused("step-3-real-manifest", problem)
+        steps.append("step-3-real-manifest")
+    
+        # --- duplicate guard BEFORE any provider I/O --------------------------
+        try:
+            self._providers.get(provider_key)
+        except ProviderNotRegistered:
+            pass
+        else:
+            raise OnboardingRefused(
+                "step-11-register-provider",
+                f"provider already registered: {provider_key}",
+            )
+    
+        # --- step 5: credential handling (opaque ref -> ACTIVE) ---------------
+        # NotImplementedError (e.g. GatewayCredentialCheckUnsupported) is an
+        # HONEST "this adapter has no credential-check wire surface" — the
+        # step is reported UNVERIFIED, never faked as passed and never
+        # treated as a failed check (41 §49). A definite non-ACTIVE answer
+        # still refuses loudly.
+        unverified_extra: list[str] = []
+        try:
+            credential = await adapter.validate_credential(credential_ref)
+        except NotImplementedError as exc:
+            unverified_extra.append(
+                f"step-5-credential-validation (adapter has no check surface: {exc})"
+            )
+        else:
+            if credential.status is not CredentialStatus.ACTIVE:
+                raise OnboardingRefused(
+                    "step-5-credential-validation",
+                    f"credential status is {credential.status.value} "
+                    f"(ref={credential.credential_ref})",
+                )
+            steps.append("step-5-credential-validation")
+    
+        # --- step 6: health check works ---------------------------------------
+        # Same 41 §49 posture as step 5: NotImplementedError (e.g.
+        # GatewayHealthCheckUnsupported — gateway answered UNKNOWN with
+        # checked_at=None, i.e. NO check was performed) is a missing check
+        # SURFACE → recorded UNVERIFIED, never faked as HEALTHY. Any
+        # returned non-HEALTHY state is a definite verdict and still refuses.
+        try:
+            health = await adapter.health_check(HealthScope.PROVIDER)
+        except NotImplementedError as exc:
+            unverified_extra.append(f"step-6-health-check (adapter has no check surface: {exc})")
+        else:
+            if health.state is not ProviderHealthState.HEALTHY:
+                raise OnboardingRefused(
+                    "step-6-health-check",
+                    f"provider health is {health.state.value}",
+                )
+            steps.append("step-6-health-check")
+    
+        # --- step 4 (observable half): >=1 declared operation ------------------
+        if not manifest.operations:
+            raise OnboardingRefused(
+                "step-4-declared-operations",
+                "manifest declares no operations (30 §5: undeclared = ineligible)",
+            )
+        steps.append("step-4-declared-operations")
+    
+        # --- step 12 input: discover + normalize BEFORE registering anything ---
+        discovered = await adapter.discover_models()
+        normalized = self._normalize_discovered(discovered)
+    
+        # --- step 11: register provider, status=DISABLED (step 13) ------------
+        provider = Provider(
+            id=uuid4(),
+            provider_key=provider_key,
+            display_name=display_name,
+            status=ProviderStatus.DISABLED,  # step 13: disabled until enabled
+            auth_types=auth_types,
+            supports_account_pool=manifest.account_pool.supported,
+        )
+        self._providers.register(provider, manifest)
+        steps.append("step-11-register-provider")
+        steps.append("step-13-provider-kept-disabled")
+    
+        # --- executability (Gap 1a): SAME maps ExecutionService reads ---------
+        # Registered here so a routed candidate for this provider passes
+        # _validate_route the moment an admin enables it. The credential_ref
+        # stays OPAQUE (20 §5) — the adapter resolves it, never this walker.
+        if self._adapters is not None:
+            self._adapters[provider.id] = adapter
+        if self._credential_refs is not None:
+            self._credential_refs[provider.id] = credential_ref
+    
+        # --- step 12: register models + bindings ------------------------------
+        prefix = model_key_prefix if model_key_prefix is not None else provider_key
+        registered_keys: list[str] = []
+        try:
+            for dm, modalities in normalized:
+                model_key = f"{prefix}/{dm.provider_model_name}"
+                model = Model(
+                    id=uuid4(),
+                    model_key=model_key,
+                    display_name=dm.provider_model_name,
+                    tier=model_tier,
+                    modalities=modalities,
+                    # Per-model capability facts are not invented (30 §4.3);
+                    # capability eligibility stays a manifest question.
+                    capabilities=[],
+                    status=ModelStatus.ACTIVE,
+                )
+                self._models.register(model)
+                self._bindings.register(
+                    ProviderModelBinding(
+                        provider_id=provider.id,
+                        model_id=model.id,
+                        provider_model_name=dm.provider_model_name,
+                        availability=BindingAvailability.AVAILABLE,
+                    )
+                )
+                registered_keys.append(model_key)
+        except DuplicateRegistration:
+            # Roll the WHOLE onboarding back — a half-registered provider
+            # would be parallel state (P2). Remove in reverse order.
+            for key in registered_keys:
+                model = self._models.get(key)
+                self._bindings.remove(provider.id, model.id)
+                self._models.remove(key)
+            self._providers.remove(provider_key)
+            if self._adapters is not None:
+                self._adapters.pop(provider.id, None)
+            if self._credential_refs is not None:
+                self._credential_refs.pop(provider.id, None)
+>           raise OnboardingRefused(
+                "step-12-register-bindings",
+                "duplicate model key during binding registration — "
+                "onboarding rolled back completely",
+            ) from None
+E           core.providers.onboarding.OnboardingRefused: onboarding refused at step-12-register-bindings: duplicate model key during binding registration — onboarding rolled back completely
+
+core/providers/onboarding.py:308: OnboardingRefused
+_ TestOneLogicalModelManyBindings.test_d_first_provider_state_is_intact_after_second_onboarding _
+
+self = <tests.providers.test_r190_logical_model_identity.TestOneLogicalModelManyBindings object at 0x7f42fd17ce10>
+
+    def test_d_first_provider_state_is_intact_after_second_onboarding(self) -> None:
+        world = World()
+        first = _onboard(world, "prov_a", prefix=SHARED)
+        model_before = world.models.get(KEY)
+        binding_before = world.bindings.get(first.provider_id, model_before.id)
+>       second = _onboard(world, "prov_b", prefix=SHARED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/providers/test_r190_logical_model_identity.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/providers/test_r190_logical_model_identity.py:56: in _onboard
+    return run(
+tests/providers/test_onboarding_service.py:58: in run
+    return asyncio.run(coro)
+           ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:196: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:119: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <core.providers.onboarding.ProviderOnboardingService object at 0x7f42fa930cd0>
+adapter = <tests.providers.test_onboarding_service.FakeAdapter object at 0x7f42fa920e90>
+provider_key = 'prov_b', display_name = 'prov_b'
+auth_types = [<AuthType.API_KEY: 'api_key'>]
+credential_ref = 'secret-ref://prov_b'
+model_tier = <ModelTier.MEDIUM: 'medium'>, model_key_prefix = 'logical'
+
+    async def onboard(
+        self,
+        *,
+        adapter: ProviderAdapterPort,
+        provider_key: str,
+        display_name: str,
+        auth_types: list[AuthType],
+        credential_ref: str,
+        model_tier: ModelTier = ModelTier.MEDIUM,
+        model_key_prefix: str | None = None,
+    ) -> OnboardingReport:
+        """Run the checklist; return the report or raise OnboardingRefused.
+    
+        ``credential_ref`` is the opaque secret-manager reference (20 §5) —
+        never the key itself. ``model_key_prefix`` defaults to provider_key,
+        producing model keys ``{prefix}/{provider_model_name}``.
+        """
+        steps: list[str] = []
+    
+        # --- step 3: manifest is real, not template (31 §22) -----------------
+        manifest = adapter.get_manifest()
+        problem = self._manifest_problem(manifest)
+        if problem is not None:
+            raise OnboardingRefused("step-3-real-manifest", problem)
+        steps.append("step-3-real-manifest")
+    
+        # --- duplicate guard BEFORE any provider I/O --------------------------
+        try:
+            self._providers.get(provider_key)
+        except ProviderNotRegistered:
+            pass
+        else:
+            raise OnboardingRefused(
+                "step-11-register-provider",
+                f"provider already registered: {provider_key}",
+            )
+    
+        # --- step 5: credential handling (opaque ref -> ACTIVE) ---------------
+        # NotImplementedError (e.g. GatewayCredentialCheckUnsupported) is an
+        # HONEST "this adapter has no credential-check wire surface" — the
+        # step is reported UNVERIFIED, never faked as passed and never
+        # treated as a failed check (41 §49). A definite non-ACTIVE answer
+        # still refuses loudly.
+        unverified_extra: list[str] = []
+        try:
+            credential = await adapter.validate_credential(credential_ref)
+        except NotImplementedError as exc:
+            unverified_extra.append(
+                f"step-5-credential-validation (adapter has no check surface: {exc})"
+            )
+        else:
+            if credential.status is not CredentialStatus.ACTIVE:
+                raise OnboardingRefused(
+                    "step-5-credential-validation",
+                    f"credential status is {credential.status.value} "
+                    f"(ref={credential.credential_ref})",
+                )
+            steps.append("step-5-credential-validation")
+    
+        # --- step 6: health check works ---------------------------------------
+        # Same 41 §49 posture as step 5: NotImplementedError (e.g.
+        # GatewayHealthCheckUnsupported — gateway answered UNKNOWN with
+        # checked_at=None, i.e. NO check was performed) is a missing check
+        # SURFACE → recorded UNVERIFIED, never faked as HEALTHY. Any
+        # returned non-HEALTHY state is a definite verdict and still refuses.
+        try:
+            health = await adapter.health_check(HealthScope.PROVIDER)
+        except NotImplementedError as exc:
+            unverified_extra.append(f"step-6-health-check (adapter has no check surface: {exc})")
+        else:
+            if health.state is not ProviderHealthState.HEALTHY:
+                raise OnboardingRefused(
+                    "step-6-health-check",
+                    f"provider health is {health.state.value}",
+                )
+            steps.append("step-6-health-check")
+    
+        # --- step 4 (observable half): >=1 declared operation ------------------
+        if not manifest.operations:
+            raise OnboardingRefused(
+                "step-4-declared-operations",
+                "manifest declares no operations (30 §5: undeclared = ineligible)",
+            )
+        steps.append("step-4-declared-operations")
+    
+        # --- step 12 input: discover + normalize BEFORE registering anything ---
+        discovered = await adapter.discover_models()
+        normalized = self._normalize_discovered(discovered)
+    
+        # --- step 11: register provider, status=DISABLED (step 13) ------------
+        provider = Provider(
+            id=uuid4(),
+            provider_key=provider_key,
+            display_name=display_name,
+            status=ProviderStatus.DISABLED,  # step 13: disabled until enabled
+            auth_types=auth_types,
+            supports_account_pool=manifest.account_pool.supported,
+        )
+        self._providers.register(provider, manifest)
+        steps.append("step-11-register-provider")
+        steps.append("step-13-provider-kept-disabled")
+    
+        # --- executability (Gap 1a): SAME maps ExecutionService reads ---------
+        # Registered here so a routed candidate for this provider passes
+        # _validate_route the moment an admin enables it. The credential_ref
+        # stays OPAQUE (20 §5) — the adapter resolves it, never this walker.
+        if self._adapters is not None:
+            self._adapters[provider.id] = adapter
+        if self._credential_refs is not None:
+            self._credential_refs[provider.id] = credential_ref
+    
+        # --- step 12: register models + bindings ------------------------------
+        prefix = model_key_prefix if model_key_prefix is not None else provider_key
+        registered_keys: list[str] = []
+        try:
+            for dm, modalities in normalized:
+                model_key = f"{prefix}/{dm.provider_model_name}"
+                model = Model(
+                    id=uuid4(),
+                    model_key=model_key,
+                    display_name=dm.provider_model_name,
+                    tier=model_tier,
+                    modalities=modalities,
+                    # Per-model capability facts are not invented (30 §4.3);
+                    # capability eligibility stays a manifest question.
+                    capabilities=[],
+                    status=ModelStatus.ACTIVE,
+                )
+                self._models.register(model)
+                self._bindings.register(
+                    ProviderModelBinding(
+                        provider_id=provider.id,
+                        model_id=model.id,
+                        provider_model_name=dm.provider_model_name,
+                        availability=BindingAvailability.AVAILABLE,
+                    )
+                )
+                registered_keys.append(model_key)
+        except DuplicateRegistration:
+            # Roll the WHOLE onboarding back — a half-registered provider
+            # would be parallel state (P2). Remove in reverse order.
+            for key in registered_keys:
+                model = self._models.get(key)
+                self._bindings.remove(provider.id, model.id)
+                self._models.remove(key)
+            self._providers.remove(provider_key)
+            if self._adapters is not None:
+                self._adapters.pop(provider.id, None)
+            if self._credential_refs is not None:
+                self._credential_refs.pop(provider.id, None)
+>           raise OnboardingRefused(
+                "step-12-register-bindings",
+                "duplicate model key during binding registration — "
+                "onboarding rolled back completely",
+            ) from None
+E           core.providers.onboarding.OnboardingRefused: onboarding refused at step-12-register-bindings: duplicate model key during binding registration — onboarding rolled back completely
+
+core/providers/onboarding.py:308: OnboardingRefused
+_ TestRoutingOverTheSharedModel.test_f_model_only_routing_sees_both_providers __
+
+self = <tests.providers.test_r190_logical_model_identity.TestRoutingOverTheSharedModel object at 0x7f42fd17d090>
+
+    def test_f_model_only_routing_sees_both_providers(self) -> None:
+>       world, _, router, _ = self._routed_world()
+                              ^^^^^^^^^^^^^^^^^^^^
+
+tests/providers/test_r190_logical_model_identity.py:187: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/providers/test_r190_logical_model_identity.py:171: in _routed_world
+    _two_providers(world)
+tests/providers/test_r190_logical_model_identity.py:70: in _two_providers
+    b = _onboard(world, "prov_b", prefix=SHARED)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/providers/test_r190_logical_model_identity.py:56: in _onboard
+    return run(
+tests/providers/test_onboarding_service.py:58: in run
+    return asyncio.run(coro)
+           ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:196: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:119: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <core.providers.onboarding.ProviderOnboardingService object at 0x7f42fa9223f0>
+adapter = <tests.providers.test_onboarding_service.FakeAdapter object at 0x7f42fa813770>
+provider_key = 'prov_b', display_name = 'prov_b'
+auth_types = [<AuthType.API_KEY: 'api_key'>]
+credential_ref = 'secret-ref://prov_b'
+model_tier = <ModelTier.MEDIUM: 'medium'>, model_key_prefix = 'logical'
+
+    async def onboard(
+        self,
+        *,
+        adapter: ProviderAdapterPort,
+        provider_key: str,
+        display_name: str,
+        auth_types: list[AuthType],
+        credential_ref: str,
+        model_tier: ModelTier = ModelTier.MEDIUM,
+        model_key_prefix: str | None = None,
+    ) -> OnboardingReport:
+        """Run the checklist; return the report or raise OnboardingRefused.
+    
+        ``credential_ref`` is the opaque secret-manager reference (20 §5) —
+        never the key itself. ``model_key_prefix`` defaults to provider_key,
+        producing model keys ``{prefix}/{provider_model_name}``.
+        """
+        steps: list[str] = []
+    
+        # --- step 3: manifest is real, not template (31 §22) -----------------
+        manifest = adapter.get_manifest()
+        problem = self._manifest_problem(manifest)
+        if problem is not None:
+            raise OnboardingRefused("step-3-real-manifest", problem)
+        steps.append("step-3-real-manifest")
+    
+        # --- duplicate guard BEFORE any provider I/O --------------------------
+        try:
+            self._providers.get(provider_key)
+        except ProviderNotRegistered:
+            pass
+        else:
+            raise OnboardingRefused(
+                "step-11-register-provider",
+                f"provider already registered: {provider_key}",
+            )
+    
+        # --- step 5: credential handling (opaque ref -> ACTIVE) ---------------
+        # NotImplementedError (e.g. GatewayCredentialCheckUnsupported) is an
+        # HONEST "this adapter has no credential-check wire surface" — the
+        # step is reported UNVERIFIED, never faked as passed and never
+        # treated as a failed check (41 §49). A definite non-ACTIVE answer
+        # still refuses loudly.
+        unverified_extra: list[str] = []
+        try:
+            credential = await adapter.validate_credential(credential_ref)
+        except NotImplementedError as exc:
+            unverified_extra.append(
+                f"step-5-credential-validation (adapter has no check surface: {exc})"
+            )
+        else:
+            if credential.status is not CredentialStatus.ACTIVE:
+                raise OnboardingRefused(
+                    "step-5-credential-validation",
+                    f"credential status is {credential.status.value} "
+                    f"(ref={credential.credential_ref})",
+                )
+            steps.append("step-5-credential-validation")
+    
+        # --- step 6: health check works ---------------------------------------
+        # Same 41 §49 posture as step 5: NotImplementedError (e.g.
+        # GatewayHealthCheckUnsupported — gateway answered UNKNOWN with
+        # checked_at=None, i.e. NO check was performed) is a missing check
+        # SURFACE → recorded UNVERIFIED, never faked as HEALTHY. Any
+        # returned non-HEALTHY state is a definite verdict and still refuses.
+        try:
+            health = await adapter.health_check(HealthScope.PROVIDER)
+        except NotImplementedError as exc:
+            unverified_extra.append(f"step-6-health-check (adapter has no check surface: {exc})")
+        else:
+            if health.state is not ProviderHealthState.HEALTHY:
+                raise OnboardingRefused(
+                    "step-6-health-check",
+                    f"provider health is {health.state.value}",
+                )
+            steps.append("step-6-health-check")
+    
+        # --- step 4 (observable half): >=1 declared operation ------------------
+        if not manifest.operations:
+            raise OnboardingRefused(
+                "step-4-declared-operations",
+                "manifest declares no operations (30 §5: undeclared = ineligible)",
+            )
+        steps.append("step-4-declared-operations")
+    
+        # --- step 12 input: discover + normalize BEFORE registering anything ---
+        discovered = await adapter.discover_models()
+        normalized = self._normalize_discovered(discovered)
+    
+        # --- step 11: register provider, status=DISABLED (step 13) ------------
+        provider = Provider(
+            id=uuid4(),
+            provider_key=provider_key,
+            display_name=display_name,
+            status=ProviderStatus.DISABLED,  # step 13: disabled until enabled
+            auth_types=auth_types,
+            supports_account_pool=manifest.account_pool.supported,
+        )
+        self._providers.register(provider, manifest)
+        steps.append("step-11-register-provider")
+        steps.append("step-13-provider-kept-disabled")
+    
+        # --- executability (Gap 1a): SAME maps ExecutionService reads ---------
+        # Registered here so a routed candidate for this provider passes
+        # _validate_route the moment an admin enables it. The credential_ref
+        # stays OPAQUE (20 §5) — the adapter resolves it, never this walker.
+        if self._adapters is not None:
+            self._adapters[provider.id] = adapter
+        if self._credential_refs is not None:
+            self._credential_refs[provider.id] = credential_ref
+    
+        # --- step 12: register models + bindings ------------------------------
+        prefix = model_key_prefix if model_key_prefix is not None else provider_key
+        registered_keys: list[str] = []
+        try:
+            for dm, modalities in normalized:
+                model_key = f"{prefix}/{dm.provider_model_name}"
+                model = Model(
+                    id=uuid4(),
+                    model_key=model_key,
+                    display_name=dm.provider_model_name,
+                    tier=model_tier,
+                    modalities=modalities,
+                    # Per-model capability facts are not invented (30 §4.3);
+                    # capability eligibility stays a manifest question.
+                    capabilities=[],
+                    status=ModelStatus.ACTIVE,
+                )
+                self._models.register(model)
+                self._bindings.register(
+                    ProviderModelBinding(
+                        provider_id=provider.id,
+                        model_id=model.id,
+                        provider_model_name=dm.provider_model_name,
+                        availability=BindingAvailability.AVAILABLE,
+                    )
+                )
+                registered_keys.append(model_key)
+        except DuplicateRegistration:
+            # Roll the WHOLE onboarding back — a half-registered provider
+            # would be parallel state (P2). Remove in reverse order.
+            for key in registered_keys:
+                model = self._models.get(key)
+                self._bindings.remove(provider.id, model.id)
+                self._models.remove(key)
+            self._providers.remove(provider_key)
+            if self._adapters is not None:
+                self._adapters.pop(provider.id, None)
+            if self._credential_refs is not None:
+                self._credential_refs.pop(provider.id, None)
+>           raise OnboardingRefused(
+                "step-12-register-bindings",
+                "duplicate model key during binding registration — "
+                "onboarding rolled back completely",
+            ) from None
+E           core.providers.onboarding.OnboardingRefused: onboarding refused at step-12-register-bindings: duplicate model key during binding registration — onboarding rolled back completely
+
+core/providers/onboarding.py:308: OnboardingRefused
+_ TestRoutingOverTheSharedModel.test_g_explicit_provider_plus_model_still_narrows _
+
+self = <tests.providers.test_r190_logical_model_identity.TestRoutingOverTheSharedModel object at 0x7f42fd17d590>
+
+    def test_g_explicit_provider_plus_model_still_narrows(self) -> None:
+>       world, _, router, _ = self._routed_world()
+                              ^^^^^^^^^^^^^^^^^^^^
+
+tests/providers/test_r190_logical_model_identity.py:196: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/providers/test_r190_logical_model_identity.py:171: in _routed_world
+    _two_providers(world)
+tests/providers/test_r190_logical_model_identity.py:70: in _two_providers
+    b = _onboard(world, "prov_b", prefix=SHARED)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/providers/test_r190_logical_model_identity.py:56: in _onboard
+    return run(
+tests/providers/test_onboarding_service.py:58: in run
+    return asyncio.run(coro)
+           ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:196: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:119: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <core.providers.onboarding.ProviderOnboardingService object at 0x7f42fa8eda30>
+adapter = <tests.providers.test_onboarding_service.FakeAdapter object at 0x7f42fa907860>
+provider_key = 'prov_b', display_name = 'prov_b'
+auth_types = [<AuthType.API_KEY: 'api_key'>]
+credential_ref = 'secret-ref://prov_b'
+model_tier = <ModelTier.MEDIUM: 'medium'>, model_key_prefix = 'logical'
+
+    async def onboard(
+        self,
+        *,
+        adapter: ProviderAdapterPort,
+        provider_key: str,
+        display_name: str,
+        auth_types: list[AuthType],
+        credential_ref: str,
+        model_tier: ModelTier = ModelTier.MEDIUM,
+        model_key_prefix: str | None = None,
+    ) -> OnboardingReport:
+        """Run the checklist; return the report or raise OnboardingRefused.
+    
+        ``credential_ref`` is the opaque secret-manager reference (20 §5) —
+        never the key itself. ``model_key_prefix`` defaults to provider_key,
+        producing model keys ``{prefix}/{provider_model_name}``.
+        """
+        steps: list[str] = []
+    
+        # --- step 3: manifest is real, not template (31 §22) -----------------
+        manifest = adapter.get_manifest()
+        problem = self._manifest_problem(manifest)
+        if problem is not None:
+            raise OnboardingRefused("step-3-real-manifest", problem)
+        steps.append("step-3-real-manifest")
+    
+        # --- duplicate guard BEFORE any provider I/O --------------------------
+        try:
+            self._providers.get(provider_key)
+        except ProviderNotRegistered:
+            pass
+        else:
+            raise OnboardingRefused(
+                "step-11-register-provider",
+                f"provider already registered: {provider_key}",
+            )
+    
+        # --- step 5: credential handling (opaque ref -> ACTIVE) ---------------
+        # NotImplementedError (e.g. GatewayCredentialCheckUnsupported) is an
+        # HONEST "this adapter has no credential-check wire surface" — the
+        # step is reported UNVERIFIED, never faked as passed and never
+        # treated as a failed check (41 §49). A definite non-ACTIVE answer
+        # still refuses loudly.
+        unverified_extra: list[str] = []
+        try:
+            credential = await adapter.validate_credential(credential_ref)
+        except NotImplementedError as exc:
+            unverified_extra.append(
+                f"step-5-credential-validation (adapter has no check surface: {exc})"
+            )
+        else:
+            if credential.status is not CredentialStatus.ACTIVE:
+                raise OnboardingRefused(
+                    "step-5-credential-validation",
+                    f"credential status is {credential.status.value} "
+                    f"(ref={credential.credential_ref})",
+                )
+            steps.append("step-5-credential-validation")
+    
+        # --- step 6: health check works ---------------------------------------
+        # Same 41 §49 posture as step 5: NotImplementedError (e.g.
+        # GatewayHealthCheckUnsupported — gateway answered UNKNOWN with
+        # checked_at=None, i.e. NO check was performed) is a missing check
+        # SURFACE → recorded UNVERIFIED, never faked as HEALTHY. Any
+        # returned non-HEALTHY state is a definite verdict and still refuses.
+        try:
+            health = await adapter.health_check(HealthScope.PROVIDER)
+        except NotImplementedError as exc:
+            unverified_extra.append(f"step-6-health-check (adapter has no check surface: {exc})")
+        else:
+            if health.state is not ProviderHealthState.HEALTHY:
+                raise OnboardingRefused(
+                    "step-6-health-check",
+                    f"provider health is {health.state.value}",
+                )
+            steps.append("step-6-health-check")
+    
+        # --- step 4 (observable half): >=1 declared operation ------------------
+        if not manifest.operations:
+            raise OnboardingRefused(
+                "step-4-declared-operations",
+                "manifest declares no operations (30 §5: undeclared = ineligible)",
+            )
+        steps.append("step-4-declared-operations")
+    
+        # --- step 12 input: discover + normalize BEFORE registering anything ---
+        discovered = await adapter.discover_models()
+        normalized = self._normalize_discovered(discovered)
+    
+        # --- step 11: register provider, status=DISABLED (step 13) ------------
+        provider = Provider(
+            id=uuid4(),
+            provider_key=provider_key,
+            display_name=display_name,
+            status=ProviderStatus.DISABLED,  # step 13: disabled until enabled
+            auth_types=auth_types,
+            supports_account_pool=manifest.account_pool.supported,
+        )
+        self._providers.register(provider, manifest)
+        steps.append("step-11-register-provider")
+        steps.append("step-13-provider-kept-disabled")
+    
+        # --- executability (Gap 1a): SAME maps ExecutionService reads ---------
+        # Registered here so a routed candidate for this provider passes
+        # _validate_route the moment an admin enables it. The credential_ref
+        # stays OPAQUE (20 §5) — the adapter resolves it, never this walker.
+        if self._adapters is not None:
+            self._adapters[provider.id] = adapter
+        if self._credential_refs is not None:
+            self._credential_refs[provider.id] = credential_ref
+    
+        # --- step 12: register models + bindings ------------------------------
+        prefix = model_key_prefix if model_key_prefix is not None else provider_key
+        registered_keys: list[str] = []
+        try:
+            for dm, modalities in normalized:
+                model_key = f"{prefix}/{dm.provider_model_name}"
+                model = Model(
+                    id=uuid4(),
+                    model_key=model_key,
+                    display_name=dm.provider_model_name,
+                    tier=model_tier,
+                    modalities=modalities,
+                    # Per-model capability facts are not invented (30 §4.3);
+                    # capability eligibility stays a manifest question.
+                    capabilities=[],
+                    status=ModelStatus.ACTIVE,
+                )
+                self._models.register(model)
+                self._bindings.register(
+                    ProviderModelBinding(
+                        provider_id=provider.id,
+                        model_id=model.id,
+                        provider_model_name=dm.provider_model_name,
+                        availability=BindingAvailability.AVAILABLE,
+                    )
+                )
+                registered_keys.append(model_key)
+        except DuplicateRegistration:
+            # Roll the WHOLE onboarding back — a half-registered provider
+            # would be parallel state (P2). Remove in reverse order.
+            for key in registered_keys:
+                model = self._models.get(key)
+                self._bindings.remove(provider.id, model.id)
+                self._models.remove(key)
+            self._providers.remove(provider_key)
+            if self._adapters is not None:
+                self._adapters.pop(provider.id, None)
+            if self._credential_refs is not None:
+                self._credential_refs.pop(provider.id, None)
+>           raise OnboardingRefused(
+                "step-12-register-bindings",
+                "duplicate model key during binding registration — "
+                "onboarding rolled back completely",
+            ) from None
+E           core.providers.onboarding.OnboardingRefused: onboarding refused at step-12-register-bindings: duplicate model key during binding registration — onboarding rolled back completely
+
+core/providers/onboarding.py:308: OnboardingRefused
+_ TestRoutingOverTheSharedModel.test_h_i_same_model_fallback_and_cooling_exclusion _
+
+self = <tests.providers.test_r190_logical_model_identity.TestRoutingOverTheSharedModel object at 0x7f42fd11e520>
+
+    def test_h_i_same_model_fallback_and_cooling_exclusion(self) -> None:
+>       world, board, router, clock = self._routed_world()
+                                      ^^^^^^^^^^^^^^^^^^^^
+
+tests/providers/test_r190_logical_model_identity.py:218: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/providers/test_r190_logical_model_identity.py:171: in _routed_world
+    _two_providers(world)
+tests/providers/test_r190_logical_model_identity.py:70: in _two_providers
+    b = _onboard(world, "prov_b", prefix=SHARED)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/providers/test_r190_logical_model_identity.py:56: in _onboard
+    return run(
+tests/providers/test_onboarding_service.py:58: in run
+    return asyncio.run(coro)
+           ^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:196: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/runners.py:119: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.13/asyncio/base_events.py:725: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <core.providers.onboarding.ProviderOnboardingService object at 0x7f42fa8de7a0>
+adapter = <tests.providers.test_onboarding_service.FakeAdapter object at 0x7f42fa87da90>
+provider_key = 'prov_b', display_name = 'prov_b'
+auth_types = [<AuthType.API_KEY: 'api_key'>]
+credential_ref = 'secret-ref://prov_b'
+model_tier = <ModelTier.MEDIUM: 'medium'>, model_key_prefix = 'logical'
+
+    async def onboard(
+        self,
+        *,
+        adapter: ProviderAdapterPort,
+        provider_key: str,
+        display_name: str,
+        auth_types: list[AuthType],
+        credential_ref: str,
+        model_tier: ModelTier = ModelTier.MEDIUM,
+        model_key_prefix: str | None = None,
+    ) -> OnboardingReport:
+        """Run the checklist; return the report or raise OnboardingRefused.
+    
+        ``credential_ref`` is the opaque secret-manager reference (20 §5) —
+        never the key itself. ``model_key_prefix`` defaults to provider_key,
+        producing model keys ``{prefix}/{provider_model_name}``.
+        """
+        steps: list[str] = []
+    
+        # --- step 3: manifest is real, not template (31 §22) -----------------
+        manifest = adapter.get_manifest()
+        problem = self._manifest_problem(manifest)
+        if problem is not None:
+            raise OnboardingRefused("step-3-real-manifest", problem)
+        steps.append("step-3-real-manifest")
+    
+        # --- duplicate guard BEFORE any provider I/O --------------------------
+        try:
+            self._providers.get(provider_key)
+        except ProviderNotRegistered:
+            pass
+        else:
+            raise OnboardingRefused(
+                "step-11-register-provider",
+                f"provider already registered: {provider_key}",
+            )
+    
+        # --- step 5: credential handling (opaque ref -> ACTIVE) ---------------
+        # NotImplementedError (e.g. GatewayCredentialCheckUnsupported) is an
+        # HONEST "this adapter has no credential-check wire surface" — the
+        # step is reported UNVERIFIED, never faked as passed and never
+        # treated as a failed check (41 §49). A definite non-ACTIVE answer
+        # still refuses loudly.
+        unverified_extra: list[str] = []
+        try:
+            credential = await adapter.validate_credential(credential_ref)
+        except NotImplementedError as exc:
+            unverified_extra.append(
+                f"step-5-credential-validation (adapter has no check surface: {exc})"
+            )
+        else:
+            if credential.status is not CredentialStatus.ACTIVE:
+                raise OnboardingRefused(
+                    "step-5-credential-validation",
+                    f"credential status is {credential.status.value} "
+                    f"(ref={credential.credential_ref})",
+                )
+            steps.append("step-5-credential-validation")
+    
+        # --- step 6: health check works ---------------------------------------
+        # Same 41 §49 posture as step 5: NotImplementedError (e.g.
+        # GatewayHealthCheckUnsupported — gateway answered UNKNOWN with
+        # checked_at=None, i.e. NO check was performed) is a missing check
+        # SURFACE → recorded UNVERIFIED, never faked as HEALTHY. Any
+        # returned non-HEALTHY state is a definite verdict and still refuses.
+        try:
+            health = await adapter.health_check(HealthScope.PROVIDER)
+        except NotImplementedError as exc:
+            unverified_extra.append(f"step-6-health-check (adapter has no check surface: {exc})")
+        else:
+            if health.state is not ProviderHealthState.HEALTHY:
+                raise OnboardingRefused(
+                    "step-6-health-check",
+                    f"provider health is {health.state.value}",
+                )
+            steps.append("step-6-health-check")
+    
+        # --- step 4 (observable half): >=1 declared operation ------------------
+        if not manifest.operations:
+            raise OnboardingRefused(
+                "step-4-declared-operations",
+                "manifest declares no operations (30 §5: undeclared = ineligible)",
+            )
+        steps.append("step-4-declared-operations")
+    
+        # --- step 12 input: discover + normalize BEFORE registering anything ---
+        discovered = await adapter.discover_models()
+        normalized = self._normalize_discovered(discovered)
+    
+        # --- step 11: register provider, status=DISABLED (step 13) ------------
+        provider = Provider(
+            id=uuid4(),
+            provider_key=provider_key,
+            display_name=display_name,
+            status=ProviderStatus.DISABLED,  # step 13: disabled until enabled
+            auth_types=auth_types,
+            supports_account_pool=manifest.account_pool.supported,
+        )
+        self._providers.register(provider, manifest)
+        steps.append("step-11-register-provider")
+        steps.append("step-13-provider-kept-disabled")
+    
+        # --- executability (Gap 1a): SAME maps ExecutionService reads ---------
+        # Registered here so a routed candidate for this provider passes
+        # _validate_route the moment an admin enables it. The credential_ref
+        # stays OPAQUE (20 §5) — the adapter resolves it, never this walker.
+        if self._adapters is not None:
+            self._adapters[provider.id] = adapter
+        if self._credential_refs is not None:
+            self._credential_refs[provider.id] = credential_ref
+    
+        # --- step 12: register models + bindings ------------------------------
+        prefix = model_key_prefix if model_key_prefix is not None else provider_key
+        registered_keys: list[str] = []
+        try:
+            for dm, modalities in normalized:
+                model_key = f"{prefix}/{dm.provider_model_name}"
+                model = Model(
+                    id=uuid4(),
+                    model_key=model_key,
+                    display_name=dm.provider_model_name,
+                    tier=model_tier,
+                    modalities=modalities,
+                    # Per-model capability facts are not invented (30 §4.3);
+                    # capability eligibility stays a manifest question.
+                    capabilities=[],
+                    status=ModelStatus.ACTIVE,
+                )
+                self._models.register(model)
+                self._bindings.register(
+                    ProviderModelBinding(
+                        provider_id=provider.id,
+                        model_id=model.id,
+                        provider_model_name=dm.provider_model_name,
+                        availability=BindingAvailability.AVAILABLE,
+                    )
+                )
+                registered_keys.append(model_key)
+        except DuplicateRegistration:
+            # Roll the WHOLE onboarding back — a half-registered provider
+            # would be parallel state (P2). Remove in reverse order.
+            for key in registered_keys:
+                model = self._models.get(key)
+                self._bindings.remove(provider.id, model.id)
+                self._models.remove(key)
+            self._providers.remove(provider_key)
+            if self._adapters is not None:
+                self._adapters.pop(provider.id, None)
+            if self._credential_refs is not None:
+                self._credential_refs.pop(provider.id, None)
+>           raise OnboardingRefused(
+                "step-12-register-bindings",
+                "duplicate model key during binding registration — "
+                "onboarding rolled back completely",
+            ) from None
+E           core.providers.onboarding.OnboardingRefused: onboarding refused at step-12-register-bindings: duplicate model key during binding registration — onboarding rolled back completely
+
+core/providers/onboarding.py:308: OnboardingRefused
+______________ test_shared_model_hydrates_once_with_two_bindings _______________
+
+    def test_shared_model_hydrates_once_with_two_bindings() -> None:
+        a, b = _provider("gw_alpha"), _provider("gw_beta")
+        model = Model(
+            id=uuid4(),
+            model_key="logical/alpha-1",
+            display_name="alpha-1",
+            tier=ModelTier.MEDIUM,
+            modalities=[Modality.TEXT],
+            capabilities=[],
+            status=ModelStatus.ACTIVE,
+        )
+        bindings = [
+            ProviderModelBinding(
+                provider_id=p.id,
+                model_id=model.id,
+                provider_model_name="alpha-1",
+                availability=BindingAvailability.AVAILABLE,
+            )
+            for p in (a, b)
+        ]
+        db = FakeDatabase(
+            gateway_registrations=FakeCatalog(
+                [(a.id, _definition("gw_alpha")), (b.id, _definition("gw_beta"))]
+            ),
+            provider_catalog=FakeCatalog([a, b]),
+            model_catalog=FakeCatalog([model]),
+            binding_catalog=FakeCatalog(bindings),
+        )
+        world = HydrationWorld()
+>       hydrated = _hydrate(world, db, settings=None)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/composition/test_r190_hydration_shared_model.py:74: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/composition/test_provider_onboarding_hydration.py:141: in _hydrate
+    return hydrate_gateway_providers(
+apps/composition/provider_onboarding.py:263: in hydrate_gateway_providers
+    models.register(model)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <core.providers.registry.ModelRegistry object at 0x7f42fd184af0>
+model = Model(id=UUID('f65bcffb-9ed8-4aa4-8424-62b0ed34d400'), model_key='logical/alpha-1', display_name='alpha-1', tier=<Mode...peed_score=None, cost_score=None, reliability_score=None, status=<ModelStatus.ACTIVE: 'active'>, agent_capability=None)
+
+    def register(self, model: Model) -> None:
+        if model.model_key in self._by_key or model.id in self._by_id:
+            msg = f"model already registered: {model.model_key}"
+>           raise DuplicateRegistration(msg)
+E           core.providers.errors.DuplicateRegistration: model already registered: logical/alpha-1
+
+core/providers/registry.py:224: DuplicateRegistration
+=============================== warnings summary ===============================
+../../home/user/webapp/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1
+  /home/user/webapp/.venv/lib/python3.13/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+../../home/user/webapp/.venv/lib/python3.13/site-packages/starlette/testclient.py:53
+  /home/user/webapp/.venv/lib/python3.13/site-packages/starlette/testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/providers/test_r190_logical_model_identity.py::TestOneLogicalModelManyBindings::test_a_b_c_second_provider_binds_to_the_existing_model
+FAILED tests/providers/test_r190_logical_model_identity.py::TestOneLogicalModelManyBindings::test_d_first_provider_state_is_intact_after_second_onboarding
+FAILED tests/providers/test_r190_logical_model_identity.py::TestRoutingOverTheSharedModel::test_f_model_only_routing_sees_both_providers
+FAILED tests/providers/test_r190_logical_model_identity.py::TestRoutingOverTheSharedModel::test_g_explicit_provider_plus_model_still_narrows
+FAILED tests/providers/test_r190_logical_model_identity.py::TestRoutingOverTheSharedModel::test_h_i_same_model_fallback_and_cooling_exclusion
+FAILED tests/composition/test_r190_hydration_shared_model.py::test_shared_model_hydrates_once_with_two_bindings
