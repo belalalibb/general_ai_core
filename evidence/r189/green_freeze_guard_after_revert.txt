@@ -1,0 +1,3 @@
+# R189 freeze guard — GREEN 3/3: mutation REVERTED (git diff core/ empty) at 951257d7
+# cmd: pytest -p no:cacheprovider tests/verification/test_contract_freeze_baseline.py -q --no-header
+......                                                                   [100%]
