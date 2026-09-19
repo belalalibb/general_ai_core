@@ -175,3 +175,103 @@ protected by the regression gate, not by shape pinning.
 - No provider calls; no App Factory work; no UI change; no change under `infrastructure/`; `core/` untouched
   (`git diff origin/main -- core/ infrastructure/` is empty).
 - Nothing hand-listed: the baseline and the served-route set are derived.
+
+---
+
+## 6. NO SILENT LOSS — deferred items (6-field blocks)
+
+### 6.1 Modality limits enforcement
+- **REMAINING:** an execute-path consumer of `PlanLimits.modality_limits` (per-modality reservation/refusal).
+- **WHY:** reservation is a single scalar (`task_units`); adding per-modality accounting changes `core/usage/*`
+  behaviour and the usage ledger shape — outside R189's stabilization scope and would touch frozen `core.contracts.usage`.
+- **DEPENDENCIES:** decision on the unit model (per-modality units vs. per-modality counters beside `task_units`);
+  additive `UsageLedger` fields under the freeze rule; declared round.
+- **EXACT NEXT STEPS:** (1) decision record choosing the unit model; (2) RED test: plan with `modality_limits.image_generations=0`
+  → image request refused with an explicit `ErrorCode`; (3) implement in `core/usage/*` + `apps/api/app.py` under a declared ceiling.
+- **VERIFICATION REQUIRED:** RED→GREEN focused tests; freeze guard shows only ADDED lines; gate of record.
+- **RECOMMENDATION:** schedule after the freeze round closes; keep field advisory until then.
+
+### 6.2 Admin fallback source (`admin_fallback_chain`)
+- **REMAINING:** a producer (admin-stored ordered chain) and its composition wiring into `SimpleScoringRouter`.
+- **WHY:** no served admin write path stores a chain; adding one is a NEW served contract (forbidden this round).
+- **DEPENDENCIES:** admin config schema for the chain (additive field on the existing routing config), persistence,
+  the router already accepts the tuple.
+- **EXACT NEXT STEPS:** (1) decision record; (2) RED test: `/v1/admin/routing` accepts `fallback_chain` and
+  `ADMIN_DEFINED_CHAIN` no longer raises `FallbackNotConfigured`; (3) wire in `apps/composition/runtime.py`.
+- **VERIFICATION REQUIRED:** router tests + admin API pins; freeze guard ADDED-only.
+- **RECOMMENDATION:** low priority — same-model fallback is the default safety path (R188).
+
+### 6.3 D-03 — credential unavailable (NOT EVALUATED, separate)
+- **REMAINING:** live-credential evaluation of the provider path listed in `green_manifest.json.not_evaluated`.
+- **WHY:** credential is unavailable (F-CS1-04 credential rotation is operator-owned); ZERO provider calls this round.
+- **DEPENDENCIES:** operator supplies a rotated credential out-of-band.
+- **EXACT NEXT STEPS:** operator rotation → run the D-03 check → move the item from `not_evaluated` with evidence.
+- **VERIFICATION REQUIRED:** the D-03 evidence file + manifest update in a records PR.
+- **RECOMMENDATION:** keep NOT EVALUATED; do not conflate with account-pool policy (Disposition C).
+
+### 6.4 Account pool lease / fencing consumer
+- **REMAINING:** composition wiring of `ResourceSelector`/`AccountPoolManager` and a `RateLimitStatus` producer.
+- **WHY:** optional in v1 (30 §10.1); no onboarded provider declares `account_pool.supported=true`.
+- **DEPENDENCIES:** a real provider that needs pools; lease store; declared round.
+- **EXACT NEXT STEPS:** only when such a provider is onboarded: decision record → RED (concurrent execution without
+  lease refused when `lease_required`) → wire.
+- **VERIFICATION REQUIRED:** hermetic lease tests + gate.
+- **RECOMMENDATION:** do nothing until a pooled provider exists.
+
+### 6.5 Async execution strategy (P-R188-03 NO)
+- **REMAINING:** running `ExecutionStrategySpec` on the worker/outbox path.
+- **WHY:** operator NO; today's refusal is explicit (422).
+- **DEPENDENCIES:** outbox payload carries the resolved spec; worker invokes `StrategyExecutor`; report persistence per stage.
+- **EXACT NEXT STEPS:** decision record → RED (async + strategy accepted, report has one node per stage) → implement.
+- **VERIFICATION REQUIRED:** worker tests, `GET /v1/executions/{id}` unchanged shape, gate.
+- **RECOMMENDATION:** after freeze; additive only (no new route).
+
+### 6.6 Durable / shared resource signals (P-R188-04 NO)
+- **REMAINING:** a shared `ResourceSignalPort` implementation (e.g. Redis/DB) behind the existing port.
+- **WHY:** operator NO; single replica is fully served by the in-process board.
+- **DEPENDENCIES:** multiple independent replicas serving `/v1/execute` concurrently; a durable store in composition.
+- **EXACT NEXT STEPS:** when replicas > 1: decision record → port-conformance tests for the new implementation → wire.
+- **VERIFICATION REQUIRED:** port conformance + snapshot vocabulary guard unchanged.
+- **RECOMMENDATION:** none needed until deployment topology changes.
+
+### 6.7 Training consumer
+- **REMAINING:** any consumer of GOLD/admitted `LearningSample`s for training.
+- **WHY:** absent by design (R188 B); no training pipeline exists in this repository.
+- **DEPENDENCIES:** external training system; export contract (additive).
+- **EXACT NEXT STEPS:** decision record defining the export shape → RED → implement export only.
+- **VERIFICATION REQUIRED:** gates (`TRAINING_ELIGIBILITY_CONDITIONS`) unchanged; export tests.
+- **RECOMMENDATION:** defer until a consumer exists.
+
+### 6.8 Feedback intake
+- **REMAINING:** any served path that accepts end-user feedback.
+- **WHY:** 41 §20 excludes feedback from gates structurally (`test_learning_gates_carry_no_feedback_input`); intake without
+  a gate consumer would be a new served contract with no verified use.
+- **DEPENDENCIES:** decision on where feedback may influence (evaluation only, never training gates).
+- **EXACT NEXT STEPS:** decision record → additive route → guard that gates still carry no feedback input.
+- **VERIFICATION REQUIRED:** the existing gate guard stays GREEN; new route pinned.
+- **RECOMMENDATION:** defer.
+
+### 6.9 Strategy-output evaluation
+- **REMAINING:** evaluation records for multi-stage (`execution_strategy`) outputs beyond the single-report grader.
+- **WHY:** R188 C-items delivered execution; evaluation of per-stage outputs was not in scope.
+- **DEPENDENCIES:** `EvaluationRecord` additive fields (stage key); grader selection per `StageKind`.
+- **EXACT NEXT STEPS:** decision record → RED (review stage produces an `EvaluationRecord` tagged with stage) → implement.
+- **VERIFICATION REQUIRED:** evaluation tests; freeze guard ADDED-only.
+- **RECOMMENDATION:** after freeze.
+
+### 6.10 P-R189-01 — model identity across providers (RECOMMENDED)
+- **REMAINING:** operator decision; then step-12 behaviour change (bind to existing `Model` when explicit prefix supplied).
+- **WHY:** repository refuses duplicate keys today; changing that silently would violate the freeze rule.
+- **DEPENDENCIES:** operator YES/NO; declared round with ceiling ≥ 1 (`core/providers/onboarding.py`).
+- **EXACT NEXT STEPS:** YES → RED (`test_same_prefix_second_provider_is_refused_and_rolled_back` inverted to expect a
+  second binding on the same model) → implement → GREEN; NO → keep the pin.
+- **VERIFICATION REQUIRED:** routing test proving same-model-different-provider fallback for onboarded providers.
+- **RECOMMENDATION:** YES (option a), smallest additive change that fulfils the R188 intent.
+
+---
+
+## 7. Evidence index (R189)
+`evidence/r189/red_p_r188_01.txt` · `green_p_r188_01.txt` · `red_freeze_guard_absent.txt` · `green_freeze_guard.txt` ·
+`red_freeze_guard_mutation.txt` · `green_freeze_guard_after_revert.txt` · `regression_focused_14eb41bf.txt` (1929 passed /
+9 skipped / 0 failed) · `static_checks_14eb41bf.txt` (mypy 218 files clean; ruff clean; touched files formatted) ·
+gate of record + gateway files added at the gate step · `evidence/r189_state_ledger.md` · `evidence/r188/audit_routing_a99e2545.md`.
