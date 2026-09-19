@@ -826,6 +826,20 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r190": {
+      "ceiling": 2,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 0,
+      "items": [
+        "P-R189-01 (operator YES, R190 directive): logical Model identity across providers — when an EXPLICIT model_key_prefix resolves to an EXISTING Model, onboarding binds the new Provider to that Model (one logical Model, many ProviderModelBindings) instead of refusing on duplicate key. Default (no prefix) behavior unchanged. Sites: core/providers/onboarding.py step 12 (reuse + rollback that removes only what THIS onboarding created) and apps/composition/provider_onboarding.py hydration (a Model row already registered by an earlier provider's binding must not be re-registered)."
+      ],
+      "log": [],
+      "note": "R190 is a targeted closure of ONE declared proposal (P-R189-01). Inspected impact BEFORE declaration: exactly two production sites build/register Models per provider — the onboarding walker (refusal site) and the gateway hydration replay (would raise DuplicateRegistration on restart once two providers share a Model). Ceiling 2 = those two files. No registry redesign, no aliases, no router/execution change (router already iterates bindings_for_model and same-model fallback already filters by model_id). If a THIRD production file becomes necessary the round STOPS before crossing and records the required change. Docs, tests, evidence and engineering/verification/* are outside the counted roots.",
+      "ceiling_history": [
+        "declared 2 at the R190 opening (2026-09-19, R190-DEC-01) from post-R189 main c9730d9d, BEFORE any production commit: core/providers/onboarding.py (step-12 reuse) + apps/composition/provider_onboarding.py (hydration idempotent model registration)."
+      ]
+    },
     "round_r189": {
       "ceiling": 2,
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
