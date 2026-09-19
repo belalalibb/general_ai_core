@@ -166,21 +166,43 @@ def _served_routes() -> list[dict[str, Any]]:
     Hermetic composition (in-memory registries, no env, no provider call) with
     the optional seams bound so every conditionally mounted family is present.
     """
+    from apps.api.admin import AdminSurface
     from apps.api.app import Principal, create_app
+    from core.admin.service import AdminConfigService
+    from core.audit.memory import InMemoryAuditLog
+    from core.evaluation.memory import InMemoryEvaluationStore
     from core.execution.service import ExecutionService
     from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
     from core.routing.router import SimpleScoringRouter
     from core.usage.memory import InMemoryUsageAccounting
 
     providers, models, bindings = ProviderRegistry(), ModelRegistry(), BindingRegistry()
+    router = SimpleScoringRouter(providers, models, bindings)
+    usage = InMemoryUsageAccounting()
+    admin_service = AdminConfigService(
+        providers=providers,
+        models=models,
+        usage=usage,
+        routing=router,
+        audit_log=InMemoryAuditLog(),
+    )
+    admin = AdminSurface(
+        service=admin_service,
+        providers=providers,
+        models=models,
+        usage=usage,
+        routing=router,
+        evaluations=InMemoryEvaluationStore(),
+    )
     app = create_app(
-        router=SimpleScoringRouter(providers, models, bindings),
+        router=router,
         execution_service=ExecutionService(adapters={}, credential_refs={}, bindings=bindings),
-        principal=Principal(tenant_id=uuid4(), user_id=uuid4()),
+        principal=Principal(tenant_id=uuid4(), user_id=uuid4(), is_admin=True),
         models=models,
         bindings=bindings,
         providers=providers,
-        usage=InMemoryUsageAccounting(),
+        usage=usage,
+        admin=admin,
         webhooks=True,
     )
     rows: list[dict[str, Any]] = []
