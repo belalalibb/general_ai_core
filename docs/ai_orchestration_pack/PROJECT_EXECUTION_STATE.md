@@ -663,3 +663,22 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
            evidence/r188_state_ledger.md; does NOT open a round without an operator
            declaration recorded in 60_DECISION_LOG.md.
 ```
+
+```
+R189_POINTER (2026-09-19) — R189 CLOSED (Contract Freeze Preparation)
+MAIN: 64e23c22 (PR #36 merge commit) + records-only closure PR.
+GATE: gate of record 7af925d4 PASS 3769/0/0/64 + gateway 194; post-merge 64e23c22 PASS 3769/0/0/64 + gateway 194.
+       min_passed 3758 -> 3769 (D-6). not_evaluated = 1 (D-03, credential unavailable; operator-owned F-CS1-04).
+PRODUCTION: 1 file (apps/api/provider_onboarding.py, P-R188-01 additive model_key_prefix); core/ + infrastructure/ zero-diff.
+FROZEN: 15 modules / 116 contracts / 44 /v1 routes — engineering/verification/contract_freeze_baseline.json (DERIVED by
+       contract_freeze_derive.py; guard tests/verification/test_contract_freeze_baseline.py). Rule: ADDITIVE-ONLY;
+       refused changes need a declared round + re-derived baseline in the same PR. See evidence/r189/CONTRACT_FREEZE_RECORD.md.
+DISPOSITIONS: A modality_limits frozen as-is (unenforced); B admin_fallback_chain frozen as-is (no producer);
+       C account pool/lease/fencing OPTIONAL in v1 (30 §10.1/§10.4). D-03 separate, NOT EVALUATED.
+DEFERRED (6-field blocks, CONTRACT_FREEZE_RECORD §6): modality limits, admin fallback source, D-03, account-pool consumer,
+       async strategy (P-R188-03 NO), durable signals (P-R188-04 NO), training consumer, feedback intake,
+       strategy-output evaluation, P-R189-01.
+PROPOSALS_PENDING_OPERATOR: P-R189-01 (bind to existing Model when explicit model_key_prefix supplied; recommended YES).
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r189_state_ledger.md;
+       does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
+```
