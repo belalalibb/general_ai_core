@@ -10,9 +10,11 @@ After the change (GREEN) the SAME test module proves additivity:
 - an OLD payload (no new field) still yields the identical stored model key
   ``<provider_key>/<provider_model_name>`` and the identical persisted
   definition semantics (the field is simply absent / None);
-- a payload WITH ``model_key_prefix`` yields ``<prefix>/<provider_model_name>``
-  — the SAME key for two providers sharing the prefix (same model, different
-  provider), which is the whole point of P-R188-01;
+- a payload WITH ``model_key_prefix`` yields ``<prefix>/<provider_model_name>``;
+- REPOSITORY FACT (wins over the directive's expectation): a SECOND provider
+  onboarded with the same prefix is refused at step 12 (duplicate model key,
+  full rollback) — the exposure alone does not bind one model to two
+  providers; that is PROPOSAL P-R189-01 (model identity), not R189 work;
 - explicit Provider + Model selection through the ONE router is unchanged:
   an ``explicit_model`` policy naming the shared key with ``provider_id``
   narrows to that provider exactly as before;
@@ -23,12 +25,14 @@ Hermetic: FakeAdapter, in-memory registries, no network.
 
 from __future__ import annotations
 
-from uuid import UUID
+import pytest
 
 from apps.api.provider_onboarding import GatewayOnboardRequest
+from core.contracts.domain import ProviderStatus
 from core.contracts.model_policy import ExplicitModelPolicy
 from core.contracts.provider import ProviderOperation
 from core.contracts.routing import RoutingRequest
+from core.routing.errors import NoEligibleCandidates
 from core.routing.router import SimpleScoringRouter
 from tests.api.test_provider_onboarding_api import RouteWorld, _body
 from tests.providers.test_onboarding_service import FakeAdapter, _manifest
@@ -60,8 +64,15 @@ class TestAdditiveField:
         assert definition["model_key_prefix"] == "shared"
 
 
-class TestSameModelDifferentProvider:
-    def _two_providers(self) -> RouteWorld:
+class TestPrefixAndRoutingOnCurrentTree:
+    """Repository fact (R189 disagreement recorded in R189-DEC-02): the walker's
+    step 12 registers a NEW Model per key and refuses a duplicate key with full
+    rollback (pinned by tests/providers/test_onboarding_service.py). So the
+    additive API exposure does NOT by itself bind one model to two onboarded
+    providers — that needs a model-identity change (PROPOSAL P-R189-01, not
+    implemented). These pins freeze what the tree actually does today."""
+
+    def test_second_provider_with_same_prefix_is_refused_and_rolled_back(self) -> None:
         world = RouteWorld()
         first = world.post(_body(model_key_prefix="shared"))
         assert first.status_code == 201, first.text
@@ -75,37 +86,42 @@ class TestSameModelDifferentProvider:
                 model_key_prefix="shared",
             )
         )
-        assert second.status_code == 201, second.text
-        return world
-
-    def test_shared_prefix_binds_one_model_to_two_providers(self) -> None:
-        world = self._two_providers()
+        assert second.status_code == 409
+        assert "step-12-register-bindings" in second.text
+        # Rolled back completely: only the first provider owns shared/cand-1.
         model = world.models.get("shared/cand-1")
         providers = {b.provider_id for b in world.bindings.bindings_for_model(model.id)}
-        assert providers == {
-            world.providers.get("gw_alpha").provider.id,
-            world.providers.get("gw_beta").provider.id,
-        }
+        assert providers == {world.providers.get("gw_alpha").provider.id}
+        assert "gw_beta" not in world.providers.all_keys()
 
     def test_explicit_provider_plus_model_selection_is_unchanged(self) -> None:
-        world = self._two_providers()
-        # Onboarded providers start DISABLED (walker posture); enable both so
-        # routing can see them — the SAME registries, the ONE router.
-        for key in ("gw_alpha", "gw_beta"):
-            entry = world.providers.get(key)
-            world.providers.replace(
-                entry.provider.model_copy(update={"status": "active"}), entry.manifest
-            )
+        world = RouteWorld()
+        assert world.post(_body(model_key_prefix="shared")).status_code == 201
+        entry = world.providers.get("gw_alpha")
+        # Onboarded providers start DISABLED (walker posture); enable so the
+        # ONE router can see it — same registries, no second roster.
+        world.providers.replace(
+            entry.provider.model_copy(update={"status": ProviderStatus.ACTIVE}), entry.manifest
+        )
         router = SimpleScoringRouter(world.providers, world.models, world.bindings)
-        beta = world.providers.get("gw_beta").provider
+        # 11 §14 rule 4: explicit provider narrowing is by provider_key (the
+        # served ExplicitModelPolicy.provider_id carries the key) — unchanged.
         decision = router.route(
             RoutingRequest(
                 operation=ProviderOperation.GENERATE_TEXT,
                 model_policy=ExplicitModelPolicy(
-                    type="explicit_model", model_id="shared/cand-1", provider_id=str(beta.id)
+                    type="explicit_model", model_id="shared/cand-1", provider_id="gw_alpha"
                 ),
             )
         )
-        assert decision.selected.provider_id == beta.id
+        assert decision.selected.provider_id == entry.provider.id
         assert decision.selected.model_id == world.models.get("shared/cand-1").id
-        assert isinstance(UUID(str(decision.selected.provider_id)), UUID)
+        with pytest.raises(NoEligibleCandidates):
+            router.route(
+                RoutingRequest(
+                    operation=ProviderOperation.GENERATE_TEXT,
+                    model_policy=ExplicitModelPolicy(
+                        type="explicit_model", model_id="shared/cand-1", provider_id="gw_other"
+                    ),
+                )
+            )
