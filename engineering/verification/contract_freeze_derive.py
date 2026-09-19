@@ -205,13 +205,15 @@ def _served_routes() -> list[dict[str, Any]]:
         admin=admin,
         webhooks=True,
     )
-    rows: list[dict[str, Any]] = []
-    for route in app.routes:
-        path = getattr(route, "path", None)
-        methods = sorted(m for m in (getattr(route, "methods", None) or ()) if m != "HEAD")
-        if path and path.startswith("/v1/") and methods:
-            rows.append({"path": path, "methods": methods})
-    rows.sort(key=lambda r: (r["path"], r["methods"]))
+    # The OpenAPI document is the served route truth (included routers are
+    # flattened there; ``app.routes`` holds lazy router wrappers).
+    paths = app.openapi()["paths"]
+    rows: list[dict[str, Any]] = [
+        {"path": path, "methods": sorted(m.upper() for m in ops if m != "head")}
+        for path, ops in paths.items()
+        if path.startswith("/v1/")
+    ]
+    rows.sort(key=lambda r: r["path"])
     return rows
 
 
