@@ -1,0 +1,17 @@
+# R189 P-R188-01 — RED at f83d0ca3 (no production change yet)
+# cmd: pytest -p no:cacheprovider tests/api/test_r189_onboarding_model_key_prefix.py -q --no-header
+E       AssertionError: field must be in the served contract
+E       assert 'model_key_prefix' in {'provider_key': {'maxLength': 512, 'minLength': 1, 'title': 'Provider Key', 'type': 'string'}, 'display_name': {'maxL...array'}, 'capabilities': {'additionalProperties': {'type': 'boolean'}, 'title': 'Capabilities', 'type': 'object'}, ...}
+E       AssertionError: {"detail":[{"type":"extra_forbidden","loc":["body","model_key_prefix"],"msg":"Extra inputs are not permitted","input":"shared"}]}
+E       assert 422 == 201
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+E       AssertionError: {"detail":[{"type":"extra_forbidden","loc":["body","model_key_prefix"],"msg":"Extra inputs are not permitted","input":"shared"}]}
+E       assert 422 == 201
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+E       AssertionError: {"detail":[{"type":"extra_forbidden","loc":["body","model_key_prefix"],"msg":"Extra inputs are not permitted","input":"shared"}]}
+E       assert 422 == 201
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+FAILED tests/api/test_r189_onboarding_model_key_prefix.py::TestAdditiveField::test_served_request_contract_declares_model_key_prefix
+FAILED tests/api/test_r189_onboarding_model_key_prefix.py::TestAdditiveField::test_payload_with_prefix_registers_prefixed_key
+FAILED tests/api/test_r189_onboarding_model_key_prefix.py::TestSameModelDifferentProvider::test_shared_prefix_binds_one_model_to_two_providers
+FAILED tests/api/test_r189_onboarding_model_key_prefix.py::TestSameModelDifferentProvider::test_explicit_provider_plus_model_selection_is_unchanged

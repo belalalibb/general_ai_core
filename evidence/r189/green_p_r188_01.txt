@@ -1,0 +1,3 @@
+# R189 P-R188-01 — GREEN at dbdbf136 (apps/api/provider_onboarding.py: additive model_key_prefix threaded into the existing service parameter)
+# cmd: pytest -p no:cacheprovider tests/api/test_r189_onboarding_model_key_prefix.py tests/api/test_provider_onboarding_api.py tests/providers/test_onboarding_service.py -v --no-header
+============================== 40 passed in 2.48s ==============================

@@ -1,0 +1,6 @@
+# R189 freeze guard — RED 2/3: deliberate UNAUTHORIZED mutation (rename ExecuteRequest.requirements -> requirement_set) at 951257d7
+# cmd: pytest -p no:cacheprovider tests/verification/test_contract_freeze_baseline.py -q --no-header
+E           ADDED    modules.core.contracts.execute.contracts.ExecuteRequest.fields.requirement_set (not in committed baseline — declare a round and re-derive)
+E           REMOVED  modules.core.contracts.execute.contracts.ExecuteRequest.fields.requirements
+E       assert not ['ADDED    modules.core.contracts.execute.contracts.ExecuteRequest.fields.requirement_set (not in committed baseline — declare a round and re-derive)', 'REMOVED  modules.core.contracts.execute.contracts.ExecuteRequest.fields.requirements']
+FAILED tests/verification/test_contract_freeze_baseline.py::test_frozen_contract_set_matches_committed_baseline
