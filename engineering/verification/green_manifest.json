@@ -830,11 +830,24 @@
       "ceiling": 2,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 0,
+      "changes_used": 2,
       "items": [
         "P-R189-01 (operator YES, R190 directive): logical Model identity across providers — when an EXPLICIT model_key_prefix resolves to an EXISTING Model, onboarding binds the new Provider to that Model (one logical Model, many ProviderModelBindings) instead of refusing on duplicate key. Default (no prefix) behavior unchanged. Sites: core/providers/onboarding.py step 12 (reuse + rollback that removes only what THIS onboarding created) and apps/composition/provider_onboarding.py hydration (a Model row already registered by an earlier provider's binding must not be re-registered)."
       ],
-      "log": [],
+      "log": [
+        {
+          "item": "P-R189-01",
+          "file": "core/providers/onboarding.py",
+          "loc": "+60/-22",
+          "summary": "Step 12: when model_key_prefix is EXPLICIT and the computed logical key names a registered Model, bind this provider to that Model (modality set must agree, else refuse loudly at step-12-register-bindings); rollback removes only bindings + Models THIS onboarding created; persistence writes only created Models plus every new binding. Default prefix (provider_key) behavior unchanged. RED evidence/r190/red_p_r189_01.txt (6 failed at 8ff3e78c) -> GREEN evidence/r190/green_p_r189_01.txt. Commit 7a846a46."
+        },
+        {
+          "item": "P-R189-01",
+          "file": "apps/composition/provider_onboarding.py",
+          "loc": "+6/-1",
+          "summary": "Gateway hydration: register a Model row once (models.get_by_id before register) so a logical Model shared by two gateway providers replays without DuplicateRegistration; binding-without-model corruption stays loud. Commit 7a846a46."
+        }
+      ],
       "note": "R190 is a targeted closure of ONE declared proposal (P-R189-01). Inspected impact BEFORE declaration: exactly two production sites build/register Models per provider — the onboarding walker (refusal site) and the gateway hydration replay (would raise DuplicateRegistration on restart once two providers share a Model). Ceiling 2 = those two files. No registry redesign, no aliases, no router/execution change (router already iterates bindings_for_model and same-model fallback already filters by model_id). If a THIRD production file becomes necessary the round STOPS before crossing and records the required change. Docs, tests, evidence and engineering/verification/* are outside the counted roots.",
       "ceiling_history": [
         "declared 2 at the R190 opening (2026-09-19, R190-DEC-01) from post-R189 main c9730d9d, BEFORE any production commit: core/providers/onboarding.py (step-12 reuse) + apps/composition/provider_onboarding.py (hydration idempotent model registration)."

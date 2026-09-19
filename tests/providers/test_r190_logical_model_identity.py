@@ -267,3 +267,30 @@ class TestRoutingOverTheSharedModel:
             third.selected.provider_id,
             *(c.provider_id for c in third.fallback_candidates),
         } == set(by_key.values())
+
+
+class TestDurabilityOfTheSharedModel:
+    def test_reused_model_row_is_not_rewritten_and_both_bindings_are_persisted(self) -> None:
+        """Write-through (Gap 1b) under P-R189-01: the second onboarding persists
+        its provider and its binding but NOT a second Model row for the shared
+        logical Model (the row already exists; rewriting it from provider facts
+        would let a provider redefine the Model)."""
+        from core.providers import ProviderOnboardingService
+        from tests.providers.test_onboarding_gap1_seams import RecordingPersistence
+
+        world = World()
+        persistence = RecordingPersistence()
+        world.service = ProviderOnboardingService(
+            providers=world.providers,
+            models=world.models,
+            bindings=world.bindings,
+            persistence=persistence,
+        )
+        _two_providers(world)
+        assert persistence.calls == [
+            ("provider", "prov_a"),
+            ("model", KEY),
+            ("binding", "cand-1"),
+            ("provider", "prov_b"),
+            ("binding", "cand-1"),
+        ]
