@@ -1,0 +1,7 @@
+# R192 RED evidence at 40b5a8c1 — BEFORE BoundProjectInspector / binding_inspector exist
+==================================== ERRORS ====================================
+________ ERROR collecting tests/agent_dev/test_r192_bound_inspector.py _________
+ImportError while importing test module '/home/user/webapp/tests/agent_dev/test_r192_bound_inspector.py'.
+E   ImportError: cannot import name 'BoundProjectInspector' from 'apps.agent_dev.project_inspector' (/home/user/webapp/apps/agent_dev/project_inspector.py)
+ERROR tests/agent_dev/test_r192_bound_inspector.py
+......                                                                   [100%]
