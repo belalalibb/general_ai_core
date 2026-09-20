@@ -826,6 +826,27 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r195": {
+      "ceiling": 4,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R195-A closed-set widening (AD-1, operator D1/D2 APPROVED): core/contracts/admin.py \u2014 AdminAction +3 members REGISTER_REPO_BINDING, GRANT_REMOTE_TRUST, REVOKE_REMOTE_TRUST (14 \u2192 17); ACTION_AREA maps all three to AdminArea.TOOLS (already in FINAL_ACTIVE_ADMIN_AREAS \u2014 no second closed-set change). core.contracts.admin is NOT a frozen module; no served route added/removed.",
+        "R195-B governed lifecycle branches (AD-1): core/admin/service.py \u2014 core Protocols RepoBindingRegistryPort / RemoteTrustRegistryPort (core stays pure); AdminConfigService(repo_bindings=None, remote_trust=None) optional seams (absent seam \u21d2 loud validation failure); PAYLOAD_FIELD_RULES, validation, preview, snapshot, _apply, _restore for the 3 actions; RollbackUnavailable where restoring would invent state.",
+        "R195-C tenant-scoped removal for rollback (AD-1): apps/agent_dev/git_tools.py \u2014 RepoBindingRegistry.remove(binding_id, *, tenant_id) mirroring get()'s tenant scoping; re-saves the store so no on-disk resurrection.",
+        "R195-D composition (AD-1 + AD-2, operator D3 APPROVED): apps/composition/runtime.py \u2014 the ONE shared secret custody instance becomes VaultSecretManager when VAULT_ADDR+VAULT_TOKEN are set (vault_settings_from_env + build_secret_manager, existing and previously uncalled; half-configured raises), InMemorySecretManager otherwise (byte-identical); AdminConfigService receives dev.bindings / dev.trust when AGENT_DEV_STATE_DIR composes the dev path."
+      ],
+      "log": [],
+      "note": "Ceiling 4 declared in R195-DEC-01 BEFORE the first production commit (operator: 'APPROVE R195. Accept the proposed R195 engineering decisions: D1 AdminAction +3 members; D2 map all three actions to AdminArea.TOOLS; D3 use the one shared durable Vault SecretManagerPort; D4 exclude N-9 from R195. Execute R195 exactly as proposed.'). Core touched ONLY in core/contracts/admin.py (non-frozen closed set, +3 approved) and core/admin/service.py (Protocol seams + lifecycle branches). No served route added/removed; contract freeze baseline expected to MATCH. Shared multi-tenant preserved: bindings carry explicit tenant_id; trust grants are keyed (tenant_id, remote_url); runtime lookups keep BINDING_TENANT_MISMATCH / fail-closed trust. Secrets never ride admin payloads (R176 FIX-04 unchanged).",
+      "ceiling_history": [
+        "declared 4 at the R195 opening (2026-09-20, R195-DEC-01) from post-R194 main 26e24f1e."
+      ]
+    },
     "round_r194": {
       "ceiling": 3,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
