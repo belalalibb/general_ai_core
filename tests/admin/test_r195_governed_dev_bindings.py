@@ -304,8 +304,7 @@ class TestRemoteTrust:
         w = World(tmp_path)
         w.publish(AdminAction.GRANT_REMOTE_TRUST, _trust_payload(TENANT_A))
         published = w.publish(AdminAction.REVOKE_REMOTE_TRUST, _trust_payload(TENANT_A))
-        w.admin._changes[(PLATFORM, published.id)]  # change exists (internal probe)
-        w.admin._snapshots[(PLATFORM, published.id)] = {"trust_grant": None}
+        w.admin._snapshots[published.id] = {"trust_grant": None}  # internal probe
         with pytest.raises(RollbackUnavailable):
             w.admin.rollback(PLATFORM, published.id)
 

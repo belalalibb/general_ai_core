@@ -192,6 +192,19 @@ class RepoBindingRegistry:
     def list_for_tenant(self, tenant_id: UUID) -> list[RepoBinding]:
         return [b for b in self._bindings.values() if b.tenant_id == tenant_id]
 
+    def remove(self, binding_id: UUID, *, tenant_id: UUID) -> RepoBinding:
+        """R195 (AD-1): tenant-scoped removal for admin-lifecycle rollback.
+
+        Exactly ``get``'s refusals (unknown / foreign tenant), then the record
+        is dropped and the full valid set re-saved — a rolled-back binding can
+        never resurrect from disk.
+        """
+        binding = self.get(binding_id, tenant_id=tenant_id)
+        del self._bindings[binding_id]
+        if self._store is not None:
+            self._store.save(self._bindings.values())
+        return binding
+
 
 # --- Path jail -------------------------------------------------------------------
 

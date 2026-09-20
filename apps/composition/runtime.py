@@ -91,6 +91,7 @@ from apps.composition.engineering import (
 from apps.composition.evaluation_policy import build_selective_judge
 from apps.composition.evaluations import build_durable_evaluation_store
 from apps.composition.gateway import gateway_settings_from_env, onboarding_secrets_from_env
+from apps.composition.secrets import build_secret_manager, vault_settings_from_env
 from apps.composition.identity import build_durable_identity_service
 from apps.composition.learning import (
     build_durable_learning_custody,
@@ -168,6 +169,7 @@ from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
 from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
 from core.runtime.worker import IdempotencyPort, InMemoryIdempotencyStore, Worker
 from core.secrets.memory import InMemorySecretManager
+from core.secrets.ports import SecretManagerPort
 from core.skills.importing import SkillImportService
 from core.tools.denied_paths import DENIED_PATH_PATTERNS
 from core.tools.registry import ToolRegistry
@@ -205,6 +207,7 @@ __all__ = [
     "RuntimeProfile",
     "build_runtime_profile",
     "build_webhook_sender",
+    "secret_custody_from_env",
     "ensure_default_plan",
     "openapi_public_from_env",
 ]
@@ -769,6 +772,20 @@ def build_webhook_sender(
     return send
 
 
+def secret_custody_from_env(env: Mapping[str, str]) -> SecretManagerPort:
+    """R195-D (AD-2): choose the ONE platform secret custody from the environment.
+
+    ``VAULT_ADDR`` + ``VAULT_TOKEN`` ⇒ the existing ``VaultSecretManager``
+    (ADR-0007); ``VAULT_ADDR`` alone ⇒ ``ValueError`` (raised by
+    ``vault_settings_from_env`` — custody is all-or-nothing); neither ⇒
+    ``InMemorySecretManager`` (dev/test posture, byte-identical to pre-R195).
+    """
+    settings = vault_settings_from_env(dict(env))
+    if settings is None:
+        return InMemorySecretManager()
+    return build_secret_manager(settings)
+
+
 def build_runtime_profile(
     environ: Mapping[str, str] | None = None,
     *,
@@ -864,11 +881,17 @@ def build_runtime_profile(
     # route-token refs under PLATFORM_TENANT_ID — the ONLY way a
     # `route_token_ref` on /v1/admin/providers/onboard can resolve. Absent
     # ⇒ the bare in-memory manager, exactly as before.
+    # R195-D (AD-2; operator D3 "the one shared durable Vault SecretManagerPort"):
+    # the ONE custody instance is Vault-backed when VAULT_ADDR+VAULT_TOKEN are
+    # set (ADR-0007 binding, previously exported but never called), the
+    # in-memory manager otherwise. Half-configured Vault raises here — never a
+    # silent fallback (20 §5). Every credential_ref in the process (provider
+    # onboarding, gateway route tokens, dev bindings) resolves against it.
     onboarding_secrets = onboarding_secrets_from_env(
         env_dict,
         tenant_id=PLATFORM_TENANT_ID,
         gateway_configured=gateway_settings is not None,
-        inner=InMemorySecretManager(),
+        inner=secret_custody_from_env(env_dict),
     )
 
     store: ExecutionStorePort
@@ -1106,6 +1129,12 @@ def build_runtime_profile(
             if bindings is not None and bridge is not None
             else None
         ),
+        # R195 (AD-1): the SAME RepoBindingRegistry / RemoteTrustRegistry the
+        # composed REST-Git tools read — governed registration / trust acts
+        # ride the 21 §3 lifecycle. Absent dev path ⇒ seams absent ⇒ the three
+        # actions fail validation loudly (no /v1/dev write route exists).
+        repo_bindings=dev.bindings if dev is not None else None,
+        remote_trust=dev.trust if dev is not None else None,
     )
     admin = AdminSurface(
         service=admin_service,

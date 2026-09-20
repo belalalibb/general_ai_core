@@ -44,6 +44,7 @@ a tenant) rollback is DENIED (RollbackUnavailable) instead of inventing a
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Final, Protocol
 from uuid import UUID
 
@@ -76,6 +77,8 @@ from core.contracts.domain import (
     ProviderStatus,
 )
 from core.contracts.provider import ProviderManifest
+from core.contracts.remote_trust import RemoteTrustGrant
+from core.contracts.repo_binding import RepoBinding
 from core.contracts.routing import ScoringWeights
 from core.contracts.skills import SkillStatus
 from core.contracts.tools import ToolStatus
@@ -166,6 +169,19 @@ PAYLOAD_FIELD_RULES: Final[dict[AdminAction, tuple[FieldRule, ...]]] = {
         FieldRule("bindings", "list", required=False, contract="ProviderModelBinding"),
     ),
     AdminAction.CAPABILITY_PROPOSAL: _proposal_sheet_rules(),
+    # R195 (AD-1): the binding payload IS the RepoBinding contract (explicit
+    # tenant_id; credential_ref is an opaque handle). Trust acts name the
+    # target tenant + remote explicitly — a platform-operator ruling.
+    AdminAction.REGISTER_REPO_BINDING: (FieldRule("binding", "object", contract="RepoBinding"),),
+    AdminAction.GRANT_REMOTE_TRUST: (
+        FieldRule("target_tenant_id", "uuid"),
+        FieldRule("remote_url", "string"),
+        FieldRule("note", "string", required=False),
+    ),
+    AdminAction.REVOKE_REMOTE_TRUST: (
+        FieldRule("target_tenant_id", "uuid"),
+        FieldRule("remote_url", "string"),
+    ),
     AdminAction.SET_PLAN: (
         FieldRule("target_tenant_id", "uuid"),
         FieldRule("plan", "string"),
@@ -304,6 +320,33 @@ class RoutingWeightsPort(Protocol):
     def set_default_weights(self, weights: ScoringWeights) -> None: ...
 
 
+class RepoBindingRegistryPort(Protocol):
+    """R195 (AD-1) seam: the SAME tenant-scoped binding registry the REST-Git
+    tools read (``apps.agent_dev.git_tools.RepoBindingRegistry`` satisfies it
+    structurally — core never imports apps). Lookups refuse foreign tenants."""
+
+    def register(self, binding: RepoBinding) -> RepoBinding: ...
+
+    def get(self, binding_id: UUID, *, tenant_id: UUID) -> RepoBinding: ...
+
+    def remove(self, binding_id: UUID, *, tenant_id: UUID) -> RepoBinding: ...
+
+    def list_for_tenant(self, tenant_id: UUID) -> list[RepoBinding]: ...
+
+
+class RemoteTrustRegistryPort(Protocol):
+    """R195 (AD-1) seam: the SAME per-tenant remote-trust table the publish
+    gate consults (``core.tools.remote_trust.RemoteTrustRegistry``)."""
+
+    def get(self, tenant_id: UUID, remote_url: str) -> RemoteTrustGrant | None: ...
+
+    def is_trusted(self, tenant_id: UUID, remote_url: str) -> bool: ...
+
+    def grant(self, grant: RemoteTrustGrant) -> None: ...
+
+    def revoke(self, tenant_id: UUID, remote_url: str, *, revoked_by: str) -> None: ...
+
+
 class AdminConfigService:
     """Config lifecycle (21 §3) over existing registries — no new authority."""
 
@@ -321,6 +364,8 @@ class AdminConfigService:
         bindings: BindingRegistry | None = None,
         persistence: AdminPersistencePort | None = None,
         active_areas: frozenset[AdminArea] = MVP_ACTIVE_ADMIN_AREAS,
+        repo_bindings: RepoBindingRegistryPort | None = None,
+        remote_trust: RemoteTrustRegistryPort | None = None,
     ) -> None:
         """FINAL Phase 19 widening (T-IMPL-068) — recorded decisions:
 
@@ -353,6 +398,12 @@ class AdminConfigService:
         # means a published/rolled-back change survives restart. Called
         # AFTER the in-memory mutation so refusals never leave rows.
         self._persistence = persistence
+        # R195 (AD-1) seams: the SAME RepoBindingRegistry / RemoteTrustRegistry
+        # instances the composed REST-Git tools read (dev.bindings / dev.trust).
+        # Absent ⇒ the three dev actions FAIL VALIDATION loudly (same posture
+        # as skills/tools): no composition pretends to govern what it cannot.
+        self._repo_bindings = repo_bindings
+        self._remote_trust = remote_trust
         self._active_areas = active_areas
         # Lifecycle records, physically keyed by (tenant, id) — foreign
         # changes are unaddressable by construction (20 §6).
@@ -532,7 +583,11 @@ class AdminConfigService:
             if isinstance(value, str):
                 return value
         # Registration payloads nest the key inside the contract object.
-        for parent, key in (("provider", "provider_key"), ("model", "model_key")):
+        for parent, key in (
+            ("provider", "provider_key"),
+            ("model", "model_key"),
+            ("binding", "remote_url"),
+        ):
             nested = payload.get(parent)
             if isinstance(nested, dict):
                 value = nested.get(key)
@@ -624,6 +679,10 @@ class AdminConfigService:
             return self._register_model_problem(payload)
         if action is AdminAction.CAPABILITY_PROPOSAL:
             return self._capability_proposal_problem(payload)
+        if action is AdminAction.REGISTER_REPO_BINDING:
+            return self._register_repo_binding_problem(payload)
+        if action in (AdminAction.GRANT_REMOTE_TRUST, AdminAction.REVOKE_REMOTE_TRUST):
+            return self._remote_trust_problem(action, payload)
         if action is AdminAction.SET_PLAN:
             return None  # every SET_PLAN rule is presence/shape — declared above
         try:
@@ -655,6 +714,52 @@ class AdminConfigService:
         except ProviderNotRegistered:
             return None
         return f"provider already registered: {provider.provider_key}"
+
+    def _register_repo_binding_problem(self, payload: JsonObject) -> str | None:
+        """REGISTER_REPO_BINDING validation — seam + contract-parse + duplicate.
+
+        The payload carries the SAME contract the dev composition loads from
+        its store (``RepoBinding``) as JSON. ``credential_ref`` is an opaque
+        handle resolved at call time by the bound ``SecretManagerPort`` (20 §5)
+        — never a value; the R176 FIX-04 request guard refuses material.
+        """
+        if self._repo_bindings is None:
+            return "repo bindings registry seam is not bound in this composition"
+        try:
+            binding = RepoBinding.model_validate(payload["binding"])
+        except ValueError as exc:
+            return f"'binding' is not a valid RepoBinding contract: {exc}"
+        existing = {b.id for b in self._repo_bindings.list_for_tenant(binding.tenant_id)}
+        if binding.id in existing:
+            return f"repo binding already registered: {binding.id}"
+        return None
+
+    @staticmethod
+    def _trust_target(payload: JsonObject) -> tuple[UUID, str]:
+        return UUID(str(payload["target_tenant_id"])), str(payload["remote_url"]).strip()
+
+    def _remote_trust_problem(self, action: AdminAction, payload: JsonObject) -> str | None:
+        """GRANT/REVOKE_REMOTE_TRUST validation — seam + remote shape + state."""
+        if self._remote_trust is None:
+            return "remote trust registry seam is not bound in this composition"
+        target, remote_url = self._trust_target(payload)
+        try:
+            # Reuse the contract's own RemoteUrl rule (https-only, bounded).
+            RemoteTrustGrant(
+                tenant_id=target,
+                remote_url=remote_url,
+                trusted=True,
+                granted_by="validation",
+                granted_at=datetime.now(UTC),
+            )
+        except ValueError as exc:
+            return f"'remote_url' is not an admissible remote: {exc}"
+        trusted = self._remote_trust.is_trusted(target, remote_url)
+        if action is AdminAction.GRANT_REMOTE_TRUST and trusted:
+            return f"remote already trusted for tenant {target}: {remote_url}"
+        if action is AdminAction.REVOKE_REMOTE_TRUST and not trusted:
+            return f"nothing to revoke: remote is not trusted for tenant {target}: {remote_url}"
+        return None
 
     def _register_model_problem(self, payload: JsonObject) -> str | None:
         """REGISTER_MODEL validation — contract-parse + duplicate + binding seam."""
@@ -761,6 +866,23 @@ class AdminConfigService:
                 "imports admit only against the new list (14 §3 references, "
                 "never dereferenced)"
             )
+        if action is AdminAction.REGISTER_REPO_BINDING:
+            return (
+                f"repo binding for remote '{self._subject(change)}' is registered for "
+                "its tenant; git tools still refuse until the remote is trusted "
+                "(R172 C3: untrusted unless told otherwise) and the credential_ref "
+                "resolves at call time"
+            )
+        if action is AdminAction.GRANT_REMOTE_TRUST:
+            return (
+                f"remote '{change.payload.get('remote_url')}' becomes trusted for tenant "
+                f"{self._subject(change)}; publish-capable git tools may target it"
+            )
+        if action is AdminAction.REVOKE_REMOTE_TRUST:
+            return (
+                f"remote '{change.payload.get('remote_url')}' trust is revoked for tenant "
+                f"{self._subject(change)}; git publish to it is refused again"
+            )
         if action is AdminAction.CAPABILITY_PROPOSAL:
             sheet = CapabilityProposalPayload.model_validate(change.payload)
             return (
@@ -804,6 +926,12 @@ class AdminConfigService:
         if action is AdminAction.CAPABILITY_PROPOSAL:
             # Nothing to restore: a ruling is evidence, not state.
             return {"decision_recorded": True}
+        if action is AdminAction.REGISTER_REPO_BINDING:
+            return {"registered": False}  # pre-publish state is ABSENCE
+        if action in (AdminAction.GRANT_REMOTE_TRUST, AdminAction.REVOKE_REMOTE_TRUST):
+            assert self._remote_trust is not None  # validated pre-publish
+            target, remote_url = self._trust_target(change.payload)
+            return {"trust_grant": self._remote_trust.get(target, remote_url)}
         return {"weights": self._routing.default_weights}
 
     def _apply(self, change: ConfigChange) -> None:
@@ -900,6 +1028,30 @@ class AdminConfigService:
                 for binding in registered_bindings:
                     self._persistence.persist_binding(binding)
             return
+        if action is AdminAction.REGISTER_REPO_BINDING:
+            assert self._repo_bindings is not None  # validated pre-publish
+            self._repo_bindings.register(RepoBinding.model_validate(change.payload["binding"]))
+            return
+        if action is AdminAction.GRANT_REMOTE_TRUST:
+            assert self._remote_trust is not None  # validated pre-publish
+            target, remote_url = self._trust_target(change.payload)
+            note = change.payload.get("note")
+            self._remote_trust.grant(
+                RemoteTrustGrant(
+                    tenant_id=target,
+                    remote_url=remote_url,
+                    trusted=True,
+                    granted_by=str(change.actor_id),
+                    granted_at=datetime.now(UTC),
+                    note=str(note) if isinstance(note, str) and note else None,
+                )
+            )
+            return
+        if action is AdminAction.REVOKE_REMOTE_TRUST:
+            assert self._remote_trust is not None  # validated pre-publish
+            target, remote_url = self._trust_target(change.payload)
+            self._remote_trust.revoke(target, remote_url, revoked_by=str(change.actor_id))
+            return
         if action is AdminAction.CAPABILITY_PROPOSAL:
             # R177-FIX-03: publishing a proposal ruling APPENDS the decision
             # row (20 §9 APPROVAL_DECISION) and touches nothing else. The
@@ -994,6 +1146,40 @@ class AdminConfigService:
             if self._persistence is not None:
                 self._persistence.delete_model(model.id)
             return
+        if action is AdminAction.REGISTER_REPO_BINDING:
+            assert self._repo_bindings is not None
+            binding = RepoBinding.model_validate(change.payload["binding"])
+            # Tenant-scoped removal (the registry re-saves its store: no
+            # on-disk resurrection). Memory and store agree after restore.
+            self._repo_bindings.remove(binding.id, tenant_id=binding.tenant_id)
+            return
+        if action in (AdminAction.GRANT_REMOTE_TRUST, AdminAction.REVOKE_REMOTE_TRUST):
+            assert self._remote_trust is not None
+            target, remote_url = self._trust_target(change.payload)
+            prior = snapshot["trust_grant"]
+            if isinstance(prior, RemoteTrustGrant) and prior.effective:
+                # Re-grant what was effective before; the rollback actor owns
+                # the re-grant (audit-true), the original note is preserved.
+                self._remote_trust.grant(
+                    prior.model_copy(
+                        update={
+                            "granted_by": str(change.actor_id),
+                            "granted_at": datetime.now(UTC),
+                            "revoked_by": None,
+                            "revoked_at": None,
+                        }
+                    )
+                )
+                return
+            if action is AdminAction.GRANT_REMOTE_TRUST:
+                # Nothing effective existed before the grant: revoke it
+                # explicitly — an auditable row, never a silent deletion.
+                self._remote_trust.revoke(target, remote_url, revoked_by=str(change.actor_id))
+                return
+            raise RollbackUnavailable(
+                "no effective trust grant preceded this revocation; restoring "
+                "would invent a grant that never was (21 §8)"
+            )
         if action is AdminAction.CAPABILITY_PROPOSAL:
             # Decisions are evidence (22 §12 posture): un-recording a ruling
             # would rewrite history. Reversal = a NEW proposal record.
