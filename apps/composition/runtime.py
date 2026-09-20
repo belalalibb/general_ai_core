@@ -80,6 +80,8 @@ from apps.composition.database import (
     database_settings_from_env,
 )
 from apps.composition.durability import build_durable_execution_store
+from apps.agent_dev.git_tools import RepoBindingRegistry
+from apps.composition.dev_bindings import build_dev_bindings
 from apps.composition.engineering import (
     build_engineering,
     grant_engineering_reads,
@@ -162,6 +164,7 @@ from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
 from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
 from core.runtime.worker import IdempotencyPort, InMemoryIdempotencyStore, Worker
 from core.secrets.memory import InMemorySecretManager
+from core.tools.registry import ToolRegistry
 from core.skills.importing import SkillImportService
 from core.tools.denied_paths import DENIED_PATH_PATTERNS
 from core.tools.source_reader import SourceReader
@@ -490,6 +493,8 @@ class RuntimeProfile:
     provider_keys: tuple[str, ...] = field(default_factory=tuple)
     # R160: the SHARED agent composition (surface + authority chain).
     agent: ComposedAgent | None = None
+    # R193: the composed RepoBindingRegistry when AGENT_DEV_STATE_DIR is set.
+    dev_bindings: RepoBindingRegistry | None = None
     # S2: the bound provider adapters (the SAME instances ExecutionService
     # calls). Retained so the lifespan can release pooled HTTP clients at
     # shutdown (owner disposes) — see ``release_adapters``.
@@ -932,6 +937,18 @@ def build_runtime_profile(
     # opt-in by AGENT_WORKSPACE_ROOT; §14 guard refuses the platform's own
     # checkout at boot. Same registry, same firewall, same audit log.
     engineering = build_engineering(env, audit=audit)
+    # R193 (P-R192-04, operator APPROVED): the governed REST-Git path — opt-in by
+    # AGENT_DEV_STATE_DIR, absent ⇒ byte-identical (IMPL-024 posture preserved).
+    # Same JSON-store posture as R172 C2/C3; same tenant-scoped custody the
+    # onboarding path already binds (``onboarding_secrets``); the tool specs are
+    # minted against the ONE ToolRegistry the agent will use.
+    shared_tool_registry = ToolRegistry()
+    dev = build_dev_bindings(
+        env,
+        secrets=onboarding_secrets,
+        tool_registry=shared_tool_registry,
+        outside_of=(engineering.root,) if engineering is not None else (),
+    )
     # R177-FIX-06: the memory substrate is created ABOVE (profile branch, before
     # the agent) so the repo_map tool writes into the SAME store the composer reads.
     # R177-FIX-06: the project store the /v1/projects surface AND the repo_map
@@ -954,6 +971,8 @@ def build_runtime_profile(
         repo_reader=repo_reader,
         repo_map=repo_map,
         engineering=engineering.bundle if engineering is not None else None,
+        tool_registry=shared_tool_registry,
+        extra_tool_specs=dev.tool_specs if dev is not None else (),
         max_steps=_agent_cap(
             env.get(_ENV_AGENT_MAX_STEPS),
             default=DEFAULT_AGENT_MAX_STEPS,
@@ -1104,6 +1123,7 @@ def build_runtime_profile(
         models=models,
         bindings=binding_registry,
         providers=providers,  # R188 C4: /v1/models rows name their providers
+        dev_bindings=dev.bindings if dev is not None else None,  # R193 (IMPL-024 seam)
         usage=usage,
         webhooks=True,
         rate_limits=InMemoryRateLimiter(),
@@ -1247,5 +1267,6 @@ def build_runtime_profile(
         demo_principal=demo_principal,
         provider_keys=tuple(provider_keys),
         agent=composed_agent,
+        dev_bindings=dev.bindings if dev is not None else None,
         adapters=adapters,
     )
