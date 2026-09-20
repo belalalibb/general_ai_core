@@ -38,6 +38,7 @@ composition root already binds.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -186,7 +187,9 @@ _GIT_APPROVAL: dict[str, ApprovalRequirement] = {
     PERM_GIT_PUBLISH: ApprovalRequirement.BEFORE_ACTION,
 }
 _GIT_DESCRIPTIONS: dict[str, str] = {
-    PERM_GIT_FETCH: "Read the remote head of ONE bound repository (binding_id) in the caller's tenant.",
+    PERM_GIT_FETCH: (
+        "Read the remote head of ONE bound repository (binding_id) in the caller's tenant."
+    ),
     PERM_GIT_STATUS: "Describe the staged snapshot of ONE bound repository (binding_id).",
     PERM_GIT_COMMIT: "Stage a commit for ONE bound repository — approval required BEFORE action.",
     PERM_GIT_PUBLISH: (
@@ -219,7 +222,12 @@ def _inspect_handler(inspector_for: Callable[[UUID], BoundProjectInspector]) -> 
         except ValueError:
             raise ValueError(f"{PERM_PROJECT_INSPECT}: binding_id must be a UUID") from None
         try:
-            inventory = inspector_for(tenant_id).inspect_binding(binding_id)
+            # The R192 port is synchronous (it owns its own event loop); inside the
+            # agent's running loop it must run on a worker thread — same chain,
+            # same authorities, no duplication of trust/credential logic here.
+            inventory = await asyncio.to_thread(
+                inspector_for(tenant_id).inspect_binding, binding_id
+            )
         except BindingLookupRefused as exc:
             raise ValueError(
                 f"{PERM_PROJECT_INSPECT}: refused {exc.code.value}: {exc.reason}"
