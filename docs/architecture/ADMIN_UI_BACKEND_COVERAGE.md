@@ -148,6 +148,8 @@ placement in doc C.
 | **PRV-4** | register provider/account/binding at runtime | registries + account pools + template scaffolding | registries are composition-time data | admin registration routes over existing registry `register` methods, lifecycle-gated where config-shaped; needs a design decision on persistence (ties to repositories primitive). |
 | **USG-2** | usage drill-down per execution / per model / per provider | `UsageLedger` per execution; summary per tenant | only tenant summary + per-execution ledger inside reports | `GET /v1/admin/usage?filters` read-model over ledgers. |
 | **WBH-1** | manage webhook subscriptions | registration + injectable subscription map | no list/delete | list/delete routes over the existing map. |
+
+**R195 note (AD-1):** the Changes surface needs NO new seam for dev bindings / remote trust — `register_repo_binding`, `grant_remote_trust`, `revoke_remote_trust` are discovered through the existing `GET /v1/admin/capabilities/actions` read model (area `tools`, declared field rules) and ride the existing change lifecycle. UI closure of these forms stays in the UI round (R197, not pre-approved).
 | **SYS-1** | System surface: platform health, runtime gauges, gateway status, config disclosure | gateway `/healthz`; queue-depth gauge, DLQ, admission stats; observability providers | no platform healthz; no runtime/ops read-model | `GET /healthz` + `GET /v1/admin/system` read-model (process-local truths labeled as such). |
 | **SRC-1** | source-change proposals (doc A §4) | audit types (`APPROVAL_DECISION`); repo gates (check_repo.sh) | everything else | design-first service in the final phase; operator-gated; FROZEN-COMPONENT stop rule. |
 
