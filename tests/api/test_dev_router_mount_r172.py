@@ -238,7 +238,5 @@ class TestSeamAbsent:
         source = Path("apps/composition/runtime.py").read_text(encoding="utf-8")
         assert "dev_bindings=dev.bindings if dev is not None else None" in source
         assert "dev = build_dev_bindings(" in source
-        composition = Path("apps/composition/dev_bindings.py").read_text(
-            encoding="utf-8"
-        )
+        composition = Path("apps/composition/dev_bindings.py").read_text(encoding="utf-8")
         assert 'ENV_DEV_STATE_DIR = "AGENT_DEV_STATE_DIR"' in composition

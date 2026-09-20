@@ -145,8 +145,7 @@ class TestInertWhenUnset:
     def test_builder_returns_none_without_env(self) -> None:
         assert build_dev_bindings({}, secrets=InMemorySecretManager()) is None
         assert (
-            build_dev_bindings({ENV_DEV_STATE_DIR: "   "}, secrets=InMemorySecretManager())
-            is None
+            build_dev_bindings({ENV_DEV_STATE_DIR: "   "}, secrets=InMemorySecretManager()) is None
         )
 
     def test_default_profile_keeps_dev_seam_inert(self) -> None:

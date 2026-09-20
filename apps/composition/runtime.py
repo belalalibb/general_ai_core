@@ -61,6 +61,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from apps.admin_agent.tools import AgentToolSurface
+from apps.agent_dev.git_tools import RepoBindingRegistry
 from apps.api.admin import AdminSurface
 from apps.api.app import Principal, create_app
 from apps.api.auth import AuthSurface
@@ -79,9 +80,8 @@ from apps.composition.database import (
     build_database_bindings,
     database_settings_from_env,
 )
-from apps.composition.durability import build_durable_execution_store
-from apps.agent_dev.git_tools import RepoBindingRegistry
 from apps.composition.dev_bindings import build_dev_bindings
+from apps.composition.durability import build_durable_execution_store
 from apps.composition.engineering import (
     build_engineering,
     grant_engineering_reads,
@@ -164,9 +164,9 @@ from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
 from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
 from core.runtime.worker import IdempotencyPort, InMemoryIdempotencyStore, Worker
 from core.secrets.memory import InMemorySecretManager
-from core.tools.registry import ToolRegistry
 from core.skills.importing import SkillImportService
 from core.tools.denied_paths import DENIED_PATH_PATTERNS
+from core.tools.registry import ToolRegistry
 from core.tools.source_reader import SourceReader
 from core.usage.memory import InMemoryUsageAccounting
 from infrastructure.security.password import Argon2idPasswordHasher
