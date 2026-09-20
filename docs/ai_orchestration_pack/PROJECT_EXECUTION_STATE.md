@@ -723,3 +723,22 @@ NEXT_PER_OPERATOR_PLAN: App Factory generation — NOT started; requires its own
 RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r191_state_ledger.md;
        does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
 ```
+
+```
+R192_POINTER (2026-09-20) — R192 CLOSED (claim verification H1-H11 + governed project inspection)
+MAIN: 3ba3e616 (PR #42 merge commit) + records-only closure PR.
+GATE: gate of record 1eab7790 PASS 3826/0/0/64 + gateway 194; post-merge 3ba3e616 PASS 3826/0/0/64 + gateway 194.
+       min_passed 3809 -> 3826 (D-6). not_evaluated = 1 (D-03; operator-owned F-CS1-04).
+REVIEW: evidence/r192/REVIEW_IMPACT_MATRIX.md — H1/H2/H4/H5/H6/H7/H9/H10 CONFIRMED, H3/H8 PARTIALLY, "missing engine" FALSE.
+PRODUCTION: 2 files (ceiling 2, used 2): core/agent/app_factory.py (BindingInspectorPort, binding_id path),
+       apps/agent_dev/project_inspector.py (BoundProjectInspector: RepoBindingRegistry -> RemoteTrust BEFORE credential
+       -> SecretManager last moment -> read-only inspection). No second engine/trust/credential/binding system.
+CONTRACT: shape baseline unchanged (contract_freeze_derive.py --check MATCHES); evidence/r192/CONTRACT_FREEZE_RECORD_R192_UPDATE.md.
+DEFERRED: generation wiring (needs P-R192-04; no remote test runner primitive); stage resume (12 §9); strategy-output eval;
+       built-in template composition; template durability.
+PROPOSALS_PENDING_OPERATOR: P-R191-01 served /v1/templates (SHAPE); P-R192-02 skill instruction channel (frozen SkillManifest);
+       P-R192-03 template ownership axis; P-R192-04 compose dev_bindings + GitToolset (+BoundProjectInspector) into production.
+NEXT_PER_OPERATOR_PLAN: STOP — all remaining arrows require one of the four decisions above.
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r192_state_ledger.md;
+       does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
+```
