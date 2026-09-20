@@ -1,7 +1,7 @@
 # R195 HANDOFF — governed dev-binding registration + remote trust (AD-1) · durable dev credential custody (AD-2)
 
 ## 1. Status
-OPEN (declared 2026-09-20). Base `main 26e24f1e`. Branch `r195_governed_dev_bindings`. Authority: `60_DECISION_LOG.md` R195-DEC-01 (operator "APPROVE R195", D1–D4 accepted).
+CLOSED 2026-09-20 — PR #48 → `main 16048078`; closure PR records-only. Base `main 26e24f1e`. Branch `r195_governed_dev_bindings`. Authority: `60_DECISION_LOG.md` R195-DEC-01 (operator "APPROVE R195", D1–D4 accepted).
 
 ## 2. Scope (ceiling 4 production files)
 | Item | File | Purpose |
