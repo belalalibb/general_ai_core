@@ -162,7 +162,7 @@ class TestPlanning:
 
     def test_o_unknown_or_non_selectable_skill_is_refused_like_v1_execute(self) -> None:
         skills = SkillRegistry()
-        skills.register(make_skill(manifest_id="draft", status=SkillStatus.DRAFT))
+        skills.register(make_skill(manifest_id="draft", status=SkillStatus.IMPORTED))
         with pytest.raises(PlanRefused, match="not selectable: ghost"):
             _agent(_world("alpha"), skills=skills).plan(
                 GeneralAgentRequest(ask="x", skills=["ghost"])
@@ -201,7 +201,9 @@ class TestCapabilities:
                     mode="custom", stages=[StrategyStage(key="inventory", role="inspector")]
                 ),
                 skills=["fastapi"],
-                required_capabilities=["chat"],
+                # "reasoning" is what the R188 World model declares; the requirement
+                # therefore flows into routing AND is satisfiable (Part 10 posture).
+                required_capabilities=["reasoning"],
                 notes=["capability chose a one-stage plan"],
             )
 
@@ -215,6 +217,7 @@ class TestCapabilities:
         assert plan.capability == "demo@1"
         assert [s.key for s in plan.strategy.stages] == ["inventory"]
         assert plan.skills == ["fastapi"] and seen and seen[0].ask == "inspect"
+        assert plan.required_capabilities == ["reasoning"]  # contribution -> routing filter
         report = _execute(agent, plan)  # through the ONE executor
         assert report.succeeded and len(report.outcomes) == 1
         with pytest.raises(PlanRefused, match="unknown capability"):
