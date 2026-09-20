@@ -725,6 +725,27 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R195_POINTER (2026-09-20) — R195 CLOSED (governed dev bindings + remote trust via admin lifecycle [AD-1]; Vault custody [AD-2])
+MAIN: 16048078 (PR #48 merge commit) + records-only closure PR.
+GATE: gate of record 2a636b50 PASS 3872/0/0/64 + gateway 194; post-merge 16048078 PASS 3872/0/0/64 + gateway 194.
+       min_passed 3852 -> 3872 (D-6). not_evaluated = 1 (D-03; operator-owned).
+OPERATOR: "APPROVE R195" + D1 (AdminAction +3), D2 (-> AdminArea.TOOLS), D3 (one shared Vault SecretManagerPort), D4 (N-9 excluded).
+       Rulings AD-1..AD-7 / D-03 / N-5 recorded verbatim in 60_DECISION_LOG R195-DEC-01.
+PRODUCTION: 4 files (ceiling 4, used 4): core/contracts/admin.py (AdminAction register_repo_binding / grant_remote_trust /
+       revoke_remote_trust -> TOOLS), core/admin/service.py (RepoBindingRegistryPort + RemoteTrustRegistryPort seams; validate /
+       preview / snapshot / apply / restore; absent seam => loud validation refusal; RollbackUnavailable where restore would invent),
+       apps/agent_dev/git_tools.py (RepoBindingRegistry.remove tenant-scoped), apps/composition/runtime.py (secret_custody_from_env:
+       VAULT_ADDR+VAULT_TOKEN => VaultSecretManager, half-configured raises, absent => in-memory; seams to AdminConfigService).
+TENANCY: binding payload names tenant_id; trust keyed (tenant_id, remote_url); foreign lookups BINDING_TENANT_MISMATCH; no /v1/dev write route.
+CONTRACT: shape unchanged (--check MATCHES; 44 routes; core.contracts.admin not frozen); evidence/r195/CONTRACT_FREEZE_RECORD_R195_UPDATE.md.
+CLOSED: G-BIND, G-TRUST, G-CRED (STATE_OF_TRUTH §E C3/C7). OPERATIONS §2 Vault rows now TRUE + dev credential seeding procedure.
+NOT_CLAIMED: D-03 rotation/purge evidence; N-9 branch cleanup; UI forms for the new actions (R197); AD-3 templates (R196).
+NEXT (requires operator approval; nothing pre-approved): R196 proposal (AD-3 read-only /v1/templates + /v1/templates/{ref};
+       additive route => baseline re-derive + freeze record in-round), then R197 (UI closure), R198 (final acceptance: AD-5 topology
+       artefact, D-03 evidence).
+```
+
+```
 R194_POINTER (2026-09-20) — R194 CLOSED (Hardening + Composition Closure; non-architectural)
 MAIN: 4f494344 (PR #46 merge commit) + records-only closure PR.
 GATE: gate of record 141eb531 PASS 3852/0/0/64 + gateway 194; post-merge 4f494344 PASS 3852/0/0/64 + gateway 194.
