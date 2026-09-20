@@ -101,9 +101,7 @@ def _agent(
 
 
 def _execute(agent: GeneralAgent, plan: AgentPlan) -> Any:
-    return _run(
-        agent.execute(plan, tenant_id=uuid4(), user_id=uuid4(), ask="go", request_hash="h")
-    )
+    return _run(agent.execute(plan, tenant_id=uuid4(), user_id=uuid4(), ask="go", request_hash="h"))
 
 
 def _model_only() -> ExplicitModelPolicy:

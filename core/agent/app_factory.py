@@ -39,12 +39,11 @@ from pydantic import Field
 from core.agent.general import (
     AgentCapability,
     AgentCapabilityRegistry,
-    AgentPlan,
     CapabilityContribution,
     GeneralAgentRequest,
     PlanRefused,
 )
-from core.contracts.agent_template import StrategyTemplate, TemplateOrigin
+from core.contracts.agent_template import AgentPlan, StrategyTemplate, TemplateOrigin
 from core.contracts.base import BoundedStr, ContractModel
 from core.contracts.execution_strategy import ExecutionStrategySpec, StageKind, StrategyStage
 from core.providers.registry import ModelRegistry

@@ -22,6 +22,7 @@ Recorded decisions:
 
 from __future__ import annotations
 
+import builtins
 from collections.abc import Iterator, Mapping
 
 from core.contracts.agent_template import (
@@ -100,10 +101,18 @@ class TemplateRegistry:
             msg = f"template already registered: {template.ref}"
             raise DuplicateTemplate(msg)
         owners = {t.origin for t in versions.values()}
-        if owners and template.origin is not TemplateOrigin.SYSTEM and TemplateOrigin.SYSTEM in owners:
+        if (
+            owners
+            and template.origin is not TemplateOrigin.SYSTEM
+            and TemplateOrigin.SYSTEM in owners
+        ):
             msg = f"template id {template.id!r} is owned by a system template; choose another id"
             raise DuplicateTemplate(msg)
-        if owners and template.origin is TemplateOrigin.SYSTEM and TemplateOrigin.SYSTEM not in owners:
+        if (
+            owners
+            and template.origin is TemplateOrigin.SYSTEM
+            and TemplateOrigin.SYSTEM not in owners
+        ):
             msg = f"template id {template.id!r} is owned by a non-system template"
             raise DuplicateTemplate(msg)
         versions[template.version] = template
@@ -149,8 +158,8 @@ class TemplateRegistry:
                 out.append(template)
         return out
 
-    def strategy_keys(self) -> list[str]:
-        keys: list[str] = []
+    def strategy_keys(self) -> builtins.list[str]:
+        keys: builtins.list[str] = []
         for template in self.list():
             keys.append(template.ref)
         for template_id in sorted(self._by_id):
@@ -166,7 +175,7 @@ class TemplateRegistry:
 
     def materialize(
         self, ref: str, *, override: TemplateOverride | None = None
-    ) -> tuple[ExecutionStrategySpec, list[OverrideRecord]]:
+    ) -> tuple[ExecutionStrategySpec, builtins.list[OverrideRecord]]:
         """Template (+ explicit override) → runtime strategy + inspectable trail."""
         template = self.resolve_ref(ref)
         if template is None:
@@ -223,5 +232,11 @@ def apply_override(
             )
         )
     return ExecutionStrategySpec.model_validate(
-        {**strategy.model_dump(), **{k: (v if k != "stages" else [s.model_dump() for s in stages]) for k, v in update.items()}}
+        {
+            **strategy.model_dump(),
+            **{
+                k: (v if k != "stages" else [s.model_dump() for s in stages])
+                for k, v in update.items()
+            },
+        }
     ), records

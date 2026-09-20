@@ -152,9 +152,7 @@ class TestOriginAndVersions:
         registry.register(_template().model_copy(update={"status": TemplateStatus.DISABLED}))
         with pytest.raises(TemplateNotFound, match="no active"):
             registry.get("coding.default")
-        assert [t.status for t in registry.list(include_inactive=True)] == [
-            TemplateStatus.DISABLED
-        ]
+        assert [t.status for t in registry.list(include_inactive=True)] == [TemplateStatus.DISABLED]
         assert registry.list() == []
 
 
@@ -180,6 +178,7 @@ class TestExistingExecutorConsumesTheRegistry:
             world.executor.resolve(ExecutionStrategySpec(mode="template", template_id="ghost"))
         # Live view: a later registration is visible to the SAME executor.
         registry.register(_template(tid="other.plan", origin=TemplateOrigin.IMPORTED))
-        assert world.executor.resolve(
-            ExecutionStrategySpec(mode="template", template_id="other.plan")
-        ) == _plan_code_review()
+        assert (
+            world.executor.resolve(ExecutionStrategySpec(mode="template", template_id="other.plan"))
+            == _plan_code_review()
+        )
