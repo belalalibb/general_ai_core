@@ -651,6 +651,7 @@ def create_app(
         if hsts:
             headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
         return response
+
     execution_store = store if store is not None else InMemoryExecutionStore()
     # 10 §13.4 explicit_models seam — composed over the SAME router and
     # execution service (Router still decides every branch; 02 inv. 5).

@@ -108,9 +108,6 @@ from apps.composition.repo_map import RepoMapper
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
 from core.admin.service import AdminConfigService
-from core.contracts.execute import WebhookPayload
-from core.contracts.webhooks import WebhookSubscription
-from core.events import WEBHOOK_STREAM, WebhookDeliveryHandler, WebhookSender
 from core.agent import (
     DEFAULT_AGENT_DEADLINE_MS,
     DEFAULT_AGENT_MAX_STEPS,
@@ -135,6 +132,7 @@ from core.contracts.domain import (
     ProviderModelBinding,
     ProviderStatus,
 )
+from core.contracts.execute import WebhookPayload
 from core.contracts.identity import Tenant, User
 from core.contracts.provider import (
     CredentialHealth,
@@ -149,8 +147,10 @@ from core.contracts.provider import (
     ProviderHealthState,
     ProviderManifest,
 )
+from core.contracts.webhooks import WebhookSubscription
 from core.evaluation.memory import InMemoryEvaluationStore
 from core.evaluation.ports import EvaluationStorePort
+from core.events import WEBHOOK_STREAM, WebhookDeliveryHandler, WebhookSender
 from core.execution.service import ExecutionService
 from core.identity.ports import IdentityServicePort
 from core.identity.service import InMemoryIdentityService, Session
