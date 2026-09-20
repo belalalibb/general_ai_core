@@ -826,6 +826,22 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r191": {
+      "ceiling": 6,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 0,
+      "items": [
+        "R191-A General Agent foundation (operator APPROVED, R191 directive): core/contracts/agent_template.py (StrategyTemplate + TemplateOverride + AgentPlan contracts — NEW module, not in the frozen set), core/execution/templates.py (TemplateRegistry with origin/version semantics + override application producing a runtime ExecutionStrategySpec; exposes a Mapping view so the EXISTING StrategyExecutor consumes it unchanged), core/agent/general.py (GeneralAgent: capability discovery via an AgentCapabilityRegistry, skill composition via the EXISTING SkillRegistry, skill requirements -> capability requirements, template/custom/auto strategy + overrides -> the ONE StrategyExecutor).",
+        "R191-B App Factory first vertical slice (operator APPROVED): core/agent/app_factory.py (AppFactoryCapability registered in the AgentCapabilityRegistry — inventory of target project + QEVION capability/skill/model inventory through Core contracts -> ApplicationPlan; NO generation, NO second engine) + apps/agent_dev/project_inspector.py (GitHub read-only tree inspection over httpx, same posture as github_transport.py; tests use httpx.MockTransport — ZERO live calls).",
+        "R191-C composition wiring (headroom, only if needed): apps/composition/runtime.py passing the built-in template registry mapping into create_app(strategy_templates=...)."
+      ],
+      "log": [],
+      "note": "Impact inspected BEFORE declaration: the R188 strategy layer already accepts templates as Mapping[str, ExecutionStrategySpec] and the served /v1/execute already carries execution_strategy (mode=template) — so R191 needs NO change to core/execution/strategy.py, core/routing/*, core/execution/service.py, apps/api/app.py or any frozen contract module. Five new files (4 core + 1 apps) + 1 headroom for composition wiring = ceiling 6. Any served route for templates (GET/POST /v1/templates) would ADD to served_routes_v1 in the derived freeze baseline => contract SHAPE change => PROPOSAL, not done this round. A SEVENTH production file => STOP and record.",
+      "ceiling_history": [
+        "declared 6 at the R191 opening (2026-09-20, R191-DEC-01) from post-R190 main dc1c62de, BEFORE any production commit: 4 new core modules + 1 new apps/agent_dev module + 1 headroom (apps/composition/runtime.py wiring)."
+      ]
+    },
     "round_r190": {
       "ceiling": 2,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
