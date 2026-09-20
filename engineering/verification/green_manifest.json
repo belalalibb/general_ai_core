@@ -830,7 +830,7 @@
       "ceiling": 6,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 3,
+      "changes_used": 5,
       "items": [
         "R191-A General Agent foundation (operator APPROVED, R191 directive): core/contracts/agent_template.py (StrategyTemplate + TemplateOverride + AgentPlan contracts — NEW module, not in the frozen set), core/execution/templates.py (TemplateRegistry with origin/version semantics + override application producing a runtime ExecutionStrategySpec; exposes a Mapping view so the EXISTING StrategyExecutor consumes it unchanged), core/agent/general.py (GeneralAgent: capability discovery via an AgentCapabilityRegistry, skill composition via the EXISTING SkillRegistry, skill requirements -> capability requirements, template/custom/auto strategy + overrides -> the ONE StrategyExecutor).",
         "R191-B App Factory first vertical slice (operator APPROVED): core/agent/app_factory.py (AppFactoryCapability registered in the AgentCapabilityRegistry — inventory of target project + QEVION capability/skill/model inventory through Core contracts -> ApplicationPlan; NO generation, NO second engine) + apps/agent_dev/project_inspector.py (GitHub read-only tree inspection over httpx, same posture as github_transport.py; tests use httpx.MockTransport — ZERO live calls).",
@@ -854,6 +854,18 @@
           "file": "core/agent/general.py",
           "loc": "+267/-0",
           "summary": "GeneralAgent (+ GeneralAgentRequest, CapabilityContribution, AgentCapability, AgentCapabilityRegistry, PlanRefused): plan() admits exactly one HOW (strategy | template_ref | capability), discovers capabilities via the registry (App Factory is one such capability), admits skills by the ONE SkillRegistry.list_selectable() rule, flows skill manifest capabilities into required_capabilities (routing filter), applies overrides via apply_override, resolves auto/template through the EXISTING StrategyExecutor.resolve; execute() is a thin call into the ONE StrategyExecutor.execute. PLATFORM_AUTHORITY names what the agent never owns. Commit 145d90b2."
+        },
+        {
+          "item": "R191-B",
+          "file": "core/agent/app_factory.py",
+          "loc": "+246/-0",
+          "summary": "AppFactoryCapability = a contributor in the ONE AgentCapabilityRegistry (no engine/router/registry of its own); APP_FACTORY_TEMPLATE = system DATA template app_factory.plan@1 (inventory-summary -> architecture-plan -> review) registered in the ONE TemplateRegistry and run by the ONE StrategyExecutor; ProjectInventory/QevionInventory/ApplicationPlan records; qevion_inventory() reads the EXISTING model/skill/capability registries; build_application_plan() states model policy + same-model-fallback routing posture explicitly; generation_deferred is Literal[True]. RED evidence/r191/red_app_factory.txt (ModuleNotFoundError at 9f8e2c4c) -> GREEN evidence/r191/green_app_factory.txt (11/11). Commit 5910ef31."
+        },
+        {
+          "item": "R191-B",
+          "file": "apps/agent_dev/project_inspector.py",
+          "loc": "+218/-0",
+          "summary": "GitHubProjectInspector: two read-only GETs (git/ref, git/trees?recursive=1) over httpx with injected transport (tests: httpx.MockTransport, ZERO live calls); bounded ProjectInventory (max_paths cap + truncated flag, language tally by extension, manifest detection); token per call in the Authorization header only, never stored/echoed (TransportError text checked); parse_github_remote refuses non-github remotes BEFORE any network call; bind() yields a token-free ProjectInspectorPort for the core layer. Same posture as github_transport.py (R172). Commit b41877e2."
         }
       ],
       "note": "Impact inspected BEFORE declaration: the R188 strategy layer already accepts templates as Mapping[str, ExecutionStrategySpec] and the served /v1/execute already carries execution_strategy (mode=template) — so R191 needs NO change to core/execution/strategy.py, core/routing/*, core/execution/service.py, apps/api/app.py or any frozen contract module. Five new files (4 core + 1 apps) + 1 headroom for composition wiring = ceiling 6. Any served route for templates (GET/POST /v1/templates) would ADD to served_routes_v1 in the derived freeze baseline => contract SHAPE change => PROPOSAL, not done this round. A SEVENTH production file => STOP and record.",
