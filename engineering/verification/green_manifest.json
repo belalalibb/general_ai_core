@@ -826,6 +826,22 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r194": {
+      "ceiling": 3,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 0,
+      "items": [
+        "R194-A security hardening (CS1 I-1/I-2; operator APPROVED R194): apps/api/app.py — one response-header middleware (nosniff, frame DENY, referrer no-referrer, CSP self-only with style-src unsafe-inline for the existing static UIs, HSTS only when the composition asks) + /openapi.json & /redoc admin-gated when the composition asks (default: public on the in-memory profile, gated on the durable profile, OPENAPI_PUBLIC overrides). No route added/removed; contract SHAPE unchanged.",
+        "R194-B webhook delivery composition (R176 §22 post-release item; core/events/__init__.py chain): apps/composition/runtime.py — ONE shared tenant-scoped subscription map passed to create_app AND ExecutionMessageHandler (terminal events were never staged in production), a second existing-class Worker on WEBHOOK_STREAM driving the existing WebhookDeliveryHandler with an httpx sender composed at the root (ADR-0008; follow_redirects=False; bounded timeout), RuntimeProfile.webhook_worker; apps/main.py — drive the webhook worker in the lifespan beside the execute worker.",
+        "R194-C (headroom, NOT used unless a RED test proves it): none declared. N-5 checkpoints is NOT in this round (finding R194-F1: build_dev_surface is uncomposed; ws_write has no checkpoint seam → operator decision)."
+      ],
+      "log": [],
+      "note": "Ceiling 3 declared in R194-DEC-01 BEFORE the first production commit (operator: 'APPROVE R194. Execute R194 exactly as proposed.'). Core untouched. No served route added/removed; the only reachability change is that /openapi.json and /redoc may require an admin bearer on the durable profile. Shared multi-tenant preserved: subscriptions stay keyed by tenant_id; delivery payloads carry only the owning tenant's events (stage_execution_event never widens scope, 20 §6). No admin-only execution introduced.",
+      "ceiling_history": [
+        "declared 3 at the R194 opening (2026-09-20, R194-DEC-01) from post-R193 main b5c46561."
+      ]
+    },
     "round_r193": {
       "ceiling": 3,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
