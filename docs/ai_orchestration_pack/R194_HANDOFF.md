@@ -17,3 +17,11 @@ Fourth production file → STOP. Any `served_routes_v1` delta or contract SHAPE 
 
 ## 6. Ledger
 `evidence/r194_state_ledger.md`.
+
+## 7. Closure (2026-09-20)
+- **Result:** R194 CLOSED (R194-DEC-02). PR #46 merged by merge commit → `main 4f494344`; records-only closure PR follows.
+- **Production:** 3/3 files (`apps/api/app.py`, `apps/composition/runtime.py`, `apps/main.py`); Core untouched; freeze `--check` MATCHES.
+- **Gates:** gate of record 141eb531 PASS 3852/0/0/64 + gateway 194; post-merge 4f494344 PASS 3852/0/0/64 + gateway 194; `min_passed` 3837 → 3852.
+- **Operating:** `OPENAPI_PUBLIC` (unset ⇒ public in-memory / gated durable), `HSTS=1` when TLS-terminated, `WEBHOOK_TIMEOUT_SECONDS` (10). Registered webhooks are now delivered by the `webhook-worker` lifespan task.
+- **Withdrawn:** N-5 checkpoints (finding R194-F1) — operator decision.
+- **Next:** STOP on main at the operator decision gate (N-5 path, AD-1, AD-2, AD-3, AD-5, P-R192-02, DEC-03/AD-6, AD-7, D-03 rotation).
