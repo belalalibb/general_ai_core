@@ -17,3 +17,6 @@ P-R191-01 (served `/v1/templates`) — still required, SHAPE change. P-R192-02 (
 
 ## 6. Ledger
 `evidence/r192_state_ledger.md`.
+
+## 7. Resolution (2026-09-20)
+R192 CLOSED — see R192-DEC-01. Two proven gaps closed additively (G1 governed inspection; G2 layering pin); everything else verified as already solved, intentionally deferred, or an operator decision. Gate of record `1eab7790` PASS 3826/0/0/64 + gateway 194; PR #42 merged → `main 3ba3e616`; post-merge gate PASS 3826/0/0/64 + gateway 194; D-6 ratchet 3809 → 3826. Contract shape unchanged (`--check` MATCHES). STOP: four operator decisions pending (freeze record §3). App Factory generation NOT started.
