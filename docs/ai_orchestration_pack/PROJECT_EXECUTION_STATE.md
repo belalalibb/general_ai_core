@@ -702,3 +702,24 @@ NEXT_PER_OPERATOR_PLAN: App Factory (item 7) — NOT started; requires its own d
 RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r190_state_ledger.md;
        does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
 ```
+
+```
+R191_POINTER (2026-09-20) — R191 CLOSED (General Agent + Template/Skill foundation + App Factory first slice)
+MAIN: 7c29ac33 (PR #40 merge commit) + records-only closure PR.
+GATE: gate of record f608c669 PASS 3809/0/0/64 + gateway 194; post-merge 7c29ac33 PASS 3809/0/0/64 + gateway 194.
+       min_passed 3779 -> 3809 (D-6). not_evaluated = 1 (D-03; operator-owned F-CS1-04).
+PRODUCTION: 5 NEW files, 0 modified (ceiling 6, used 5): core/contracts/agent_template.py, core/execution/templates.py,
+       core/agent/general.py, core/agent/app_factory.py, apps/agent_dev/project_inspector.py.
+BEHAVIOR: GeneralAgent plans one HOW (strategy | template_ref | capability) and executes via the ONE StrategyExecutor;
+       templates are versioned DATA in a TemplateRegistry consumed by the EXISTING executor; overrides are recorded;
+       skills admitted by the ONE SkillRegistry rule, their capabilities flow to routing; App Factory is a capability
+       (DATA template app_factory.plan@1) ending at ApplicationPlan — generation_deferred = True.
+CONTRACT: shape baseline unchanged (contract_freeze_derive.py --check MATCHES); P-R191-01 served /v1/templates = PROPOSAL only;
+       evidence/r191/CONTRACT_FREEZE_RECORD_R191_UPDATE.md.
+DEFERRED: R190 set unchanged + R191: template durability; UI template CRUD (after P-R191-01); App Factory generation;
+       composition wiring of built-in templates (R191-C unused); strategy-output evaluation; inspector credential source.
+PROPOSALS_PENDING_OPERATOR: P-R191-01 (served /v1/templates list/get/register — SHAPE change; needs operator YES).
+NEXT_PER_OPERATOR_PLAN: App Factory generation — NOT started; requires its own declaration. STOP point.
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r191_state_ledger.md;
+       does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
+```

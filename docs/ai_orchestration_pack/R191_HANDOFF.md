@@ -17,3 +17,6 @@ Seventh production file → STOP. Served route / frozen-shape change → PROPOSA
 
 ## 6. Ledger
 `evidence/r191_state_ledger.md`.
+
+## 7. Resolution (2026-09-20)
+R191 CLOSED — see R191-DEC-02 (deliverables 1–16 + exit criteria). Foundation delivered as 5 NEW production files (5/6 of ceiling; R191-C headroom deliberately unused): `core/contracts/agent_template.py`, `core/execution/templates.py`, `core/agent/general.py`, `core/agent/app_factory.py`, `apps/agent_dev/project_inspector.py`. Contract shape unchanged (`--check` MATCHES); P-R191-01 (served `/v1/templates`) recorded as PROPOSAL, not executed. Gate of record `f608c669` PASS 3809/0/0/64 + gateway 194; PR #40 merged → `main 7c29ac33`; post-merge gate PASS 3809/0/0/64 + gateway 194. D-6 ratchet 3779 → 3809. App Factory first slice ends at `ApplicationPlan` (generation deferred by directive). Stop on main.
