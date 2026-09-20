@@ -725,6 +725,27 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R193_POINTER (2026-09-20) — R193 CLOSED (P-R192-04: production composition of the governed REST-Git engineering path)
+MAIN: 04952844 (PR #44 merge commit) + records-only closure PR.
+GATE: gate of record 9ae8b6b6 PASS 3837/0/0/64 + gateway 194; post-merge 04952844 PASS 3837/0/0/64 + gateway 194.
+       min_passed 3826 -> 3837 (D-6). not_evaluated = 1 (D-03; operator-owned F-CS1-04).
+PRODUCTION: 3 files (ceiling 3, used 3): apps/composition/dev_bindings.py (NEW: build_dev_bindings(env) -> None unless
+       AGENT_DEV_STATE_DIR; JsonBindingStore+RepoBindingRegistry, JsonRemoteTrustStore+RemoteTrustRegistry, GitHubRestTransport,
+       per-tenant GitToolset/BoundProjectInspector, 5 AgentToolSpecs), apps/composition/agent.py (tool_registry/extra_tool_specs),
+       apps/composition/runtime.py (RuntimeProfile.dev_bindings; create_app(dev_bindings=)). Core untouched.
+TENANCY: tenant from the admitted run context at every lookup; foreign -> binding_tenant_mismatch (0 secret resolves, 0 HTTP);
+       untrusted -> remote_not_trusted before credential; shared registry; no admin-only path; no new isolation model.
+CONTRACT: shape baseline unchanged (contract_freeze_derive.py --check MATCHES); evidence/r193/CONTRACT_FREEZE_RECORD_R193_UPDATE.md.
+       IMPL-024 pin flipped deliberately (env-gated); docs/r169/CAPABILITY_MAP.md + docs/r172/BACKEND_STATE_OF_TRUTH.md §E updated.
+NOT_CLAIMED: /v1/dev write routes; trust-grant endpoint/CLI; durable credential custody; branch/PR cleanup primitive.
+PROPOSALS_PENDING_OPERATOR: P-R191-01 served /v1/templates (SHAPE); P-R192-02 skill instruction channel;
+       P-R192-03 template ownership axis / trust-grant operator act. P-R192-04 CLOSED.
+NEXT_PER_OPERATOR_PLAN: STOP — remaining arrows require one of the three decisions above.
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r193_state_ledger.md;
+       does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
+```
+
+```
 R192_POINTER (2026-09-20) — R192 CLOSED (claim verification H1-H11 + governed project inspection)
 MAIN: 3ba3e616 (PR #42 merge commit) + records-only closure PR.
 GATE: gate of record 1eab7790 PASS 3826/0/0/64 + gateway 194; post-merge 3ba3e616 PASS 3826/0/0/64 + gateway 194.
