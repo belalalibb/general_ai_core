@@ -207,6 +207,15 @@ class AdminAction(StrEnum):
     # it appends one APPROVAL_DECISION audit row (20 §9). Approved closed-set
     # edit (assessment §12: "admin change-kind set +1").
     CAPABILITY_PROPOSAL = "capability_proposal"
+    # R195 (AD-1; operator APPROVED D1 "+3 members", D2 "TOOLS"): the governed
+    # dev-binding and remote-trust acts ride the SAME 21 §3 lifecycle instead of
+    # new /v1/dev write routes. A binding payload is the RepoBinding contract as
+    # JSON (explicit tenant_id; credential_ref is an opaque handle — 20 §5, the
+    # R176 FIX-04 payload guard still refuses credential material). Trust acts
+    # are platform-operator rulings keyed (target_tenant_id, remote_url).
+    REGISTER_REPO_BINDING = "register_repo_binding"
+    GRANT_REMOTE_TRUST = "grant_remote_trust"
+    REVOKE_REMOTE_TRUST = "revoke_remote_trust"
 
 
 # Each action belongs to EXACTLY ONE area (mismatch = invalid change).
@@ -225,6 +234,10 @@ ACTION_AREA: dict[AdminAction, AdminArea] = {
     AdminAction.REGISTER_PROVIDER: AdminArea.PROVIDERS,
     AdminAction.REGISTER_MODEL: AdminArea.MODELS,
     AdminAction.CAPABILITY_PROPOSAL: AdminArea.TOOLS,
+    # R195 D2: dev bindings mint Tool specs against the shared ToolRegistry.
+    AdminAction.REGISTER_REPO_BINDING: AdminArea.TOOLS,
+    AdminAction.GRANT_REMOTE_TRUST: AdminArea.TOOLS,
+    AdminAction.REVOKE_REMOTE_TRUST: AdminArea.TOOLS,
 }
 
 

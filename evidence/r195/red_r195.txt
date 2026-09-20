@@ -1,0 +1,8 @@
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/composition/test_r195_secret_custody.py:26: in <module>
+    from apps.composition.runtime import (
+E   ImportError: cannot import name 'secret_custody_from_env' from 'apps.composition.runtime' (/home/user/webapp/apps/composition/runtime.py)
+=========================== short test summary info ============================
+ERROR tests/admin/test_r195_governed_dev_bindings.py
+ERROR tests/composition/test_r195_secret_custody.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
