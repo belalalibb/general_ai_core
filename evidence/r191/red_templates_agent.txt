@@ -1,0 +1,10 @@
+# R191 RED evidence — tests at 23133338 run against the tree BEFORE core/execution/templates.py and core/agent/general.py existed (worktree @ 23133338)
+# command: python -m pytest -p no:cacheprovider -q --no-header tests/execution/test_r191_templates.py tests/agent/test_r191_general_agent.py
+==================================== ERRORS ====================================
+___________ ERROR collecting tests/execution/test_r191_templates.py ____________
+E   ModuleNotFoundError: No module named 'core.execution.templates'
+___________ ERROR collecting tests/agent/test_r191_general_agent.py ____________
+E   ModuleNotFoundError: No module named 'core.agent.general'
+ERROR tests/execution/test_r191_templates.py
+ERROR tests/agent/test_r191_general_agent.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!

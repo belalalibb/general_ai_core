@@ -1,0 +1,6 @@
+# R191-B RED evidence — tests at 9f8e2c4c BEFORE core/agent/app_factory.py and apps/agent_dev/project_inspector.py exist
+==================================== ERRORS ====================================
+_________ ERROR collecting tests/agent/test_r191_app_factory_slice.py __________
+E   ModuleNotFoundError: No module named 'apps.agent_dev.project_inspector'
+ERROR tests/agent/test_r191_app_factory_slice.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
