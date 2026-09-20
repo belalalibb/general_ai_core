@@ -1,0 +1,6 @@
+# R193 RED — tests at d7fa658f BEFORE apps/composition/dev_bindings.py exists (worktree)
+==================================== ERRORS ====================================
+___ ERROR collecting tests/composition/test_r193_dev_bindings_composition.py ___
+ImportError while importing test module '/tmp/wt_red/tests/composition/test_r193_dev_bindings_composition.py'.
+E   ModuleNotFoundError: No module named 'apps.composition.dev_bindings'
+ERROR tests/composition/test_r193_dev_bindings_composition.py

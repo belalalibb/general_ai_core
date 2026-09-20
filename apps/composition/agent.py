@@ -21,7 +21,7 @@ Catalog posture (20 §4, deny-by-default):
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from uuid import UUID, uuid4
 
@@ -201,6 +201,8 @@ def build_agent(
     max_steps: int = DEFAULT_AGENT_MAX_STEPS,
     deadline_ms: int | None = DEFAULT_AGENT_DEADLINE_MS,
     reasoning_max_tokens: int = DEFAULT_REASONING_MAX_TOKENS,
+    tool_registry: ToolRegistry | None = None,
+    extra_tool_specs: Sequence[AgentToolSpec] = (),
 ) -> ComposedAgent:
     """Compose the shared agent authority chain + runtime + catalog.
 
@@ -211,8 +213,14 @@ def build_agent(
     this runtime (``AgentRuntime`` enforces the hard cap of 32); a request may
     only ask for less. Engineering turns (inspect → change → test → diagnose →
     fix → verify → git) need more than the 8-step default.
+
+    ``tool_registry`` / ``extra_tool_specs`` (R193): composition may pre-build the
+    ONE registry and mint further specs against it (the REST-Git tools of
+    ``apps.composition.dev_bindings``); the specs join the SAME catalog under the
+    same admission rule. Absent ⇒ byte-identical to before.
     """
-    tool_registry = ToolRegistry()
+    if tool_registry is None:
+        tool_registry = ToolRegistry()
     firewall = CapabilityFirewall()
     devices = DeviceRegistry()
     runtime = AgentRuntime(
@@ -239,6 +247,11 @@ def build_agent(
     if engineering is not None:
         for spec in engineering_tool_specs(engineering, tool_registry):
             catalog[spec.name] = spec
+    for spec in extra_tool_specs:
+        # R193: the composer must have registered the tool in THIS registry —
+        # the catalog never advertises a tool the gate cannot resolve.
+        tool_registry.get(spec.tool.id)  # raises for an unknown tool id
+        catalog[spec.name] = spec
     return ComposedAgent(
         surface=AgentSurface(runtime=runtime, catalog=catalog),
         tool_registry=tool_registry,

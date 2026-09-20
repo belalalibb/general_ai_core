@@ -230,8 +230,13 @@ class TestSeamAbsent:
         assert _cap_state(app, CAP_ID) == "inert"
 
     def test_default_runtime_profile_does_not_compose_the_dev_seam(self) -> None:
-        # Owner decision (R172 C7): production composition does not build a
-        # RepoBindingRegistry, so the seam stays inert there. Pinned so a later
-        # round flipping it must do so deliberately (and update CAPABILITY_MAP).
+        # Owner decision (R172 C7) flipped deliberately in R193 (R193-DEC-01):
+        # production composition now injects the seam ONLY when
+        # AGENT_DEV_STATE_DIR is set (apps/composition/dev_bindings.py). The
+        # default profile (env unset) stays byte-identical and inert; pinned
+        # here so the gate is the env var, never an unconditional wiring.
         source = Path("apps/composition/runtime.py").read_text(encoding="utf-8")
-        assert "dev_bindings=" not in source
+        assert "dev_bindings=dev.bindings if dev is not None else None" in source
+        assert "dev = build_dev_bindings(" in source
+        composition = Path("apps/composition/dev_bindings.py").read_text(encoding="utf-8")
+        assert 'ENV_DEV_STATE_DIR = "AGENT_DEV_STATE_DIR"' in composition

@@ -84,12 +84,12 @@ are byte-identical to round start (frozen by mandate). Consequences:
 
 | Item | What is missing | Where |
 |------|-----------------|-------|
-| C2 binding store | construct `JsonBindingStore(path, outside_of=…)` in `apps/composition/runtime.py`; choose default state path | `core/tools/binding_store.py` |
-| C3 trust registry | wire `RemoteTrustRegistry` into the production `GitToolset`; operator act that *grants* trust (CLI/endpoint) | `core/tools/remote_trust.py` |
+| C2 binding store | **DONE R193** (env-gated): `JsonBindingStore(AGENT_DEV_STATE_DIR/bindings.json, outside_of=(engineering.root,))` built by `apps/composition/dev_bindings.py`; unset env ⇒ not constructed | `core/tools/binding_store.py` |
+| C3 trust registry | **wired R193** (env-gated): `RemoteTrustRegistry(JsonRemoteTrustStore(AGENT_DEV_STATE_DIR/remote_trust.json))` feeds the per-tenant `GitToolset`/`BoundProjectInspector`; the operator *grant* act (CLI/endpoint) remains deliberately absent (SHAPE decision, P-R192-03) | `core/tools/remote_trust.py` |
 | C5 checkpoints | pass a `CheckpointManager` to `build_dev_surface`; retention/GC policy | `core/tools/checkpoint.py` |
 | C6 payload binding | UI/approval issuer must emit `payload_sha256`; hash versioning field | `core/tools/payload_binding.py` |
-| C7 dev seam | inject `dev_bindings` in `runtime.py` (depends on C2 + C3); write routes deliberately absent | `apps/api/app.py` |
-| C8 transport | construct `GitHubRestTransport` + `GitToolset` in a production root; GHE `base_url` plumbing; branch/PR cleanup primitive | `apps/agent_dev/github_transport.py` |
+| C7 dev seam | **DONE R193** (env-gated): `runtime.py` passes `dev_bindings=dev.bindings` when `AGENT_DEV_STATE_DIR` is set; `/v1/dev` write routes deliberately absent (read-only `publish-modes` only) | `apps/api/app.py` |
+| C8 transport | **DONE R193** (env-gated): `GitHubRestTransport(base_url)` + per-tenant `GitToolset` constructed by `apps/composition/dev_bindings.py`; GHE via `AGENT_DEV_GITHUB_API`; branch/PR cleanup primitive still open | `apps/agent_dev/github_transport.py` |
 | Groq live completion | an unblocked key; then `tests_live/r172` and `tests/providers/test_groq_live.py` run green end-to-end | env only |
 | Session-artefact denial | `*dump*`/`*session*` deliberately NOT denied (would hit fixtures); content-based detection out of scope | C1 notes |
 | Sandboxing | still design-only (O1 refused with evidence, §8) | `docs/r169/SANDBOX_OPTIONS.md` |

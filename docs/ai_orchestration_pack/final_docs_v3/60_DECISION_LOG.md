@@ -1931,3 +1931,21 @@ Tests (outside counted roots): `tests/providers/test_r190_logical_model_identity
 - **P. Next safe continuation point:** `main = 3ba3e616` + this records-only closure PR. Next session starts from main, reads the R192 pointer and the last ledger row, and does NOT proceed on any of P-R191-01 / P-R192-02 / P-R192-03 / P-R192-04 without an operator YES recorded in this log. Live GitHub/provider behaviour, durability, and production credential integration are NOT claimed (hermetic proofs only).
 
 **Gates:** gate of record fresh clone `1eab7790` PASS **3826/0/0/64** + gateway **194**; D-6 ratchet `min_passed` 3809 → 3826 (+17); PR #42 merged by merge commit → `main 3ba3e616`; post-merge fresh clone PASS **3826/0/0/64** + gateway **194**.
+
+### R193-DEC-01 — R193 OPENED (operator "APPROVE R193"): production composition of the governed REST-Git engineering path = P-R192-04 as scoped; env-gated, read-first, multi-tenant preserved (2026-09-20)
+
+**Operator text (verbatim anchors):** "APPROVE R193." · "preserving the existing multi-tenant/shared architecture and verifying tenant-scoped access throughout" · "Do not introduce admin-only execution or assume any new isolation model" · "Stop and propose a change only if the repository requires it."
+
+**Baseline verified:** `main = 7983590a`, clean, open PRs 0; R192 records reconciled; no newer record.
+
+**Decision:** compose the R172 C2/C3/C7/C8 owner items behind ONE env gate `AGENT_DEV_STATE_DIR` (precedent: `build_engineering` / `AGENT_WORKSPACE_ROOT`): `JsonBindingStore(<dir>/bindings.json)` → `RepoBindingRegistry`; `JsonRemoteTrustStore(<dir>/remote_trust.json)` → `RemoteTrustRegistry`; `create_app(dev_bindings=registry)` (the EXISTING read-only `/v1/dev` router, IMPL-024); per-tenant `GitToolset(tenant_id, bindings, GitHubRestTransport, secrets, trust)` and `BoundProjectInspector` exposed to the AgentRuntime as `AgentToolSpec`s whose handlers read the ADMITTED caller's tenant from `apps.api.run_context.current_run_tenant()` (precedent: `repo_map`, R177-FIX-06) and refuse when unbound. Approval requirements unchanged: `git.commit`/`git.publish` stay `BEFORE_ACTION` and are REFUSED inside the loop (no self-approval). Unset env ⇒ byte-identical to today (extends the IMPL-024 pin).
+
+**Tenancy statement (operator mandate):** no admin-only path; no new isolation model. Tenant scope = `RepoBindingRegistry.get(binding_id, tenant_id=caller)` (foreign → `binding_tenant_mismatch`) + `RemoteTrustPort.is_trusted(caller_tenant, remote)` + `SecretManagerPort.resolve(caller_tenant, credential_ref)`. The state dir is shared across tenants exactly as the existing JSON stores are (records carry `tenant_id`); isolation is enforced at every lookup, never by directory.
+
+**Ceiling:** 3 production files (`apps/composition/dev_bindings.py` NEW, `apps/composition/runtime.py`, `apps/composition/agent.py`); STOP at 4. Core untouched.
+
+**Not claimed / out of scope:** `/v1/dev` write routes; a trust-grant endpoint (SHAPE — trust is seeded by an explicit operator act on the JSON store, as accepted in the proposal); durable credential custody (the composition secret manager is process-lifetime — production credential integration is NOT claimed); App Factory generation stages; remote test runner.
+
+**RED-first proof:** `tests/composition/test_r193_dev_bindings_composition.py` — (i) unset ⇒ inert (extends IMPL-024 pin); (ii) set ⇒ `/v1/dev/.../publish-modes` 200 own tenant, same typed 404 foreign/unknown; (iii) JSON store round-trip across two profile builds (the only durability claimed); (iv) untrusted remote ⇒ `remote_not_trusted` BEFORE `secrets.resolve` and BEFORE HTTP (MockTransport, zero live calls); (v) `git.commit`/`git.publish` BEFORE_ACTION preserved, REFUSED in the loop; (vi) state dir inside the platform ⇒ boot refusal (§14); (vii) tool handler outside a bound run ⇒ refusal; bound run ⇒ caller's tenant, token never in outputs.
+
+**Exit:** RED→GREEN; regression incl. R188/R190/R191/R192; freeze `--check` MATCHES (re-derive confirms `/v1/dev` already in baseline as opt-in — else STOP); fresh-clone gate + gateway 194; D-6 ratchet; PR by merge commit; post-merge gate; R193-DEC-02; stop on main.
