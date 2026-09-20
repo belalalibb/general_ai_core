@@ -830,12 +830,16 @@
       "ceiling": 3,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 0,
+      "changes_used": 3,
       "items": [
         "R193-A dev-bindings composition (operator APPROVED R193 = P-R192-04 as scoped): apps/composition/dev_bindings.py (NEW builder: AGENT_DEV_STATE_DIR env gate, §14 refusal, JsonBindingStore + JsonRemoteTrustStore behind the EXISTING RepoBindingRegistry / RemoteTrustRegistry, per-tenant GitToolset + BoundProjectInspector factories, tenant-bound AgentToolSpecs reading the admitted caller from apps.api.run_context), apps/composition/runtime.py (env-gated wiring; passes dev_bindings= to create_app; appends the REST-git tool specs; unset env => byte-identical behaviour), apps/composition/agent.py (build_agent accepts extra tool specs — same pattern as engineering_tool_specs / repo_map_tool_spec).",
         "R193-B (headroom, NOT used unless a RED test proves it): none declared."
       ],
-      "log": [],
+      "log": [
+        {"item": "R193-A", "file": "apps/composition/dev_bindings.py", "loc": "+296/-0", "summary": "NEW env-gated composition root: build_dev_bindings(env) returns None when AGENT_DEV_STATE_DIR is blank; else refuses a state dir inside the platform root (ADR-0009 §14), builds JsonBindingStore+RepoBindingRegistry, JsonRemoteTrustStore+RemoteTrustRegistry, GitHubRestTransport/GitHubProjectInspector, per-tenant GitToolset/BoundProjectInspector factories, and 5 AgentToolSpecs (git.fetch/status/commit/publish, project.inspect) whose handlers take the tenant from the admitted run context (refuse when unbound). Commits b148f517, bb646e6d."},
+        {"item": "R193-A", "file": "apps/composition/agent.py", "loc": "+15/-2", "summary": "build_agent accepts an optional shared ToolRegistry and extra_tool_specs; each extra spec must already be registered (ToolRegistry.get raises otherwise) before it enters the catalog. Commit 3ba48552."},
+        {"item": "R193-A", "file": "apps/composition/runtime.py", "loc": "+21/-0", "summary": "RuntimeProfile.dev_bindings (None by default); after build_engineering: shared ToolRegistry + dev = build_dev_bindings(env, secrets=onboarding_secrets, outside_of=(engineering.root,)); build_agent(tool_registry=..., extra_tool_specs=dev.tool_specs or ()); create_app(dev_bindings=dev.bindings or None). Unset env ⇒ byte-identical behaviour. Commit c3eddc22."}
+      ],
       "note": "Ceiling 3 declared in the approved R193 proposal and R193-DEC-01 BEFORE the first production commit. Core untouched. No /v1/dev write route, no trust-grant endpoint (SHAPE), no admin-only execution, no new isolation model: tenant scope comes from RepoBindingRegistry.get(tenant_id=) + run-context caller tenant, exactly as repo_map (R177-FIX-06).",
       "ceiling_history": [
         "declared 3 at the R193 opening (2026-09-20, R193-DEC-01) from post-R192 main 7983590a."
