@@ -13,3 +13,4 @@
 | 9 | R191-B GREEN | 11/11 (`evidence/r191/green_app_factory.txt`); one TEST fix (model policy expressed as an explicit `TemplateOverride`, asserted via `overrides_applied`). | VERIFIED | 98268974 |
 | 10 | Static | mypy strict clean on all 5 new modules; ruff check/format clean on touched files; `contract_freeze_derive.py --check` → MATCHES (new modules only; no served route added — P-R191-01 stays a PROPOSAL). | VERIFIED | e0306dd9 |
 | 11 | Budget | manifest `round_r191.changes_used = 5` (rows R191-A ×3, R191-B ×2). R191-C headroom: NOT used (see row 12). | DONE | (this) |
+| 12 | Regression | 2721 passed / 13 skipped / 0 failed across the standing suite set (incl. R188/R189/R190 suites) at 56d1fc61 (`evidence/r191/regression_56d1fc61.txt`). Freeze `--check` MATCHES. R191-C headroom deliberately unused (freeze record §3.4). | VERIFIED | (this) |
