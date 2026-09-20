@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
@@ -40,11 +40,10 @@ from core.contracts.admin import (
 from core.contracts.audit import AuditEventType
 from core.contracts.base import JsonObject
 from core.contracts.remote_trust import RemoteTrustGrant
-from core.contracts.repo_binding import RepoBinding
+from core.contracts.repo_binding import GitRefusalCode, RepoBinding
 from core.providers import BindingRegistry, ModelRegistry, ProviderRegistry
 from core.routing import SimpleScoringRouter
 from core.tools.binding_store import JsonBindingStore
-from core.tools.git_refusal import GitRefusalCode
 from core.tools.remote_trust import JsonRemoteTrustStore, RemoteTrustRegistry
 from core.usage import InMemoryUsageAccounting
 
@@ -310,7 +309,9 @@ class TestRemoteTrust:
 
     def test_previews_are_plain_language(self, tmp_path: Path) -> None:
         w = World(tmp_path)
-        c1 = w.draft(AdminAction.REGISTER_REPO_BINDING, _binding_payload(_binding(tmp_path, TENANT_A)))
+        c1 = w.draft(
+            AdminAction.REGISTER_REPO_BINDING, _binding_payload(_binding(tmp_path, TENANT_A))
+        )
         w.admin.validate(PLATFORM, c1.id)
         assert "binding" in (w.admin.preview(PLATFORM, c1.id).impact_preview or "")
         c2 = w.draft(AdminAction.GRANT_REMOTE_TRUST, _trust_payload(TENANT_A))

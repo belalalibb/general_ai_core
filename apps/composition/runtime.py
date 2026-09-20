@@ -91,7 +91,6 @@ from apps.composition.engineering import (
 from apps.composition.evaluation_policy import build_selective_judge
 from apps.composition.evaluations import build_durable_evaluation_store
 from apps.composition.gateway import gateway_settings_from_env, onboarding_secrets_from_env
-from apps.composition.secrets import build_secret_manager, vault_settings_from_env
 from apps.composition.identity import build_durable_identity_service
 from apps.composition.learning import (
     build_durable_learning_custody,
@@ -106,6 +105,7 @@ from apps.composition.provider_onboarding import (
     replay_admin_status_overrides,
 )
 from apps.composition.repo_map import RepoMapper
+from apps.composition.secrets import build_secret_manager, vault_settings_from_env
 from apps.composition.sourcechange import build_durable_sourcechange_stores
 from apps.composition.workspaces import build_durable_workspace_stores
 from core.admin.service import AdminConfigService
