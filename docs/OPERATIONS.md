@@ -72,6 +72,9 @@ below is read from the process environment at start.
 | `AGENT_WORKSPACE_COMMANDS` | comma-separated executables `ws_run` may launch (allow-list; `bash`, `sh`, `curl` etc. are refused unless listed) | `python3,pytest,ruff` |
 | `VAULT_ADDR`, `VAULT_TOKEN`, `VAULT_MOUNT` | Vault-backed `SecretManagerPort` (secret refs resolve there) | absent ⇒ env-backed refs |
 | `EXECUTE_RATE_LIMIT`, `REGISTER_RATE_LIMIT` | per-tenant / per-IP limits | recorded defaults |
+| `OPENAPI_PUBLIC` (R194-A) | `1` serves `/openapi.json` + `/redoc` to anyone; `0` requires an admin bearer (401 tokenless / 403 non-admin, same posture as `/v1/admin/*`) | unset ⇒ public on the in-memory profile, admin-gated when `DATABASE_URL` is set |
+| `HSTS` (R194-A) | `1` adds `Strict-Transport-Security: max-age=31536000; includeSubDomains` — set ONLY when this process is reached over TLS | unset ⇒ header absent (the other hardening headers are always sent) |
+| `WEBHOOK_TIMEOUT_SECONDS` (R194-B) | outbound timeout for webhook delivery (`POST <registered url>`; redirects never followed; non-2xx ⇒ retry then dead-letter) | `10` |
 | `PROVIDER_MAX_RETRIES` | bounded same-model retries for *retryable* provider errors (rate limit / 5xx / a generation that failed the provider's own post-check), honoring `Retry-After` up to 60 s — a longer `Retry-After` (Groq free tier answered 1335 s live) fails over instead of parking the run. Raise (e.g. `4`) on token-per-minute-capped tiers such as Groq free (8k TPM) so a multi-step agent run survives a 429 mid-task (0–8) | `1` |
 
 Verify what the environment actually composes (evidence, not a claim):
