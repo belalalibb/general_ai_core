@@ -41,7 +41,7 @@ from core.agent.general import (
     GeneralAgentRequest,
     PlanRefused,
 )
-from core.contracts.agent_template import TemplateOrigin
+from core.contracts.agent_template import TemplateOrigin, TemplateOverride
 from core.contracts.model_policy import ExplicitModelPolicy
 from core.contracts.skills import SkillStatus
 from core.execution.strategy import StrategyExecutor
@@ -220,7 +220,12 @@ class TestAppFactoryIsACapabilityNotAnEngine:
                 ask="build an admin dashboard for this shop",
                 capability=APP_FACTORY_CAPABILITY_NAME,
                 skills=["fastapi"],
-                model_policy=ExplicitModelPolicy(type="explicit_model", model_id="shared-model"),
+                # Part 9 chain: the runtime override on top of the template is EXPLICIT
+                override=TemplateOverride(
+                    model_policy_all=ExplicitModelPolicy(
+                        type="explicit_model", model_id="shared-model"
+                    )
+                ),
                 context={"project_inventory": inventory.model_dump(mode="json")},
             )
         )
@@ -232,8 +237,13 @@ class TestAppFactoryIsACapabilityNotAnEngine:
             "review",
         ]
         assert plan.skills == ["fastapi"]
-        # the request model policy is the runtime override (Part 9 chain, no hidden rule)
+        # the override is applied AND recorded per stage (Part 9 chain, no hidden rule)
         assert all(s.model_policy is not None for s in plan.strategy.stages)
+        assert {(r.field, r.stage_key) for r in plan.overrides_applied} == {
+            ("model_policy", "inventory-summary"),
+            ("model_policy", "architecture-plan"),
+            ("model_policy", "review"),
+        }
         report = _run(
             agent.execute(
                 plan,
