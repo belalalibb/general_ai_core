@@ -22,13 +22,25 @@ from __future__ import annotations
 import asyncio
 from collections import Counter
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from apps.agent_dev.git_tools import TransportError
+from apps.agent_dev.git_tools import (
+    BindingLookupRefused,
+    RemoteTrustPort,
+    RepoBindingRegistry,
+    TransportError,
+)
 from apps.agent_dev.github_transport import GITHUB_API_BASE, parse_github_remote
 from core.agent.app_factory import ProjectInventory
+from core.contracts.repo_binding import GitRefusalCode, RepoBinding
+from core.secrets.errors import SecretNotFound
+
+if TYPE_CHECKING:
+    from uuid import UUID
+
+    from core.secrets.ports import SecretManagerPort
 
 _API_VERSION = "2022-11-28"
 _DEFAULT_MAX_PATHS = 2000
@@ -216,3 +228,70 @@ class _BoundInspector:
 
     def inspect(self, remote_url: str, branch: str) -> ProjectInventory:
         return asyncio.run(self._inspector.inspect(remote_url, branch, token=self._token_source()))
+
+
+class BoundProjectInspector:
+    """R192 G1 — the GOVERNED inspection path, by ``RepoBinding`` id.
+
+    Same chain, same authorities, same order as ``GitToolset`` (R169/R172):
+
+    1. ``RepoBindingRegistry.get(binding_id, tenant_id=...)`` — tenant-scoped;
+       a foreign tenant's binding is ``binding_tenant_mismatch``, never "unknown".
+    2. ``RemoteTrustPort.is_trusted`` BEFORE any credential resolve; a registry
+       fault is "not trusted" (fail closed). ``trust=None`` preserves the pre-R172
+       behaviour exactly like ``GitToolset``.
+    3. ``SecretManagerPort.resolve(tenant_id, binding.credential_ref)`` at the
+       last moment; ``SecretNotFound`` → ``credential_unresolved``. The value is
+       passed straight into ``GitHubProjectInspector.inspect`` and never stored.
+
+    Implements ``core.agent.app_factory.BindingInspectorPort`` so Core only ever
+    sees a binding id and an inventory — no URL+token pairs cross into Core.
+    """
+
+    def __init__(
+        self,
+        inspector: GitHubProjectInspector,
+        *,
+        tenant_id: UUID,
+        bindings: RepoBindingRegistry,
+        trust: RemoteTrustPort | None,
+        secrets: SecretManagerPort,
+    ) -> None:
+        self._inspector = inspector
+        self._tenant_id = tenant_id
+        self._bindings = bindings
+        self._trust = trust
+        self._secrets = secrets
+
+    def __repr__(self) -> str:  # never includes credentials — none are stored
+        return f"BoundProjectInspector(tenant={self._tenant_id}, inspector={self._inspector!r})"
+
+    # -- the ONE governed chain (mirrors GitToolset._binding/_require_trust/_token) ----
+
+    def _require_trust(self, binding: RepoBinding) -> None:
+        if self._trust is None:
+            return
+        try:
+            trusted = self._trust.is_trusted(self._tenant_id, binding.remote_url) is True
+        except Exception:  # defensive: registry faults must not become 500s
+            trusted = False
+        if not trusted:
+            raise BindingLookupRefused(
+                GitRefusalCode.REMOTE_NOT_TRUSTED,
+                f"remote {binding.remote_url} is not trusted for tenant {self._tenant_id}",
+            )
+
+    def _token(self, binding: RepoBinding) -> str:
+        try:
+            return self._secrets.resolve(self._tenant_id, binding.credential_ref)
+        except SecretNotFound as exc:
+            raise BindingLookupRefused(
+                GitRefusalCode.CREDENTIAL_UNRESOLVED,
+                f"credential_ref could not be resolved for binding {binding.id}",
+            ) from exc
+
+    def inspect_binding(self, binding_id: UUID) -> ProjectInventory:
+        binding = self._bindings.get(binding_id, tenant_id=self._tenant_id)
+        self._require_trust(binding)  # BEFORE the credential is touched
+        token = self._token(binding)
+        return asyncio.run(self._inspector.inspect(binding.remote_url, binding.branch, token=token))
