@@ -33,6 +33,7 @@ token-free by construction (the composition layer binds credentials).
 from __future__ import annotations
 
 from typing import Literal, Protocol
+from uuid import UUID
 
 from pydantic import Field
 
@@ -105,6 +106,20 @@ class ProjectInspectorPort(Protocol):
     def inspect(self, remote_url: str, branch: str) -> ProjectInventory: ...
 
 
+class BindingInspectorPort(Protocol):
+    """R192 G1: governed inspection by ``RepoBinding`` id.
+
+    The implementation (``apps.agent_dev.project_inspector.BoundProjectInspector``)
+    owns the ONE chain tenant → RepoBindingRegistry → RemoteTrustPort →
+    SecretManagerPort (last moment) → read-only transport. Core sees only the
+    binding id and the resulting inventory; refusals arrive as exceptions that
+    carry a typed ``code`` (``GitRefusalCode``) which ``AppFactoryCapability``
+    re-raises as ``PlanRefused`` without inventing a second refusal vocabulary.
+    """
+
+    def inspect_binding(self, binding_id: UUID) -> ProjectInventory: ...
+
+
 # --------------------------------------------------------------------------- template (data)
 
 
@@ -175,8 +190,14 @@ def qevion_inventory(
 class AppFactoryCapability:
     """Contributor for the General Agent. Holds an optional inspector port only."""
 
-    def __init__(self, *, inspector: ProjectInspectorPort | None) -> None:
+    def __init__(
+        self,
+        *,
+        inspector: ProjectInspectorPort | None,
+        binding_inspector: BindingInspectorPort | None = None,
+    ) -> None:
         self._inspector = inspector
+        self._binding_inspector = binding_inspector
 
     def as_capability(self) -> AgentCapability:
         return AgentCapability(
@@ -207,14 +228,34 @@ class AppFactoryCapability:
                 return ProjectInventory.model_validate(raw)
             except ValueError as exc:
                 raise PlanRefused(f"context.project_inventory is malformed: {exc}") from exc
+        raw_binding = request.context.get("binding_id")
+        if raw_binding is not None:
+            return self._inventory_from_binding(raw_binding)
         remote = request.context.get("remote_url")
         branch = request.context.get("branch", "main")
         if self._inspector is not None and isinstance(remote, str) and isinstance(branch, str):
             return self._inspector.inspect(remote, branch)
         raise PlanRefused(
-            "app_factory needs context.project_inventory, or context.remote_url with a bound "
-            "project inspector"
+            "app_factory needs context.project_inventory, context.binding_id with a bound "
+            "binding inspector, or context.remote_url with a bound project inspector"
         )
+
+    def _inventory_from_binding(self, raw_binding: object) -> ProjectInventory:
+        """Governed path (R192 G1): identity by RepoBinding id, never by raw URL + token."""
+        try:
+            binding_id = UUID(str(raw_binding))
+        except ValueError as exc:
+            raise PlanRefused("context.binding_id is not a UUID") from exc
+        if self._binding_inspector is None:
+            raise PlanRefused("context.binding_id given but no governed project inspector is bound")
+        try:
+            return self._binding_inspector.inspect_binding(binding_id)
+        except Exception as exc:  # typed refusals from the ONE binding/trust/secret chain
+            code = getattr(exc, "code", None)
+            label = getattr(code, "value", None) or type(exc).__name__
+            raise PlanRefused(
+                f"project inspection refused: {label} (binding {binding_id})"
+            ) from exc
 
 
 # --------------------------------------------------------------------------- plan record
