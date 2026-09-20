@@ -826,6 +826,34 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r192": {
+      "ceiling": 2,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 2,
+      "items": [
+        "R192-G1 governed project inspection (proven gap H5/H10 in evidence/r192/REVIEW_IMPACT_MATRIX.md): apps/agent_dev/project_inspector.py BoundProjectInspector reusing RepoBindingRegistry (tenant-scoped) -> RemoteTrustPort (BEFORE credential, fail closed) -> SecretManagerPort.resolve (last moment) -> read-only GitHubProjectInspector; core/agent/app_factory.py BindingInspectorPort + AppFactoryCapability(binding_inspector=) resolving context.binding_id. No second trust/credential/binding system.",
+        "R192-G2 layering guard (H1/H2): tests only — GeneralAgent/app_factory import no router/execution/tool/transport authority; App Factory template is model-only; /v1/execute never stacks strategy+agent."
+      ],
+      "log": [
+        {
+          "item": "R192-G1",
+          "file": "core/agent/app_factory.py",
+          "loc": "+44/-3",
+          "summary": "Additive BindingInspectorPort (inspect_binding by RepoBinding id, token-free) and AppFactoryCapability(binding_inspector=None) resolving context.binding_id through it; typed refusal codes (GitRefusalCode) re-raised as PlanRefused; existing project_inventory / remote_url paths unchanged. RED evidence/r192/red_g1_g2.txt (ImportError at 40b5a8c1) -> GREEN evidence/r192/green_g1_g2.txt (17/17; R191 slice 11/11 unchanged). Commit 9bf0543d."
+        },
+        {
+          "item": "R192-G1",
+          "file": "apps/agent_dev/project_inspector.py",
+          "loc": "+81/-2",
+          "summary": "BoundProjectInspector: the ONE governed chain by binding id — RepoBindingRegistry.get(tenant_id=) (foreign tenant = binding_tenant_mismatch), RemoteTrustPort.is_trusted BEFORE any credential resolve (registry fault = not trusted), SecretManagerPort.resolve at the last moment (SecretNotFound = credential_unresolved), token passed straight into GitHubProjectInspector.inspect and never stored/echoed. Mirrors GitToolset._require_trust/_token verbatim in order and codes. Commit a11b7088."
+        }
+      ],
+      "note": "Ceiling 2 declared in evidence/r192/REVIEW_IMPACT_MATRIX.md (commit 2e5202a5) BEFORE the first production commit. Everything else in H1-H11 was already solved, intentionally deferred, or an operator decision (P-R191-01, P-R192-02, P-R192-03, P-R192-04).",
+      "ceiling_history": [
+        "declared 2 at the R192 opening (2026-09-20, Review/Impact Matrix) from post-R191 main fde5276d — two proven gaps (G1 production x2 files, G2 tests only)."
+      ]
+    },
     "round_r191": {
       "ceiling": 6,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",

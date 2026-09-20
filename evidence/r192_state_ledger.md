@@ -1,0 +1,9 @@
+# R192 state ledger — claim verification + App Factory closure (governed inspection)
+
+| # | Step | Fact | Status | Commit |
+|---|---|---|---|---|
+| 1 | Baseline | `HEAD = origin/main = fde5276d`, clean, open PRs 0; R191 pointer / HANDOFF §7 / ledger row 15 / freeze update read. | VERIFIED | — |
+| 2 | Reconciliation + H1–H11 | `evidence/r192/REVIEW_IMPACT_MATRIX.md`: H1 CONFIRMED (GeneralAgent unserved library layer; intentional per 12 §2), H2 CONFIRMED / "missing engine" FALSE, H3 PARTIALLY (skill content not in frozen contract → P-R192-02), H4 CONFIRMED (in-memory; P-R191-01 still required; ownership undefined → P-R192-03), H5 CONFIRMED gap (no trust/credential chain on inspector), H6 CONFIRMED by owner decision IMPL-024 → P-R192-04, H7 lifecycle unwired but primitives exist (except remote test runner), H8 PARTIALLY (per-call idempotency yes; stage resume deferred to durable runtime 12 §9), H9 preserved, H10 intact, H11 per-stage intake exists. Ceiling 2 declared. | DONE | 2e5202a5 |
+| 3 | RED | `tests/agent_dev/test_r192_bound_inspector.py` (11) + `tests/agent/test_r192_layering_guard.py` (6) committed BEFORE production; RED = `ImportError: BoundProjectInspector` (`evidence/r192/red_g1_g2.txt`); G2 guard already passes (a pin). | VERIFIED | 40b5a8c1 |
+| 4 | G1 production | `core/agent/app_factory.py` (9bf0543d), `apps/agent_dev/project_inspector.py` (a11b7088) — 2/2 of ceiling. GREEN 17/17; R191 slice 11/11 unchanged. mypy strict clean; ruff clean; freeze `--check` MATCHES. | VERIFIED | a11b7088 |
+| 5 | Budget | manifest `round_r192` (ceiling 2, used 2, log rows ×2) inserted textually before `round_r191`. | DONE | (this) |
