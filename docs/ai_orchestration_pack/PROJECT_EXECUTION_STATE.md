@@ -725,6 +725,28 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R194_POINTER (2026-09-20) — R194 CLOSED (Hardening + Composition Closure; non-architectural)
+MAIN: 4f494344 (PR #46 merge commit) + records-only closure PR.
+GATE: gate of record 141eb531 PASS 3852/0/0/64 + gateway 194; post-merge 4f494344 PASS 3852/0/0/64 + gateway 194.
+       min_passed 3837 -> 3852 (D-6). not_evaluated = 1 (D-03; operator-owned F-CS1-04).
+PRODUCTION: 3 files (ceiling 3, used 3): apps/api/app.py (create_app(hsts=, openapi_public=); outermost hardening headers:
+       nosniff / frame DENY / no-referrer / self-only CSP; /openapi.json + /redoc under the /v1/admin/* posture when gated),
+       apps/composition/runtime.py (ONE tenant-scoped webhook subscription map shared by create_app + ExecutionMessageHandler;
+       build_webhook_sender: httpx, follow_redirects=False, WEBHOOK_TIMEOUT_SECONDS, non-2xx raises; webhook_worker on
+       WEBHOOK_STREAM; openapi_public_from_env = OPENAPI_PUBLIC or not durable; HSTS=1), apps/main.py (webhook-worker task).
+TENANCY: delivery only to the owning tenant's rows (proven: foreign tenant receives nothing); no admin-only execution.
+CONTRACT: shape baseline unchanged (contract_freeze_derive.py --check MATCHES; 44 routes); evidence/r194/CONTRACT_FREEZE_RECORD_R194_UPDATE.md.
+WITHDRAWN: N-5 checkpoints — finding R194-F1 (build_dev_surface uncomposed; ws_write has no hook) -> operator decision.
+NOT_CLAIMED: durable subscription storage; signed webhook payloads; CSP without style-src 'unsafe-inline'.
+DECISIONS_AT_GATE (none pre-approved): N-5 path; AD-1 G-TRUST/G-BIND via admin change lifecycle (R195); AD-2 durable dev
+       credentials; AD-3 read-only /v1/templates + template composition (R196: P-R191-01, P-R192-03); AD-5 v1 topology;
+       P-R192-02; DEC-03/AD-6 API keys; AD-7 sandbox; D-03 credential rotation (operator-owned, overdue).
+NEXT_PER_OPERATOR_PLAN: STOP — wait for APPROVE <ROUND_ID> or rulings.
+RESUME_RULE: the next session starts from main; reads this pointer, then the last row of evidence/r194_state_ledger.md;
+       does NOT open a round without an operator declaration recorded in 60_DECISION_LOG.md.
+```
+
+```
 R193_POINTER (2026-09-20) — R193 CLOSED (P-R192-04: production composition of the governed REST-Git engineering path)
 MAIN: 04952844 (PR #44 merge commit) + records-only closure PR.
 GATE: gate of record 9ae8b6b6 PASS 3837/0/0/64 + gateway 194; post-merge 04952844 PASS 3837/0/0/64 + gateway 194.
