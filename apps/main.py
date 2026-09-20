@@ -41,6 +41,7 @@ from collections.abc import AsyncIterator
 from fastapi import FastAPI
 
 from apps.composition.runtime import RuntimeProfile, build_runtime_profile
+from core.runtime.worker import Worker
 
 __all__ = ["create_runtime_app", "main"]
 
@@ -62,13 +63,22 @@ async def _relay_loop(profile: RuntimeProfile) -> None:
 
 async def _worker_loop(profile: RuntimeProfile) -> None:
     """Consume + process queued executions forever; recover stale claims."""
+    await _drive_worker(profile.worker)
+
+
+async def _webhook_loop(profile: RuntimeProfile) -> None:
+    """R194-B: deliver staged webhook events forever (same cadence, same class)."""
+    await _drive_worker(profile.webhook_worker)
+
+
+async def _drive_worker(worker: Worker) -> None:
     last_recover = 0.0
     loop = asyncio.get_running_loop()
     while True:
-        report = await profile.worker.run_once(max_messages=_BATCH)
+        report = await worker.run_once(max_messages=_BATCH)
         now = loop.time()
         if now - last_recover >= RECOVER_EVERY_SECONDS:
-            await profile.worker.recover_once(RECOVER_IDLE_MS, max_messages=_BATCH)
+            await worker.recover_once(RECOVER_IDLE_MS, max_messages=_BATCH)
             last_recover = now
         if not report.processed and not report.duplicates:
             await asyncio.sleep(WORKER_POLL_SECONDS)
@@ -104,12 +114,14 @@ def create_runtime_app(profile: RuntimeProfile | None = None) -> FastAPI:
         _startup_banner(runtime)
         relay_task = asyncio.create_task(_relay_loop(runtime), name="outbox-relay")
         worker_task = asyncio.create_task(_worker_loop(runtime), name="exec-worker")
+        # R194-B: webhook delivery worker beside the execute worker (40 §4.6).
+        webhook_task = asyncio.create_task(_webhook_loop(runtime), name="webhook-worker")
         try:
             yield
         finally:
-            for task in (worker_task, relay_task):
+            for task in (webhook_task, worker_task, relay_task):
                 task.cancel()
-            for task in (worker_task, relay_task):
+            for task in (webhook_task, worker_task, relay_task):
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
             # S2: release pooled provider HTTP clients BEFORE the DB pool —

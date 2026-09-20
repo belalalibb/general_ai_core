@@ -85,7 +85,7 @@ are byte-identical to round start (frozen by mandate). Consequences:
 | Item | What is missing | Where |
 |------|-----------------|-------|
 | C2 binding store | **DONE R193** (env-gated): `JsonBindingStore(AGENT_DEV_STATE_DIR/bindings.json, outside_of=(engineering.root,))` built by `apps/composition/dev_bindings.py`; unset env ⇒ not constructed | `core/tools/binding_store.py` |
-| C3 trust registry | **wired R193** (env-gated): `RemoteTrustRegistry(JsonRemoteTrustStore(AGENT_DEV_STATE_DIR/remote_trust.json))` feeds the per-tenant `GitToolset`/`BoundProjectInspector`; the operator *grant* act (CLI/endpoint) remains deliberately absent (SHAPE decision, P-R192-03) | `core/tools/remote_trust.py` |
+| C3 trust registry | **wired R193** (env-gated): `RemoteTrustRegistry(JsonRemoteTrustStore(AGENT_DEV_STATE_DIR/remote_trust.json))` feeds the per-tenant `GitToolset`/`BoundProjectInspector`; the operator *grant* act (CLI/endpoint) remains deliberately absent — open operator decision **G-TRUST** (labelled in the R193→R194 closure audit; formerly mis-cited here as P-R192-03, which is template ownership) | `core/tools/remote_trust.py` |
 | C5 checkpoints | pass a `CheckpointManager` to `build_dev_surface`; retention/GC policy | `core/tools/checkpoint.py` |
 | C6 payload binding | UI/approval issuer must emit `payload_sha256`; hash versioning field | `core/tools/payload_binding.py` |
 | C7 dev seam | **DONE R193** (env-gated): `runtime.py` passes `dev_bindings=dev.bindings` when `AGENT_DEV_STATE_DIR` is set; `/v1/dev` write routes deliberately absent (read-only `publish-modes` only) | `apps/api/app.py` |
@@ -93,6 +93,8 @@ are byte-identical to round start (frozen by mandate). Consequences:
 | Groq live completion | an unblocked key; then `tests_live/r172` and `tests/providers/test_groq_live.py` run green end-to-end | env only |
 | Session-artefact denial | `*dump*`/`*session*` deliberately NOT denied (would hit fixtures); content-based detection out of scope | C1 notes |
 | Sandboxing | still design-only (O1 refused with evidence, §8) | `docs/r169/SANDBOX_OPTIONS.md` |
+| C5 checkpoints | **withdrawn from R194 by finding R194-F1**: `build_dev_surface(checkpoints=)` is the only seam and has 0 production callers; `ws_write` (`core/engineering/tools.py`) has no checkpoint hook → composing checkpoints is an operator decision (which surface serves tenants, or a Core change) | `core/tools/checkpoint.py` |
+| I-1 / I-2 hardening (CS1) | **DONE R194-A**: hardening headers on every response; `/openapi.json` + `/redoc` admin-gated on the durable profile by default (`OPENAPI_PUBLIC` override; `HSTS=1` opt-in) | `apps/api/app.py` |
 | Throwaway repo | `r172-live-transport-throwaway-48b263` keeps PR #1/#2 as evidence; delete when no longer needed | GitHub |
 
 How to run the live suite (keys exported in-shell only, never persisted):

@@ -56,6 +56,7 @@ from pathlib import Path
 from typing import TextIO
 from uuid import UUID, uuid4, uuid5
 
+import httpx
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -131,6 +132,7 @@ from core.contracts.domain import (
     ProviderModelBinding,
     ProviderStatus,
 )
+from core.contracts.execute import WebhookPayload
 from core.contracts.identity import Tenant, User
 from core.contracts.provider import (
     CredentialHealth,
@@ -145,8 +147,10 @@ from core.contracts.provider import (
     ProviderHealthState,
     ProviderManifest,
 )
+from core.contracts.webhooks import WebhookSubscription
 from core.evaluation.memory import InMemoryEvaluationStore
 from core.evaluation.ports import EvaluationStorePort
+from core.events import WEBHOOK_STREAM, WebhookDeliveryHandler, WebhookSender
 from core.execution.service import ExecutionService
 from core.identity.ports import IdentityServicePort
 from core.identity.service import InMemoryIdentityService, Session
@@ -192,18 +196,34 @@ from providers.real.groq import (
 __all__ = [
     "DEFAULT_PLAN_NAME",
     "EXECUTE_STREAM",
+    "OPENAPI_PUBLIC_ENV",
+    "WEBHOOK_TIMEOUT_ENV",
     "BridgedIdempotency",
     "BridgedOutbox",
     "BudgetGrantingIdentity",
     "ConsoleEmailSender",
     "RuntimeProfile",
     "build_runtime_profile",
+    "build_webhook_sender",
     "ensure_default_plan",
+    "openapi_public_from_env",
 ]
 
 EXECUTE_STREAM = "executions.requests"
 WORKER_GROUP = "executions"
 WORKER_CONSUMER = "local-worker-1"
+#: R194-B: the second existing-class Worker drains WEBHOOK_STREAM (40 §4.6).
+WEBHOOK_WORKER_GROUP = "webhooks"
+WEBHOOK_WORKER_CONSUMER = "local-webhooks-1"
+#: R194-B: outbound delivery timeout (seconds); the sender is the ONLY
+#: outbound HTTP the runtime performs for webhooks (ADR-0008).
+WEBHOOK_TIMEOUT_ENV = "WEBHOOK_TIMEOUT_SECONDS"
+DEFAULT_WEBHOOK_TIMEOUT_SECONDS = 10.0
+#: R194-A (CS1 I-1): "1"/"0" override; unset ⇒ public on the in-memory
+#: profile, admin-gated on the durable profile.
+OPENAPI_PUBLIC_ENV = "OPENAPI_PUBLIC"
+#: R194-A: HSTS only when the operator states TLS is terminated for this app.
+HSTS_ENV = "HSTS"
 DEFAULT_PLAN_NAME = "local-default"
 #: Stable UUID for the seeded local plan row (uuid5 over a fixed namespace
 #: string — deterministic across restarts so the seed is idempotent).
@@ -479,6 +499,8 @@ class RuntimeProfile:
     app: FastAPI
     worker: Worker
     relay: OutboxRelay
+    #: R194-B: drains WEBHOOK_STREAM → WebhookDeliveryHandler → httpx sender.
+    webhook_worker: Worker
     outbox: OutboxPort
     identity: IdentityServicePort | None
     usage: UsageBinding
@@ -708,8 +730,49 @@ def _bind_echo_provider(
     credential_refs[provider.id] = "secret-ref://local-echo"
 
 
+def openapi_public_from_env(env: Mapping[str, str], *, durable: bool) -> bool:
+    """R194-A: OPENAPI_PUBLIC="1"/"0" wins; unset ⇒ public iff in-memory profile."""
+    raw = env.get(OPENAPI_PUBLIC_ENV, "").strip()
+    if raw == "":
+        return not durable
+    if raw in ("1", "0"):
+        return raw == "1"
+    raise ValueError(f"{OPENAPI_PUBLIC_ENV} must be '1' or '0' (got {raw!r})")
+
+
+def build_webhook_sender(
+    env: Mapping[str, str],
+    *,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> WebhookSender:
+    """R194-B: the ONE outbound sender for ``WebhookDeliveryHandler`` (ADR-0008).
+
+    POSTs the payload as JSON to the registered URL only: redirects are NOT
+    followed (the SSRF admission was judged on that URL and nothing else),
+    the timeout is bounded, and any non-2xx answer raises so the Worker keeps
+    its retry / dead-letter posture (40 §4.7). ``transport`` is injectable
+    for hermetic tests (``httpx.MockTransport``).
+    """
+    raw = env.get(WEBHOOK_TIMEOUT_ENV, "").strip()
+    timeout = float(raw) if raw else DEFAULT_WEBHOOK_TIMEOUT_SECONDS
+    if timeout <= 0:
+        raise ValueError(f"{WEBHOOK_TIMEOUT_ENV} must be > 0 (got {raw!r})")
+
+    async def send(url: str, payload: WebhookPayload) -> None:
+        async with httpx.AsyncClient(
+            transport=transport, timeout=timeout, follow_redirects=False
+        ) as client:
+            response = await client.post(url, json=payload.model_dump(mode="json"))
+        if not 200 <= response.status_code < 300:
+            raise RuntimeError(f"webhook delivery refused by receiver: HTTP {response.status_code}")
+
+    return send
+
+
 def build_runtime_profile(
     environ: Mapping[str, str] | None = None,
+    *,
+    webhook_transport: httpx.AsyncBaseTransport | None = None,
 ) -> RuntimeProfile:
     """Compose the whole platform from the environment (P-B Option A).
 
@@ -1098,6 +1161,10 @@ def build_runtime_profile(
     )
 
     # --- the app (injection only — env never crosses this line) --------------
+    # R194-B: ONE tenant-scoped subscription map — the API registers into it,
+    # the execution worker stages terminal events from it (20 §6: rows are
+    # looked up by the owning tenant only; process-local like the queue).
+    webhook_subscriptions: dict[UUID, list[WebhookSubscription]] = {}
     app = create_app(
         router=router,
         execution_service=execution_service,
@@ -1126,6 +1193,9 @@ def build_runtime_profile(
         dev_bindings=dev.bindings if dev is not None else None,  # R193 (IMPL-024 seam)
         usage=usage,
         webhooks=True,
+        webhook_subscriptions=webhook_subscriptions,  # R194-B: ONE map, shared with the worker
+        hsts=env.get(HSTS_ENV, "") == "1",  # R194-A
+        openapi_public=openapi_public_from_env(env, durable=durable),  # R194-A
         rate_limits=InMemoryRateLimiter(),
         execute_rate_limit=int(env.get("EXECUTE_RATE_LIMIT", "0") or "0"),
         outbox=outbox,
@@ -1240,6 +1310,10 @@ def build_runtime_profile(
         router=router,
         service_factory=_service_factory,
         store=store,
+        # R194-B: terminal events (execution.succeeded/failed) are staged for
+        # the owning tenant's subscriptions — the SAME map the API writes to.
+        outbox=outbox,
+        subscriptions=webhook_subscriptions,
     )
     worker = Worker(
         queue,
@@ -1250,11 +1324,22 @@ def build_runtime_profile(
         handler=handler,
     )
     relay = OutboxRelay(outbox, queue)
+    # R194-B: the delivery worker is the SAME Worker class over the SAME queue
+    # (its own idempotency store — delivery ids are per subscription+event).
+    webhook_worker = Worker(
+        queue,
+        InMemoryIdempotencyStore(),
+        stream=WEBHOOK_STREAM,
+        group=WEBHOOK_WORKER_GROUP,
+        consumer=WEBHOOK_WORKER_CONSUMER,
+        handler=WebhookDeliveryHandler(build_webhook_sender(env, transport=webhook_transport)),
+    )
 
     return RuntimeProfile(
         app=app,
         worker=worker,
         relay=relay,
+        webhook_worker=webhook_worker,
         outbox=outbox,
         identity=identity,
         usage=usage,
