@@ -1,0 +1,7 @@
+# RED at 63e6e47f (declaration commit) — tests/security/test_r194_security_headers.py + tests/composition/test_r194_webhook_delivery.py
+
+E   ImportError: cannot import name 'OPENAPI_PUBLIC_ENV' from 'apps.composition.runtime' (/home/user/webapp/apps/composition/runtime.py)
+E   ImportError: cannot import name 'WEBHOOK_TIMEOUT_ENV' from 'apps.composition.runtime' (/home/user/webapp/apps/composition/runtime.py)
+ERROR tests/security/test_r194_security_headers.py
+ERROR tests/composition/test_r194_webhook_delivery.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
