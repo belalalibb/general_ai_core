@@ -826,6 +826,21 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r193": {
+      "ceiling": 3,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "changes_used": 0,
+      "items": [
+        "R193-A dev-bindings composition (operator APPROVED R193 = P-R192-04 as scoped): apps/composition/dev_bindings.py (NEW builder: AGENT_DEV_STATE_DIR env gate, §14 refusal, JsonBindingStore + JsonRemoteTrustStore behind the EXISTING RepoBindingRegistry / RemoteTrustRegistry, per-tenant GitToolset + BoundProjectInspector factories, tenant-bound AgentToolSpecs reading the admitted caller from apps.api.run_context), apps/composition/runtime.py (env-gated wiring; passes dev_bindings= to create_app; appends the REST-git tool specs; unset env => byte-identical behaviour), apps/composition/agent.py (build_agent accepts extra tool specs — same pattern as engineering_tool_specs / repo_map_tool_spec).",
+        "R193-B (headroom, NOT used unless a RED test proves it): none declared."
+      ],
+      "log": [],
+      "note": "Ceiling 3 declared in the approved R193 proposal and R193-DEC-01 BEFORE the first production commit. Core untouched. No /v1/dev write route, no trust-grant endpoint (SHAPE), no admin-only execution, no new isolation model: tenant scope comes from RepoBindingRegistry.get(tenant_id=) + run-context caller tenant, exactly as repo_map (R177-FIX-06).",
+      "ceiling_history": [
+        "declared 3 at the R193 opening (2026-09-20, R193-DEC-01) from post-R192 main 7983590a."
+      ]
+    },
     "round_r192": {
       "ceiling": 2,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
