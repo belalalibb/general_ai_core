@@ -17,3 +17,10 @@ Fourth production file → STOP. Any served-route SHAPE change → STOP + propos
 
 ## 6. Ledger
 `evidence/r193_state_ledger.md`.
+
+## 7. Closure (2026-09-20)
+- **Result:** R193 CLOSED (R193-DEC-02). PR #44 merged by merge commit → `main 04952844`; records-only closure PR follows.
+- **Production:** 3/3 files (`apps/composition/dev_bindings.py` NEW, `agent.py`, `runtime.py`); Core untouched; freeze `--check` MATCHES.
+- **Gates:** gate of record 9ae8b6b6 PASS 3837/0/0/64 + gateway 194; post-merge 04952844 PASS 3837/0/0/64 + gateway 194; `min_passed` 3826 → 3837.
+- **Operating the seam:** set `AGENT_DEV_STATE_DIR=<dir outside the platform root>` (optionally `AGENT_DEV_GITHUB_API` for GHE). Bindings and trust grants are registered through the existing `RepoBindingRegistry` / `RemoteTrustRegistry` authorities on `RuntimeProfile.dev_bindings` / the composed trust store — no HTTP write route and no grant endpoint exist (P-R192-03).
+- **Next:** STOP on main. Open decisions P-R191-01, P-R192-02, P-R192-03 remain operator-owned.

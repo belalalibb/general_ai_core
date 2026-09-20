@@ -1949,3 +1949,28 @@ Tests (outside counted roots): `tests/providers/test_r190_logical_model_identity
 **RED-first proof:** `tests/composition/test_r193_dev_bindings_composition.py` — (i) unset ⇒ inert (extends IMPL-024 pin); (ii) set ⇒ `/v1/dev/.../publish-modes` 200 own tenant, same typed 404 foreign/unknown; (iii) JSON store round-trip across two profile builds (the only durability claimed); (iv) untrusted remote ⇒ `remote_not_trusted` BEFORE `secrets.resolve` and BEFORE HTTP (MockTransport, zero live calls); (v) `git.commit`/`git.publish` BEFORE_ACTION preserved, REFUSED in the loop; (vi) state dir inside the platform ⇒ boot refusal (§14); (vii) tool handler outside a bound run ⇒ refusal; bound run ⇒ caller's tenant, token never in outputs.
 
 **Exit:** RED→GREEN; regression incl. R188/R190/R191/R192; freeze `--check` MATCHES (re-derive confirms `/v1/dev` already in baseline as opt-in — else STOP); fresh-clone gate + gateway 194; D-6 ratchet; PR by merge commit; post-merge gate; R193-DEC-02; stop on main.
+
+### R193-DEC-02 — R193 CLOSED: production composition of the governed REST-Git engineering path (P-R192-04) — env-gated `AGENT_DEV_STATE_DIR`, read-first, multi-tenant preserved; gate of record 3837/0/0/64; PR #44 merged (2026-09-20)
+
+**Operator text (verbatim anchors):** "APPROVE R193. Execute the proposed round as scoped, preserving the existing multi-tenant/shared architecture and verifying tenant-scoped access throughout. Do not introduce admin-only execution or assume any new isolation model. Stop and propose a change only if the repository requires it."
+
+**Part 14 — final verification:**
+
+- **A. Verified TRUE:** the C2/C3/C7/C8 primitives and the R192 `BoundProjectInspector` existed uncomposed (R193 ledger row 2); `build_engineering` / `repo_map` (run-context tenant) are the composition precedents; `/v1/dev` `publish-modes` was already in the frozen baseline as opt-in (IMPL-024).
+- **B. Disproved:** none required — the repository did not require a scope change; no STOP was raised.
+- **C. Already implemented (reused, not rebuilt):** `JsonBindingStore`/`RepoBindingRegistry`, `JsonRemoteTrustStore`/`RemoteTrustRegistry`, `GitHubRestTransport`, `GitToolset` + `PERM_GIT_*`, `BoundProjectInspector`, `workspace_root_refusal`/`PLATFORM_ROOT`, `bind_run_tenant`/`current_run_tenant`, `ToolRegistry`, `AgentToolSpec`, `ApprovalRequirement`, the onboarding `SecretManagerPort`.
+- **D. Actually changed (3 files = ceiling 3, Core untouched):** `apps/composition/dev_bindings.py` NEW (+296) — `build_dev_bindings(env)`; `apps/composition/agent.py` (+15/−2) — `tool_registry` / `extra_tool_specs`; `apps/composition/runtime.py` (+21) — `RuntimeProfile.dev_bindings`, `dev = build_dev_bindings(...)`, `create_app(dev_bindings=...)`. Fix within file 1: `project.inspect` runs the synchronous R192 inspector via `asyncio.to_thread`.
+- **E. Why each file was necessary:** `dev_bindings.py` — one composition root so the store, trust registry, transport and per-tenant toolset are built once and consistently, refusing a state dir under the platform root; `agent.py` — the agent catalog had no injection point for externally registered specs; `runtime.py` — the only production composition root.
+- **F. Contract shape impact:** NONE — `contract_freeze_derive.py --check` MATCHES at 039a12c2 and on `main 04952844`. No route added, removed or reshaped; unset env ⇒ byte-identical served routes and catalog (pinned).
+- **G. Security impact:** positive — untrusted remote refused before any credential resolve; secret resolved per call, never stored by R193 code; `git.commit`/`git.publish` keep `BEFORE_ACTION` approval, risk `high`; handlers refuse outside an admitted run.
+- **H. Tenancy impact:** enforced and test-proven — tenant from `current_run_tenant()` at every lookup; foreign tenant → `binding_tenant_mismatch` with zero secret resolves and zero HTTP; one shared registry for all tenants; no admin-only path; no new isolation model.
+- **I. Persistence impact:** opt-in only — `AGENT_DEV_STATE_DIR/bindings.json` + `remote_trust.json` (JSON stores already in Core); survive a second composition (tested); none when env unset.
+- **J. Authorities reused:** see C; nothing duplicated.
+- **K. Tests:** RED `ModuleNotFoundError: apps.composition.dev_bindings` at d7fa658f (`evidence/r193/red_dev_bindings.txt`) → GREEN 22/22 (`green_dev_bindings.txt`: 11 R193 + 11 R172 pins). IMPL-024 pin flipped deliberately (asserts env-gated wiring), `CAPABILITY_MAP.md` and `BACKEND_STATE_OF_TRUTH.md` §E updated (821cbbe6).
+- **L. Regression:** 2962 passed / 14 skipped / 0 failed across 16 roots at 039a12c2, incl. R188/R190/R191/R192 suites.
+- **M. Static:** mypy strict clean (3 files); ruff check/format clean; budget guards 33/33.
+- **N. NOT claimed:** `/v1/dev` write routes; trust-grant endpoint/CLI (SHAPE); durable credential custody; branch/PR cleanup primitive.
+- **O. Operator decisions still required:** **P-R191-01** served `/v1/templates` (SHAPE); **P-R192-02** skill instruction channel; **P-R192-03** template ownership axis / trust-grant operator act. **P-R192-04 CLOSED by R193.**
+- **P. Next safe continuation point:** `main = 04952844` + this records-only closure PR. Next session starts from main, reads the R193 pointer and the last ledger row, and does NOT open a round without an operator declaration.
+
+**Gates:** gate of record fresh clone `9ae8b6b6` PASS **3837/0/0/64** + gateway **194**; D-6 ratchet `min_passed` 3826 → 3837 (+11); PR #44 merged by merge commit → `main 04952844`; post-merge fresh clone PASS **3837/0/0/64** + gateway **194** (`evidence/r193/gate_merge_04952844.txt`, `gateway_merge_04952844.txt`).
