@@ -15,3 +15,4 @@ PASSED tests/composition/test_r194_webhook_delivery.py::TestProfileShape::test_s
 PASSED tests/composition/test_r194_webhook_delivery.py::TestEndToEndDelivery::test_registered_tenant_receives_queued_and_terminal_events_only_for_itself
 PASSED tests/composition/test_r194_webhook_delivery.py::TestEndToEndDelivery::test_failed_delivery_is_not_acked
 PASSED tests/composition/test_r194_webhook_delivery.py::TestMainLifespan::test_lifespan_drives_the_webhook_worker
+...............                                                          [100%]

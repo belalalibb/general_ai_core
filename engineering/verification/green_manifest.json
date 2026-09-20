@@ -830,13 +830,17 @@
       "ceiling": 3,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
       "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
-      "changes_used": 0,
+      "changes_used": 3,
       "items": [
         "R194-A security hardening (CS1 I-1/I-2; operator APPROVED R194): apps/api/app.py — one response-header middleware (nosniff, frame DENY, referrer no-referrer, CSP self-only with style-src unsafe-inline for the existing static UIs, HSTS only when the composition asks) + /openapi.json & /redoc admin-gated when the composition asks (default: public on the in-memory profile, gated on the durable profile, OPENAPI_PUBLIC overrides). No route added/removed; contract SHAPE unchanged.",
         "R194-B webhook delivery composition (R176 §22 post-release item; core/events/__init__.py chain): apps/composition/runtime.py — ONE shared tenant-scoped subscription map passed to create_app AND ExecutionMessageHandler (terminal events were never staged in production), a second existing-class Worker on WEBHOOK_STREAM driving the existing WebhookDeliveryHandler with an httpx sender composed at the root (ADR-0008; follow_redirects=False; bounded timeout), RuntimeProfile.webhook_worker; apps/main.py — drive the webhook worker in the lifespan beside the execute worker.",
         "R194-C (headroom, NOT used unless a RED test proves it): none declared. N-5 checkpoints is NOT in this round (finding R194-F1: build_dev_surface is uncomposed; ws_write has no checkpoint seam → operator decision)."
       ],
-      "log": [],
+      "log": [
+        {"item": "R194-A", "file": "apps/api/app.py", "loc": "+69/-0", "summary": "create_app(hsts=False, openapi_public=True): ONE outermost response-header middleware (X-Content-Type-Options nosniff, X-Frame-Options DENY, Referrer-Policy no-referrer, self-only CSP with style-src 'unsafe-inline' for the frozen static UIs; HSTS only when hsts=True); openapi_public=False admits /openapi.json + /redoc under the /v1/admin/* posture (401 tokenless, 403 non-admin with PERMISSION_DENIED audit, 200 admin) through the EXISTING _principal resolver; refuses gating without the auth seam. No route added/removed. Commits 03e378a0, ec58893a."},
+        {"item": "R194-B", "file": "apps/composition/runtime.py", "loc": "+85/-0", "summary": "ONE tenant-scoped webhook_subscriptions map passed to create_app AND ExecutionMessageHandler(outbox=, subscriptions=) so terminal events are staged; build_webhook_sender (httpx at the root, follow_redirects=False, WEBHOOK_TIMEOUT_SECONDS, non-2xx raises → Worker retry/dead-letter unchanged); second existing-class Worker on WEBHOOK_STREAM → RuntimeProfile.webhook_worker; openapi_public_from_env (OPENAPI_PUBLIC or not durable) and HSTS=1 passed to create_app. Commit adf5a644."},
+        {"item": "R194-B", "file": "apps/main.py", "loc": "+16/-4", "summary": "lifespan drives the webhook worker ('webhook-worker' task) beside the execute worker via one shared _drive_worker loop; cancelled first at shutdown. Commit 74939eab."}
+      ],
       "note": "Ceiling 3 declared in R194-DEC-01 BEFORE the first production commit (operator: 'APPROVE R194. Execute R194 exactly as proposed.'). Core untouched. No served route added/removed; the only reachability change is that /openapi.json and /redoc may require an admin bearer on the durable profile. Shared multi-tenant preserved: subscriptions stay keyed by tenant_id; delivery payloads carry only the owning tenant's events (stage_execution_event never widens scope, 20 §6). No admin-only execution introduced.",
       "ceiling_history": [
         "declared 3 at the R194 opening (2026-09-20, R194-DEC-01) from post-R193 main b5c46561."
