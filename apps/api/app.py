@@ -462,6 +462,17 @@ _AUTH_ENTRY_PATHS: frozenset[str] = frozenset(
     {"/v1/auth/register", "/v1/auth/verify", "/v1/auth/login", "/v1/auth/logout"}
 )
 
+#: R194-A (CS1 I-2): one policy for the whole process. ``style-src
+#: 'unsafe-inline'`` is the ONLY relaxation and exists for the frozen static
+#: UIs' ``style=`` attributes; scripts are external files only.
+_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "
+    "base-uri 'self'; form-action 'self'"
+)
+#: R194-A (CS1 I-1): the served API documents (``docs_url`` is already None).
+_OPENAPI_DOCUMENT_PATHS = frozenset({"/openapi.json", "/redoc"})
+
 
 def create_app(
     *,
@@ -509,6 +520,8 @@ def create_app(
     preferences: PreferenceLearner | None = None,
     evaluation_judge: ModelJudgePort | None = None,
     learning_custody: LearningCustodyPort | None = None,
+    hsts: bool = False,
+    openapi_public: bool = True,
 ) -> FastAPI:
     """Build the API application from injected, already-verified services.
 
@@ -610,8 +623,34 @@ def create_app(
     #                      (a bad credential is a refusal, not anonymity).
     if principal is None and auth is None:
         raise ValueError("exactly one of principal / auth must be provided (or both: hybrid)")
+    # R194-A (CS1 I-1): gating the OpenAPI documents needs an admin identity to
+    # admit; a fixed-principal composition has none, so the door would be
+    # locked for everyone — refuse the composition loudly instead.
+    if not openapi_public and auth is None:
+        raise ValueError("openapi_public=False requires the auth seam (admin admission)")
 
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
+
+    # --- R194-A (CS1 I-2): hardening headers on EVERY response ---------------
+    # Set in ONE place so static UI mounts, SSE streams and error envelopes all
+    # carry them. The CSP matches the frozen static UIs as they are (one
+    # external ``<script src>`` each, no inline scripts; ``style-src
+    # 'unsafe-inline'`` covers their existing ``style=`` attributes). HSTS is
+    # opt-in: only a composition that KNOWS it terminates TLS asks for it.
+    @app.middleware("http")
+    async def _hardening_headers(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        response = await call_next(request)
+        headers = response.headers
+        headers.setdefault("X-Content-Type-Options", "nosniff")
+        headers.setdefault("X-Frame-Options", "DENY")
+        headers.setdefault("Referrer-Policy", "no-referrer")
+        headers.setdefault("Content-Security-Policy", _CONTENT_SECURITY_POLICY)
+        if hsts:
+            headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
     execution_store = store if store is not None else InMemoryExecutionStore()
     # 10 §13.4 explicit_models seam — composed over the SAME router and
     # execution service (Router still decides every branch; 02 inv. 5).
@@ -714,6 +753,34 @@ def create_app(
                 )
                 return error_response(ErrorCode.UNAUTHORIZED, "Admin access required.")
             return await call_next(request)
+
+        # R194-A (CS1 I-1): the served OpenAPI documents follow the /v1/admin/*
+        # posture when the composition asks (durable profile by default):
+        # 401 tokenless, 403 non-admin, 200 admin. The in-process
+        # ``app.openapi()`` (freeze derivation, ``apps.cli check``) is untouched.
+        if not openapi_public:
+
+            @app.middleware("http")
+            async def _openapi_documents_admission(
+                request: Request,
+                call_next: Callable[[Request], Awaitable[Response]],
+            ) -> Response:
+                if request.url.path not in _OPENAPI_DOCUMENT_PATHS:
+                    return await call_next(request)
+                if bearer_token(request) is None:
+                    return unauthenticated()
+                caller = _principal(request)
+                if isinstance(caller, JSONResponse):
+                    return caller
+                if not caller.is_admin:
+                    _audit_denied(
+                        request,
+                        caller,
+                        AuditEventType.PERMISSION_DENIED,
+                        {"reason": "admin_required"},
+                    )
+                    return error_response(ErrorCode.UNAUTHORIZED, "Admin access required.")
+                return await call_next(request)
 
     @app.exception_handler(RequestValidationError)
     async def _validation_handler(_request: Request, exc: RequestValidationError) -> JSONResponse:
