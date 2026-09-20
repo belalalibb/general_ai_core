@@ -103,7 +103,7 @@ class TestHeadersOnEveryResponse:
         app = _app(World())
         for path, status in (
             ("/healthz", 200),
-            ("/v1/models", 200),
+            ("/v1/executions", 200),
             ("/v1/executions/00000000-0000-4000-8000-000000000000", 404),
             ("/does-not-exist", 404),
         ):

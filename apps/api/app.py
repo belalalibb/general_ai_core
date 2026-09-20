@@ -631,27 +631,6 @@ def create_app(
 
     app = FastAPI(title="AI Orchestration Platform", version="0.1.0", docs_url=None)
 
-    # --- R194-A (CS1 I-2): hardening headers on EVERY response ---------------
-    # Set in ONE place so static UI mounts, SSE streams and error envelopes all
-    # carry them. The CSP matches the frozen static UIs as they are (one
-    # external ``<script src>`` each, no inline scripts; ``style-src
-    # 'unsafe-inline'`` covers their existing ``style=`` attributes). HSTS is
-    # opt-in: only a composition that KNOWS it terminates TLS asks for it.
-    @app.middleware("http")
-    async def _hardening_headers(
-        request: Request,
-        call_next: Callable[[Request], Awaitable[Response]],
-    ) -> Response:
-        response = await call_next(request)
-        headers = response.headers
-        headers.setdefault("X-Content-Type-Options", "nosniff")
-        headers.setdefault("X-Frame-Options", "DENY")
-        headers.setdefault("Referrer-Policy", "no-referrer")
-        headers.setdefault("Content-Security-Policy", _CONTENT_SECURITY_POLICY)
-        if hsts:
-            headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-        return response
-
     execution_store = store if store is not None else InMemoryExecutionStore()
     # 10 §13.4 explicit_models seam — composed over the SAME router and
     # execution service (Router still decides every branch; 02 inv. 5).
@@ -2451,5 +2430,27 @@ def create_app(
                 strict_promotion_evidence=strict_promotion_evidence,
             )
         )
+
+    # --- R194-A (CS1 I-2): hardening headers on EVERY response ---------------
+    # Registered LAST so it is the OUTERMOST middleware: admission 401/403
+    # short-circuits, static UI mounts, SSE streams and error envelopes all
+    # carry them. The CSP matches the frozen static UIs as they are (one
+    # external ``<script src>`` each, no inline scripts; ``style-src
+    # 'unsafe-inline'`` covers their existing ``style=`` attributes). HSTS is
+    # opt-in: only a composition that KNOWS it terminates TLS asks for it.
+    @app.middleware("http")
+    async def _hardening_headers(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        response = await call_next(request)
+        headers = response.headers
+        headers.setdefault("X-Content-Type-Options", "nosniff")
+        headers.setdefault("X-Frame-Options", "DENY")
+        headers.setdefault("Referrer-Policy", "no-referrer")
+        headers.setdefault("Content-Security-Policy", _CONTENT_SECURITY_POLICY)
+        if hsts:
+            headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return response
 
     return app
