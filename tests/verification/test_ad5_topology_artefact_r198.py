@@ -31,6 +31,7 @@ AD5_VERBATIM = (
 _ENV_SOURCES = (
     ROOT / "apps" / "composition" / "runtime.py",
     ROOT / "apps" / "composition" / "database.py",
+    ROOT / "apps" / "composition" / "secrets.py",
     ROOT / "apps" / "main.py",
     ROOT / "apps" / "cli.py",
     ROOT / "apps" / "api",
@@ -38,7 +39,7 @@ _ENV_SOURCES = (
 )
 _ENV_READ = re.compile(
     r"(?:environ|env|os\.environ)(?:\.get)?\(?\[?\s*[\"']([A-Z][A-Z0-9_]{3,})[\"']"
-    r"|_ENV_[A-Z_]+\s*=\s*[\"']([A-Z][A-Z0-9_]{3,})[\"']"
+    r"|[A-Z_]*_ENV(?:_[A-Z_]+)?\s*=\s*[\"']([A-Z][A-Z0-9_]{3,})[\"']"
     r"|[\"']([A-Z][A-Z0-9_]{3,})[\"']\s*(?:not\s+)?in\s+(?:environ|env)\b"
 )
 

@@ -41,8 +41,12 @@ def _register() -> str:
 
 
 def _rows() -> list[list[str]]:
+    """Rows of the status-bearing sections A–C (section D is measured facts, no status)."""
     rows = []
-    for line in _register().splitlines():
+    text = _register()
+    cut = text.find("## D.")
+    body = text if cut == -1 else text[:cut]
+    for line in body.splitlines():
         if line.startswith("|") and not re.match(r"^\|\s*-", line):
             cells = [c.strip() for c in line.strip().strip("|").split("|")]
             rows.append(cells)
@@ -64,7 +68,7 @@ def _status_of(row: list[str]) -> str:
 
 
 def test_register_exists_with_status_column_closed_set() -> None:
-    rows = [r for r in _rows() if r and r[0] not in ("id", "ID", "Item", "item")]
+    rows = [r for r in _rows() if r and r[0] not in ("id", "ID", "Item", "item", "route", "area")]
     assert len(rows) >= 20
     for r in rows:
         _status_of(r)
