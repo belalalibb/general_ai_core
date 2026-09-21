@@ -1,7 +1,7 @@
 # R196 HANDOFF — read-only `/v1/templates` surface + built-in template registry composition (AD-3)
 
 ## 1. Status
-OPEN (declared 2026-09-20). Base `main f7a127fd`. Branch `r196_templates_read_surface`. Authority: `60_DECISION_LOG.md` R196-DEC-01 (operator "APPROVE R196 with confirmation", D1–D5).
+CLOSED 2026-09-20 — PR #50 → `main e08b04f6`; closure PR records-only. Base `main f7a127fd`. Branch `r196_templates_read_surface`. Authority: `60_DECISION_LOG.md` R196-DEC-01 (operator "APPROVE R196 with confirmation", D1–D5).
 
 ## 2. Scope (ceiling 4 production files)
 | Item | File | Purpose |
