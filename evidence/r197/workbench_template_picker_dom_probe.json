@@ -1,0 +1,104 @@
+{
+ "base": "http://127.0.0.1:<ephemeral>",
+ "head": "27d37dec",
+ "served_templates": {
+  "templates": [
+   {
+    "ref": "app_factory.plan@1",
+    "id": "app_factory.plan",
+    "version": "1",
+    "name": "App Factory — application plan",
+    "origin": "system",
+    "status": "active",
+    "description": "Inventory the target project and QEVION's own capabilities, draft an architecture plan, review it. Generation is a later, separate template.",
+    "tags": [
+     "app-factory",
+     "planning"
+    ],
+    "stage_count": 3,
+    "stage_keys": [
+     "inventory-summary",
+     "architecture-plan",
+     "review"
+    ],
+    "skills": [],
+    "required_capabilities": []
+   }
+  ]
+ },
+ "request_trace_in_order": [
+  {
+   "method": "GET",
+   "url": "/v1/auth/session",
+   "post": null
+  },
+  {
+   "method": "GET",
+   "url": "/v1/workspaces",
+   "post": null
+  },
+  {
+   "method": "GET",
+   "url": "/v1/projects",
+   "post": null
+  },
+  {
+   "method": "GET",
+   "url": "/v1/templates",
+   "post": null,
+   "status": 200,
+   "response_status": null,
+   "response_execution_id": null
+  },
+  {
+   "method": "POST",
+   "url": "/v1/execute",
+   "post": "{\"ask\":\"probe: template mode\",\"execution_strategy\":{\"mode\":\"template\",\"template_id\":\"app_factory.plan@1\"}}",
+   "status": 200,
+   "response_status": "succeeded",
+   "response_execution_id": "da98c5a1-d88a-49a6-9855-e77f71852325"
+  },
+  {
+   "method": "POST",
+   "url": "/v1/execute",
+   "post": "{\"ask\":\"probe: template mode\"}",
+   "status": 200,
+   "response_status": "succeeded",
+   "response_execution_id": "661bbbe6-9d93-442b-91c1-bcaaf0863da0"
+  }
+ ],
+ "picker_options": [
+  {
+   "value": "",
+   "text": "— none (auto) —"
+  },
+  {
+   "value": "app_factory.plan@1",
+   "text": "App Factory — application plan · app_factory.plan@1 · 3 stages"
+  }
+ ],
+ "ask_error_hidden": true,
+ "select_value_before_submit": "app_factory.plan@1",
+ "requests_with_template": [
+  {
+   "method": "POST",
+   "url": "/v1/execute",
+   "post": "{\"ask\":\"probe: template mode\",\"execution_strategy\":{\"mode\":\"template\",\"template_id\":\"app_factory.plan@1\"}}",
+   "status": 200,
+   "response_status": "succeeded",
+   "response_execution_id": "da98c5a1-d88a-49a6-9855-e77f71852325"
+  }
+ ],
+ "result_visible": true,
+ "result_text_head": "\n          \n            succeeded\n            da98c5a1-d88a-49a6-9855-e77f71852325\n            Open in Runs\n          \n          {\"context_blocks\": [{\"content\": \"probe: template mode\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"probe: template mode\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}\n        ",
+ "requests_without_template": [
+  {
+   "method": "POST",
+   "url": "/v1/execute",
+   "post": "{\"ask\":\"probe: template mode\"}",
+   "status": 200,
+   "response_status": "succeeded",
+   "response_execution_id": "661bbbe6-9d93-442b-91c1-bcaaf0863da0"
+  }
+ ]
+}
