@@ -1,6 +1,6 @@
 # R199 HANDOFF — Unified Shell Foundation (UI-only, layer A)
 
-Status: **OPEN** (R199-DEC-01). Base: `main f1a9752a` (post-R198 closure). Branch `genspark_ai_developer_r199`. Ceiling 0.
+Status: **CLOSED** (R199-DEC-02). Base: `main f1a9752a` → PR #56 merge commit **`main 8110179e`**; records-only closure PR follows. Gate of record `d8f39043` PASS 3951/0/0/64 + gateway 194; head re-gate `bdb3bb6e` PASS; post-merge `8110179e` PASS 3951/0/0/64 + gateway 194. Ceiling 0, used 0. Ratchet `min_passed` 3929 → 3951.
 
 ## 1. Authority (operator, verbatim anchors)
 "APPROVE R199. Accept D1–D5 as proposed: D1 = A, D2 = A, D3 = QEVION · Command / QEVION · Workbench / QEVION · Admin, D4 = use only real catalog/API provider-state values, D5 = standard gate ratchet. Execute R199 exactly as proposed. Do not pre-approve R200 or R204. Preserve the unified shared multi-tenant product direction and all existing security, authorization, Core, contract, and provider boundaries. Stop at the next decision gate."
@@ -18,3 +18,6 @@ Status: **OPEN** (R199-DEC-01). Base: `main f1a9752a` (post-R198 closure). Branc
 
 ## 4. Not in this round
 R200 (Command capability→surface routing; non-admin Command posture), R201 (`project_id` carried into execute), R202 (`templates/{ref}` + App Factory UX), R203 (shared agent panel), R204 (root `/` redirect — composition, ceiling 1). Each needs its own `APPROVE`.
+
+## 5. Outcome (CLOSED)
+All five items delivered as declared; 22 new guards; real-browser probe evidence; ceilings 73 / 12 / 22 / fetch 4 unchanged; production tree untouched. Full record: R199-DEC-02, `evidence/r199_state_ledger.md` rows 1–9, `evidence/r199/*`. **Next round requires a fresh `APPROVE <ROUND_ID>`** (R200 Command routing/discovery is the proposed next step; not pre-approved).

@@ -725,15 +725,20 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
-R199_POINTER (2026-09-21) — R199 OPEN (Unified Shell Foundation; UI-only layer A; ceiling 0)
-BASE: main f1a9752a. BRANCH: genspark_ai_developer_r199.
-OPERATOR: "APPROVE R199" D1 = A (Command stays admin-only; links only), D2 = A (root / stays 404; /app/command/ documented entry),
+R199_POINTER (2026-09-21) — R199 CLOSED (Unified Shell Foundation; UI-only layer A; ceiling 0 used 0)
+MAIN: 8110179e (PR #56 merge commit) + records-only closure PR.
+GATE: gate of record d8f39043 PASS 3951/0/0/64 + gateway 194; head re-gate bdb3bb6e PASS; post-merge 8110179e PASS 3951/0/0/64 + gateway 194.
+       min_passed 3929 -> 3951 (D5). regression 18 roots 0 failed. freeze --check MATCHES (46).
+OPERATOR: "APPROVE R199" D1 = A (Command admin-only kept; links only), D2 = A (root / stays 404; /app/command/ documented entry),
        D3 = QEVION · Command / QEVION · Workbench / QEVION · Admin, D4 = only served provider-state values, D5 = standard ratchet.
        R200 / R204 NOT pre-approved.
-SCOPE: ui/app/command/{index.html,command.css}, ui/app/{index.html,app.js,styles.css}, ui/admin/{index.html,styles.css};
-       tests/ui/test_unified_shell_r199.py (RED first) + three moved Command title pins; evidence/r199/*; records.
-FROZEN: core/ apps/ infrastructure/ (0); command.js 12; ui/admin/app.js 73; contracts + freeze 46; workbench guard 22 / 4.
-NEXT: RED -> implement A..E -> GREEN -> guards -> gate of record (fresh clone) -> PR (merge commit) -> post-merge gate -> closure PR -> STOP.
+PRODUCTION: 0 files (ceiling 0, used 0). ui/admin/app.js 73 + command.js 12 byte-identical; ui/app/app.js 22 / fetch 4.
+DELIVERED: brand strings (A); command.css shared tokens (B); cross-links /app/ <-> /app/command/ <-> /admin/ (C);
+       /app Models providers[] chips + runtime truth strip from GET /v1/models only (D); Command sign-in admin copy + Workbench link (E).
+GUARDS: tests/ui/test_unified_shell_r199.py (22); three Command title pins moved to "QEVION · Command".
+EVIDENCE: evidence/r199/{red,green}.txt, browser_probe_1607ee75.{json,py.txt}, *.png, regression_d8f39043.txt,
+       gate_head_{d8f39043,bdb3bb6e}.txt, gateway_head_*.txt, gate_merge_8110179e.txt, gateway_merge_8110179e.txt; ledger rows 1-9.
+NOT CLAIMED: Production Ready (D-03 / N-9 OPERATOR-OWNED-OPEN). NEXT: STOP — wait for APPROVE <ROUND_ID> (R200 proposed, not approved).
 ```
 
 ```
