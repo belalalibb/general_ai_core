@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QEVION Control Plane</title>
+<title>QEVION · Workbench</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -43,8 +43,8 @@
         <circle cx="7"  cy="33" r="2.5" fill="var(--accent-2)"/>
       </svg>
     </div>
-    <h1>QEVION Control Plane</h1>
-    <p class="muted">Sign in to your intelligent workspace.</p>
+    <h1>QEVION · Workbench</h1>
+    <p class="muted">QEVION Control Plane — sign in to your intelligent workspace.</p>
     <div class="tab-row" role="tablist">
       <button id="tab-login" class="tab active" type="button">Sign in</button>
       <button id="tab-register" class="tab" type="button">Create account</button>
@@ -83,9 +83,15 @@
         <circle cx="24" cy="24" r="10" fill="none" stroke="var(--accent)" stroke-width="3"/>
         <circle cx="24" cy="24" r="4" fill="var(--accent)"/>
       </svg>
-      <span class="brand-name">Substrate</span>
-      <span class="brand-sub">workspace</span>
+      <span class="brand-name">QEVION</span>
+      <span class="brand-sub">Workbench</span>
     </div>
+    <!-- R199-C: the three served mounts link to each other (plain hrefs, no /v1/).
+         Admin-only destinations are labelled; the gate itself stays server-side + in each tree. -->
+    <nav class="shell-links" aria-label="QEVION surfaces">
+      <a href="/app/command/" class="shell-link" title="Command — admin session required">Command <span class="shell-tag">admin</span></a>
+      <a href="/admin/" class="shell-link" title="Admin — admin session required">Admin <span class="shell-tag">admin</span></a>
+    </nav>
     <button id="cmdk-open" class="cmdk-trigger" type="button">
       <span class="cmdk-glyph">⌘</span> Search &amp; commands
       <kbd>Ctrl K</kbd>
@@ -231,6 +237,9 @@
           <button id="models-refresh" class="btn-ghost small" type="button">Refresh</button>
         </div>
         <div id="models-error" class="error-box" hidden></div>
+        <!-- R199-D: runtime truth strip — every value below is copied from the GET /v1/models
+             response (provider keys, availability, counts). Nothing is inferred. -->
+        <div id="models-truth" class="truth-strip" hidden></div>
         <div id="models-grid" class="models-grid"></div>
       </section>
 
