@@ -1,4 +1,4 @@
-/* Substrate — end-user workspace shell (UI/UX directive; P-D.2 posture kept).
+/* QEVION · Workbench — end-user workspace shell (UI/UX directive; P-D.2 posture kept).
  *
  * HONESTY CONTRACTS enforced in this file (non-negotiable):
  * - Profile is PROBED, never assumed: GET /v1/auth/session without a
@@ -716,6 +716,42 @@ async function refreshModels() {
   if (!result.ok) return renderError($("models-error"), result.body);
   const grid = $("models-grid");
   grid.replaceChildren();
+  /* R199-D (operator D4): the truth strip repeats what THIS response said — the
+     distinct provider keys bound to the served models, the model count and the
+     availability counts. No second read, no provider-name branching, no prose
+     that the API did not return. Absent providers[] is shown as absent. */
+  const truth = $("models-truth");
+  truth.replaceChildren();
+  const providerKeys = new Set();
+  const availabilityCounts = new Map();
+  let providersServed = false;
+  for (const model of result.body.models) {
+    if (Array.isArray(model.providers)) {
+      providersServed = true;
+      for (const key of model.providers) providerKeys.add(key);
+    }
+    availabilityCounts.set(model.availability, (availabilityCounts.get(model.availability) || 0) + 1);
+  }
+  let providersText = "not served";
+  if (providersServed) providersText = providerKeys.size ? [...providerKeys].sort().join(", ") : "none bound";
+  const truthRows = [
+    ["models", String(result.body.models.length)],
+    ["providers", providersText],
+    ["availability", [...availabilityCounts].map(([k, n]) => `${k} ${n}`).join(" · ") || "—"],
+  ];
+  for (const [label, value] of truthRows) {
+    const cell = document.createElement("span");
+    cell.className = "truth-cell";
+    const k = document.createElement("span");
+    k.className = "truth-k";
+    k.textContent = label;
+    const v = document.createElement("span");
+    v.className = "truth-v mono";
+    v.textContent = value;
+    cell.append(k, v);
+    truth.appendChild(cell);
+  }
+  truth.hidden = false;
   if (result.body.models.length === 0) {
     const empty = document.createElement("div");
     empty.className = "muted small";
@@ -741,7 +777,32 @@ async function refreshModels() {
       chip.textContent = capability;
       caps.appendChild(chip);
     }
-    card.append(head, tier, caps);
+    /* R199-D: providers[] as served (R188 C4) — one chip per key, verbatim. */
+    const providers = document.createElement("div");
+    providers.className = "model-providers";
+    const providersLabel = document.createElement("span");
+    providersLabel.className = "muted small";
+    providersLabel.textContent = "providers:";
+    providers.appendChild(providersLabel);
+    if (!Array.isArray(model.providers)) {
+      const none = document.createElement("span");
+      none.className = "muted small";
+      none.textContent = "not served";
+      providers.appendChild(none);
+    } else if (model.providers.length === 0) {
+      const none = document.createElement("span");
+      none.className = "muted small";
+      none.textContent = "none bound";
+      providers.appendChild(none);
+    } else {
+      for (const key of model.providers) {
+        const chip = document.createElement("span");
+        chip.className = "provider-chip mono";
+        chip.textContent = key;
+        providers.appendChild(chip);
+      }
+    }
+    card.append(head, tier, providers, caps);
     grid.appendChild(card);
   }
 }

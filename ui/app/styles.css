@@ -280,6 +280,13 @@ label.inline input[type="checkbox"] { width: auto; margin: 0; }
 }
 .brand { display: flex; align-items: center; gap: 8px; }
 .brand-name { font-weight: 700; letter-spacing: 0.01em; }
+/* R199-C — cross-links between the served mounts (/app/, /app/command/, /admin/) */
+.shell-links { display: flex; align-items: center; gap: 8px; margin-left: 12px; }
+.shell-link { color: var(--ink-dim); text-decoration: none; font-size: 13px; padding: 4px 8px; border-radius: 6px; border: 1px solid transparent; transition: background var(--speed), color var(--speed); }
+.shell-link:hover, .shell-link:focus-visible { color: var(--ink); background: var(--accent-soft); border-color: var(--line-strong); }
+.shell-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--warn); margin-left: 4px; }
+@media (max-width: 720px) { .shell-links { display: none; } }
+
 .brand-sub { color: var(--ink-faint); font-size: 0.78rem; }
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .who { font-size: 0.85rem; }
@@ -610,6 +617,13 @@ kbd {
   margin-bottom: 6px;
 }
 .model-caps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+/* R199-D — runtime truth strip + provider chips (values copied from GET /v1/models) */
+.truth-strip { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 14px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-1); }
+.truth-cell { display: inline-flex; gap: 8px; align-items: baseline; font-size: 13px; }
+.truth-k { color: var(--ink-dim); text-transform: uppercase; font-size: 11px; letter-spacing: 0.06em; }
+.truth-v { color: var(--ink); }
+.model-providers { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+.provider-chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--accent-2-soft); color: var(--ink); border: 1px solid var(--line); }
 .cap-chip {
   font-size: 0.72rem;
   font-family: var(--mono);
