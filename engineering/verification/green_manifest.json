@@ -842,6 +842,28 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r199": {
+          "ceiling": 0,
+          "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+          "counts_production_code_under": [
+                "core/",
+                "apps/",
+                "infrastructure/"
+          ],
+          "changes_used": 0,
+          "items": [
+                "R199-A one brand string per surface (operator D3): <title>/<h1> = 'QEVION · Workbench' (ui/app/index.html), 'QEVION · Command' (ui/app/command/index.html), 'QEVION · Admin' (ui/admin/index.html); 'QEVION Control Plane' stays as the platform descriptor line under each sign-in heading. The three test pins on the old Command title (tests/ui/test_command_center_topology_r182.py, tests/ui/test_command_center_browser_r182.py, tests/ui/test_command_center_browser_r185.py) move to the new string in the same commit — tests are not production and not UI-frozen.",
+                "R199-B command.css adopts the shared token set of ui/app/styles.css + ui/admin/styles.css (identical :root blocks measured at f1a9752a): --bg-0/--bg-1/--bg-2/--bg-3, --line, --ink/--ink-dim, --accent #4fd6ff, --accent-2 #8b7bff, --ok/--warn/--err/--info, --unknown #ff45e0; Command-local names (--brand, --panel, --text, --muted, state colours) become aliases of shared tokens; the divergent hex values #7dd3fc / #38bdf8 leave the tree. No motion/keyframe change (R185 collapse under prefers-reduced-motion untouched).",
+                "R199-C cross-navigation: plain <a href> links between the three served mounts (/app/, /app/command/, /admin/) in each header; zero /v1/ in any href (inherited rule); admin-only destinations labelled as such. ui/app/command/command.js and ui/admin/app.js are NOT touched (12 / 73 hold by identity).",
+                "R199-D /app Models renders the served providers[] of each GET /v1/models row (R188 C4 field, present in the response, previously not rendered) and a runtime-truth strip computed ONLY from that same response (operator D4: distinct provider keys as served, model count, availability counts — no invented prose, no provider branching, no second read). No new /v1/ literal, no new fetch( — ui_workbench_static_check stays 22 / 4.",
+                "R199-E Command honesty (operator D1 = A, admin-only posture kept this round): the sign-in copy names the admin requirement and links tenant users to the Workbench; no gate change in command.js."
+          ],
+          "log": [],
+          "note": "Ceiling 0 declared in R199-DEC-01 BEFORE any commit (operator: 'APPROVE R199. Accept D1–D5 as proposed: D1 = A, D2 = A, D3 = QEVION · Command / QEVION · Workbench / QEVION · Admin, D4 = use only real catalog/API provider-state values, D5 = standard gate ratchet. Execute R199 exactly as proposed. Do not pre-approve R200 or R204.'). UI-only round (layer A): core/ apps/ infrastructure/ FROZEN; contracts + freeze baseline FROZEN (46; --check must MATCH); root '/' stays 404 (D2 = A; /app/command/ documented as the entry). Allowed files: ui/app/command/{index.html,command.css}, ui/app/{index.html,app.js,styles.css}, ui/admin/{index.html,styles.css}, tests/ui/test_unified_shell_r199.py, the three title pins named in R199-A, evidence/r199/*, records.",
+          "ceiling_history": [
+                "declared 0 at the R199 opening (2026-09-21, R199-DEC-01) from post-R198 main f1a9752a."
+          ]
+    },
     "round_r198": {
       "ceiling": 0,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",

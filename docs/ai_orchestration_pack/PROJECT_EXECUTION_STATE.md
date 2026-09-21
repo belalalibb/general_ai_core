@@ -725,6 +725,18 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R199_POINTER (2026-09-21) — R199 OPEN (Unified Shell Foundation; UI-only layer A; ceiling 0)
+BASE: main f1a9752a. BRANCH: genspark_ai_developer_r199.
+OPERATOR: "APPROVE R199" D1 = A (Command stays admin-only; links only), D2 = A (root / stays 404; /app/command/ documented entry),
+       D3 = QEVION · Command / QEVION · Workbench / QEVION · Admin, D4 = only served provider-state values, D5 = standard ratchet.
+       R200 / R204 NOT pre-approved.
+SCOPE: ui/app/command/{index.html,command.css}, ui/app/{index.html,app.js,styles.css}, ui/admin/{index.html,styles.css};
+       tests/ui/test_unified_shell_r199.py (RED first) + three moved Command title pins; evidence/r199/*; records.
+FROZEN: core/ apps/ infrastructure/ (0); command.js 12; ui/admin/app.js 73; contracts + freeze 46; workbench guard 22 / 4.
+NEXT: RED -> implement A..E -> GREEN -> guards -> gate of record (fresh clone) -> PR (merge commit) -> post-merge gate -> closure PR -> STOP.
+```
+
+```
 R198_POINTER (2026-09-21) — R198 CLOSED (final acceptance AS MEASURED; Production Ready NOT claimed — D-03 / N-9 OPERATOR-OWNED-OPEN)
 MAIN: dc26e3e6 (PR #54 merge commit) + records-only closure PR.
 GATE: gate of record 8805e024 PASS 3929/0/0/64 + gateway 194; post-merge dc26e3e6 PASS 3929/0/0/64 + gateway 194.
