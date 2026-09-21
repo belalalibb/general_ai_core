@@ -37,7 +37,7 @@ exactly the posture the 2,700+ hermetic tests prove.
 | Profile | Services | Startup order |
 |---|---|---|
 | **Local / dev** (default) | none — one Python process | `apps.cli serve` |
-| **Durable single-server** | PostgreSQL (`DATABASE_URL`) | 1. Postgres up → 2. `alembic upgrade head` → 3. `apps.cli serve` |
+| **Durable single-server** (v1 production topology, AD-5 — see `docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md`) | PostgreSQL (`DATABASE_URL`) | 1. Postgres up → 2. `alembic upgrade head` → 3. `apps.cli serve` |
 | **Real providers** (either profile) | outbound HTTPS to the provider(s) | set the key env var(s) BEFORE start; keys are read once at composition |
 
 One process serves the API, drains the transactional outbox, and executes
