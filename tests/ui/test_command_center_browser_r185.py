@@ -210,7 +210,7 @@ def test_command_center_experience_in_a_real_browser(server: dict) -> None:
         page.on("request", lambda r: requests.append((r.method, r.url)))
 
         page.goto(f"{base}/app/command/", wait_until="load")
-        assert page.title() == "QEVION Control Plane — Command Center"
+        assert page.title() == "QEVION · Command"  # R199-A (D3)
         page.fill("#login-email", ADMIN_EMAIL)
         page.fill("#login-password", PASSWORD)
         page.click("#login-form button[type=submit]")

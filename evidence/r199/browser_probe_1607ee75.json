@@ -1,0 +1,56 @@
+{
+ "served_models": {
+  "count": 1,
+  "rows": [
+   {
+    "name": "local-echo-1",
+    "availability": "available",
+    "providers": [
+     "local_echo"
+    ]
+   }
+  ]
+ },
+ "workbench_title": "QEVION · Workbench",
+ "workbench_links": [
+  [
+   "/app/command/",
+   "Command admin"
+  ],
+  [
+   "/admin/",
+   "Admin admin"
+  ]
+ ],
+ "truth_strip": [
+  [
+   "models",
+   "1"
+  ],
+  [
+   "providers",
+   "local_echo"
+  ],
+  [
+   "availability",
+   "available 1"
+  ]
+ ],
+ "provider_chips": [
+  "local_echo"
+ ],
+ "command_title": "QEVION · Command",
+ "command_links": [
+  "/app/",
+  "/admin/"
+ ],
+ "command_login_copy": "QEVION Control Plane — Command Center. This surface reads admin-gated routes: an admin account is required. Tenant users: open the Workbench.",
+ "command_accent": "#4fd6ff",
+ "command_accent_resolved": "rgb(79, 214, 255)",
+ "admin_title": "QEVION · Admin",
+ "admin_links": [
+  "/app/",
+  "/app/command/"
+ ],
+ "admin_h1": "QEVION · Admin"
+}

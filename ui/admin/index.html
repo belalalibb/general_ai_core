@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin Console — QEVION Control Plane</title>
+<title>QEVION · Admin</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -41,8 +41,8 @@
         <circle cx="8"  cy="40" r="2.5" fill="var(--accent-2)"/>
       </svg>
     </div>
-    <h1>Admin Console <span class="muted">· QEVION Control Plane</span></h1>
-    <p class="muted">Sign in with an admin account.</p>
+    <h1>QEVION · Admin</h1>
+    <p class="muted">QEVION Control Plane — Admin Console. Sign in with an admin account.</p>
     <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
     <label>Password <input type="password" id="login-password" required autocomplete="current-password"></label>
     <button type="submit" class="btn-primary">Sign in</button>
@@ -60,9 +60,14 @@
         <rect x="16" y="16" width="16" height="16" rx="4" fill="none" stroke="var(--accent)" stroke-width="3"/>
         <circle cx="24" cy="24" r="3.5" fill="var(--accent)"/>
       </svg>
-      <span class="brand-name">Substrate</span>
-      <span class="brand-sub">control</span>
+      <span class="brand-name">QEVION</span>
+      <span class="brand-sub">Admin</span>
     </div>
+    <!-- R199-C: cross-links to the other served mounts (plain hrefs, no /v1/). -->
+    <nav class="shell-links" aria-label="QEVION surfaces">
+      <a href="/app/" class="shell-link" title="Workbench — tenant workspace">Workbench</a>
+      <a href="/app/command/" class="shell-link" title="Command — admin session required">Command <span class="shell-tag">admin</span></a>
+    </nav>
     <div class="topbar-right">
       <span id="health-dot" class="badge neutral" title="GET /healthz">health: ?</span>
       <span id="session-who" class="muted small mono" title="GET /v1/auth/session"></span>

@@ -231,7 +231,7 @@ def test_rendered_nodes_equal_served_capabilities_in_a_real_browser(server: dict
         page.on("request", lambda r: requests.append((r.method, r.url)))
 
         page.goto(f"{base}/app/command/", wait_until="load")
-        assert page.title() == "QEVION Control Plane — Command Center"
+        assert page.title() == "QEVION · Command"  # R199-A (D3)
         assert page.locator("#center-view").is_hidden()
 
         page.fill("#login-email", ADMIN_EMAIL)

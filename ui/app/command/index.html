@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QEVION Control Plane — Command Center</title>
+<title>QEVION · Command</title>
 <link rel="stylesheet" href="command.css">
 </head>
 <body>
@@ -36,10 +36,15 @@
 <header class="cc-header">
   <div class="brand">
     <span class="brand-mark" aria-hidden="true"></span>
-    <span class="brand-name">QEVION Control Plane</span>
-    <span class="brand-sep" aria-hidden="true">/</span>
-    <span class="brand-page">Command Center</span>
+    <span class="brand-name">QEVION</span>
+    <span class="brand-sep" aria-hidden="true">·</span>
+    <span class="brand-page">Command</span>
   </div>
+  <!-- R199-C: cross-links to the other served mounts (plain hrefs, no /v1/). -->
+  <nav class="shell-links" aria-label="QEVION surfaces">
+    <a href="/app/" class="shell-link" title="Workbench — tenant workspace">Workbench</a>
+    <a href="/admin/" class="shell-link" title="Admin — admin session required">Admin <span class="shell-tag">admin</span></a>
+  </nav>
   <div class="header-right">
     <!-- Transport indicator: a fact about THIS browser's request, never a Core/runtime state. -->
     <span id="transport-indicator" class="transport" aria-live="polite" aria-busy="false" hidden>
@@ -53,8 +58,9 @@
 
 <!-- Sign-in: admin session required for GET /v1/admin/* (deny-by-default). -->
 <section id="login-view" class="panel login-panel" aria-labelledby="login-title">
-  <h1 id="login-title">Sign in</h1>
-  <p class="muted">The Command Center reads admin-gated routes. Sign in with an admin account.</p>
+  <h1 id="login-title">QEVION · Command</h1>
+  <p class="muted">QEVION Control Plane — Command Center. This surface reads admin-gated routes:
+    an admin account is required. Tenant users: open the <a href="/app/">Workbench</a>.</p>
   <form id="login-form">
     <label>Email <input type="email" id="login-email" required autocomplete="username"></label>
     <label>Password <input type="password" id="login-password" required autocomplete="current-password"></label>
