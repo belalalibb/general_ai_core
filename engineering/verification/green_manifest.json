@@ -826,6 +826,27 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r196": {
+      "ceiling": 4,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R196-A read models (AD-3): core/contracts/agent_template.py — TemplateListEntry (summary: ref, id, version, name, origin, status, description, tags, stage_count, stage_keys, skills, required_capabilities; NO strategy body) + TemplatesListResponse; from_template() projection. Non-frozen module, additive.",
+        "R196-B served read surface (AD-3, operator D1/D3/D4/D5): apps/api/app.py — create_app(templates: TemplateRegistry | None = None); bound => StrategyExecutor consumes templates.as_strategy_mapping() (strategy_templates AND templates together => ValueError, one source of truth); GET /v1/templates (ACTIVE SYSTEM templates only, ref-ordered) + GET /v1/templates/{ref} (full StrategyTemplate; unknown / inactive / non-system => 404 validation_error) behind the same principal resolver as /v1/skills; absent seam => routes absent; _cap('templates.listing', templates is not None).",
+        "R196-C composition (AD-3 'compose the existing built-in template registry'): apps/composition/runtime.py — build_template_registry() registering the ONE built-in APP_FACTORY_TEMPLATE; passed as templates= to create_app; RuntimeProfile.templates. Side effect (operator D5 confirmed): /v1/execute mode='template' template_id='app_factory.plan' resolves through the ONE StrategyExecutor (R191-C deferred proof).",
+        "R196-D capability catalog closed-set widening (operator D2 confirmed, 23 -> 24): apps/api/capabilities.py — CAPABILITY_IDS + 'templates.listing' (precedents dev.publish_modes 16->17, learning.custody_governance 22->23)."
+      ],
+      "log": [],
+      "note": "Ceiling 4 declared in R196-DEC-01 BEFORE the first production commit (operator: 'APPROVE R196 with confirmation' of D1 freeze re-derive in-round, D2 CAPABILITY_IDS +1, D3 full template detail, D4 tenant-authenticated reads, D5 template-mode execution resolvable). SHAPE CHANGE DECLARED: two ADDITIVE served routes (served_routes_v1 44 -> 46); the 15 frozen modules and 116 contracts are untouched; engineering/verification/contract_freeze_derive.py binds the templates seam in its hermetic composition and the baseline is re-derived with --write in this round (verification tooling; not counted). No write route, no durability, no ownership rule (workspace ownership recorded as the later direction per AD-3). Reads are tenant-neutral platform data behind tenant authentication.",
+      "ceiling_history": [
+        "declared 4 at the R196 opening (2026-09-20, R196-DEC-01) from post-R195 main f7a127fd."
+      ]
+    },
     "round_r195": {
       "ceiling": 4,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",

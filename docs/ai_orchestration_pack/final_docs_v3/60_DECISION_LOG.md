@@ -2081,3 +2081,37 @@ Tests (outside counted roots): `tests/providers/test_r190_logical_model_identity
 - **P. Next safe continuation point:** `main = 16048078` + this records-only closure PR. Next session starts from main, reads `R195_POINTER` and ledger row 9, and does NOT open R196 or any AD-n implementation without an operator ruling recorded here.
 
 **Gates:** gate of record fresh clone `2a636b50` PASS **3872/0/0/64** + gateway **194**; D-6 ratchet `min_passed` 3852 → 3872 (+20); PR #48 merged by merge commit → `main 16048078`; post-merge fresh clone PASS **3872/0/0/64** + gateway **194** (`evidence/r195/gate_merge_16048078.txt`, `gateway_merge_16048078.txt`).
+
+### R196-DEC-01 — R196 OPENED (operator "APPROVE R196 with confirmation" of D1–D5): read-only `/v1/templates` + `/v1/templates/{ref}` for system templates and composition of the existing built-in template registry (AD-3); DECLARED additive served-route shape change (44 → 46); ceiling 4 (2026-09-20)
+
+**Operator ruling executed (verbatim, from "APPROVE THE AUDIT RECOMMENDATIONS"):** AD-3 — "approve read-only `/v1/templates` + `/v1/templates/{ref}` for system templates; record workspace ownership as the later ownership direction; compose the existing built-in template registry."
+
+**Operator text for this round (verbatim):** "APPROVE R196 with confirmation" — confirming the proposal's D1 (freeze baseline re-derived in this declared round), D2 (`CAPABILITY_IDS` + `templates.listing`, 23 → 24), D3 (`/v1/templates/{ref}` returns the full `StrategyTemplate`), D4 (reads are tenant-authenticated like `/v1/skills`), D5 (`/v1/execute` `mode="template"` becomes resolvable for `app_factory.plan` through the ONE `StrategyExecutor`).
+
+**Baseline:** `main = f7a127fd` (R195 closed, PR #49), clean, open PRs 0. Branch `r196_templates_read_surface`.
+
+**Repository findings (read-only, verified before proposing):**
+- F1 `TemplateRegistry` (`core/execution/templates.py`) exists with `list/get/resolve_ref/materialize/as_strategy_mapping`, proven by 8 R191 tests — routes are projections, no new registry.
+- F2 `TemplateRegistry` has ZERO production callers; `runtime.py` passes `strategy_templates=None`; R191-C headroom was deliberately unused ("dead code without a route or consumer") — AD-3 supplies both.
+- F3 exactly ONE built-in system template exists: `core/agent/app_factory.py::APP_FACTORY_TEMPLATE` (`app_factory.plan`, origin SYSTEM, 3 stages).
+- F4 `StrategyExecutor(templates=Mapping)` resolves `mode="template"` via `.get(template_id)` → `UnknownTemplate`; `as_strategy_mapping()` is the declared seam; `ExecutionStrategySpec.template_id` is an EXISTING frozen field — composing the registry makes template mode resolve with NO frozen-shape change.
+- F5 `core.contracts.agent_template` is NOT frozen; `served_routes_v1` = 44 derived from `app.openapi()` of a hermetic `create_app` WITHOUT the templates seam ⇒ the derivation must bind the seam and the baseline must be re-derived `--write` in this round (R189 rule: additions admitted only by re-deriving in an explicitly declared round — THIS is that round).
+- F6 precedent `GET /v1/skills`: authenticated, contract read-model in a non-frozen contracts module, `exclude_none` JSON.
+- F7 unknown-resource convention: `error_response(ErrorCode.VALIDATION_ERROR, ..., http_status=404)`; no `NOT_FOUND` code exists — none is added.
+- F8 `CAPABILITY_IDS` is a closed set of 23 pinned by test; `catalog_json` refuses incomplete catalogs; precedents for approved +1 exist (R172 C7, R179 4.2).
+- F9 conditional-route precedent (`/v1/agent-tools`, `/v1/dev/*`): absent seam ⇒ absent route (20 §4).
+- F10 `TemplateOrigin` is provenance, not ownership; `StrategyTemplate` carries no tenant/workspace id; `core/contracts/identity.py::Workspace{id, tenant_id, name}` is "optional future scope" — **workspace ownership is RECORDED here as the later ownership direction (AD-3) and NOT implemented**; only `origin=SYSTEM` templates are served.
+
+**Decision (declared BEFORE any production commit):**
+- **R196-A — `core/contracts/agent_template.py`:** `TemplateListEntry` (ref, id, version, name, origin, status, description, tags, stage_count, stage_keys, skills, required_capabilities — a summary, no strategy body) with `from_template()`; `TemplatesListResponse{templates}`. Additive, non-frozen module.
+- **R196-B — `apps/api/app.py`:** `create_app(..., templates: TemplateRegistry | None = None)`. When bound, `StrategyExecutor` receives `templates.as_strategy_mapping()`; passing BOTH `strategy_templates` and `templates` ⇒ `ValueError` (one source of truth). Routes mounted ONLY when bound: `GET /v1/templates` → `templates.list(origin=SYSTEM)` (ACTIVE only, ref-ordered) as `TemplatesListResponse`; `GET /v1/templates/{ref}` → `resolve_ref(ref)`; `None` or non-SYSTEM ⇒ 404 `validation_error`; otherwise the full `StrategyTemplate` JSON (D3). Both behind `_principal` (D4). `_cap("templates.listing", templates is not None, ...)`.
+- **R196-C — `apps/composition/runtime.py`:** `build_template_registry() -> TemplateRegistry` registering `APP_FACTORY_TEMPLATE`; passed as `templates=` to `create_app`; `RuntimeProfile.templates`. D5: template-mode execution for `app_factory.plan` resolves (routed child executions through the ONE executor; no code generation, no sandbox — AD-7 untouched).
+- **R196-D — `apps/api/capabilities.py`:** `CAPABILITY_IDS` + `"templates.listing"` (23 → 24; D2).
+- **Verification tooling (not budget):** `engineering/verification/contract_freeze_derive.py` binds `templates=TemplateRegistry()` in `_served_routes()`; `contract_freeze_baseline.json` re-derived `--write` (44 → 46 routes; modules/contracts unchanged); `evidence/r196/CONTRACT_FREEZE_RECORD_R196_UPDATE.md` records P-R191-01 EXECUTED and R191-C CLOSED; P-R192-03 stays open as "workspace ownership — later direction".
+- **Ceiling 4** — a fifth production file ⇒ STOP.
+
+**Invariants preserved (to be proven by tests):** no write route; no durability; no ownership rule; system templates only; tenant-authenticated reads; unified error envelope; ONE `StrategyExecutor`, ONE router, ONE execution service; a stage never names a provider (contract-enforced, R191 Part 9 D); frozen 15 modules / 116 contracts untouched (only `served_routes_v1` grows by 2, declared).
+
+**RED-first proof plan:** `tests/contract/test_agent_template_read_models_r196.py` (projection field-for-field from `APP_FACTORY_TEMPLATE`; JSON round-trip; no strategy body in list entries) · `tests/api/test_r196_templates_routes.py` (seam absent ⇒ 404 + INERT row; bound ⇒ list excludes USER-origin and DISABLED; ref-ordered; `/{ref}` for `id` and `id@version`; unknown/inactive/user-origin ⇒ 404 `validation_error`; tokenless with auth seam ⇒ 401; both seams ⇒ `ValueError`; capability AVAILABLE) · `tests/composition/test_r196_template_composition.py` (profile exposes `templates` with exactly `app_factory.plan`; `GET /v1/templates` over the profile; `/v1/execute` `mode="template"` no longer raises `UnknownTemplate`) · freeze guard asserts both routes present after re-derive · pin `len(CAPABILITY_IDS) == 23` → 24.
+
+**Exit:** GREEN; regression 18 roots; `--check` MATCHES after `--write`; mypy strict + ruff; guards; fresh-clone gate + gateway 194; D-6 ratchet; PR by merge commit; post-merge gate; R196-DEC-02; then STOP at the operator decision gate (R197/R198 NOT pre-approved; D-03 NOT claimed).
