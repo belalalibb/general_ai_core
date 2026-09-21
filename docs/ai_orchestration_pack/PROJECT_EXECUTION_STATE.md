@@ -725,6 +725,28 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R198_POINTER (2026-09-21) — R198 CLOSED (final acceptance AS MEASURED; Production Ready NOT claimed — D-03 / N-9 OPERATOR-OWNED-OPEN)
+MAIN: dc26e3e6 (PR #54 merge commit) + records-only closure PR.
+GATE: gate of record 8805e024 PASS 3929/0/0/64 + gateway 194; post-merge dc26e3e6 PASS 3929/0/0/64 + gateway 194.
+       min_passed 3914 -> 3929 (D-6). not_evaluated = 1 (live two-account failover; credential unavailable).
+OPERATOR: "APPROVE R198" D1 YES accept v1 as measured, D-03 OPEN, no Production Ready claim; D2 YES ADR-0014; D3 YES live
+       PostgreSQL re-measure; D4 YES purge path but NO rewrite without the operator-controlled procedure/evidence (rewritten SHAs
+       invalidate prior references — acknowledged); D5 legacy branches removed only via that procedure; D6 YES DECLARED-UNCONSUMED.
+PRODUCTION: 0 files (ceiling 0, used 0). ui/* untouched (73 / 12 / 22). Contract shape unchanged (46; --check MATCHES).
+DELIVERED: docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md (AD-5); docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+       (AD-1..7, D-03, N-5, N-9, R189 §6.1-6.10, P-R191-01, P-R192-03, not_evaluated #1, DECLARED-UNCONSUMED routes);
+       evidence/r198/D03_CREDENTIAL_ROTATION_AND_PURGE.md (measured state + operator checklist E1-E9);
+       evidence/r198/live_* — PostgreSQL 17.11 + pgvector 0.8.0 on current main: r179 durability 5/5 (SIGKILL P1-P4), r178 59/59.
+GUARDS: tests/verification/test_ad5_topology_artefact_r198.py (7), test_v1_acceptance_register_r198.py (8) — no silent loss;
+       env keys named must be read by code; Production Ready never claimed while D-03 row is OPERATOR-OWNED-OPEN.
+MEASURED (D-03): leak commit 521d8850 (tree-only redaction 28989b04); secret-scanning alert #1 Groq OPEN publicly_leaked;
+       alert #2 PAT dismissed used_in_tests (not a rotation proof); repo PUBLIC; five legacy branches carry the blobs.
+       ENGINEERING DID NOT rewrite history, force-push or delete branches (D4/D5).
+NOT_CLAIMED: Production Ready; D-03 closure; multi-replica readiness; container/ingress manifests; any deferred R189 §6 item.
+NEXT (operator-owned, no engineering pre-approval): complete E1-E9 (revocations, pre-purge bundle, purge over main + legacy
+       branches, branch/tag removal, GitHub GC, alert closure). Then a records-only R199 verifies the evidence and flips the
+       D-03 / N-9 register rows. Any other work = its own proposal + approval.
+```
 R197_POINTER (2026-09-21) — R197 CLOSED (UI closure: Workbench template picker over /v1/templates; R195 admin actions closed by discovery evidence)
 MAIN: 8ced2242 (PR #52 merge commit) + records-only closure PR.
 GATE: gate of record cf00399a PASS 3914/0/0/64 + gateway 194; post-merge 8ced2242 PASS 3914/0/0/64 + gateway 194.
