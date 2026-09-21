@@ -3630,6 +3630,18 @@
       ]
     },
     {
+      "path": "/v1/templates",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "/v1/templates/{ref}",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
       "path": "/v1/usage",
       "methods": [
         "GET"

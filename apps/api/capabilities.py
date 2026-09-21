@@ -89,6 +89,9 @@ CAPABILITY_IDS: frozenset[str] = frozenset(
         # audit log — an operator surface that existed without a shelf row.
         # -> /v1/admin/learning/custody/{revoke,sweep,release-legacy-hold}
         "learning.custody_governance",
+        # R196 (AD-3; operator D2, 23 -> 24): create_app(templates=) ->
+        # GET /v1/templates + /v1/templates/{ref} (read-only, system templates).
+        "templates.listing",
     }
 )
 

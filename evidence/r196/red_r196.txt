@@ -1,0 +1,5 @@
+==================================== ERRORS ====================================
+___ ERROR collecting tests/contract/test_agent_template_read_models_r196.py ____
+E   ImportError: cannot import name 'TemplateListEntry' from 'core.contracts.agent_template' (/home/user/webapp/core/contracts/agent_template.py)
+ERROR tests/contract/test_agent_template_read_models_r196.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!

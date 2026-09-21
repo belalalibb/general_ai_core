@@ -177,6 +177,7 @@ def _served_routes() -> list[dict[str, Any]]:
     from core.audit.memory import InMemoryAuditLog
     from core.evaluation.memory import InMemoryEvaluationStore
     from core.execution.service import ExecutionService
+    from core.execution.templates import TemplateRegistry
     from core.providers.registry import BindingRegistry, ModelRegistry, ProviderRegistry
     from core.routing.router import SimpleScoringRouter
     from core.usage.memory import InMemoryUsageAccounting
@@ -209,6 +210,9 @@ def _served_routes() -> list[dict[str, Any]]:
         usage=usage,
         admin=admin,
         webhooks=True,
+        # R196 (AD-3, declared shape change): the templates seam is bound so the
+        # read-only /v1/templates family is part of the derived served surface.
+        templates=TemplateRegistry(),
     )
     # The OpenAPI document is the served route truth (included routers are
     # flattened there; ``app.routes`` holds lazy router wrappers).

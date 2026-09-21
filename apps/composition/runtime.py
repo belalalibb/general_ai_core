@@ -117,6 +117,7 @@ from core.agent import (
     MAX_REASONING_MAX_TOKENS,
     MIN_REASONING_MAX_TOKENS,
 )
+from core.agent.app_factory import APP_FACTORY_TEMPLATE
 from core.audit.memory import InMemoryAuditLog
 from core.audit.ports import AuditLogPort
 from core.context.composer import ContextComposer
@@ -153,6 +154,7 @@ from core.evaluation.memory import InMemoryEvaluationStore
 from core.evaluation.ports import EvaluationStorePort
 from core.events import WEBHOOK_STREAM, WebhookDeliveryHandler, WebhookSender
 from core.execution.service import ExecutionService
+from core.execution.templates import TemplateRegistry
 from core.identity.ports import IdentityServicePort
 from core.identity.service import InMemoryIdentityService, Session
 from core.learning.lifecycle import LearningCustodyPort
@@ -208,6 +210,7 @@ __all__ = [
     "build_runtime_profile",
     "build_webhook_sender",
     "secret_custody_from_env",
+    "build_template_registry",
     "ensure_default_plan",
     "openapi_public_from_env",
 ]
@@ -520,6 +523,9 @@ class RuntimeProfile:
     agent: ComposedAgent | None = None
     # R193: the composed RepoBindingRegistry when AGENT_DEV_STATE_DIR is set.
     dev_bindings: RepoBindingRegistry | None = None
+    # R196 (AD-3): the ONE TemplateRegistry served on /v1/templates and read by
+    # the StrategyExecutor (template mode). Holds the built-in system templates.
+    templates: TemplateRegistry | None = None
     # S2: the bound provider adapters (the SAME instances ExecutionService
     # calls). Retained so the lifespan can release pooled HTTP clients at
     # shutdown (owner disposes) — see ``release_adapters``.
@@ -770,6 +776,21 @@ def build_webhook_sender(
             raise RuntimeError(f"webhook delivery refused by receiver: HTTP {response.status_code}")
 
     return send
+
+
+def build_template_registry() -> TemplateRegistry:
+    """R196 (AD-3 "compose the existing built-in template registry").
+
+    The ONE registry holding the built-in SYSTEM templates — today exactly
+    ``APP_FACTORY_TEMPLATE`` (R191). Served read-only on ``/v1/templates`` and
+    consumed by the ONE ``StrategyExecutor`` through ``as_strategy_mapping()``,
+    so ``/v1/execute`` ``mode="template"`` resolves the same data a UI lists.
+    No user / workspace templates and no store: workspace ownership is the
+    recorded later direction (R196-DEC-01 F10), not implemented here.
+    """
+    registry = TemplateRegistry()
+    registry.register(APP_FACTORY_TEMPLATE)
+    return registry
 
 
 def secret_custody_from_env(env: Mapping[str, str]) -> SecretManagerPort:
@@ -1194,6 +1215,7 @@ def build_runtime_profile(
     # the execution worker stages terminal events from it (20 §6: rows are
     # looked up by the owning tenant only; process-local like the queue).
     webhook_subscriptions: dict[UUID, list[WebhookSubscription]] = {}
+    templates = build_template_registry()  # R196 (AD-3)
     app = create_app(
         router=router,
         execution_service=execution_service,
@@ -1220,6 +1242,7 @@ def build_runtime_profile(
         bindings=binding_registry,
         providers=providers,  # R188 C4: /v1/models rows name their providers
         dev_bindings=dev.bindings if dev is not None else None,  # R193 (IMPL-024 seam)
+        templates=templates,  # R196 (AD-3): built-in system templates, ONE registry
         usage=usage,
         webhooks=True,
         webhook_subscriptions=webhook_subscriptions,  # R194-B: ONE map, shared with the worker
@@ -1382,5 +1405,6 @@ def build_runtime_profile(
         provider_keys=tuple(provider_keys),
         agent=composed_agent,
         dev_bindings=dev.bindings if dev is not None else None,
+        templates=templates,  # R196 (AD-3)
         adapters=adapters,
     )

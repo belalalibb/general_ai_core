@@ -173,6 +173,11 @@ from apps.api.workspaces import (
 )
 from core.context.composer import ContextComposer
 from core.context.errors import ContextBudgetExceeded
+from core.contracts.agent_template import (
+    TemplateListEntry,
+    TemplateOrigin,
+    TemplatesListResponse,
+)
 from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import JsonObject, utc_now
 from core.contracts.context import ComposedContext, ContextComposeRequest
@@ -235,6 +240,7 @@ from core.execution.service import (
     PipelineStage,
 )
 from core.execution.strategy import StrategyExecutor, UnknownTemplate
+from core.execution.templates import TemplateRegistry
 from core.identity.errors import SessionInvalid
 from core.learning import LearningError, LearningLifecycleService, TrainingEligibilityGate
 from core.learning.lifecycle import LearningCustodyPort
@@ -492,6 +498,7 @@ def create_app(
     bindings: BindingRegistry | None = None,
     providers: ProviderRegistry | None = None,
     strategy_templates: Mapping[str, ExecutionStrategySpec] | None = None,
+    templates: TemplateRegistry | None = None,
     usage: UsageAccountingPort | None = None,
     webhooks: bool = False,
     rate_limits: RateLimitPort | None = None,
@@ -637,8 +644,16 @@ def create_app(
     multi_model_executor = MultiModelExecutor(router=router, execution=execution_service)
     # R188 C3 execution-strategy seam — composed over the SAME router and
     # execution service (every stage is a routed, stored child execution).
+    # R196 (AD-3): ONE template source. A bound TemplateRegistry feeds the
+    # executor through its declared mapping view AND is served read-only on
+    # /v1/templates; the legacy raw mapping stays for existing callers. Both
+    # at once would be two truths — refused loudly.
+    if templates is not None and strategy_templates is not None:
+        raise ValueError("pass either templates (TemplateRegistry) or strategy_templates, not both")
     strategy_executor = StrategyExecutor(
-        router=router, execution=execution_service, templates=strategy_templates
+        router=router,
+        execution=execution_service,
+        templates=templates.as_strategy_mapping() if templates is not None else strategy_templates,
     )
     skill_registry = skills if skills is not None else SkillRegistry()
     role_registry = roles if roles is not None else RoleRegistry()
@@ -1631,6 +1646,50 @@ def create_app(
             content=response.model_dump(mode="json", exclude_none=True),
         )
 
+    # --- GET /v1/templates (R196, AD-3): read-only system template surface -----
+    # Absent seam ⇒ absent routes (20 §4). Served ONLY origin=system templates
+    # (workspace ownership is the recorded later direction, not implemented).
+    # Tenant-authenticated like /v1/skills (operator D4); the detail route
+    # returns the FULL StrategyTemplate — declarative data (operator D3).
+    if templates is not None:
+        template_registry = templates
+
+        @app.get("/v1/templates")
+        async def list_templates(request: Request) -> Response:
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
+            response = TemplatesListResponse(
+                templates=[
+                    TemplateListEntry.from_template(template)
+                    for template in template_registry.list(origin=TemplateOrigin.SYSTEM)
+                ]
+            )
+            return JSONResponse(
+                status_code=200,
+                content=response.model_dump(mode="json", exclude_none=True),
+            )
+
+        @app.get("/v1/templates/{ref}")
+        async def get_template(ref: str, request: Request) -> Response:
+            caller = _principal(request)
+            if isinstance(caller, JSONResponse):
+                return caller
+            template = template_registry.resolve_ref(ref)
+            if template is None or template.origin is not TemplateOrigin.SYSTEM:
+                # Unknown, inactive and non-system collapse into ONE answer
+                # (anti-enumeration, 20 §6) — the existing 404 convention.
+                return error_response(
+                    ErrorCode.VALIDATION_ERROR,
+                    "unknown template.",
+                    details={"field": "ref"},
+                    http_status=404,
+                )
+            return JSONResponse(
+                status_code=200,
+                content=template.model_dump(mode="json", exclude_none=True),
+            )
+
     # --- GET /v1/agent-tools (R160): the offered agent tool catalog ------------
     # The external-consumption seam: what a caller MAY name in
     # ``tools.allowed`` for ``execution_policy.strategy="agent"``. Composition
@@ -2084,6 +2143,11 @@ def create_app(
         ),
         _cap("skills.listing", True, "GET /v1/skills over the skill registry"),
         _cap(
+            "templates.listing",
+            templates is not None,
+            "templates seam -> GET /v1/templates + /v1/templates/{ref} (R196, AD-3)",
+        ),
+        _cap(
             "usage.reporting",
             usage is not None,
             "usage seam -> GET /v1/usage (10 §8)",
@@ -2169,6 +2233,8 @@ def create_app(
     # AND the composition root (which hands the SAME tuple to the agent's
     # AgentToolSurface) read this attribute — zero parallel derivations.
     app.state.capability_catalog = capability_catalog
+    # R196: the ONE strategy executor (inspectable by composition tests).
+    app.state.strategy_executor = strategy_executor
 
     # --- Capability Exercise Surface (Vision V7 chunk 2) ----------------------
     # REAL probes over the SAME composed machinery the catalog rows point

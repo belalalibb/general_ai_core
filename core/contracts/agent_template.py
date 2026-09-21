@@ -127,3 +127,54 @@ class AgentPlan(ContractModel):
     required_capabilities: list[BoundedStr] = Field(default_factory=list)
     overrides_applied: list[OverrideRecord] = Field(default_factory=list)
     notes: list[BoundedStr] = Field(default_factory=list)
+
+
+# --- Read models for the served template surface (R196, AD-3) ---------------------
+
+
+class TemplateListEntry(ContractModel):
+    """One row of ``GET /v1/templates`` — a SUMMARY projection of a template.
+
+    Recorded decisions (R196-DEC-01, operator D3): the list carries NO
+    strategy body (stage instructions live on the detail route, which serves
+    the full :class:`StrategyTemplate`); ``stage_count`` / ``stage_keys`` are
+    enough to pick a template. Only ``origin=system`` templates are served in
+    v1 — workspace ownership is the recorded later direction (AD-3), not a
+    field here.
+    """
+
+    ref: BoundedStr
+    id: BoundedStr
+    version: BoundedStr
+    name: BoundedStr
+    origin: TemplateOrigin
+    status: TemplateStatus
+    description: BoundedStr | None = None
+    tags: list[BoundedStr] = Field(default_factory=list)
+    stage_count: int = Field(ge=1)
+    stage_keys: list[BoundedStr] = Field(default_factory=list)
+    skills: list[BoundedStr] = Field(default_factory=list)
+    required_capabilities: list[BoundedStr] = Field(default_factory=list)
+
+    @classmethod
+    def from_template(cls, template: StrategyTemplate) -> TemplateListEntry:
+        return cls(
+            ref=template.ref,
+            id=template.id,
+            version=template.version,
+            name=template.name,
+            origin=template.origin,
+            status=template.status,
+            description=template.description,
+            tags=list(template.tags),
+            stage_count=len(template.strategy.stages),
+            stage_keys=[stage.key for stage in template.strategy.stages],
+            skills=list(template.skills),
+            required_capabilities=list(template.required_capabilities),
+        )
+
+
+class TemplatesListResponse(ContractModel):
+    """``GET /v1/templates`` envelope."""
+
+    templates: list[TemplateListEntry] = Field(default_factory=list)
