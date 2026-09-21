@@ -1,9 +1,9 @@
 {
   "server": "python3 -m apps.main (in-memory profile, ADMIN_EMAILS)",
   "page": "/app/command/",
-  "served_capabilities": 23,
-  "rendered_graph_nodes": 23,
-  "rendered_list_nodes": 23,
+  "served_capabilities": 24,
+  "rendered_graph_nodes": 24,
+  "rendered_list_nodes": 24,
   "core_state": "idle",
   "scope_badge": "scope: process",
   "requests": [
@@ -13,11 +13,12 @@
     "GET /healthz",
     "GET /v1/admin/capabilities",
     "GET /v1/admin/system",
-    "GET /v1/agent/executions/118b2014-a12c-4352-8e13-71367ab2a5e3/trace",
+    "GET /v1/admin/usage",
+    "GET /v1/agent/executions/3f5c1bed-d837-4382-b20a-a6b3c4429d80/trace",
     "GET /v1/auth/session",
     "GET /v1/executions",
-    "GET /v1/executions/118b2014-a12c-4352-8e13-71367ab2a5e3",
-    "GET /v1/executions/118b2014-a12c-4352-8e13-71367ab2a5e3/events",
+    "GET /v1/executions/3f5c1bed-d837-4382-b20a-a6b3c4429d80",
+    "GET /v1/executions/3f5c1bed-d837-4382-b20a-a6b3c4429d80/events",
     "POST /v1/auth/login",
     "POST /v1/execute"
   ],

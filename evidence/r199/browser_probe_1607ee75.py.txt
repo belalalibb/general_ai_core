@@ -1,0 +1,50 @@
+import contextlib, json, os, re, socket, subprocess, sys, time, urllib.request
+from playwright.sync_api import sync_playwright
+ROOT="/home/user/webapp"; s=socket.socket(); s.bind(("127.0.0.1",0)); port=s.getsockname()[1]; s.close()
+env=dict(os.environ, HOST="127.0.0.1", PORT=str(port), ADMIN_EMAILS="probe-admin@example.test", LOG_LEVEL="warning", PYTHONUNBUFFERED="1")
+for k in list(env):
+    if k in ("DATABASE_URL","REDIS_URL") or k.startswith(("GROQ_API_KEY","GSK_API_KEY","GW_GROQ")): env.pop(k)
+log=open("/tmp/probe_server.txt","w")
+proc=subprocess.Popen([sys.executable,"-m","apps.main"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+base=f"http://127.0.0.1:{port}"
+def http(m,u,b=None,tok=None):
+    req=urllib.request.Request(u,method=m,data=json.dumps(b).encode() if b is not None else None,headers={"Content-Type":"application/json",**({"Authorization":f"Bearer {tok}"} if tok else {})})
+    try:
+        with urllib.request.urlopen(req,timeout=5) as r: return r.status, json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as e: return e.code, json.loads(e.read() or b"{}")
+for _ in range(60):
+    with contextlib.suppress(Exception):
+        st,_b=http("GET",f"{base}/healthz")
+        if st==200: break
+    time.sleep(0.5)
+out={}
+try:
+    http("POST",f"{base}/v1/auth/register",{"email":"probe-admin@example.test","password":"correct horse battery staple"})
+    log.flush(); tok=re.findall(r'"token": "([^"]+)"',open("/tmp/probe_server.txt").read())[-1]
+    http("POST",f"{base}/v1/auth/verify",{"token":tok})
+    st,body=http("POST",f"{base}/v1/auth/login",{"email":"probe-admin@example.test","password":"correct horse battery staple"})
+    bearer=body["token"]
+    st,models=http("GET",f"{base}/v1/models",tok=bearer); out["served_models"]=models
+    with sync_playwright() as p:
+        b=p.chromium.launch(); pg=b.new_page(viewport={"width":1280,"height":900})
+        pg.goto(f"{base}/app/"); out["workbench_title"]=pg.title()
+        out["workbench_links"]=pg.eval_on_selector_all(".shell-links a","els=>els.map(e=>[e.getAttribute('href'),e.textContent.trim()])")
+        pg.fill("#login-email","probe-admin@example.test"); pg.fill("#login-password","correct horse battery staple"); pg.click("#login-form button[type=submit]")
+        pg.wait_for_selector("#main-view:not([hidden])",timeout=10000)
+        pg.click('.nav-item[data-view="models"]'); pg.wait_for_selector("#models-truth:not([hidden])",timeout=10000)
+        out["truth_strip"]=pg.eval_on_selector_all("#models-truth .truth-cell","els=>els.map(e=>[e.querySelector('.truth-k').textContent,e.querySelector('.truth-v').textContent])")
+        out["provider_chips"]=pg.eval_on_selector_all("#models-grid .provider-chip","els=>els.map(e=>e.textContent)")
+        pg.screenshot(path="/home/user/webapp/evidence/r199/workbench_models_truth.png")
+        pg.goto(f"{base}/app/command/"); out["command_title"]=pg.title()
+        out["command_links"]=pg.eval_on_selector_all(".shell-links a","els=>els.map(e=>e.getAttribute('href'))")
+        out["command_login_copy"]=pg.inner_text("#login-view p.muted")
+        out["command_accent"]=pg.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()")
+        out["command_accent_resolved"]=pg.evaluate("getComputedStyle(document.querySelector('.brand-mark')).backgroundColor")
+        pg.screenshot(path="/home/user/webapp/evidence/r199/command_signin.png")
+        pg.goto(f"{base}/admin/"); out["admin_title"]=pg.title()
+        out["admin_links"]=pg.eval_on_selector_all(".shell-links a","els=>els.map(e=>e.getAttribute('href'))")
+        out["admin_h1"]=pg.inner_text("h1")
+        b.close()
+finally:
+    proc.terminate()
+print(json.dumps(out,indent=1))

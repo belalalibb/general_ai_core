@@ -29,11 +29,11 @@
     "GET /v1/admin/capabilities",
     "GET /v1/admin/system",
     "GET /v1/admin/usage",
-    "GET /v1/agent/executions/30941394-d232-4452-97e3-2c3090c47f48/trace",
+    "GET /v1/agent/executions/8d076941-d410-43b4-a552-1edf65c90385/trace",
     "GET /v1/auth/session",
     "GET /v1/executions",
-    "GET /v1/executions/30941394-d232-4452-97e3-2c3090c47f48",
-    "GET /v1/executions/30941394-d232-4452-97e3-2c3090c47f48/events",
+    "GET /v1/executions/8d076941-d410-43b4-a552-1edf65c90385",
+    "GET /v1/executions/8d076941-d410-43b4-a552-1edf65c90385/events",
     "POST /v1/auth/login",
     "POST /v1/execute"
   ]
