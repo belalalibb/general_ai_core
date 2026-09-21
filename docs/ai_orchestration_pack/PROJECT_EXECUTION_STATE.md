@@ -725,6 +725,25 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R197_POINTER (2026-09-21) — R197 CLOSED (UI closure: Workbench template picker over /v1/templates; R195 admin actions closed by discovery evidence)
+MAIN: 8ced2242 (PR #52 merge commit) + records-only closure PR.
+GATE: gate of record cf00399a PASS 3914/0/0/64 + gateway 194; post-merge 8ced2242 PASS 3914/0/0/64 + gateway 194.
+       min_passed 3888 -> 3914 (D-6). not_evaluated = 1 (D-03; operator-owned). First gate attempt 41ba57a8 FAILED (ruff over an
+       evidence .py script -> renamed .py.txt; ledger row 5).
+OPERATOR: "APPROVE R197 (optionally with rulings on D1-D5)" — recommended rulings stand: D1 thaw ui/app/ ONLY; D2 guard declared
+       BEFORE code (ui_workbench_static_check, /v1/ ceiling null -> measured 22, down only; fetch( ceiling 4 measured); D3 no bespoke
+       admin forms (R180 discovery form is the closure); D4 ref-based picker, execution_strategy {mode:"template", template_id: ref}
+       only when chosen, /v1/templates/{ref} NOT consumed; D5 round_r197 ceiling 0.
+PRODUCTION: 0 files (ceiling 0, used 0). git diff b8f2f706..8ced2242 -- core apps infrastructure ui/admin ui/app/command = EMPTY.
+UI: ui/app/index.html +4 (select#ask-template, empty default option only); ui/app/app.js +27 (populateTemplateSelect from enterMain,
+       server rows keyed by ref, refusal clears + renders verbatim; submitAsk conditional execution_strategy). /v1/ 21 -> 22.
+TESTS: tests/ui/test_workbench_template_picker_r197.py (22 items; RED 6 at aec5efe2 -> GREEN), tests/ui/test_r197_admin_actions_discovered.py
+       (4; evidence). Live Chromium proof evidence/r197/workbench_template_picker_dom_probe.json (template-mode body proven).
+SHAPE CHANGE: NONE (46 routes; --check MATCHES; evidence/r197/CONTRACT_FREEZE_RECORD_R197_UPDATE.md).
+NOT_CLAIMED: template detail view; user/workspace templates; write routes; App Factory generation (AD-7); Command Center picker; D-03 evidence.
+NEXT (requires operator approval; nothing pre-approved): R198 proposal (final acceptance: AD-5 topology artefact, D-03 rotation +
+       purge evidence [operator-owned], N-9 branch cleanup). Any further UI work = its own proposal.
+```
 R196_POINTER (2026-09-20) — R196 CLOSED (read-only /v1/templates surface + built-in template registry composition [AD-3])
 MAIN: e08b04f6 (PR #50 merge commit) + records-only closure PR.
 GATE: gate of record 63f7b876 PASS 3888/0/0/64 + gateway 194; post-merge e08b04f6 PASS 3888/0/0/64 + gateway 194.
