@@ -150,6 +150,8 @@ placement in doc C.
 | **WBH-1** | manage webhook subscriptions | registration + injectable subscription map | no list/delete | list/delete routes over the existing map. |
 
 **R195 note (AD-1):** the Changes surface needs NO new seam for dev bindings / remote trust — `register_repo_binding`, `grant_remote_trust`, `revoke_remote_trust` are discovered through the existing `GET /v1/admin/capabilities/actions` read model (area `tools`, declared field rules) and ride the existing change lifecycle. UI closure of these forms stays in the UI round (R197, not pre-approved).
+
+**R196 note (AD-3):** template selection has a served seam now — `GET /v1/templates` (summary rows) and `GET /v1/templates/{ref}` (full `StrategyTemplate`), tenant-authenticated, system templates only; `templates.listing` is a catalog row. The UI template picker itself stays in the UI round (R197, not pre-approved). Template write/ownership routes do not exist (P-R192-03 open; workspace ownership = recorded later direction).
 | **SYS-1** | System surface: platform health, runtime gauges, gateway status, config disclosure | gateway `/healthz`; queue-depth gauge, DLQ, admission stats; observability providers | no platform healthz; no runtime/ops read-model | `GET /healthz` + `GET /v1/admin/system` read-model (process-local truths labeled as such). |
 | **SRC-1** | source-change proposals (doc A §4) | audit types (`APPROVAL_DECISION`); repo gates (check_repo.sh) | everything else | design-first service in the final phase; operator-gated; FROZEN-COMPONENT stop rule. |
 
