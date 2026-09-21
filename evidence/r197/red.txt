@@ -1,0 +1,82 @@
+# RED at addec78d (declaration commit; Workbench untouched) — 2026-09-21T15:31Z
+# cmd: .venv/bin/python -m pytest -p no:cacheprovider -q --no-header tests/ui/test_workbench_template_picker_r197.py tests/ui/test_r197_admin_actions_discovered.py
+..F..FFFFF................                                               [100%]
+=================================== FAILURES ===================================
+___________ test_v1_occurrence_count_never_exceeds_declared_ceiling ____________
+
+    def test_v1_occurrence_count_never_exceeds_declared_ceiling() -> None:
+        ceiling = _block()["v1_count_ceiling_app_js"]
+        count = _app_js().count("/v1/")
+>       assert ceiling is not None, (
+            f"ceiling not yet measured (null) — measured count now {count}; "
+            "set it ONCE at the first GREEN of R197 (D2), then down only"
+        )
+E       AssertionError: ceiling not yet measured (null) — measured count now 21; set it ONCE at the first GREEN of R197 (D2), then down only
+E       assert None is not None
+
+tests/ui/test_workbench_template_picker_r197.py:126: AssertionError
+____________________ test_html_carries_the_template_select _____________________
+
+    def test_html_carries_the_template_select() -> None:
+        html = _html()
+>       assert 'id="ask-template"' in html, "Workbench composer has no <select id=ask-template>"
+E       AssertionError: Workbench composer has no <select id=ask-template>
+E       assert 'id="ask-template"' in '<!DOCTYPE html>\n<html lang="en" data-theme="dark">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="w...l-error" class="error-box small" hidden></div>\n  </div>\n</div>\n\n<script src="app.js"></script>\n</body>\n</html>\n'
+
+tests/ui/test_workbench_template_picker_r197.py:151: AssertionError
+_______________ test_templates_route_is_the_only_template_source _______________
+
+    def test_templates_route_is_the_only_template_source() -> None:
+        code = _code()
+>       assert f'api("{TEMPLATES_ROUTE}")' in code, "Workbench does not read GET /v1/templates"
+E       AssertionError: Workbench does not read GET /v1/templates
+E       assert 'api("/v1/templates")' in '\n"use strict";\n\nconst state = {\n  token: null,\n  profile: null,\n  email: null,\n  view: "home",\n  workspaces: ...\n  });\n}\n\n\n\nwireAuth();\nwireNav();\nwireModal();\nwireWorkspaces();\nwireAsk();\nwireCmdk();\nprobeProfile();\n'
+
+tests/ui/test_workbench_template_picker_r197.py:163: AssertionError
+__________ test_execution_strategy_is_sent_only_when_a_ref_is_chosen ___________
+
+    def test_execution_strategy_is_sent_only_when_a_ref_is_chosen() -> None:
+        body = _function_body(_code(), "submitAsk")
+>       assert "execution_strategy" in body
+E       assert 'execution_strategy' in '{\n  clearError($("ask-error"));\n  $("ask-result").hidden = true;\n  $("run-live").hidden = true;\n  $("run-timeline...         : JSON.stringify(result.body, null, 2));\n    }\n  } finally {\n    $("ask-submit").disabled = false;\n  }\n}'
+
+tests/ui/test_workbench_template_picker_r197.py:174: AssertionError
+________________ test_template_read_is_not_fired_at_module_load ________________
+
+    def test_template_read_is_not_fired_at_module_load() -> None:
+        code = _code()
+        top = _top_level_statements(code)
+        assert "populateTemplateSelect(" not in top, "template read must not run at module load"
+>       assert "populateTemplateSelect(" in _function_body(code, "enterMain"), (
+            "template read must run once the session is established (enterMain), F-R180-01 pattern"
+        )
+E       AssertionError: template read must run once the session is established (enterMain), F-R180-01 pattern
+E       assert 'populateTemplateSelect(' in '{\n  $("auth-view").hidden = true;\n  $("main-view").hidden = false;\n  $("who").textContent = who;\n  $("logout-button").hidden = state.profile !== "durable" || !state.token;\n  refreshWorkspaces();\n}'
+E        +  where '{\n  $("auth-view").hidden = true;\n  $("main-view").hidden = false;\n  $("who").textContent = who;\n  $("logout-button").hidden = state.profile !== "durable" || !state.token;\n  refreshWorkspaces();\n}' = _function_body('\n"use strict";\n\nconst state = {\n  token: null,\n  profile: null,\n  email: null,\n  view: "home",\n  workspaces: ...\n  });\n}\n\n\n\nwireAuth();\nwireNav();\nwireModal();\nwireWorkspaces();\nwireAsk();\nwireCmdk();\nprobeProfile();\n', 'enterMain')
+
+tests/ui/test_workbench_template_picker_r197.py:187: AssertionError
+_________ test_failed_read_renders_unified_error_and_offers_no_option __________
+
+    def test_failed_read_renders_unified_error_and_offers_no_option() -> None:
+>       body = _function_body(_code(), "populateTemplateSelect")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/ui/test_workbench_template_picker_r197.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+js = '\n"use strict";\n\nconst state = {\n  token: null,\n  profile: null,\n  email: null,\n  view: "home",\n  workspaces: ...\n  });\n}\n\n\n\nwireAuth();\nwireNav();\nwireModal();\nwireWorkspaces();\nwireAsk();\nwireCmdk();\nprobeProfile();\n'
+name = 'populateTemplateSelect'
+
+    def _function_body(js: str, name: str) -> str:
+>       start = js.index(f"function {name}(")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       ValueError: substring not found
+
+tests/ui/test_workbench_template_picker_r197.py:80: ValueError
+=========================== short test summary info ============================
+FAILED tests/ui/test_workbench_template_picker_r197.py::test_v1_occurrence_count_never_exceeds_declared_ceiling
+FAILED tests/ui/test_workbench_template_picker_r197.py::test_html_carries_the_template_select
+FAILED tests/ui/test_workbench_template_picker_r197.py::test_templates_route_is_the_only_template_source
+FAILED tests/ui/test_workbench_template_picker_r197.py::test_execution_strategy_is_sent_only_when_a_ref_is_chosen
+FAILED tests/ui/test_workbench_template_picker_r197.py::test_template_read_is_not_fired_at_module_load
+FAILED tests/ui/test_workbench_template_picker_r197.py::test_failed_read_renders_unified_error_and_offers_no_option
