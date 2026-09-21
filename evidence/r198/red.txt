@@ -1,0 +1,331 @@
+# RED at 85127178 (declaration commit; ADR-0014 and register absent) — 2026-09-21T18:19Z
+# cmd: .venv/bin/python -m pytest -p no:cacheprovider -q --no-header tests/verification/test_ad5_topology_artefact_r198.py tests/verification/test_v1_acceptance_register_r198.py
+FFFFFFFFFFFFFFF                                                          [100%]
+=================================== FAILURES ===================================
+___________ test_artefact_exists_and_carries_the_ad5_ruling_verbatim ___________
+
+    def test_artefact_exists_and_carries_the_ad5_ruling_verbatim() -> None:
+>       assert AD5_VERBATIM in _adr()
+                               ^^^^^^
+
+tests/verification/test_ad5_topology_artefact_r198.py:62: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _adr() -> str:
+>       assert ADR.is_file(), f"AD-5 artefact absent: {ADR.relative_to(ROOT)}"
+E       AssertionError: AD-5 artefact absent: docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md').is_file
+
+tests/verification/test_ad5_topology_artefact_r198.py:47: AssertionError
+___________ test_names_the_operations_durable_profile_steps_in_order ___________
+
+    def test_names_the_operations_durable_profile_steps_in_order() -> None:
+        ops = OPERATIONS.read_text(encoding="utf-8")
+        assert "`alembic upgrade head`" in ops and "`apps.cli serve`" in ops, "OPERATIONS §1 moved"
+>       text = _adr()
+               ^^^^^^
+
+tests/verification/test_ad5_topology_artefact_r198.py:69: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _adr() -> str:
+>       assert ADR.is_file(), f"AD-5 artefact absent: {ADR.relative_to(ROOT)}"
+E       AssertionError: AD-5 artefact absent: docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md').is_file
+
+tests/verification/test_ad5_topology_artefact_r198.py:47: AssertionError
+________________ test_states_one_process_with_relay_and_worker _________________
+
+    def test_states_one_process_with_relay_and_worker() -> None:
+>       text = _adr().lower()
+               ^^^^^^
+
+tests/verification/test_ad5_topology_artefact_r198.py:79: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _adr() -> str:
+>       assert ADR.is_file(), f"AD-5 artefact absent: {ADR.relative_to(ROOT)}"
+E       AssertionError: AD-5 artefact absent: docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md').is_file
+
+tests/verification/test_ad5_topology_artefact_r198.py:47: AssertionError
+_________________ test_every_named_env_key_is_read_by_the_code _________________
+
+    def test_every_named_env_key_is_read_by_the_code() -> None:
+>       named = set(re.findall(r"`([A-Z][A-Z0-9_]{3,})`", _adr()))
+                                                          ^^^^^^
+
+tests/verification/test_ad5_topology_artefact_r198.py:86: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _adr() -> str:
+>       assert ADR.is_file(), f"AD-5 artefact absent: {ADR.relative_to(ROOT)}"
+E       AssertionError: AD-5 artefact absent: docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md').is_file
+
+tests/verification/test_ad5_topology_artefact_r198.py:47: AssertionError
+_______________ test_exclusions_carry_their_decision_references ________________
+
+    def test_exclusions_carry_their_decision_references() -> None:
+>       text = _adr()
+               ^^^^^^
+
+tests/verification/test_ad5_topology_artefact_r198.py:95: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _adr() -> str:
+>       assert ADR.is_file(), f"AD-5 artefact absent: {ADR.relative_to(ROOT)}"
+E       AssertionError: AD-5 artefact absent: docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md').is_file
+
+tests/verification/test_ad5_topology_artefact_r198.py:47: AssertionError
+_____________________ test_tls_at_ingress_and_hsts_posture _____________________
+
+    def test_tls_at_ingress_and_hsts_posture() -> None:
+>       text = _adr()
+               ^^^^^^
+
+tests/verification/test_ad5_topology_artefact_r198.py:103: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _adr() -> str:
+>       assert ADR.is_file(), f"AD-5 artefact absent: {ADR.relative_to(ROOT)}"
+E       AssertionError: AD-5 artefact absent: docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md').is_file
+
+tests/verification/test_ad5_topology_artefact_r198.py:47: AssertionError
+_____________________ test_does_not_claim_production_ready _____________________
+
+    def test_does_not_claim_production_ready() -> None:
+>       text = _adr()
+               ^^^^^^
+
+tests/verification/test_ad5_topology_artefact_r198.py:109: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _adr() -> str:
+>       assert ADR.is_file(), f"AD-5 artefact absent: {ADR.relative_to(ROOT)}"
+E       AssertionError: AD-5 artefact absent: docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md').is_file
+
+tests/verification/test_ad5_topology_artefact_r198.py:47: AssertionError
+______________ test_register_exists_with_status_column_closed_set ______________
+
+    def test_register_exists_with_status_column_closed_set() -> None:
+>       rows = [r for r in _rows() if r and r[0] not in ("id", "ID", "Item", "item")]
+                           ^^^^^^^
+
+tests/verification/test_v1_acceptance_register_r198.py:67: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/verification/test_v1_acceptance_register_r198.py:45: in _rows
+    for line in _register().splitlines():
+                ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _register() -> str:
+>       assert REGISTER.is_file(), f"acceptance register absent: {REGISTER.relative_to(ROOT)}"
+E       AssertionError: acceptance register absent: docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md').is_file
+
+tests/verification/test_v1_acceptance_register_r198.py:39: AssertionError
+_________________ test_every_r189_deferred_block_is_registered _________________
+
+    def test_every_r189_deferred_block_is_registered() -> None:
+        ids = re.findall(r"^### (6\.\d+) ", FREEZE_R189.read_text(encoding="utf-8"), flags=re.M)
+        assert len(ids) == 10, ids
+        for i in ids:
+>           _status_of(_row_for(f"R189 §{i}"))
+                       ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/verification/test_v1_acceptance_register_r198.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/verification/test_v1_acceptance_register_r198.py:53: in _row_for
+    for r in _rows():
+             ^^^^^^^
+tests/verification/test_v1_acceptance_register_r198.py:45: in _rows
+    for line in _register().splitlines():
+                ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _register() -> str:
+>       assert REGISTER.is_file(), f"acceptance register absent: {REGISTER.relative_to(ROOT)}"
+E       AssertionError: acceptance register absent: docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md').is_file
+
+tests/verification/test_v1_acceptance_register_r198.py:39: AssertionError
+___________________ test_every_audit_decision_is_registered ____________________
+
+    def test_every_audit_decision_is_registered() -> None:
+        for d in DECISION_IDS:
+>           _status_of(_row_for(d))
+                       ^^^^^^^^^^^
+
+tests/verification/test_v1_acceptance_register_r198.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/verification/test_v1_acceptance_register_r198.py:53: in _row_for
+    for r in _rows():
+             ^^^^^^^
+tests/verification/test_v1_acceptance_register_r198.py:45: in _rows
+    for line in _register().splitlines():
+                ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _register() -> str:
+>       assert REGISTER.is_file(), f"acceptance register absent: {REGISTER.relative_to(ROOT)}"
+E       AssertionError: acceptance register absent: docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md').is_file
+
+tests/verification/test_v1_acceptance_register_r198.py:39: AssertionError
+__________________ test_open_proposals_registered_as_deferred __________________
+
+    def test_open_proposals_registered_as_deferred() -> None:
+        for p in OPEN_PROPOSALS:
+>           assert _status_of(_row_for(p)) == "DEFERRED-BY-RULING"
+                              ^^^^^^^^^^^
+
+tests/verification/test_v1_acceptance_register_r198.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/verification/test_v1_acceptance_register_r198.py:53: in _row_for
+    for r in _rows():
+             ^^^^^^^
+tests/verification/test_v1_acceptance_register_r198.py:45: in _rows
+    for line in _register().splitlines():
+                ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _register() -> str:
+>       assert REGISTER.is_file(), f"acceptance register absent: {REGISTER.relative_to(ROOT)}"
+E       AssertionError: acceptance register absent: docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md').is_file
+
+tests/verification/test_v1_acceptance_register_r198.py:39: AssertionError
+______________________ test_not_evaluated_item_registered ______________________
+
+    def test_not_evaluated_item_registered() -> None:
+        items = json.loads(MANIFEST.read_text(encoding="utf-8"))["not_evaluated"]
+        for it in items:
+>           assert _status_of(_row_for(it["item"][:40])) == "NOT-EVALUATED"
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/verification/test_v1_acceptance_register_r198.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/verification/test_v1_acceptance_register_r198.py:53: in _row_for
+    for r in _rows():
+             ^^^^^^^
+tests/verification/test_v1_acceptance_register_r198.py:45: in _rows
+    for line in _register().splitlines():
+                ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _register() -> str:
+>       assert REGISTER.is_file(), f"acceptance register absent: {REGISTER.relative_to(ROOT)}"
+E       AssertionError: acceptance register absent: docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md').is_file
+
+tests/verification/test_v1_acceptance_register_r198.py:39: AssertionError
+______________________ test_ui_unconsumed_routes_declared ______________________
+
+    def test_ui_unconsumed_routes_declared() -> None:
+        for route in UNCONSUMED_ROUTES:
+>           assert _status_of(_row_for(route)) == "DECLARED-UNCONSUMED"
+                              ^^^^^^^^^^^^^^^
+
+tests/verification/test_v1_acceptance_register_r198.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/verification/test_v1_acceptance_register_r198.py:53: in _row_for
+    for r in _rows():
+             ^^^^^^^
+tests/verification/test_v1_acceptance_register_r198.py:45: in _rows
+    for line in _register().splitlines():
+                ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _register() -> str:
+>       assert REGISTER.is_file(), f"acceptance register absent: {REGISTER.relative_to(ROOT)}"
+E       AssertionError: acceptance register absent: docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md').is_file
+
+tests/verification/test_v1_acceptance_register_r198.py:39: AssertionError
+________________ test_d03_and_n9_operator_owned_until_evidence _________________
+
+    def test_d03_and_n9_operator_owned_until_evidence() -> None:
+>       d03 = _status_of(_row_for("D-03"))
+                         ^^^^^^^^^^^^^^^^
+
+tests/verification/test_v1_acceptance_register_r198.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/verification/test_v1_acceptance_register_r198.py:53: in _row_for
+    for r in _rows():
+             ^^^^^^^
+tests/verification/test_v1_acceptance_register_r198.py:45: in _rows
+    for line in _register().splitlines():
+                ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _register() -> str:
+>       assert REGISTER.is_file(), f"acceptance register absent: {REGISTER.relative_to(ROOT)}"
+E       AssertionError: acceptance register absent: docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md').is_file
+
+tests/verification/test_v1_acceptance_register_r198.py:39: AssertionError
+_______________ test_production_ready_not_claimed_while_d03_open _______________
+
+    def test_production_ready_not_claimed_while_d03_open() -> None:
+>       text = _register()
+               ^^^^^^^^^^^
+
+tests/verification/test_v1_acceptance_register_r198.py:112: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def _register() -> str:
+>       assert REGISTER.is_file(), f"acceptance register absent: {REGISTER.relative_to(ROOT)}"
+E       AssertionError: acceptance register absent: docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md
+E       assert False
+E        +  where False = is_file()
+E        +    where is_file = PosixPath('/home/user/webapp/docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md').is_file
+
+tests/verification/test_v1_acceptance_register_r198.py:39: AssertionError
+=========================== short test summary info ============================
+FAILED tests/verification/test_ad5_topology_artefact_r198.py::test_artefact_exists_and_carries_the_ad5_ruling_verbatim
+FAILED tests/verification/test_ad5_topology_artefact_r198.py::test_names_the_operations_durable_profile_steps_in_order
+FAILED tests/verification/test_ad5_topology_artefact_r198.py::test_states_one_process_with_relay_and_worker
+FAILED tests/verification/test_ad5_topology_artefact_r198.py::test_every_named_env_key_is_read_by_the_code
+FAILED tests/verification/test_ad5_topology_artefact_r198.py::test_exclusions_carry_their_decision_references
+FAILED tests/verification/test_ad5_topology_artefact_r198.py::test_tls_at_ingress_and_hsts_posture
+FAILED tests/verification/test_ad5_topology_artefact_r198.py::test_does_not_claim_production_ready
+FAILED tests/verification/test_v1_acceptance_register_r198.py::test_register_exists_with_status_column_closed_set
+FAILED tests/verification/test_v1_acceptance_register_r198.py::test_every_r189_deferred_block_is_registered
+FAILED tests/verification/test_v1_acceptance_register_r198.py::test_every_audit_decision_is_registered
+FAILED tests/verification/test_v1_acceptance_register_r198.py::test_open_proposals_registered_as_deferred
+FAILED tests/verification/test_v1_acceptance_register_r198.py::test_not_evaluated_item_registered
+FAILED tests/verification/test_v1_acceptance_register_r198.py::test_ui_unconsumed_routes_declared
+FAILED tests/verification/test_v1_acceptance_register_r198.py::test_d03_and_n9_operator_owned_until_evidence
+FAILED tests/verification/test_v1_acceptance_register_r198.py::test_production_ready_not_claimed_while_d03_open

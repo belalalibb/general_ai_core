@@ -1,0 +1,137 @@
+{
+  "commit": "332db1d3",
+  "method": "python -m apps.main OS process over TCP; SIGKILL -9 between phases; DATABASE_URL on a fresh real-alembic schema",
+  "arrange": {
+    "p1_evaluation_id_present": true,
+    "p1_replay": [
+      200,
+      true
+    ],
+    "p1_admitted": [
+      true,
+      null
+    ],
+    "p1_promote_status": 201,
+    "p1_promote_body": {
+      "promoted": true,
+      "memory_item_id": "c61313c6-28b0-4734-89a9-ac8b6906b38b",
+      "knowledge_key": "durability.fact",
+      "evidence": {
+        "strict": true,
+        "artifact_evidence_required": true,
+        "resolved": {
+          "offline_eval_pass": {
+            "held": true,
+            "ref": "d722ee3f-e1bf-4b28-934d-c1e9a0756200",
+            "reason": "recorded evaluation",
+            "level": "VALIDATED"
+          },
+          "security_eval_pass": {
+            "held": true,
+            "ref": "d722ee3f-e1bf-4b28-934d-c1e9a0756200",
+            "reason": "recorded evaluation",
+            "level": "VALIDATED"
+          },
+          "regression_pass": {
+            "held": true,
+            "ref": "877d5700-6bc5-4d28-851f-cbb32479a280",
+            "reason": "recorded verified scenario replay"
+          }
+        },
+        "unverified": [
+          "shadow_performance_acceptable",
+          "canary_performance_acceptable",
+          "rollback_plan_exists",
+          "admin_approved"
+        ],
+        "refused_unbacked": []
+      }
+    },
+    "p2_conversation_execute_status": [
+      200,
+      200
+    ],
+    "p2_conversation_execute_status_after_restart": 200
+  },
+  "P1_knowledge_injected": {
+    "learned_keys_before": {
+      "keys": [
+        "durability.fact"
+      ]
+    },
+    "learned_keys_after": {
+      "keys": [
+        "durability.fact"
+      ]
+    },
+    "gold_blocks_before": 1,
+    "gold_blocks_after": 1,
+    "memory_blocks_before": 2,
+    "memory_blocks_after": 2,
+    "preference_items_before": {
+      "preferences": [
+        {
+          "id": "d50e0b01-7370-430d-a0fb-8cac0f365cc9",
+          "key": "preferred_language",
+          "value": "ar",
+          "scope": "tenant",
+          "source": "preference",
+          "user_id": "8aa7c334-f2d9-4822-b350-fb50c8300042",
+          "confidence": 1.0,
+          "evidence_count": 1,
+          "last_seen": "2026-09-21T18:30:16.807282+00:00",
+          "sensitivity": "low"
+        }
+      ]
+    },
+    "preference_items_after": {
+      "preferences": [
+        {
+          "id": "d50e0b01-7370-430d-a0fb-8cac0f365cc9",
+          "key": "preferred_language",
+          "value": "ar",
+          "scope": "tenant",
+          "source": "preference",
+          "user_id": "8aa7c334-f2d9-4822-b350-fb50c8300042",
+          "confidence": 1.0,
+          "evidence_count": 1,
+          "last_seen": "2026-09-21T18:30:16.807282+00:00",
+          "sensitivity": "low"
+        }
+      ]
+    },
+    "custody_row_after_status": 200,
+    "custody_level_after": "GOLD"
+  },
+  "P2_conversation_continuity": {
+    "blocks_total_before": 3,
+    "blocks_total_after": 3,
+    "execute_after_status": 200,
+    "execute_after_error": null
+  },
+  "P3_audit_survivability": {
+    "total_after_login_in_boot_process": 1,
+    "total_before_kill": 2,
+    "total_after_restart": 2
+  },
+  "P4_usage_accounting": {
+    "summary_before_kill": {
+      "plan": "local-default",
+      "task_units": {
+        "limit": 1000000.0,
+        "used": 6.0,
+        "remaining": 999994.0
+      },
+      "modality_limits": {}
+    },
+    "summary_after_restart": {
+      "plan": "local-default",
+      "task_units": {
+        "limit": 1000000.0,
+        "used": 8.0,
+        "remaining": 999992.0
+      },
+      "modality_limits": {}
+    }
+  }
+}
