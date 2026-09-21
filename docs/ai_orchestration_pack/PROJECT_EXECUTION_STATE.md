@@ -725,6 +725,26 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R196_POINTER (2026-09-20) — R196 CLOSED (read-only /v1/templates surface + built-in template registry composition [AD-3])
+MAIN: e08b04f6 (PR #50 merge commit) + records-only closure PR.
+GATE: gate of record 63f7b876 PASS 3888/0/0/64 + gateway 194; post-merge e08b04f6 PASS 3888/0/0/64 + gateway 194.
+       min_passed 3872 -> 3888 (D-6). not_evaluated = 1 (D-03; operator-owned).
+OPERATOR: "APPROVE R196 with confirmation" — D1 freeze re-derive in-round, D2 CAPABILITY_IDS +1 (23 -> 24), D3 full template
+       detail, D4 tenant-authenticated reads, D5 template-mode execution resolvable.
+SHAPE CHANGE (DECLARED, ADDITIVE): served_routes_v1 44 -> 46 (+GET /v1/templates, +GET /v1/templates/{ref}); 15 frozen modules /
+       contracts identical; baseline re-derived --write in-round; --check MATCHES (evidence/r196/CONTRACT_FREEZE_RECORD_R196_UPDATE.md).
+PRODUCTION: 4 files (ceiling 4, used 4): core/contracts/agent_template.py (TemplateListEntry + TemplatesListResponse),
+       apps/api/app.py (create_app(templates=); list/detail routes behind _principal; executor consumes the SAME registry;
+       templates.listing row; app.state.strategy_executor), apps/composition/runtime.py (build_template_registry() = the ONE
+       built-in APP_FACTORY_TEMPLATE; RuntimeProfile.templates), apps/api/capabilities.py (+templates.listing).
+CLOSED: P-R191-01 read half EXECUTED; R191-C composition wiring CLOSED (/v1/execute mode=template resolves app_factory.plan).
+OPEN (recorded direction, NOT implemented): P-R192-03 template ownership/durability — workspace ownership = later direction.
+NOT_CLAIMED: write routes; user/workspace templates; App Factory code generation (AD-7); UI template picker (R197); D-03 evidence.
+NEXT (requires operator approval; nothing pre-approved): R197 proposal (UI closure: template picker + the three R195 admin action
+       forms over the existing discovery read model), then R198 (final acceptance: AD-5 topology artefact, D-03 evidence).
+```
+
+```
 R195_POINTER (2026-09-20) — R195 CLOSED (governed dev bindings + remote trust via admin lifecycle [AD-1]; Vault custody [AD-2])
 MAIN: 16048078 (PR #48 merge commit) + records-only closure PR.
 GATE: gate of record 2a636b50 PASS 3872/0/0/64 + gateway 194; post-merge 16048078 PASS 3872/0/0/64 + gateway 194.
