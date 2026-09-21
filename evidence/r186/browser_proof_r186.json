@@ -1,5 +1,5 @@
 {
-  "failed_execution_id": "6d0ceedb-613c-45e6-b9d5-428b10738085",
+  "failed_execution_id": "004b38e6-bba4-4da9-8558-90af91011ae3",
   "failed_execution_status": "failed",
   "error_frame_text": "error {\"detail\":\"action must be one of ['final', 'tool_call'], got None\",\"reason\":\"invalid_proposal\"}",
   "error_frame_scroll_width_px": 334,

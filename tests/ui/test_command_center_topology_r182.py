@@ -149,7 +149,7 @@ def test_command_center_shell_serves_under_existing_app_mount() -> None:
         async with _client(profile.app) as c:
             index = await c.get("/app/command/")
             assert index.status_code == 200
-            assert "QEVION Control Plane — Command Center" in index.text
+            assert "QEVION · Command" in index.text  # R199-A (D3)
             js = await c.get("/app/command/command.js")
             assert js.status_code == 200
             assert "NODE_STATES" in js.text
