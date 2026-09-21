@@ -1,0 +1,25 @@
+>       assert 'href="/app/"' in login.group(0), "Command sign-in lacks the Workbench link"
+E       AssertionError: Command sign-in lacks the Workbench link
+E       assert 'href="/app/"' in '<section id="login-view" class="panel login-panel" aria-labelledby="login-title">\n  <h1 id="login-title">Sign in</h1...ss="btn-primary">Sign in</button>\n  </form>\n  <p id="login-error" class="error" role="alert" hidden></p>\n</section>'
+E        +  where '<section id="login-view" class="panel login-panel" aria-labelledby="login-title">\n  <h1 id="login-title">Sign in</h1...ss="btn-primary">Sign in</button>\n  </form>\n  <p id="login-error" class="error" role="alert" hidden></p>\n</section>' = <built-in method group of re.Match object at 0x7f5502684e40>(0)
+E        +    where <built-in method group of re.Match object at 0x7f5502684e40> = <re.Match object; span=(2776, 3371), match='<section id="login-view" class="panel login-panel>.group
+
+tests/ui/test_unified_shell_r199.py:230: AssertionError
+=========================== short test summary info ============================
+FAILED tests/ui/test_unified_shell_r199.py::test_title_is_the_ruled_brand_string[workbench-html_path0]
+FAILED tests/ui/test_unified_shell_r199.py::test_title_is_the_ruled_brand_string[command-html_path1]
+FAILED tests/ui/test_unified_shell_r199.py::test_title_is_the_ruled_brand_string[admin-html_path2]
+FAILED tests/ui/test_unified_shell_r199.py::test_sign_in_heading_carries_the_brand_string[workbench-html_path0]
+FAILED tests/ui/test_unified_shell_r199.py::test_sign_in_heading_carries_the_brand_string[command-html_path1]
+FAILED tests/ui/test_unified_shell_r199.py::test_sign_in_heading_carries_the_brand_string[admin-html_path2]
+FAILED tests/ui/test_unified_shell_r199.py::test_legacy_brand_strings_left_the_titles
+FAILED tests/ui/test_unified_shell_r199.py::test_command_css_uses_the_shared_token_set
+FAILED tests/ui/test_unified_shell_r199.py::test_command_css_dropped_the_divergent_hex_values
+FAILED tests/ui/test_unified_shell_r199.py::test_shared_root_tokens_identical_between_app_and_admin
+FAILED tests/ui/test_unified_shell_r199.py::test_each_tree_links_to_the_other_two_mounts[html_path0-expected_others0]
+FAILED tests/ui/test_unified_shell_r199.py::test_each_tree_links_to_the_other_two_mounts[html_path1-expected_others1]
+FAILED tests/ui/test_unified_shell_r199.py::test_each_tree_links_to_the_other_two_mounts[html_path2-expected_others2]
+FAILED tests/ui/test_unified_shell_r199.py::test_admin_only_destinations_are_labelled_where_linked
+FAILED tests/ui/test_unified_shell_r199.py::test_workbench_renders_served_providers_in_refresh_models
+FAILED tests/ui/test_unified_shell_r199.py::test_truth_strip_element_exists_and_is_filled_from_the_models_response
+FAILED tests/ui/test_unified_shell_r199.py::test_command_sign_in_names_the_admin_requirement_and_links_the_workbench
