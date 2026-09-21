@@ -183,7 +183,8 @@ def test_execution_strategy_is_sent_only_when_a_ref_is_chosen() -> None:
 def test_template_read_is_not_fired_at_module_load() -> None:
     code = _code()
     top = _top_level_statements(code)
-    assert "populateTemplateSelect(" not in top, "template read must not run at module load"
+    calls_at_top = re.findall(r"(?<!function )\bpopulateTemplateSelect\(", top)
+    assert calls_at_top == [], "template read must not run at module load"
     assert "populateTemplateSelect(" in _function_body(code, "enterMain"), (
         "template read must run once the session is established (enterMain), F-R180-01 pattern"
     )

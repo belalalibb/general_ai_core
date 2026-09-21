@@ -170,8 +170,8 @@
       "ui/app/index.html",
       "ui/app/styles.css"
     ],
-    "v1_count_ceiling_app_js": null,
-    "v1_count_ceiling_rule": "null until the first GREEN of R197 (guard fails closed), then = raw /v1/ occurrence count of ui/app/app.js MEASURED at that GREEN; set ONCE, moves DOWN only (R182 D-2 pattern). Pre-R197 measured count at b8f2f706: 21; R197 adds exactly ONE served literal (/v1/templates) => expected 22.",
+    "v1_count_ceiling_app_js": 22,
+    "v1_count_ceiling_rule": "22 = raw /v1/ occurrence count of ui/app/app.js MEASURED at the first GREEN of R197 (2026-09-21): 21 pre-round literals + exactly ONE served literal (/v1/templates in populateTemplateSelect); set ONCE, moves DOWN only (R182 D-2 pattern). History: null (declared before code at addec78d; guard failed closed — evidence/r197/red.txt)",
     "fetch_count_ceiling_app_js": 4,
     "fetch_count_rule": "4 = MEASURED at b8f2f706 BEFORE R197: api() + two DELETE 204 no-body calls (workspaces, projects) + one SSE reader (executions/{id}/events); the inherited 'exactly one fetch( inside api()' rule is therefore NOT claimed for this tree — declared honestly as measured; moves DOWN only; R197 adds NO fetch( call",
     "exception_count_ceiling": 0,

@@ -129,6 +129,7 @@ function enterMain(who) {
   $("who").textContent = who;
   $("logout-button").hidden = state.profile !== "durable" || !state.token;
   refreshWorkspaces();
+  populateTemplateSelect();
 }
 
 /* --- auth ----------------------------------------------------------------------- */
@@ -305,6 +306,30 @@ function confirmModal(title, message, okLabel) {
       body.appendChild(p);
     },
   });
+}
+
+/* --- strategy templates (R197, AD-3 read seam) -------------------------------------- */
+
+async function populateTemplateSelect() {
+  /* The ONLY template source is the served templates read model (R196 AD-3:
+     ACTIVE SYSTEM templates, ref-ordered by the server) — the one api() call below. Runs once the
+     session is established (enterMain), never at module load. Idempotent: a
+     re-read replaces the offered set; a refused read leaves NO stale option
+     behind and renders the platform's error verbatim — the UI never guesses. */
+  const select = $("ask-template");
+  clearError($("ask-error"));
+  const result = await api("/v1/templates");
+  while (select.options.length > 1) select.remove(1);
+  if (!result.ok) {
+    renderError($("ask-error"), result.body);
+    return;
+  }
+  for (const row of result.body.templates || []) {
+    const opt = document.createElement("option");
+    opt.value = row.ref;
+    opt.textContent = `${row.name} \u00b7 ${row.ref} \u00b7 ${row.stage_count} stage${row.stage_count === 1 ? "" : "s"}`;
+    select.appendChild(opt);
+  }
 }
 
 /* --- workspaces & projects (GAP-1 API — real state only) ---------------------------- */
@@ -604,6 +629,10 @@ async function submitAsk() {
     const body = { ask: $("ask-input").value };
     const projectId = $("ask-project").value;
     if (projectId) body.project_id = projectId;
+    /* Template mode (R197): the chosen ref is what the executor resolves
+       (ExecutionStrategySpec mode="template"); no choice ⇒ body unchanged. */
+    const templateRef = $("ask-template").value;
+    if (templateRef) body.execution_strategy = { mode: "template", template_id: templateRef };
     if (isAsync) body.execution_policy = { async: true };
     const result = await api("/v1/execute", { method: "POST", body });
     if (!result.ok) return renderError($("ask-error"), result.body);
