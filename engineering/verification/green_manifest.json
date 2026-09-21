@@ -842,6 +842,28 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r198": {
+      "ceiling": 0,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R198-A AD-5 topology artefact (operator D2): docs/architecture/ADR-0014_V1_PRODUCTION_TOPOLOGY.md — durable single-server, ONE API process (API + outbox relay + exec worker in one lifespan), external PostgreSQL (postgresql+asyncpg; alembic upgrade head before start), TLS at an external ingress (HSTS=1 only then), explicit exclusions with recorded reasons (P-R188-04 process-local signals; in-process tickets/grants; no distributed worker; no token streaming). Guarded by tests/verification/test_ad5_topology_artefact_r198.py (cites OPERATIONS §1 steps; names only env keys that exist in apps/composition/runtime.py).",
+        "R198-B live durable re-measure on current main (operator D3): tests_live/r179/run_local_postgres.sh with PostgreSQL 17.11 + pgvector 0.8.0 rebuilt into .venv/pg_root; real alembic 0001->0022 on a fresh cluster; SIGKILL durability P1-P4; tests_live/r178 regression. Evidence-only; if the environment cannot support it => NOT EVALUATED with closed-set reason 'environment unavailable' (count 1 -> 2, ceiling 2 holds).",
+        "R198-C V1 acceptance register (operator D1/D6): docs/ai_orchestration_pack/V1_ACCEPTANCE_REGISTER.md — one row per AD-1..AD-7, D-03, N-5, N-9, R189 §6.1-6.10, P-R191-01 write half, P-R192-03, not_evaluated #1, UI-unconsumed routes (DECLARED-UNCONSUMED). Status closed set: ACCEPTED-AS-MEASURED | DEFERRED-BY-RULING | OPERATOR-OWNED-OPEN | NOT-EVALUATED | DECLARED-UNCONSUMED. Guarded by tests/verification/test_v1_acceptance_register_r198.py (every §6 deferred id maps; every decision id present; 'Production Ready' NOT claimed while D-03 row is OPERATOR-OWNED-OPEN).",
+        "R198-D D-03 evidence slot (operator D4, operator-owned): evidence/r198/D03_CREDENTIAL_ROTATION_AND_PURGE.md — measured current state (leak commit 521d8850; redaction 28989b04 tree-only; secret-scanning alert #1 Groq OPEN publicly_leaked; alert #2 PAT dismissed used_in_tests — NOT a rotation proof; repo PUBLIC; legacy branches carry the blobs) + the operator evidence checklist. History rewrite is NOT performed by engineering unless the operator-controlled procedure/evidence is available; rewritten SHAs invalidate prior commit references (acknowledged in the record).",
+        "R198-E N-9 disposition (operator D5, bound to D4): the five legacy branches carry the leaked blobs => they are removed ONLY as part of the approved purge procedure after the historical record is preserved (archive bundle/tag per the procedure); until then recorded as OPERATOR-OWNED-OPEN. No publicly reachable ref to the leaked commits may remain after the purge."
+      ],
+      "log": [],
+      "note": "Ceiling 0 declared in R198-DEC-01 BEFORE any commit (operator: 'APPROVE R198' with D1 YES accept v1 as measured, D-03 explicitly OPEN, no Production Ready claim while unresolved; D2 YES ADR-0014; D3 YES live PostgreSQL re-measure or honest NOT EVALUATED; D4 YES history-purge path but NO rewrite without the operator-controlled procedure/evidence; D5 remove leaked-blob legacy branches only via the approved purge procedure; D6 YES DECLARED-UNCONSUMED, no extra UI round). Records + evidence round: core/ apps/ infrastructure/ FROZEN; all three UI trees FROZEN (73 / 12 / 22); contracts + freeze baseline FROZEN (46 routes; --check must MATCH). New tests only under tests/verification/ (static guards over the two new documents).",
+      "ceiling_history": [
+        "declared 0 at the R198 opening (2026-09-21, R198-DEC-01) from post-R197 main fbdd1f0b."
+      ]
+    },
     "round_r197": {
       "ceiling": 0,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
