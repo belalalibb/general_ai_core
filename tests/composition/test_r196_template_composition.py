@@ -67,4 +67,8 @@ class TestBuiltInRegistryComposed:
             ExecutionStrategySpec(mode="template", template_id="app_factory.plan")
         )
         assert resolved.mode == "custom"
-        assert [s.key for s in resolved.stages] == ["inventory-summary", "architecture-plan", "review"]
+        assert [s.key for s in resolved.stages] == [
+            "inventory-summary",
+            "architecture-plan",
+            "review",
+        ]

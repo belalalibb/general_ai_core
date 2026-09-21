@@ -117,6 +117,7 @@ from core.agent import (
     MAX_REASONING_MAX_TOKENS,
     MIN_REASONING_MAX_TOKENS,
 )
+from core.agent.app_factory import APP_FACTORY_TEMPLATE
 from core.audit.memory import InMemoryAuditLog
 from core.audit.ports import AuditLogPort
 from core.context.composer import ContextComposer
@@ -153,6 +154,7 @@ from core.evaluation.memory import InMemoryEvaluationStore
 from core.evaluation.ports import EvaluationStorePort
 from core.events import WEBHOOK_STREAM, WebhookDeliveryHandler, WebhookSender
 from core.execution.service import ExecutionService
+from core.execution.templates import TemplateRegistry
 from core.identity.ports import IdentityServicePort
 from core.identity.service import InMemoryIdentityService, Session
 from core.learning.lifecycle import LearningCustodyPort
@@ -168,8 +170,6 @@ from core.routing.router import SimpleScoringRouter
 from core.runtime.memory import InMemoryQueue, InMemoryRateLimiter
 from core.runtime.outbox import InMemoryOutbox, OutboxPort, OutboxRecord, OutboxRelay
 from core.runtime.worker import IdempotencyPort, InMemoryIdempotencyStore, Worker
-from core.agent.app_factory import APP_FACTORY_TEMPLATE
-from core.execution.templates import TemplateRegistry
 from core.secrets.memory import InMemorySecretManager
 from core.secrets.ports import SecretManagerPort
 from core.skills.importing import SkillImportService

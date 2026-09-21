@@ -173,6 +173,11 @@ from apps.api.workspaces import (
 )
 from core.context.composer import ContextComposer
 from core.context.errors import ContextBudgetExceeded
+from core.contracts.agent_template import (
+    TemplateListEntry,
+    TemplateOrigin,
+    TemplatesListResponse,
+)
 from core.contracts.audit import AuditEvent, AuditEventType
 from core.contracts.base import JsonObject, utc_now
 from core.contracts.context import ComposedContext, ContextComposeRequest
@@ -208,11 +213,6 @@ from core.contracts.provider import ProviderError, ProviderOperation
 from core.contracts.role_profile import RoleProfile
 from core.contracts.roles import Role
 from core.contracts.routing import RoutingDecision, RoutingRequest, TaskAnalysis
-from core.contracts.agent_template import (
-    TemplateListEntry,
-    TemplateOrigin,
-    TemplatesListResponse,
-)
 from core.contracts.skills import Skill, SkillListEntry, SkillsListResponse
 from core.contracts.usage import UsageLedger
 from core.contracts.webhooks import (

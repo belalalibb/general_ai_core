@@ -81,7 +81,7 @@ def test_closed_set_is_exactly_twenty_three_and_contains_the_new_ids() -> None:
     # The row is DERIVED from the same seam variables that mount the routes
     # (admin + memory + learning_custody + admin.audit) — never a documentation claim.
     assert "learning.custody_governance" in CAPABILITY_IDS
-    assert len(CAPABILITY_IDS) == 23
+    assert len(CAPABILITY_IDS) == 24  # R196: + templates.listing (AD-3, operator D2)
 
 
 def test_minimal_admin_composition_states() -> None:

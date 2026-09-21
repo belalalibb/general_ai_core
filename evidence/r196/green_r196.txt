@@ -1,0 +1,3 @@
+................                                                         [100%]
+
+16 passed (exit 0) — tests/contract/test_agent_template_read_models_r196.py (3), tests/api/test_r196_templates_routes.py (10), tests/composition/test_r196_template_composition.py (3)

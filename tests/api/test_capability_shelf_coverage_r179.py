@@ -228,6 +228,7 @@ def test_shipped_runtime_every_mounted_family_has_a_shelf_row() -> None:
         "/v1/executions": "execute.sync",
         "/v1/models": "models.listing",
         "/v1/skills": "skills.listing",
+        "/v1/templates": "templates.listing",  # R196 (AD-3)
         "/v1/usage": "usage.reporting",
         "/v1/webhooks": "webhooks.registration",
         "/v1/workspaces": "workspaces.projects",
