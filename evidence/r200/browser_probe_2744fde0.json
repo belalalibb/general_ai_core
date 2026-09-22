@@ -1,0 +1,197 @@
+{
+ "tenant": {
+  "requests": [
+   "/healthz",
+   "/v1/auth/login",
+   "/v1/auth/session",
+   "/v1/executions"
+  ],
+  "tenant_view_hidden": false,
+  "topology_hidden": true,
+  "execution_panel_hidden": true,
+  "tenant_links": [
+   [
+    "/app/#view=models",
+    "Workbench · models"
+   ],
+   [
+    "/app/#view=home",
+    "Workbench · home"
+   ],
+   [
+    "/app/#view=usage",
+    "Workbench · usage"
+   ],
+   [
+    "/app/#view=runs",
+    "Workbench · runs"
+   ]
+  ],
+  "tenant_admin_node": "Admin · control plane — admin session.is_admin = false — the capability topology, system overview and agent are admin reads and are not requested here.",
+  "locked_disabled": "true"
+ },
+ "admin": {
+  "requests": [
+   "/healthz",
+   "/v1/admin/capabilities",
+   "/v1/admin/system",
+   "/v1/admin/usage",
+   "/v1/auth/login",
+   "/v1/auth/session",
+   "/v1/executions"
+  ],
+  "tenant_view_hidden": true,
+  "topology_hidden": false,
+  "execution_panel_hidden": false,
+  "all_nodes": [
+   [
+    "admin.control_plane",
+    "available",
+    "Open Admin · overview/v1/admin",
+    "/admin/#surface=overview"
+   ],
+   [
+    "agent.runtime",
+    "available",
+    "Open Admin · overview/v1/agent-tools",
+    "/admin/#surface=overview"
+   ],
+   [
+    "auth.sessions",
+    "available",
+    "Open Workbench · home/v1/auth",
+    "/app/#view=home"
+   ],
+   [
+    "context.composition",
+    "available",
+    "no surface owns this route (evidence names a seam, not a route)",
+    null
+   ],
+   [
+    "conversations.persistence",
+    "available",
+    "no surface owns this route (evidence names a seam, not a route)",
+    null
+   ],
+   [
+    "dev.publish_modes",
+    "inert",
+    "Admin · engineering — not linked: node is inert",
+    null
+   ],
+   [
+    "evaluation.records",
+    "available",
+    "Open Admin · intelligence/v1/admin/evaluations",
+    "/admin/#surface=intelligence"
+   ],
+   [
+    "execute.async",
+    "available",
+    "no surface owns this route (evidence names a seam, not a route)",
+    null
+   ],
+   [
+    "execute.sync",
+    "available",
+    "Open Workbench · home/v1/execute",
+    "/app/#view=home"
+   ],
+   [
+    "execute.token_streaming",
+    "unavailable",
+    "no surface owns this route (evidence names a seam, not a route)",
+    null
+   ],
+   [
+    "executions.progress_sse",
+    "available",
+    "Open Workbench · runs/v1/executions",
+    "/app/#view=runs"
+   ],
+   [
+    "health.liveness",
+    "available",
+    "Open Workbench · home/healthz",
+    "/app/#view=home"
+   ],
+   [
+    "learning.custody_governance",
+    "inert",
+    "Admin · learning — not linked: node is inert",
+    null
+   ],
+   [
+    "learning.lifecycle",
+    "available",
+    "Open Admin · learning/v1/admin/learning",
+    "/admin/#surface=learning"
+   ],
+   [
+    "models.listing",
+    "available",
+    "Open Workbench · models/v1/models",
+    "/app/#view=models"
+   ],
+   [
+    "rate_limits.execute",
+    "inert",
+    "no surface owns this route (evidence names a seam, not a route)",
+    null
+   ],
+   [
+    "skills.import",
+    "available",
+    "Open Admin · skills/v1/admin/skills",
+    "/admin/#surface=skills"
+   ],
+   [
+    "skills.listing",
+    "available",
+    "Open Admin · skills/v1/skills",
+    "/admin/#surface=skills"
+   ],
+   [
+    "sourcechange.workflow",
+    "available",
+    "Open Admin · source/v1/admin/source-changes",
+    "/admin/#surface=source"
+   ],
+   [
+    "templates.listing",
+    "available",
+    "Open Workbench · home/v1/templates",
+    "/app/#view=home"
+   ],
+   [
+    "usage.reporting",
+    "available",
+    "Open Workbench · usage/v1/usage",
+    "/app/#view=usage"
+   ],
+   [
+    "webhooks.delivery_staging",
+    "available",
+    "no surface owns this route (evidence names a seam, not a route)",
+    null
+   ],
+   [
+    "webhooks.registration",
+    "available",
+    "Open Admin · system/v1/webhooks",
+    "/admin/#surface=system"
+   ],
+   [
+    "workspaces.projects",
+    "available",
+    "Open Workbench · home/v1/workspaces",
+    "/app/#view=home"
+   ]
+  ]
+ },
+ "app_deeplink_models_visible": true,
+ "app_deeplink_active_nav": "models",
+ "admin_deeplink_active_rail": "catalog",
+ "request_sets": "OK"
+}

@@ -1,0 +1,68 @@
+"""R200 real-browser proof (stored as .py.txt: evidence, not a test).
+Asserts the REQUEST SET per tier (tenant: no /v1/admin/*, no /v1/agent/*; admin: R185 set),
+classifies all 24 node affordances, and exercises both boot-once hash receivers."""
+import contextlib, json, os, re, socket, subprocess, sys, time, urllib.request
+from playwright.sync_api import sync_playwright
+ROOT="/home/user/webapp"; s=socket.socket(); s.bind(("127.0.0.1",0)); port=s.getsockname()[1]; s.close()
+env=dict(os.environ, HOST="127.0.0.1", PORT=str(port), ADMIN_EMAILS="admin-r200@example.test", LOG_LEVEL="warning", PYTHONUNBUFFERED="1")
+for k in list(env):
+    if k in ("DATABASE_URL","REDIS_URL") or k.startswith(("GROQ_API_KEY","GSK_API_KEY","GW_GROQ")): env.pop(k)
+log=open("/tmp/probe200_server.txt","w")
+proc=subprocess.Popen([sys.executable,"-m","apps.main"],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
+base=f"http://127.0.0.1:{port}"
+def http(m,u,b=None):
+    req=urllib.request.Request(u,method=m,data=json.dumps(b).encode() if b is not None else None,headers={"Content-Type":"application/json"})
+    try:
+        with urllib.request.urlopen(req,timeout=5) as r: return r.status
+    except urllib.error.HTTPError as e: return e.code
+for _ in range(60):
+    with contextlib.suppress(Exception):
+        if http("GET",f"{base}/healthz")==200: break
+    time.sleep(0.5)
+PW="correct horse battery staple"
+def mk(email):
+    http("POST",f"{base}/v1/auth/register",{"email":email,"password":PW}); log.flush()
+    tok=re.findall(r'"token": "([^"]+)"',open("/tmp/probe200_server.txt").read())[-1]
+    http("POST",f"{base}/v1/auth/verify",{"token":tok})
+HREF="(()=>{const a=document.querySelector('#detail-surface a'); return a?a.getAttribute('href'):null})()"
+out={}
+try:
+    mk("admin-r200@example.test"); mk("tenant-r200@example.test")
+    with sync_playwright() as p:
+        b=p.chromium.launch()
+        def session(email, tag):
+            ctx=b.new_context(viewport={"width":1280,"height":900}); pg=ctx.new_page(); reqs=[]
+            pg.on("request", lambda r: reqs.append(re.sub(r"^https?://[^/]+","",r.url)) if "/v1/" in r.url or "/healthz" in r.url else None)
+            pg.goto(f"{base}/app/command/"); pg.fill("#login-email",email); pg.fill("#login-password",PW); pg.click("#login-form button[type=submit]")
+            pg.wait_for_selector("#center-view:not([hidden])",timeout=10000); pg.wait_for_timeout(800)
+            o={"requests":sorted(set(reqs))}
+            o["tenant_view_hidden"]=pg.eval_on_selector("#tenant-view","e=>e.hidden")
+            o["topology_hidden"]=pg.eval_on_selector("#topology-view","e=>e.hidden")
+            o["execution_panel_hidden"]=pg.eval_on_selector("#execution-panel","e=>e.hidden")
+            if not o["tenant_view_hidden"]:
+                o["tenant_links"]=pg.eval_on_selector_all("#tenant-surfaces a","els=>els.map(e=>[e.getAttribute('href'),e.textContent])")
+                o["tenant_admin_node"]=pg.inner_text("#tenant-admin-node")
+                o["locked_disabled"]=pg.eval_on_selector("#tenant-admin-node a","e=>e.getAttribute('aria-disabled')")
+            else:
+                o["all_nodes"]=[]
+                for i in range(pg.locator("#topology-list button").count()):
+                    pg.locator("#topology-list button").nth(i).click(); pg.wait_for_timeout(30)
+                    o["all_nodes"].append([pg.inner_text("#detail-id"), pg.inner_text("#detail-state"), pg.inner_text("#detail-surface"), pg.evaluate(HREF)])
+            pg.screenshot(path=f"{ROOT}/evidence/r200/command_{tag}.png"); ctx.close(); return o
+        out["tenant"]=session("tenant-r200@example.test","tenant")
+        out["admin"]=session("admin-r200@example.test","admin")
+        ctx=b.new_context(); pg=ctx.new_page()
+        pg.goto(f"{base}/app/#view=models"); pg.fill("#login-email","tenant-r200@example.test"); pg.fill("#login-password",PW); pg.click("#login-form button[type=submit]")
+        pg.wait_for_selector("#main-view:not([hidden])",timeout=10000); pg.wait_for_timeout(500)
+        out["app_deeplink_models_visible"]=not pg.eval_on_selector("#view-models","e=>e.hidden")
+        out["app_deeplink_active_nav"]=pg.eval_on_selector(".nav-item.active","e=>e.dataset.view")
+        pg.goto(f"{base}/admin/#surface=catalog"); pg.fill("#login-email","admin-r200@example.test"); pg.fill("#login-password",PW); pg.click("#login-form button[type=submit]")
+        pg.wait_for_selector("#console-view:not([hidden])",timeout=10000); pg.wait_for_timeout(800)
+        out["admin_deeplink_active_rail"]=pg.eval_on_selector(".rail-item.active","e=>e.dataset.surface")
+        pg.screenshot(path=f"{ROOT}/evidence/r200/admin_deeplink_catalog.png"); b.close()
+finally:
+    proc.terminate()
+assert not any(u.startswith(("/v1/admin/","/v1/agent")) for u in out["tenant"]["requests"]), "tenant leaked an admin/agent request"
+assert set(out["admin"]["requests"])=={"/healthz","/v1/admin/capabilities","/v1/admin/system","/v1/admin/usage","/v1/auth/login","/v1/auth/session","/v1/executions"}
+out["request_sets"]="OK"
+print(json.dumps(out,indent=1,ensure_ascii=False))
