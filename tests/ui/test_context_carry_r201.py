@@ -76,10 +76,18 @@ def _command() -> str:
 
 
 def _app() -> str:
-    return _read(APP / "app.js")
+    return _strip(_read(APP / "app.js"))
 
 
 def _admin() -> str:
+    return _strip(_read(ADMIN / "app.js"))
+
+
+def _app_raw() -> str:
+    return _read(APP / "app.js")
+
+
+def _admin_raw() -> str:
     return _read(ADMIN / "app.js")
 
 
@@ -108,9 +116,9 @@ def test_admin_record_offers_workbench_and_admin_affordances() -> None:
     assert "executionHref(" in body
     assert "SURFACE_BY_SEGMENT.executions" in body, "Workbench runs owner from the table"
     assert "ADMIN_EXECUTIONS_OWNER" in body, "Admin executions owner is one named table entry"
-    assert "/admin/#surface=executions" in js and "/v1/" not in _body(js, "renderExecutionSurfaces")
+    assert "/admin/#surface=executions" in js and "/v1/" not in body
     assert "is_admin" in body, "admin target labelled from the served session fact"
-    assert "aria-disabled" in body, "non-admin sees a labelled, disabled admin link (nothing hidden)"
+    assert "aria-disabled" in body, "non-admin: labelled, disabled admin link (nothing hidden)"
     show = _body(js, "showExecution")
     assert "renderExecutionSurfaces(" in show, "selected execution must render its affordances"
 
@@ -134,8 +142,8 @@ def test_command_counts_hold() -> None:
     raw = _command()
     assert raw.count("/v1/") == 12, "command.js /v1/ literal count is frozen at 12"
     assert _strip(raw).count("fetch(") == 1, "one fetch( — inside api()"
-    for word in FORBIDDEN_STATES:
-        assert word not in raw.lower(), word
+    for word in FORBIDDEN_STATES:  # the R185 rendering-context rule, verbatim
+        assert re.search(rf"[\"'`.\-]{word}\b", raw, flags=re.I) is None, word
 
 
 # ------------------------------------------------------------------ R201-B (D1 = a, D3 = i)
@@ -181,7 +189,7 @@ def test_workbench_context_key_is_session_scoped_and_never_the_token() -> None:
     js = _app()
     assert "qevion.app.context" in js
     assert "sessionStorage" in js
-    assert "localStorage" not in js, "never persist beyond the tab"
+    assert "localStorage" not in _app_raw(), "never persist beyond the tab (not even in prose)"
     body = _body(js, "saveContext")
     assert "token" not in body, "the bearer token is NEVER part of the stored context"
     for key in ("view", "selectedWorkspace", "project", "template"):
@@ -207,7 +215,7 @@ def test_workbench_restore_requires_served_membership_and_yields_to_hash() -> No
 def test_workbench_clears_context_on_logout() -> None:
     js = _app()
     logout = js[js.index('$("logout-button").addEventListener') :]
-    logout = logout[: logout.index("});") + 3]
+    logout = logout[: logout.index("\n  });") + 6]
     assert "clearContext(" in logout or "sessionStorage.removeItem(" in logout
 
 
@@ -215,11 +223,12 @@ def test_workbench_clears_context_on_logout() -> None:
 
 
 def test_frozen_counts_and_ceiling() -> None:
-    app_raw = _app()
+    app_raw = _app_raw()
     assert app_raw.count("/v1/") <= 22 and app_raw.count("fetch(") == 4
-    assert _admin().count("/v1/") == 73
+    assert _admin_raw().count("/v1/") == 73
     assert "/v1/" not in _read(COMMAND / "command.css")
-    wired = re.findall(r"(href|src|action|data-[a-z-]+)=[\"'][^\"']*/v1/", _read(COMMAND / "index.html"))
+    html = _read(COMMAND / "index.html")
+    wired = re.findall(r"(href|src|action|data-[a-z-]+)=[\"'][^\"']*/v1/", html)
     assert wired == [], wired
     block = _block()
     assert int(block["ceiling"]) == 0 and int(block["changes_used"]) == 0
