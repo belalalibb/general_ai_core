@@ -725,6 +725,18 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R201_POINTER (2026-09-22) — R201 OPEN (Context-carrying execution; UI-only layer A/B; ceiling 0)
+BASE: main daa88afd. BRANCH: genspark_ai_developer_r201.
+OPERATOR: "APPROVE R201 with D1-D7 confirmed" D1 = a (carry execution id in the hash to the EXISTING openRun/openExecution),
+       D2 = i (Workbench self-restores non-secret selection via sessionStorage 'qevion.app.context'; hash wins; never the token),
+       D3 = i (&execution= only; no receiver without an emitter), D4/D5/D6/D7 = defer (token custody; project filter = architectural; model selection; Command project_id).
+SCOPE: ui/app/command/{command.js,index.html,command.css}, ui/app/app.js, ui/admin/app.js; tests/ui/test_context_carry_r201.py (RED first); evidence/r201/*; records.
+FROZEN: core/ apps/ infrastructure/ (0); contracts + freeze 46; all /v1/admin/* + /v1/agent/* gates; register section C; CAPABILITY_IDS.
+COUNTS: command.js 12 / one fetch; ui/app/app.js <= 22 / 4; ui/admin/app.js 73 — HOLD as ceilings.
+NEXT: RED -> A/B/C -> GREEN + browser proof -> gate of record -> PR (merge commit) -> post-merge -> closure PR -> STOP.
+```
+
+```
 R200_POINTER (2026-09-22) — R200 CLOSED (Command capability -> surface routing + tenant centre; UI-only layer A/B; ceiling 0 used 0)
 MAIN: ebe5e549 (PR #58 merge commit) + records-only closure PR.
 DELIVERED: surfaceForEvidence() (evidence-route prefix -> {tree,hash,admin}; no id literals); node affordance link / admin-locked / not-linked / no-surface (nothing hidden);

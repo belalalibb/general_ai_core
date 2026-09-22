@@ -842,6 +842,27 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r201": {
+        "ceiling": 0,
+        "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+        "counts_production_code_under": [
+            "core/",
+            "apps/",
+            "infrastructure/"
+        ],
+        "changes_used": 0,
+        "items": [
+            "R201-A (operator D1 = a, D3 = i) ui/app/command/{command.js,index.html,command.css}: executionHref(owner, id) builds '<owner.href>&execution=<uuid>' from the EXISTING SURFACE_BY_SEGMENT entries (no /v1/ literal; command.js stays 12 + one fetch()); admin tier renders 'Open Workbench . runs' / 'Open Admin . executions' affordances for the selected execution under the R200 permission rule (session.is_admin labels, server 403 decides); tenant tier lists the ALREADY-FETCHED state.executions rows as execution-carrying links (no new request).",
+            "R201-B (operator D1 = a, D3 = i) boot-once receivers accept an optional '&execution=<uuid>': ui/app/app.js applyDeepLink -> showView(view) then openRun(id) iff view == runs; ui/admin/app.js applyDeepLink -> rail click then openExecution(id) iff surface == executions. Anchored regex: malformed hash is ignored whole; no hashchange listener, no timer, no new read; the server's own 404/422 is rendered verbatim (no client tenancy logic). No receiver parameter without an emitter (no project=/template= params).",
+            "R201-C (operator D2 = i) ui/app/app.js: Workbench self-restores its NON-SECRET selection across the round trip via sessionStorage key 'qevion.app.context' = {view, selectedWorkspace, project, template}; written on selectWorkspace / #ask-project / #ask-template change / showView; read in enterMain AFTER refreshWorkspaces() and populateTemplateSelect() resolve; applied only when the option exists in the served list; explicit hash wins over the stored view; cleared on logout; never the token; never localStorage.",
+            "DEFERRED by operator ruling: D4 token custody across trees (memory -> re-login stays; security posture round); D5 project filter on GET /v1/executions / project on the execution record (architectural: contract + schema + store + repos + route); D6 model/provider selection (no UI supports a selection; model_policy unused); D7 Command converse-execute attaching project_id (Command holds no project; would add /v1/ literals)."
+        ],
+        "log": [],
+        "note": "Ceiling 0 declared in R201-DEC-01 BEFORE any commit (operator: 'APPROVE R201 with D1–D7 confirmed (recommended: D1=a, D2=i, D3=i, D4=defer, D5=defer, D6=defer, D7=defer)'). UI-only round (layer A/B). Reuses the existing hash mechanism (R200), openRun/openExecution, SURFACE_BY_SEGMENT, the session read and served rows. FROZEN: core/ apps/ infrastructure/ (0 files); contracts + freeze baseline (46); every /v1/admin/* and /v1/agent/* gate; command.js /v1/ 12 + one fetch(; ui/app/app.js <= 22 / 4; ui/admin/app.js 73; register section C; CAPABILITY_IDS.",
+        "ceiling_history": [
+            "declared 0 at the R201 opening (2026-09-22, R201-DEC-01) from post-R200 main daa88afd."
+        ]
+    },
     "round_r200": {
           "ceiling": 0,
           "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
