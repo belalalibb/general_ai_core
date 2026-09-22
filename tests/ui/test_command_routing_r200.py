@@ -92,8 +92,11 @@ def test_routing_is_derived_from_evidence_route_prefix() -> None:
     assert "function surfaceForEvidence(" in js, "no evidence-derived routing function"
     body = _body(js, "surfaceForEvidence")
     assert "evidence" in body
-    # the table keys are ROUTE prefixes (served facts), never capability ids
-    assert re.search(r"[\"'`]/v1/", body), "surface table is not keyed by route prefixes"
+    # the route is PARSED out of the served evidence with an escaped regex (\/v1\/...),
+    # never spelled as a quoted "/v1/" literal (the 12-literal ceiling is frozen);
+    # the table is keyed by the parsed first route segment (served facts, never ids)
+    assert re.search(r"\\/v1\\/", body), "evidence route is not parsed by regex"
+    assert not re.search(r"[\"'`]/v1/", body), "a quoted /v1/ literal would breach 12"
 
 
 def test_no_capability_id_literal_anywhere_in_command_js() -> None:
