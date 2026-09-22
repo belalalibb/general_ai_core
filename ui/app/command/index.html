@@ -80,6 +80,8 @@
     <p class="muted small">Every link below is a served QEVION surface you can open with this session. Admin-only surfaces stay visible and are marked; the server decides access.</p>
     <ul id="tenant-surfaces" class="surface-list" aria-label="Surfaces available to this session"></ul>
     <p id="tenant-executions" class="muted small"></p>
+    <!-- R201-A: served execution rows, each carrying its id to the Workbench runs view. -->
+    <ul id="tenant-execution-list" class="surface-list execution-list" aria-label="Executions in this tenant (open in Workbench)"></ul>
     <p id="tenant-admin-node" class="tenant-admin-node"></p>
   </section>
 
@@ -217,6 +219,8 @@
     <!-- Execution graph (row 8): trace.stages[] in recorded order. -->
     <div id="execution-graph" class="exec-graph" aria-label="Execution stages (from the recorded trace)"></div>
     <p id="execution-record" class="muted small" hidden></p>
+    <!-- R201-A: the selected execution, carried by id into the Workbench / Admin record views. -->
+    <p id="execution-surfaces" class="execution-surfaces" aria-label="Open this execution in another surface"></p>
 
     <!-- Live connections (row 9): SSE frames as received (fetch-read), five types only. -->
     <ol id="stream-log" class="stream-log" aria-label="Progress events (as emitted)"></ol>
