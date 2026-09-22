@@ -155,8 +155,8 @@ function applyDeepLink() {
 }
 
 /* --- R201-C (operator D2 = i): tab-scoped, NON-SECRET selection memory ------------------
-   Key holds {view, selectedWorkspace, project, template} — never the token, never in
-   localStorage (R187 rule). Written when the selection changes; read once in enterMain after
+   Key holds {view, selectedWorkspace, project, template} — never the token; tab-scoped
+   storage only, never a persistent store (R187 rule). Written when the selection changes; read once in enterMain after
    the served lists resolved; applied only when the server still offers the value; an explicit
    hash (#view=…) wins over the stored view; forgotten on logout. */
 const CONTEXT_KEY = "qevion.app.context";
