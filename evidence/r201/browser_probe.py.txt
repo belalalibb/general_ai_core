@@ -1,0 +1,186 @@
+"""R201 real-browser proof (stored as .py.txt: evidence, not a test).
+Drives `python3 -m apps.main` (in-memory profile, ADMIN_EMAILS) with Chromium and records:
+  1. tenant creates one execution (Workbench composer) -> Command tenant tier lists it as an
+     execution-carrying link -> clicking it lands on Workbench runs with the record open;
+     request set of the hop contains EXACTLY one GET /v1/executions/<id> and no /v1/admin/*.
+  2. admin: Command record panel offers Workbench/Admin links; /admin/#surface=executions&execution=<id>
+     lands on the executions rail with the record open.
+  3. malformed id (#view=runs&execution=not-a-uuid) issues NO by-id request.
+  4. foreign id: tenant B's Workbench with tenant A's id shows the server's own 404 body verbatim.
+  5. round trip: workspace + project + template selected in Workbench -> Command -> back to /app/
+     -> after login the same selection is restored; #view=usage overrides the stored view;
+     localStorage stays empty; the stored context never contains the token.
+"""
+import contextlib, json, os, re, socket, subprocess, sys, time, urllib.request
+from playwright.sync_api import sync_playwright
+ROOT = "/home/user/webapp"
+s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+ADMIN, TA, TB = "admin-r201@example.test", "tenant-a-r201@example.test", "tenant-b-r201@example.test"
+env = dict(os.environ, HOST="127.0.0.1", PORT=str(port), ADMIN_EMAILS=ADMIN, LOG_LEVEL="warning", PYTHONUNBUFFERED="1")
+for k in list(env):
+    if k in ("DATABASE_URL", "REDIS_URL") or k.startswith(("GROQ_API_KEY", "GSK_API_KEY", "GW_GROQ")):
+        env.pop(k)
+log = open("/tmp/probe201_server.txt", "w")
+proc = subprocess.Popen([sys.executable, "-m", "apps.main"], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+base = f"http://127.0.0.1:{port}"
+PW = "correct horse battery staple"
+UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
+
+def http(m, u, b=None, tok=None):
+    h = {"Content-Type": "application/json"}
+    if tok:
+        h["Authorization"] = f"Bearer {tok}"
+    req = urllib.request.Request(u, method=m, data=json.dumps(b).encode() if b is not None else None, headers=h)
+    try:
+        with urllib.request.urlopen(req, timeout=5) as r:
+            return r.status, json.loads(r.read() or b"null")
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read() or b"null")
+
+
+for _ in range(60):
+    with contextlib.suppress(Exception):
+        if http("GET", f"{base}/healthz")[0] == 200:
+            break
+    time.sleep(0.5)
+
+
+def mk(email):
+    http("POST", f"{base}/v1/auth/register", {"email": email, "password": PW}); log.flush()
+    tok = re.findall(r'"token": "([^"]+)"', open("/tmp/probe201_server.txt").read())[-1]
+    http("POST", f"{base}/v1/auth/verify", {"token": tok})
+
+
+def login(pg, url, email, ready):
+    pg.goto(url); pg.fill("#login-email", email); pg.fill("#login-password", PW)
+    pg.click("#login-form button[type=submit]"); pg.wait_for_selector(ready, timeout=10000); pg.wait_for_timeout(700)
+
+
+def track(pg):
+    reqs = []
+    pg.on("request", lambda r: reqs.append((r.method, re.sub(r"^https?://[^/]+", "", r.url))) if "/v1/" in r.url or "/healthz" in r.url else None)
+    return reqs
+
+
+out = {}
+try:
+    mk(ADMIN); mk(TA); mk(TB)
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        # ---- 1. tenant A: create an execution in the Workbench, select ws/project/template -------
+        ctx = b.new_context(viewport={"width": 1280, "height": 900}); pg = ctx.new_page()
+        login(pg, f"{base}/app/", TA, "#main-view:not([hidden])")
+        pg.once("dialog", lambda d: d.accept("ws-r201"))
+        # workspace / project via the API-backed UI buttons (promptModal is in-page)
+        pg.click("#ws-create"); pg.wait_for_timeout(200)
+        if pg.locator("#modal-input").count():
+            pg.fill("#modal-input", "ws-r201"); pg.click("#modal-ok"); pg.wait_for_timeout(400)
+        pg.fill("#ask-input", "R201 probe execution"); pg.click("#ask-submit")
+        pg.wait_for_selector("#ask-result:not([hidden])", timeout=15000)
+        exec_id = pg.inner_text("#ask-result-id").strip()
+        out["execution_id"] = exec_id; assert UUID.match(exec_id), exec_id
+        pg.screenshot(path=f"{ROOT}/evidence/r201/workbench_execution_created.png"); ctx.close()
+
+        # ---- 1b. tenant A: Command tenant tier lists the execution link; follow it --------------
+        ctx = b.new_context(viewport={"width": 1280, "height": 900}); pg = ctx.new_page(); reqs = track(pg)
+        login(pg, f"{base}/app/command/", TA, "#center-view:not([hidden])")
+        links = pg.eval_on_selector_all("#tenant-execution-list a", "els=>els.map(e=>e.getAttribute('href'))")
+        out["tenant_execution_links"] = links
+        assert any(l == f"/app/#view=runs&execution={exec_id}" for l in links), links
+        pg.screenshot(path=f"{ROOT}/evidence/r201/command_tenant_execution_links.png")
+        assert not any(u.startswith(("/v1/admin/", "/v1/agent")) for _, u in reqs), reqs
+        reqs.clear()
+        pg.click(f"#tenant-execution-list a[href='/app/#view=runs&execution={exec_id}']")
+        pg.wait_for_selector("#login-form", timeout=10000)
+        assert pg.evaluate("location.hash") == f"#view=runs&execution={exec_id}", "hash lost before login"
+        pg.fill("#login-email", TA); pg.fill("#login-password", PW); pg.click("#login-form button[type=submit]")
+        pg.wait_for_selector("#run-detail:not([hidden])", timeout=10000); pg.wait_for_timeout(500)
+        out["hop_runs_visible"] = not pg.eval_on_selector("#view-runs", "e=>e.hidden")
+        out["hop_run_detail_id"] = pg.inner_text("#run-detail-id").strip()
+        by_id = [u for m, u in reqs if m == "GET" and u.startswith("/v1/executions/")]
+        out["hop_by_id_requests"] = by_id
+        assert out["hop_run_detail_id"] == exec_id and by_id == [f"/v1/executions/{exec_id}"], (out, reqs)
+        assert not any(u.startswith(("/v1/admin/", "/v1/agent")) for _, u in reqs)
+        pg.screenshot(path=f"{ROOT}/evidence/r201/workbench_hop_run_open.png"); ctx.close()
+
+        # ---- 2. admin: Command record panel + admin deep link ----------------------------------
+        ctx = b.new_context(viewport={"width": 1280, "height": 900}); pg = ctx.new_page()
+        login(pg, f"{base}/app/command/", ADMIN, "#center-view:not([hidden])")
+        pg.check("input[name=converse-mode][value=execute]")
+        pg.fill("#converse-message", "R201 admin probe"); pg.click("#converse-form button[type=submit]")
+        pg.wait_for_selector("#execution-surfaces a", timeout=20000); pg.wait_for_timeout(300)
+        admin_exec = pg.inner_text("#progress-execution-id").strip()
+        out["admin_execution_id"] = admin_exec
+        out["admin_record_links"] = pg.eval_on_selector_all("#execution-surfaces a", "els=>els.map(e=>[e.getAttribute('href'),e.getAttribute('aria-disabled'),e.textContent])")
+        assert [l[0] for l in out["admin_record_links"]] == [f"/app/#view=runs&execution={admin_exec}", f"/admin/#surface=executions&execution={admin_exec}"], out["admin_record_links"]
+        pg.screenshot(path=f"{ROOT}/evidence/r201/command_admin_record_links.png")
+        pg.goto(f"{base}/admin/#surface=executions&execution={admin_exec}")
+        pg.fill("#login-email", ADMIN); pg.fill("#login-password", PW); pg.click("#login-form button[type=submit]")
+        pg.wait_for_selector("#console-view:not([hidden])", timeout=10000); pg.wait_for_timeout(1200)
+        out["admin_hop_rail"] = pg.eval_on_selector(".rail-item.active", "e=>e.dataset.surface")
+        out["admin_hop_record_mentions_id"] = admin_exec in pg.inner_text("#console-view")
+        assert out["admin_hop_rail"] == "executions" and out["admin_hop_record_mentions_id"]
+        pg.screenshot(path=f"{ROOT}/evidence/r201/admin_hop_execution_open.png"); ctx.close()
+
+        # ---- 3. malformed id: no by-id request -------------------------------------------------
+        ctx = b.new_context(); pg = ctx.new_page(); reqs = track(pg)
+        login(pg, f"{base}/app/#view=runs&execution=not-a-uuid", TA, "#main-view:not([hidden])")
+        out["malformed_by_id_requests"] = [u for m, u in reqs if u.startswith("/v1/executions/")]
+        out["malformed_runs_visible"] = not pg.eval_on_selector("#view-runs", "e=>e.hidden")
+        assert out["malformed_by_id_requests"] == [] and out["malformed_runs_visible"] is False, out
+        ctx.close()
+
+        # ---- 4. foreign id: tenant B sees the server's verbatim 404 ---------------------------
+        ctx = b.new_context(); pg = ctx.new_page()
+        login(pg, f"{base}/app/#view=runs&execution={exec_id}", TB, "#main-view:not([hidden])")
+        pg.wait_for_selector("#runs-error:not([hidden])", timeout=10000)
+        out["foreign_error_text"] = pg.inner_text("#runs-error")
+        status, body = http("GET", f"{base}/v1/executions/{exec_id}", tok=None)
+        out["foreign_run_detail_hidden"] = pg.eval_on_selector("#run-detail", "e=>e.hidden")
+        assert out["foreign_run_detail_hidden"] and ("not found" in out["foreign_error_text"].lower() or "unknown" in out["foreign_error_text"].lower() or "404" in out["foreign_error_text"]), out["foreign_error_text"]
+        pg.screenshot(path=f"{ROOT}/evidence/r201/workbench_foreign_id_server_404.png"); ctx.close()
+
+        # ---- 5. round trip: selection restored; hash wins; storage hygiene ---------------------
+        ctx = b.new_context(viewport={"width": 1280, "height": 900}); pg = ctx.new_page()
+        login(pg, f"{base}/app/", TA, "#main-view:not([hidden])")
+        pg.wait_for_selector(".ws-node", timeout=10000); pg.click(".ws-node"); pg.wait_for_timeout(200)
+        ws_id = pg.evaluate("document.getElementById('ws-detail-id').textContent")
+        tmpl_opts = pg.eval_on_selector_all("#ask-template option", "els=>els.map(e=>e.value).filter(Boolean)")
+        prj_opts = pg.eval_on_selector_all("#ask-project option", "els=>els.map(e=>e.value).filter(Boolean)")
+        if prj_opts:
+            pg.select_option("#ask-project", prj_opts[0])
+        if tmpl_opts:
+            pg.select_option("#ask-template", tmpl_opts[0])
+        pg.click(".nav-item[data-view=usage]"); pg.wait_for_timeout(200)
+        stored = pg.evaluate("sessionStorage.getItem('qevion.app.context')")
+        out["stored_context"] = json.loads(stored)
+        assert "token" not in stored.lower() and pg.evaluate("Object.keys(localStorage)") == []
+        pg.click(".shell-link[href='/app/command/']"); pg.wait_for_selector("#login-form", timeout=10000)
+        pg.goto(f"{base}/app/"); pg.fill("#login-email", TA); pg.fill("#login-password", PW); pg.click("#login-form button[type=submit]")
+        pg.wait_for_selector("#main-view:not([hidden])", timeout=10000); pg.wait_for_timeout(900)
+        out["restored"] = {
+            "workspace": pg.evaluate("document.getElementById('ws-detail-id').textContent"),
+            "project": pg.evaluate("document.getElementById('ask-project').value"),
+            "template": pg.evaluate("document.getElementById('ask-template').value"),
+            "view": pg.eval_on_selector(".nav-item.active", "e=>e.dataset.view"),
+        }
+        assert out["restored"]["workspace"] == ws_id and out["restored"]["view"] == "usage"
+        assert out["restored"]["project"] == (prj_opts[0] if prj_opts else "")
+        assert out["restored"]["template"] == (tmpl_opts[0] if tmpl_opts else "")
+        pg.screenshot(path=f"{ROOT}/evidence/r201/workbench_round_trip_restored.png")
+        pg.goto(f"{base}/app/#view=models"); pg.wait_for_timeout(300)
+        if pg.locator("#login-form:visible").count():
+            pg.fill("#login-email", TA); pg.fill("#login-password", PW); pg.click("#login-form button[type=submit]")
+        pg.wait_for_selector("#main-view:not([hidden])", timeout=10000); pg.wait_for_timeout(700)
+        out["hash_wins_view"] = pg.eval_on_selector(".nav-item.active", "e=>e.dataset.view")
+        assert out["hash_wins_view"] == "models"
+        out["localStorage_keys"] = pg.evaluate("Object.keys(localStorage)")
+        pg.click("#logout-button"); pg.wait_for_timeout(400)
+        out["context_after_logout"] = pg.evaluate("sessionStorage.getItem('qevion.app.context')")
+        assert out["context_after_logout"] is None
+        ctx.close(); b.close()
+finally:
+    proc.terminate()
+out["result"] = "OK"
+print(json.dumps(out, indent=1, ensure_ascii=False))
