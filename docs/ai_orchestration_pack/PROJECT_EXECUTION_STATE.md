@@ -725,16 +725,15 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
-R200_POINTER (2026-09-22) — R200 OPEN (Command capability -> surface routing + tenant centre; UI-only layer A/B; ceiling 0)
-BASE: main f6991e16. BRANCH: genspark_ai_developer_r200.
-OPERATOR: "APPROVE R200" D1 = B (two-tier Command: tenant centre from tenant-readable reads only; admin topology = one locked node),
-       D2 = i (routing derived from served evidence route prefix; no capability-id literals), D3 = i incl. /admin receiver
-       (#view= / #surface= boot-once), D4 = defer (no 13th literal), D5 = affordances as proposed (nothing hidden).
-SCOPE: ui/app/command/{command.js,index.html,command.css}, ui/app/app.js (hash receiver), ui/admin/app.js (hash receiver);
-       tests/ui/test_command_routing_r200.py (RED first); evidence/r200/*; records.
-FROZEN: core/ apps/ infrastructure/ (0); contracts + freeze 46; CAPABILITY_IDS; all /v1/admin/* + /v1/agent/* gates; register §C.
-COUNTS: command.js 12 / one fetch; ui/app/app.js 22 / 4; ui/admin/app.js 73 — all HOLD as ceilings.
-NEXT: RED -> A/B/C -> GREEN + browser request-set proof -> gate of record -> PR (merge commit) -> post-merge -> closure PR -> STOP.
+R200_POINTER (2026-09-22) — R200 CLOSED (Command capability -> surface routing + tenant centre; UI-only layer A/B; ceiling 0 used 0)
+MAIN: ebe5e549 (PR #58 merge commit) + records-only closure PR.
+DELIVERED: surfaceForEvidence() (evidence-route prefix -> {tree,hash,admin}; no id literals); node affordance link / admin-locked / not-linked / no-surface (nothing hidden);
+       two-tier loadCenter (admin == R185 request set; tenant = /healthz + executions only + surfaces list + one locked admin node labelled from session.is_admin);
+       probeSession admits any session; boot-once #view= (ui/app) and #surface= (ui/admin) receivers.
+GUARDS: tests/ui/test_command_routing_r200.py 21 (RED 14F -> GREEN 21/21); browser request-set proof; counts 12/1, 22/4, 73 HOLD; freeze 46 MATCHES; core/apps/infrastructure 0.
+GATES: record c57d4c88 PASS 3972/0/0/64 + gateway 194 (ratchet 3951 -> 3972); post-merge ebe5e549 PASS 3972/0/0/64 + 194; regression 18 roots 3139/13s/0F.
+NOT CLAIMED: Production Ready (D-03/N-9 open); D4 template picker (deferred); templates/{ref}; project_id carry-through; shared agent panel; root / redirect; register flips.
+NEXT: none pre-approved. Next session starts from main, reads this pointer + evidence/r200_state_ledger.md row 9, and does NOT start any round without an operator APPROVE.
 ```
 
 ```
