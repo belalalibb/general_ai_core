@@ -341,3 +341,15 @@ label.inline input { width: auto; margin: 0; display: inline; }
   .stage-ambient { display: none; }
   .node.selected .node-body, .exec-dot.selected .exec-dot-body, .trace.selected { filter: none; }
 }
+
+/* R200 — surface affordances (D5) + tenant tier (D1 = B). Shared tokens only (R199-B). */
+.surface-link { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+.surface-link:hover, .surface-link:focus-visible { border-bottom-color: var(--accent); }
+.surface-link.is-disabled, .surface-link[aria-disabled="true"] { color: var(--ink-dim); border-bottom-style: dashed; cursor: not-allowed; }
+.affordance { display: inline-block; }
+.affordance-route { margin-left: 8px; color: var(--ink-dim); font-size: 12px; }
+.detail-surface { overflow-wrap: anywhere; }
+.tenant { margin: 16px; }
+.surface-list { list-style: none; padding: 0; margin: 8px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.surface-list li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--bg-1); }
+.tenant-admin-node { border: 1px dashed var(--line-strong); border-radius: 8px; padding: 10px 12px; background: var(--bg-1); }

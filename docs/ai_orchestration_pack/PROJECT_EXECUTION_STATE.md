@@ -725,6 +725,19 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R200_POINTER (2026-09-22) — R200 OPEN (Command capability -> surface routing + tenant centre; UI-only layer A/B; ceiling 0)
+BASE: main f6991e16. BRANCH: genspark_ai_developer_r200.
+OPERATOR: "APPROVE R200" D1 = B (two-tier Command: tenant centre from tenant-readable reads only; admin topology = one locked node),
+       D2 = i (routing derived from served evidence route prefix; no capability-id literals), D3 = i incl. /admin receiver
+       (#view= / #surface= boot-once), D4 = defer (no 13th literal), D5 = affordances as proposed (nothing hidden).
+SCOPE: ui/app/command/{command.js,index.html,command.css}, ui/app/app.js (hash receiver), ui/admin/app.js (hash receiver);
+       tests/ui/test_command_routing_r200.py (RED first); evidence/r200/*; records.
+FROZEN: core/ apps/ infrastructure/ (0); contracts + freeze 46; CAPABILITY_IDS; all /v1/admin/* + /v1/agent/* gates; register §C.
+COUNTS: command.js 12 / one fetch; ui/app/app.js 22 / 4; ui/admin/app.js 73 — all HOLD as ceilings.
+NEXT: RED -> A/B/C -> GREEN + browser request-set proof -> gate of record -> PR (merge commit) -> post-merge -> closure PR -> STOP.
+```
+
+```
 R199_POINTER (2026-09-21) — R199 CLOSED (Unified Shell Foundation; UI-only layer A; ceiling 0 used 0)
 MAIN: 8110179e (PR #56 merge commit) + records-only closure PR.
 GATE: gate of record d8f39043 PASS 3951/0/0/64 + gateway 194; head re-gate bdb3bb6e PASS; post-merge 8110179e PASS 3951/0/0/64 + gateway 194.

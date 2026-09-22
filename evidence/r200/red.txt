@@ -1,0 +1,30 @@
+>       body = _body(js, "applyDeepLink")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/ui/test_command_routing_r200.py:249: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+js = '\n"use strict";\n\nconst state = { token: null, surface: "overview", tenantId: null };\n\n\nconst STATUS_CLASSES = {\...ST", body });\n  if (!r.ok) renderError(document.getElementById("global-error"), r.body);\n  loadEngineering();\n});\n'
+name = 'applyDeepLink'
+
+    def _body(js: str, name: str) -> str:
+>       start = js.index(f"function {name}(")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       ValueError: substring not found
+
+tests/ui/test_command_routing_r200.py:62: ValueError
+=========================== short test summary info ============================
+FAILED tests/ui/test_command_routing_r200.py::test_routing_is_derived_from_evidence_route_prefix
+FAILED tests/ui/test_command_routing_r200.py::test_routeless_rows_get_an_honest_no_surface_line
+FAILED tests/ui/test_command_routing_r200.py::test_built_hrefs_are_served_mounts_with_hash_and_no_v1
+FAILED tests/ui/test_command_routing_r200.py::test_probe_session_admits_any_authenticated_session
+FAILED tests/ui/test_command_routing_r200.py::test_load_center_branches_on_session_is_admin
+FAILED tests/ui/test_command_routing_r200.py::test_tenant_path_never_names_admin_or_agent_routes
+FAILED tests/ui/test_command_routing_r200.py::test_tenant_center_renders_one_locked_admin_node_from_the_session_fact
+FAILED tests/ui/test_command_routing_r200.py::test_admin_path_request_set_unchanged
+FAILED tests/ui/test_command_routing_r200.py::test_node_detail_carries_an_affordance_slot
+FAILED tests/ui/test_command_routing_r200.py::test_disabled_affordance_is_labelled_not_hidden
+FAILED tests/ui/test_command_routing_r200.py::test_workbench_boot_once_hash_receiver
+FAILED tests/ui/test_command_routing_r200.py::test_admin_boot_once_hash_receiver
+FAILED tests/ui/test_command_routing_r200.py::test_receivers_add_no_route_literals[app]
+FAILED tests/ui/test_command_routing_r200.py::test_receivers_add_no_route_literals[admin]

@@ -207,7 +207,18 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
   loadAgent();
   loadPlatformAgentTools();
   loadSurface("overview");
+  applyDeepLink();
 });
+
+/* R200-B (operator D3 = i): boot-once deep link. Command links here as /admin/#surface=<name>.
+   Read ONCE after sign-in; no hashchange listener, no timer, no request. The target must be
+   an EXISTING rail item — unknown names are ignored, no surface is invented. */
+function applyDeepLink() {
+  const match = /^#surface=([a-z]+)$/.exec(location.hash || "");
+  if (!match) return;
+  const item = document.querySelector(`.rail-item[data-surface="${match[1]}"]`);
+  if (item) item.click();
+}
 
 /* --- logout (POST /v1/auth/logout — the server ends the session; the UI
    forgets the token only AFTER the server confirmed, never before) ---------- */

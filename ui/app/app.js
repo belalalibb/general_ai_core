@@ -130,6 +130,17 @@ function enterMain(who) {
   $("logout-button").hidden = state.profile !== "durable" || !state.token;
   refreshWorkspaces();
   populateTemplateSelect();
+  applyDeepLink();
+}
+
+/* R200-B (operator D3 = i): boot-once deep link. Command links here as /app/#view=<name>.
+   Read ONCE when the main view opens; no hashchange listener, no timer, no request.
+   Unknown names are ignored — no view is invented. */
+function applyDeepLink() {
+  const match = /^#view=([a-z]+)$/.exec(location.hash || "");
+  if (!match) return;
+  const view = match[1];
+  if (VIEWS.includes(view)) showView(view);
 }
 
 /* --- auth ----------------------------------------------------------------------- */
