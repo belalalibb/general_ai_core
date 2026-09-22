@@ -170,7 +170,7 @@ def test_node_detail_carries_an_affordance_slot() -> None:
     js = _command()
     body = _body(js, "selectNode")
     assert "detail-surface" in body
-    # one affordance function owns the derivation: selectNode -> renderAffordance -> surfaceForEvidence
+    # one function owns the derivation: selectNode -> renderAffordance -> surfaceForEvidence
     assert "renderAffordance(" in body
     assert "surfaceForEvidence(" in _body(js, "renderAffordance")
 
