@@ -725,15 +725,15 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
-R201_POINTER (2026-09-22) — R201 OPEN (Context-carrying execution; UI-only layer A/B; ceiling 0)
-BASE: main daa88afd. BRANCH: genspark_ai_developer_r201.
-OPERATOR: "APPROVE R201 with D1-D7 confirmed" D1 = a (carry execution id in the hash to the EXISTING openRun/openExecution),
-       D2 = i (Workbench self-restores non-secret selection via sessionStorage 'qevion.app.context'; hash wins; never the token),
-       D3 = i (&execution= only; no receiver without an emitter), D4/D5/D6/D7 = defer (token custody; project filter = architectural; model selection; Command project_id).
-SCOPE: ui/app/command/{command.js,index.html,command.css}, ui/app/app.js, ui/admin/app.js; tests/ui/test_context_carry_r201.py (RED first); evidence/r201/*; records.
-FROZEN: core/ apps/ infrastructure/ (0); contracts + freeze 46; all /v1/admin/* + /v1/agent/* gates; register section C; CAPABILITY_IDS.
-COUNTS: command.js 12 / one fetch; ui/app/app.js <= 22 / 4; ui/admin/app.js 73 — HOLD as ceilings.
-NEXT: RED -> A/B/C -> GREEN + browser proof -> gate of record -> PR (merge commit) -> post-merge -> closure PR -> STOP.
+R201_POINTER (2026-09-22) — R201 CLOSED (Context-carrying execution; UI-only layer A/B; ceiling 0 used 0)
+MAIN: 2140e541 (PR #60 merge commit) + records-only closure PR.
+DELIVERED: executionHref() from the routing table ('&execution=<uuid>'); Command admin tier: Workbench/Admin record links for the selected execution (R200 permission rule);
+       Command tenant tier: served executions listed as record links (no new request); receivers (#view=/#surface=) accept &execution= and call the EXISTING openRun/openExecution;
+       Workbench self-restores {view, workspace, project, template} via sessionStorage 'qevion.app.context' (served membership; hash wins; never the token; cleared on logout).
+GUARDS: tests/ui/test_context_carry_r201.py 12 (RED 8F -> GREEN 12/12); browser proof incl. foreign-id verbatim server 404; counts 12/1, 22/4, 73 HOLD; freeze 46 MATCHES; core/apps/infrastructure 0.
+GATES: record 798903ca PASS 3984/0/0/64 + gateway 194 (ratchet 3972 -> 3984); post-merge 2140e541 PASS 3984/0/0/64 on re-run (first run FAIL = erased browser binary, kept on record); regression 3139/13s/0F.
+NOT CLAIMED: Production Ready (D-03/N-9 open); D4 token custody; D5 project filter (architectural); D6 model selection; D7 Command project_id; templates/{ref}; root / redirect; register flips.
+NEXT: none pre-approved. Next session starts from main, reads this pointer + evidence/r201_state_ledger.md row 12, and does NOT start any round without an operator APPROVE.
 ```
 
 ```
