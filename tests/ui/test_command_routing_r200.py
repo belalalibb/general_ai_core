@@ -167,9 +167,12 @@ def test_admin_path_request_set_unchanged() -> None:
 def test_node_detail_carries_an_affordance_slot() -> None:
     html = _read(COMMAND / "index.html")
     assert 'id="detail-surface"' in html
-    body = _body(_command(), "selectNode")
+    js = _command()
+    body = _body(js, "selectNode")
     assert "detail-surface" in body
-    assert "surfaceForEvidence(" in body
+    # one affordance function owns the derivation: selectNode -> renderAffordance -> surfaceForEvidence
+    assert "renderAffordance(" in body
+    assert "surfaceForEvidence(" in _body(js, "renderAffordance")
 
 
 def test_disabled_affordance_is_labelled_not_hidden() -> None:
