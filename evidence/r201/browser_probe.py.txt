@@ -71,11 +71,12 @@ try:
         # ---- 1. tenant A: create an execution in the Workbench, select ws/project/template -------
         ctx = b.new_context(viewport={"width": 1280, "height": 900}); pg = ctx.new_page()
         login(pg, f"{base}/app/", TA, "#main-view:not([hidden])")
-        pg.once("dialog", lambda d: d.accept("ws-r201"))
-        # workspace / project via the API-backed UI buttons (promptModal is in-page)
-        pg.click("#ws-create"); pg.wait_for_timeout(200)
-        if pg.locator("#modal-input").count():
-            pg.fill("#modal-input", "ws-r201"); pg.click("#modal-ok"); pg.wait_for_timeout(400)
+        # workspace + project through the EXISTING in-page modal (promptModal -> #modal-body input)
+        pg.click("#ws-new-btn"); pg.wait_for_selector("#modal-body input", timeout=5000)
+        pg.fill("#modal-body input", "ws-r201"); pg.click("#modal-ok"); pg.wait_for_timeout(600)
+        pg.wait_for_selector("#ws-detail:not([hidden])", timeout=5000)  # createWorkspace selects it
+        pg.click("#prj-new-btn"); pg.wait_for_selector("#modal-body input", timeout=5000)
+        pg.fill("#modal-body input", "prj-r201"); pg.click("#modal-ok"); pg.wait_for_timeout(600)
         pg.fill("#ask-input", "R201 probe execution"); pg.click("#ask-submit")
         pg.wait_for_selector("#ask-result:not([hidden])", timeout=15000)
         exec_id = pg.inner_text("#ask-result-id").strip()
@@ -169,10 +170,11 @@ try:
         assert out["restored"]["project"] == (prj_opts[0] if prj_opts else "")
         assert out["restored"]["template"] == (tmpl_opts[0] if tmpl_opts else "")
         pg.screenshot(path=f"{ROOT}/evidence/r201/workbench_round_trip_restored.png")
-        pg.goto(f"{base}/app/#view=models"); pg.wait_for_timeout(300)
-        if pg.locator("#login-form:visible").count():
-            pg.fill("#login-email", TA); pg.fill("#login-password", PW); pg.click("#login-form button[type=submit]")
-        pg.wait_for_selector("#main-view:not([hidden])", timeout=10000); pg.wait_for_timeout(700)
+        # a hash-only goto does not reload a SPA: navigate away first, then boot with the hash
+        pg.goto(f"{base}/admin/"); pg.wait_for_timeout(200)
+        pg.goto(f"{base}/app/#view=models"); pg.wait_for_selector("#login-form", timeout=10000)
+        pg.fill("#login-email", TA); pg.fill("#login-password", PW); pg.click("#login-form button[type=submit]")
+        pg.wait_for_selector("#main-view:not([hidden])", timeout=10000); pg.wait_for_timeout(900)
         out["hash_wins_view"] = pg.eval_on_selector(".nav-item.active", "e=>e.dataset.view")
         assert out["hash_wins_view"] == "models"
         out["localStorage_keys"] = pg.evaluate("Object.keys(localStorage)")
