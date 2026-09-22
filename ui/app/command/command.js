@@ -260,6 +260,46 @@ const ADMIN_SURFACE_BY_AREA = Object.freeze({
   onboarding: "onboarding",
 });
 
+/* R201 (operator D1 = a, D3 = i): the Admin Console surface that owns execution records,
+   named ONCE so the execution-carrying link is built from a table entry, never minted. */
+const ADMIN_EXECUTIONS_OWNER = Object.freeze({
+  tree: "Admin", view: "executions", href: "/admin/#surface=executions", admin: true,
+});
+
+/* R201-A: '<owner.href>&execution=<id>' — the ONLY carried parameter. The receiver on the
+   other side (applyDeepLink) hands the id to its EXISTING open-by-id function; the server's
+   own 404/422 decides whether this session may read it. */
+function executionHref(owner, executionId) {
+  return `${owner.href}&execution=${encodeURIComponent(String(executionId))}`;
+}
+
+/* R201-A (admin tier): the selected execution offers its record in the Workbench (runs) and in
+   the Admin Console (executions). Same permission rule as renderAffordance — the admin target
+   stays visible for a non-admin session, disabled and labelled from the served session fact. */
+function renderExecutionSurfaces(executionId, session) {
+  const box = document.getElementById("execution-surfaces");
+  if (!box) return;
+  box.replaceChildren();
+  if (!executionId) return;
+  const targets = [SURFACE_BY_SEGMENT.executions, ADMIN_EXECUTIONS_OWNER];
+  for (const owner of targets) {
+    const link = document.createElement("a");
+    link.className = "surface-link";
+    link.textContent = `Open ${owner.tree} · ${owner.view} for this execution`;
+    const permitted = !owner.admin || (session && session.is_admin === true);
+    if (permitted) {
+      link.href = executionHref(owner, executionId);
+    } else {
+      link.setAttribute("aria-disabled", "true");
+      link.classList.add("is-disabled");
+      link.title = `admin session required (session.is_admin = ${String(session ? session.is_admin : "unknown")})`;
+      link.textContent += " — admin";
+      link.addEventListener("click", (event) => event.preventDefault());
+    }
+    box.appendChild(link);
+  }
+}
+
 function surfaceForEvidence(evidence) {
   const text = String(evidence || "");
   if (/\/healthz\b/.test(text)) {
@@ -648,6 +688,26 @@ function renderTenantSurfaces(session, executions) {
   }
   const runs = document.getElementById("tenant-executions");
   runs.textContent = `executions in this tenant: ${executions.length}`;
+  /* R201-A (operator D1 = a): every served row is one click from its record in the Workbench —
+     built from the rows ALREADY in state.executions (no second read); id, status and created_at
+     are repeated as served. The Workbench asks the server for the record; the server decides. */
+  const rows = document.getElementById("tenant-execution-list");
+  rows.replaceChildren();
+  for (const row of executions) {
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.className = "surface-link";
+    link.href = executionHref(SURFACE_BY_SEGMENT.executions, row.execution_id);
+    link.textContent = `Open ${SURFACE_BY_SEGMENT.executions.tree} · ${SURFACE_BY_SEGMENT.executions.view}`;
+    const id = document.createElement("code");
+    id.className = "affordance-route";
+    id.textContent = String(row.execution_id);
+    const fact = document.createElement("span");
+    fact.className = "muted small";
+    fact.textContent = ` ${String(row.status)} · ${String(row.created_at)}`;
+    li.append(link, " ", id, fact);
+    rows.appendChild(li);
+  }
   const locked = document.getElementById("tenant-admin-node");
   locked.replaceChildren();
   const link = document.createElement("a");
@@ -824,6 +884,7 @@ async function showExecution(executionId) {
   document.querySelectorAll("#execution-orbit .exec-dot").forEach((el) => {
     el.classList.toggle("selected", el.getAttribute("data-id") === executionId);
   });
+  renderExecutionSurfaces(executionId, state.session);
   await loadExecutionRecord(executionId);
   await readEvents(executionId);
   /* Re-read after the stream closed: the events are a projection of stored truth. */

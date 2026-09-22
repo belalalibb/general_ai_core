@@ -1,0 +1,46 @@
+{
+ "execution_id": "08b384f9-9677-40f9-925b-4dff051445a8",
+ "tenant_execution_links": [
+  "/app/#view=runs&execution=08b384f9-9677-40f9-925b-4dff051445a8"
+ ],
+ "hop_runs_visible": true,
+ "hop_run_detail_id": "08b384f9-9677-40f9-925b-4dff051445a8",
+ "hop_by_id_requests": [
+  "/v1/executions/08b384f9-9677-40f9-925b-4dff051445a8"
+ ],
+ "admin_execution_id": "a344ba96-e24e-4c26-8401-ca4aff098880",
+ "admin_record_links": [
+  [
+   "/app/#view=runs&execution=a344ba96-e24e-4c26-8401-ca4aff098880",
+   null,
+   "Open Workbench · runs for this execution"
+  ],
+  [
+   "/admin/#surface=executions&execution=a344ba96-e24e-4c26-8401-ca4aff098880",
+   null,
+   "Open Admin · executions for this execution"
+  ]
+ ],
+ "admin_hop_rail": "executions",
+ "admin_hop_record_mentions_id": true,
+ "malformed_by_id_requests": [],
+ "malformed_runs_visible": false,
+ "foreign_error_text": "validation_error: Unknown execution id.",
+ "foreign_run_detail_hidden": true,
+ "stored_context": {
+  "view": "usage",
+  "selectedWorkspace": "1dfbc89c-a5fe-4609-b8d8-af6576c14ee3",
+  "project": "a9c5963e-c929-493c-8963-ba11856059fa",
+  "template": "app_factory.plan@1"
+ },
+ "restored": {
+  "workspace": "1dfbc89c-a5fe-4609-b8d8-af6576c14ee3",
+  "project": "a9c5963e-c929-493c-8963-ba11856059fa",
+  "template": "app_factory.plan@1",
+  "view": "usage"
+ },
+ "hash_wins_view": "models",
+ "localStorage_keys": [],
+ "context_after_logout": null,
+ "result": "OK"
+}

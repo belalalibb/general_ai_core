@@ -353,3 +353,9 @@ label.inline input { width: auto; margin: 0; display: inline; }
 .surface-list { list-style: none; padding: 0; margin: 8px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .surface-list li { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--bg-1); }
 .tenant-admin-node { border: 1px dashed var(--line-strong); border-radius: 8px; padding: 10px 12px; background: var(--bg-1); }
+
+/* R201 — execution-carrying links (D1 = a). Same shared tokens; rows stack, ids wrap. */
+.execution-list { grid-template-columns: 1fr; }
+.execution-list li { overflow-wrap: anywhere; }
+.execution-surfaces { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0 0; }
+.execution-surfaces:empty { display: none; }

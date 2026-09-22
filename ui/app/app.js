@@ -123,24 +123,92 @@ async function refreshHealth() {
   dot.textContent = `health: ${value}`;
 }
 
-function enterMain(who) {
+async function enterMain(who) {
   $("auth-view").hidden = true;
   $("main-view").hidden = false;
   $("who").textContent = who;
   $("logout-button").hidden = state.profile !== "durable" || !state.token;
-  refreshWorkspaces();
-  populateTemplateSelect();
+  /* R201-C: the served lists must exist BEFORE a stored selection may be re-applied — a
+     selection is restored only when the server still offers it. */
+  await refreshWorkspaces();
+  await populateTemplateSelect();
+  restoreContext();
   applyDeepLink();
 }
 
 /* R200-B (operator D3 = i): boot-once deep link. Command links here as /app/#view=<name>.
    Read ONCE when the main view opens; no hashchange listener, no timer, no request.
-   Unknown names are ignored — no view is invented. */
+   Unknown names are ignored — no view is invented.
+   R201-B (operator D1 = a, D3 = i): an optional "&execution=<uuid>" is carried ONLY into the
+   EXISTING openRun() on the runs view. The regex stays anchored, so a malformed id makes the
+   whole hash unmatched (ignored, like an unknown view). Ownership is the server's call: a
+   foreign or unknown id yields its own 404/422, rendered verbatim in the runs error box. */
 function applyDeepLink() {
-  const match = /^#view=([a-z]+)$/.exec(location.hash || "");
+  const match =
+    /^#view=([a-z]+)(?:&execution=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?$/
+      .exec(location.hash || "");
   if (!match) return;
   const view = match[1];
-  if (VIEWS.includes(view)) showView(view);
+  if (!VIEWS.includes(view)) return;
+  showView(view);
+  if (match[2] && view === "runs") openRun(match[2]);
+}
+
+/* --- R201-C (operator D2 = i): tab-scoped, NON-SECRET selection memory ------------------
+   Key holds {view, selectedWorkspace, project, template} — never the token; tab-scoped
+   storage only, never a persistent store (R187 rule). Written when the selection changes; read once in enterMain after
+   the served lists resolved; applied only when the server still offers the value; an explicit
+   hash (#view=…) wins over the stored view; forgotten on logout. */
+const CONTEXT_KEY = "qevion.app.context";
+
+function saveContext() {
+  const snapshot = {
+    view: state.view,
+    selectedWorkspace: state.selectedWorkspace,
+    project: $("ask-project").value || null,
+    template: $("ask-template").value || null,
+  };
+  try {
+    sessionStorage.setItem(CONTEXT_KEY, JSON.stringify(snapshot));
+  } catch (_error) {
+    /* storage unavailable: nothing is remembered, nothing breaks */
+  }
+}
+
+function clearContext() {
+  try {
+    sessionStorage.removeItem(CONTEXT_KEY);
+  } catch (_error) {
+    /* storage unavailable */
+  }
+}
+
+function restoreContext() {
+  let stored = null;
+  try {
+    stored = JSON.parse(sessionStorage.getItem(CONTEXT_KEY) || "null");
+  } catch (_error) {
+    stored = null;
+  }
+  if (!stored || typeof stored !== "object") return;
+  if (
+    typeof stored.selectedWorkspace === "string" &&
+    state.workspaces.some((w) => w.workspace_id === stored.selectedWorkspace)
+  ) {
+    state.selectedWorkspace = stored.selectedWorkspace;
+    renderWorkspaceTree();
+    renderWorkspaceDetail();
+  }
+  for (const [field, value] of [["ask-project", stored.project], ["ask-template", stored.template]]) {
+    const select = $(field);
+    if (typeof value === "string" && [...select.options].some((o) => o.value === value)) {
+      select.value = value;
+    }
+  }
+  const hashHasView = /^#view=/.test(location.hash || "");
+  if (!hashHasView && typeof stored.view === "string" && VIEWS.includes(stored.view)) {
+    showView(stored.view);
+  }
 }
 
 /* --- auth ----------------------------------------------------------------------- */
@@ -210,6 +278,7 @@ function wireAuth() {
     await api("/v1/auth/logout", { method: "POST" });
     state.token = null;
     state.email = null;
+    clearContext();
     $("main-view").hidden = true;
     $("auth-view").hidden = false;
   });
@@ -221,6 +290,7 @@ const VIEWS = ["home", "runs", "models", "usage"];
 
 function showView(view) {
   state.view = view;
+  saveContext();
   for (const name of VIEWS) $(`view-${name}`).hidden = name !== view;
   for (const item of document.querySelectorAll(".nav-item")) {
     item.classList.toggle("active", item.dataset.view === view);
@@ -405,6 +475,7 @@ function selectWorkspace(workspaceId) {
   renderWorkspaceTree();
   renderWorkspaceDetail();
   showView("home");
+  saveContext();
 }
 
 function renderWorkspaceDetail() {
@@ -450,6 +521,7 @@ function renderWorkspaceDetail() {
     use.textContent = "Use in composer";
     use.addEventListener("click", () => {
       $("ask-project").value = prj.project_id;
+      saveContext();
       $("ask-input").focus();
     });
     const del = document.createElement("button");
@@ -667,6 +739,8 @@ async function submitAsk() {
 
 function wireAsk() {
   $("ask-submit").addEventListener("click", submitAsk);
+  $("ask-project").addEventListener("change", saveContext);
+  $("ask-template").addEventListener("change", saveContext);
   $("ask-input").addEventListener("keydown", (event) => {
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
