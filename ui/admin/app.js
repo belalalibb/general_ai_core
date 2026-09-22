@@ -214,10 +214,17 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
    Read ONCE after sign-in; no hashchange listener, no timer, no request. The target must be
    an EXISTING rail item — unknown names are ignored, no surface is invented. */
 function applyDeepLink() {
-  const match = /^#surface=([a-z]+)$/.exec(location.hash || "");
+  /* R201-B (operator D1 = a, D3 = i): an optional "&execution=<uuid>" is handed to the EXISTING
+     openExecution() on the executions surface only. Anchored regex: a malformed id makes the
+     whole hash unmatched. The server's own 404/422 decides whether this session may read it. */
+  const match =
+    /^#surface=([a-z]+)(?:&execution=([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))?$/
+      .exec(location.hash || "");
   if (!match) return;
   const item = document.querySelector(`.rail-item[data-surface="${match[1]}"]`);
-  if (item) item.click();
+  if (!item) return;
+  item.click();
+  if (match[2] && match[1] === "executions") openExecution(match[2]);
 }
 
 /* --- logout (POST /v1/auth/logout — the server ends the session; the UI

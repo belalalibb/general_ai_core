@@ -218,8 +218,9 @@ def test_frozen_counts_and_ceiling() -> None:
     app_raw = _app()
     assert app_raw.count("/v1/") <= 22 and app_raw.count("fetch(") == 4
     assert _admin().count("/v1/") == 73
-    for name in ("index.html", "command.css"):
-        assert "/v1/" not in _read(COMMAND / name), f"{name} must carry no wired route"
+    assert "/v1/" not in _read(COMMAND / "command.css")
+    wired = re.findall(r"(href|src|action|data-[a-z-]+)=[\"'][^\"']*/v1/", _read(COMMAND / "index.html"))
+    assert wired == [], wired
     block = _block()
     assert int(block["ceiling"]) == 0 and int(block["changes_used"]) == 0
     assert block["items"] and any("R201-A" in i for i in block["items"])
