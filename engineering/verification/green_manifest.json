@@ -842,6 +842,27 @@
         "declared 0 held 0/0 through the whole round; frozen trees zero-diff (core/ apps/ infrastructure/ ui/admin ui/app/{app.js,index.html,styles.css} core/tools/gate.py PROJECT_EXECUTION_STATE.md); PR #28 merged by merge commit 1028212c; gate on the merge commit PASS 3712/0/0/64 (evidence/r186/gate_merge_1028212c.txt), gateway 194; the thawed tree ui/app/command changed in command.css and command.js only (F-R185-L01/L02); tests/ui/test_command_center_fix_r186.py (9) added -> min_passed 3703 -> 3712 at the gate of record 44fc99b6 (D-6). Round CLOSED 2026-09-16 (R186-DEC-02)."
       ]
     },
+    "round_r200": {
+          "ceiling": 0,
+          "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+          "counts_production_code_under": [
+                "core/",
+                "apps/",
+                "infrastructure/"
+          ],
+          "changes_used": 0,
+          "items": [
+                "R200-A (operator D1 = B, D2 = i, D5) command.js: probeSession admits ANY authenticated session (server 403 remains the authority); loadCenter branches on session.is_admin — admin path byte-for-byte the same request set as R185 (healthz, admin/system, admin/capabilities, executions, admin/usage); tenant path reads ONLY tenant-readable routes already literal in command.js (healthz, auth/session, executions) and renders a surfaces list + ONE locked 'admin control plane' node whose label quotes session.is_admin — it never calls /v1/admin/* or /v1/agent/*. Capability → surface routing is DERIVED from the served evidence route prefix (/v1/models → Workbench·Models, /v1/templates → Workbench·Home, /v1/usage → Workbench·Usage, /v1/workspaces|/v1/projects → Workbench·Home, /v1/execute|/v1/executions → Workbench·Runs, /v1/admin/* → Admin·<surface>, /v1/agent* → Admin·agent, /v1/skills → Admin·skills, /v1/webhooks → Admin·system); no CAPABILITY_IDS quoted (R182 guard holds); routeless rows render 'no surface owns this route'. Node affordance: available+owned+permitted → <a href>; available+owned+admin-only for a tenant → disabled link labelled admin; inert/unavailable → no link, evidence verbatim. Nothing hidden. ZERO new /v1/ literals (12 holds); one fetch( in api() holds.",
+                "R200-B (operator D3 = i incl. /admin receiver) deep-link receivers, boot-once, no hashchange listener/timer: ui/app/app.js reads location.hash '#view=<name>' once after enterMain and calls showView(name) iff name ∈ VIEWS; ui/admin/app.js reads '#surface=<name>' once after login and clicks the matching .rail-item iff it exists. Unknown values ignored silently (no state, no fabricated view). 0 new /v1/ literals, 0 new fetch( in either tree (22 / 4 and 73 hold as COUNT ceilings; the R197/R199 'byte-identical' wording for ui/admin/app.js becomes a count pin — 73 was always a ceiling).",
+                "R200-C ui/app/command/{index.html,command.css}: tenant surfaces list markup + disabled-link style from the shared token set (R199-B); hrefs carry no /v1/.",
+                "R200-D (operator D4 = defer) Command execute parity with the Workbench template picker is NOT done (would add a 13th /v1/ literal against the down-only rule); the Ask affordance links to /app/#view=home instead."
+          ],
+          "log": [],
+          "note": "Ceiling 0 declared in R200-DEC-01 BEFORE any commit (operator: 'APPROVE R200. Confirm: D1 = B, D2 = I, D3 = I, including the /admin receiver, D4 = defer, D5 = accept as proposed. Execute R200 exactly as proposed. Preserve the unified shared multi-tenant QEVION direction: Command is the unified entry point, admin-only capabilities remain protected by the server, nothing implemented may become hidden, and no duplicate engine/router/agent or backend authority may be introduced. Do not pre-approve future rounds or broaden scope.'). UI-only round (layer A/B): core/ apps/ infrastructure/ FROZEN; contracts + freeze baseline FROZEN (46; --check must MATCH); CAPABILITY_IDS FROZEN; every /v1/admin/* and /v1/agent/* gate FROZEN; register §C untouched (no route newly consumed). Allowed files: ui/app/command/{command.js,index.html,command.css}, ui/app/app.js, ui/admin/app.js, tests/ui/test_command_routing_r200.py, pins that name the old identity wording, evidence/r200/*, records.",
+          "ceiling_history": [
+                "declared 0 at the R200 opening (2026-09-22, R200-DEC-01) from post-R199 main f6991e16."
+          ]
+    },
     "round_r199": {
           "ceiling": 0,
           "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
