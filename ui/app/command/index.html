@@ -71,7 +71,19 @@
 
 <main id="center-view" class="center" hidden>
   <!-- Topology: Core in the middle, executions on the inner orbit, one node per served capability outside. -->
-  <section class="topology" aria-labelledby="topology-title">
+  <!-- R200 (operator D1 = B): the tenant tier. Shown when session.is_admin !== true.
+       Built ONLY from tenant-readable reads (healthz, session, executions) and the
+       same routing table the admin nodes use; the admin control plane is ONE locked
+       node whose label quotes the session fact. Nothing admin-only is requested here. -->
+  <section id="tenant-view" class="panel tenant" aria-labelledby="tenant-title" hidden>
+    <h2 id="tenant-title">Surfaces</h2>
+    <p class="muted small">Every link below is a served QEVION surface you can open with this session. Admin-only surfaces stay visible and are marked; the server decides access.</p>
+    <ul id="tenant-surfaces" class="surface-list" aria-label="Surfaces available to this session"></ul>
+    <p id="tenant-executions" class="muted small"></p>
+    <p id="tenant-admin-node" class="tenant-admin-node"></p>
+  </section>
+
+  <section id="topology-view" class="topology" aria-labelledby="topology-title">
     <h2 id="topology-title" class="visually-hidden">Capability topology</h2>
     <div class="stage">
       <div class="stage-ambient" aria-hidden="true"></div>
@@ -138,6 +150,8 @@
     </div>
     <p><span class="k">state</span> <span id="detail-state" class="badge"></span></p>
     <p><span class="k">evidence</span> <code id="detail-evidence" class="evidence"></code></p>
+    <!-- R200 (D2 = i / D5): the surface that owns the evidence route, derived client-side from the served string. -->
+    <p><span class="k">surface</span> <span id="detail-surface" class="detail-surface"></span></p>
     <p class="muted small">Rendered from the server record. Inert = machinery exists, seam not composed in this process. Unavailable = work does not exist yet.</p>
   </aside>
 
@@ -167,7 +181,7 @@
        Progress only — the server emits execution_started | node_started |
        node_completed | final | error; `delta` is never emitted, so nothing here
        types, streams text or animates a voice. ===== -->
-  <section class="panel execution" aria-labelledby="execution-title">
+  <section id="execution-panel" class="panel execution" aria-labelledby="execution-title">
     <h2 id="execution-title">Execution</h2>
 
     <form id="converse-form" class="composer">

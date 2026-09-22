@@ -214,6 +214,112 @@ function renderCore(coreState) {
   document.getElementById("overview-core").textContent = meta.label;
 }
 
+/* --- R200 (operator D2 = i): capability -> surface routing DERIVED from the served
+   evidence string. The first route segment after the version prefix is parsed out
+   of `evidence` (a served fact); the table below maps that SEGMENT to the QEVION
+   surface that already consumes it (measured at f6991e16). No capability id is
+   spelled here (R182 guard), no route literal is added (12 holds), and a row whose
+   evidence names no route says so — nothing is hidden or invented. Hrefs are the
+   served static mounts plus a boot-once hash the receiving tree reads (D3 = i). */
+const SURFACE_BY_SEGMENT = Object.freeze({
+  models: { tree: "Workbench", view: "models", href: "/app/#view=models", admin: false },
+  templates: { tree: "Workbench", view: "home", href: "/app/#view=home", admin: false },
+  usage: { tree: "Workbench", view: "usage", href: "/app/#view=usage", admin: false },
+  workspaces: { tree: "Workbench", view: "home", href: "/app/#view=home", admin: false },
+  projects: { tree: "Workbench", view: "home", href: "/app/#view=home", admin: false },
+  execute: { tree: "Workbench", view: "home", href: "/app/#view=home", admin: false },
+  executions: { tree: "Workbench", view: "runs", href: "/app/#view=runs", admin: false },
+  auth: { tree: "Workbench", view: "home", href: "/app/#view=home", admin: false },
+  skills: { tree: "Admin", view: "skills", href: "/admin/#surface=skills", admin: true },
+  webhooks: { tree: "Admin", view: "system", href: "/admin/#surface=system", admin: true },
+  "agent-tools": { tree: "Admin", view: "overview", href: "/admin/#surface=overview", admin: true },
+  agent: { tree: "Admin", view: "overview", href: "/admin/#surface=overview", admin: true },
+  dev: { tree: "Admin", view: "engineering", href: "/admin/#surface=engineering", admin: true },
+});
+/* admin/<area> segment pair -> the Admin Console rail surface that owns that area. */
+const ADMIN_SURFACE_BY_AREA = Object.freeze({
+  capabilities: "intelligence",
+  scenarios: "intelligence",
+  "self-review": "intelligence",
+  evaluations: "intelligence",
+  executions: "executions",
+  learning: "learning",
+  skills: "skills",
+  changes: "changes",
+  "source-changes": "source",
+  models: "catalog",
+  providers: "catalog",
+  routing: "catalog",
+  usage: "usage",
+  plans: "usage",
+  notifications: "notifications",
+  system: "system",
+  audit: "changes",
+  "context-lab": "intelligence",
+  engineering: "engineering",
+  onboarding: "onboarding",
+});
+
+function surfaceForEvidence(evidence) {
+  const text = String(evidence || "");
+  if (/\/healthz\b/.test(text)) {
+    return { tree: "Workbench", view: "home", href: "/app/#view=home", admin: false, route: "/healthz" };
+  }
+  const match = /\/v1\/([a-z-]+)(?:\/([a-z-]+))?/.exec(text);
+  if (!match) return { none: true, reason: "no surface owns this route (evidence names a seam, not a route)" };
+  const segment = match[1];
+  if (segment === "admin") {
+    const area = match[2] || "";
+    const surface = ADMIN_SURFACE_BY_AREA[area] || "overview";
+    return { tree: "Admin", view: surface, href: `/admin/#surface=${surface}`, admin: true, route: match[0] };
+  }
+  const owner = SURFACE_BY_SEGMENT[segment];
+  if (!owner) return { none: true, reason: `no surface owns this route (${match[0]})` };
+  return Object.assign({ route: match[0] }, owner);
+}
+
+/* R200 (operator D5): the affordance is a FUNCTION of served state + session fact.
+   available + owned + permitted -> link; available + owned + admin-only for a
+   non-admin -> the SAME link, disabled and labelled "admin" (visible, never hidden);
+   inert / unavailable -> no link, the served evidence stands; routeless -> its reason. */
+function renderAffordance(container, capability, session) {
+  container.replaceChildren();
+  const stateKey = nodeState(capability.state);
+  const target = surfaceForEvidence(capability.evidence);
+  const line = document.createElement("span");
+  line.className = "affordance";
+  if (target.none) {
+    line.textContent = target.reason;
+    line.classList.add("muted");
+    container.appendChild(line);
+    return;
+  }
+  if (stateKey !== "available") {
+    line.textContent = `${target.tree} · ${target.view} — not linked: node is ${NODE_STATES[stateKey].label}`;
+    line.classList.add("muted");
+    container.appendChild(line);
+    return;
+  }
+  const link = document.createElement("a");
+  link.className = "surface-link";
+  link.textContent = `Open ${target.tree} · ${target.view}`;
+  const permitted = !target.admin || (session && session.is_admin === true);
+  if (permitted) {
+    link.href = target.href;
+  } else {
+    link.setAttribute("aria-disabled", "true");
+    link.classList.add("is-disabled");
+    link.title = `admin session required (session.is_admin = ${String(session ? session.is_admin : "unknown")})`;
+    link.textContent += " — admin";
+    link.addEventListener("click", (event) => event.preventDefault());
+  }
+  container.appendChild(link);
+  const route = document.createElement("code");
+  route.className = "affordance-route";
+  route.textContent = target.route;
+  container.appendChild(route);
+}
+
 function renderTopology(catalog) {
   const nodesGroup = document.getElementById("topology-nodes");
   const traces = document.getElementById("topology-traces");
@@ -339,6 +445,7 @@ function selectNode(capability, opener) {
   badge.textContent = meta.label;
   badge.className = `badge ${meta.cls}`;
   document.getElementById("detail-evidence").textContent = capability.evidence || "";
+  renderAffordance(document.getElementById("detail-surface"), capability, state.session);
   if (detail.hidden) openDialog(detail, opener);
 }
 
@@ -458,10 +565,26 @@ async function refreshExecutions() {
 
 /* --- load sequence (one read per surface; no polling) -------------------------- */
 
+/* R200 (operator D1 = B): ONE Command, two tiers decided by the served session fact.
+   The server's 403 stays the only permission authority; the UI never emulates a gate —
+   the tenant tier simply issues no request the tenant is not entitled to. */
 async function loadCenter() {
   const errorBox = document.getElementById("center-error");
   errorBox.hidden = true;
+  const isAdmin = Boolean(state.session && state.session.is_admin === true);
+  document.getElementById("topology-view").hidden = !isAdmin;
+  document.getElementById("tenant-view").hidden = isAdmin;
+  document.getElementById("execution-panel").hidden = !isAdmin;
+  if (isAdmin) {
+    await loadAdminCenter(errorBox);
+  } else {
+    await loadTenantCenter(errorBox);
+  }
+}
 
+/* Admin tier — the R185 request set, unchanged: healthz, admin/system, admin/capabilities,
+   executions, admin/usage. */
+async function loadAdminCenter(errorBox) {
   const health = await api("/healthz");
   const reachable = health.ok;
   state.health = reachable ? health.body || { status: "ok" } : null;
@@ -486,6 +609,57 @@ async function loadCenter() {
 
   await refreshExecutions();
   await loadUsage();
+}
+
+/* Tenant tier — reads ONLY what the tenant already may read (healthz, the session already
+   in hand, the ONE executions read the admin tier also uses). The surfaces list is the SAME
+   routing table the admin nodes use; the admin control plane is ONE locked node whose label
+   quotes the session fact. Zero requests to admin or agent routes. */
+async function loadTenantCenter(errorBox) {
+  const health = await api("/healthz");
+  const reachable = health.ok;
+  state.health = reachable ? health.body || { status: "ok" } : null;
+  document.getElementById("status-health").innerHTML =
+    `health: <b>${reachable ? (health.body && health.body.status) || "ok" : "unreachable"}</b>`;
+  renderScope(null, null);
+  document.getElementById("status-nodes").innerHTML = "nodes: <b>—</b>";
+  document.getElementById("status-states").innerHTML = "available/inert/unavailable: <b>— (admin read)</b>";
+  document.getElementById("status-evaluation").innerHTML = "evaluation: <b>— (admin read)</b>";
+  await refreshExecutions();
+  if (errorBox) errorBox.hidden = true;
+  renderTenantSurfaces(state.session, state.executions);
+}
+
+function renderTenantSurfaces(session, executions) {
+  const list = document.getElementById("tenant-surfaces");
+  list.replaceChildren();
+  /* Distinct tenant targets from the routing table (served-mount hrefs, no requests). */
+  const seen = new Set();
+  for (const owner of Object.values(SURFACE_BY_SEGMENT)) {
+    if (owner.admin || seen.has(owner.href)) continue;
+    seen.add(owner.href);
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.className = "surface-link";
+    link.href = owner.href;
+    link.textContent = `${owner.tree} · ${owner.view}`;
+    li.appendChild(link);
+    list.appendChild(li);
+  }
+  const runs = document.getElementById("tenant-executions");
+  runs.textContent = `executions in this tenant: ${executions.length}`;
+  const locked = document.getElementById("tenant-admin-node");
+  locked.replaceChildren();
+  const link = document.createElement("a");
+  link.className = "surface-link is-disabled";
+  link.setAttribute("aria-disabled", "true");
+  link.textContent = "Admin · control plane — admin";
+  link.title = `admin session required (session.is_admin = ${String(session ? session.is_admin : "unknown")})`;
+  link.addEventListener("click", (event) => event.preventDefault());
+  const fact = document.createElement("span");
+  fact.className = "muted small";
+  fact.textContent = ` session.is_admin = ${String(session ? session.is_admin : "unknown")} — the capability topology, system overview and agent are admin reads and are not requested here.`;
+  locked.append(link, fact);
 }
 
 /* --- M2: execution graph / progress / stream / conversation --------------------- */
@@ -775,8 +949,10 @@ function rememberToken(token) {
 }
 
 async function probeSession() {
+  /* R200 (D1 = B): any authenticated session enters; the tier is decided in loadCenter
+     from the served `is_admin` fact. A stale/invalid token still clears. */
   const session = await api("/v1/auth/session");
-  if (!session.ok || !session.body || session.body.is_admin !== true) {
+  if (!session.ok || !session.body) {
     rememberToken(null);
     return null;
   }
@@ -811,7 +987,7 @@ document.getElementById("login-form").addEventListener("submit", async (event) =
   rememberToken(result.body.token);
   const session = await probeSession();
   if (!session) {
-    showError(errorBox, { error: { code: "unauthorized", message: "Admin access required." } });
+    showError(errorBox, { error: { code: "unauthenticated", message: "Session could not be read." } });
     return;
   }
   await enterCenter(session);
@@ -832,6 +1008,7 @@ document.getElementById("logout").addEventListener("click", async () => {
   document.getElementById("session-who").textContent = "";
   document.getElementById("logout").hidden = true;
   document.getElementById("center-view").hidden = true;
+  document.getElementById("tenant-view").hidden = true;
   document.getElementById("login-view").hidden = false;
   document.getElementById("login-password").value = "";
 });
