@@ -52,7 +52,7 @@ contract freeze 15 modules · 46 served routes, `--check` MATCHES; 18 regression
 |---|---|---|---|
 | `GET /v1/admin/evaluations/{id}` | evaluation detail read; the Command Center renders `evaluation_status` from the execution record (R185), not this route | DECLARED-UNCONSUMED | `tests/ui/test_command_center_experience_r185.py`; freeze baseline |
 | `GET /v1/admin/learning/dashboard` | declared INERT surface (R182_HANDOFF §11 row 16) — honest placeholder only | DECLARED-UNCONSUMED | `docs/ai_orchestration_pack/R182_HANDOFF.md` §11 |
-| `GET /v1/templates/{ref}` | R197 operator D4: picker consumes the list only; detail view not in R197 | DECLARED-UNCONSUMED | R197-DEC-01 D4; `evidence/r197/` |
+| `GET /v1/templates/{ref}` | R202-A (operator D1 = a, D2 = i, D3 = i; ruling (a) at the decision gate): Workbench detail panel reads the served `StrategyTemplate` exactly once per choice and renders it verbatim (stages kind/role/depends_on/instruction; served `model_policy` posture; 404 verbatim). Scope of this flip = R202-A ONLY; R202-B (labelled timeline rows) is DEFERRED per FINDING R202-F1 and NOT covered | ACCEPTED-AS-MEASURED | R202-DEC-01/-02; `evidence/r202/browser_probe_9a6f89cb.json` + PNGs; gate of record `a4a8aad9` PASS 3993; post-merge `5ac352be` PASS 3993; `evidence/r202_state_ledger.md` |
 | `GET /v1/webhooks/{id}`, `DELETE /v1/webhooks/{id}` | console lists webhooks (`GET /v1/webhooks`) and registers them; per-id read/delete not surfaced | DECLARED-UNCONSUMED | `ui/admin/app.js` (webhooks table); `docs/architecture/ADMIN_UI_BACKEND_COVERAGE.md` P6 |
 
 ## D. Cross-cutting acceptance facts (measured at the baseline)

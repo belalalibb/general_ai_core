@@ -1,6 +1,6 @@
 # R202 HANDOFF — Templates + App Factory UX (UI-only)
 
-Status: **OPEN** (R202-DEC-01). Base: `main 22111694` (post-R201 closure). Branch `genspark_ai_developer_r202`. Production ceiling 0; `ui/app/app.js` `/v1/` ceiling 22 → 23 (declared).
+Status: **CLOSED** (R202-DEC-02, 2026-09-23) — R202-A ACCEPTED-AS-MEASURED; R202-B DEFERRED per FINDING R202-F1 (operator ruling (a)). Originally OPEN by R202-DEC-01. Base: `main 22111694` (post-R201 closure). Branch `genspark_ai_developer_r202`. Production ceiling 0; `ui/app/app.js` `/v1/` ceiling 22 → 23 (declared).
 
 ## 1. Authority (operator, verbatim)
 "APPROVE R202. Confirm the proposed rulings: D1 = a, D2 = i, D3 = i, D4 = i, D5 = i, D6 = i, D7 = yes, D8 = defer. Confirm the declared ui/app/app.js /v1/ ceiling adjustment: 22 → 23. Execute R202 exactly as proposed. Preserve the unified QEVION direction, existing shared multi-tenant architecture, security/authorization boundaries, one Router, one StrategyExecutor, one TemplateRegistry, and the existing execution path. Do not add TemplateOverride/model selection, project filtering, Command template reads, template persistence, user/workspace templates, or App Factory code generation. Stop at the next decision gate."
@@ -37,3 +37,11 @@ Options for the operator (none pre-approved): **(a)** accept R202-A as the prove
 statically guarded; F1 recorded in R202-DEC-02) → ratchet 3984→3993, head re-gate, PR, closure; **(b)** remove R202-B
 (`stageLabel` + the `followEvents` wiring; flip its guard) → re-GREEN, re-gate, then PR; **(c)** hold R202 and propose a separate
 backend round lifting R188 C3 for template mode (production ceiling ≥ 1 under `apps/`) so R202-B becomes reachable.
+
+## §5 Outcome (CLOSED 2026-09-23)
+- Operator ruling at the §4a decision gate (verbatim head): "(a) ACCEPT R202-A AS THE PROVEN R202 SCOPE. R202-A = accepted-as-measured. R202-B is DEFERRED and remains latent only … Do NOT modify R188 C3. Do NOT add async template execution. Do NOT change execution semantics. Do NOT add backend production files. Do NOT widen the R202 scope."
+- Ratchet `min_passed` 3984 → 3993 at the gate of record `a4a8aad9`; head re-gate `7506ad42` PASS 3993; PR #62 merged by merge commit → `main 5ac352be`; post-merge fresh-clone gate PASS 3993/0/0/64, gateway 194, regression 18 roots 3139/13/0.
+- Register §C: `GET /v1/templates/{ref}` DECLARED-UNCONSUMED → **ACCEPTED-AS-MEASURED for R202-A only**.
+- R202-B recorded as DEFERRED (latent code; 0 literals; 0 reads; statically guarded; never claimed reachable). R202-F1 and R202-DEC-02 are the authoritative evidence for that state.
+- Production diff for R202: `core/ apps/ infrastructure/` **0 lines** (`changes_used 0`). `ui/app/app.js` `/v1/` ceiling **23** (down-only from here).
+- Nothing pre-approved for R203.
