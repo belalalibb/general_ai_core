@@ -1,0 +1,57 @@
+"""AUDIT V2 probe 3b — Journey B (project) + D (failure) re-run with corrected selectors."""
+import sys, json, time, re; sys.path.insert(0, "/tmp"); from audit_boot import *
+from playwright.sync_api import sync_playwright
+proc, base, log = boot("jbd"); api = Api(base, log); out = {}; PW = "correct horse battery staple"; EV = "/home/user/webapp/evidence/audit_v2"
+def login(pg, url, email):
+    pg.goto(url); pg.wait_for_timeout(700)
+    f = pg.query_selector("form:has(input[type=password])")
+    if f and f.is_visible():
+        f.query_selector("input[type=email]").fill(email); f.query_selector("input[type=password]").fill(PW); f.query_selector("button[type=submit]").click()
+    pg.wait_for_timeout(1200)
+def modal_fill(pg, text):
+    pg.wait_for_selector("dialog[open] input, #modal:not([hidden]) input", timeout=5000)
+    mi = pg.query_selector("dialog[open] input, #modal:not([hidden]) input"); mi.fill(text)
+    pg.query_selector("dialog[open] button.btn-primary, #modal:not([hidden]) button.btn-primary").click(); pg.wait_for_timeout(900)
+try:
+    api.user("u@audit.test")
+    p = sync_playwright().start(); b = p.chromium.launch(); pg = b.new_context(viewport={"width": 1280, "height": 900}).new_page()
+    reqs = []; pg.on("request", lambda r: reqs.append((r.method, r.url.split(base, 1)[-1], r.post_data)) if "/v1/" in r.url else None)
+    login(pg, base + "/app/", "u@audit.test")
+    pg.click("#ws-new-btn"); modal_fill(pg, "Audit workspace")
+    pg.wait_for_selector("#ws-tree .ws-node", timeout=5000); pg.click("#ws-tree .ws-node"); pg.wait_for_timeout(500)
+    out["B_ws_detail_visible"] = pg.is_visible("#ws-detail"); out["B_ws_detail_text"] = re.sub(r"\s+", " ", pg.inner_text("#ws-detail"))[:300]
+    pg.click("#prj-new-btn"); modal_fill(pg, "Project Alpha")
+    out["B_ws_detail_after_project"] = re.sub(r"\s+", " ", pg.inner_text("#ws-detail"))[:400]
+    out["B_project_options"] = pg.eval_on_selector_all("#ask-project option", "els => els.map(e => e.textContent)")
+    use = [e for e in pg.query_selector_all("#ws-detail button") if "use" in (e.text_content() or "").lower()]
+    if use: use[0].click(); pg.wait_for_timeout(300)
+    out["B_project_selected"] = pg.input_value("#ask-project") != ""
+    pg.fill("#ask-input", "Second task inside project"); reqs.clear(); pg.click("#ask-submit")
+    pg.wait_for_selector("#ask-result:not([hidden]), #ask-error:not([hidden])", timeout=30000)
+    posts = [r for r in reqs if r[0] == "POST"]; out["B_execute_body"] = json.loads(posts[0][2]) if posts else None
+    out["B_result"] = re.sub(r"\s+", " ", pg.inner_text("#ask-result"))[:300] if pg.is_visible("#ask-result") else pg.inner_text("#ask-error")
+    pg.click(".nav-item[data-view=runs]"); pg.wait_for_timeout(700)
+    out["B_runs_text"] = re.sub(r"\s+", " ", pg.inner_text("#runs-list"))[:300]; out["B_runs_show_project"] = "Project Alpha" in pg.inner_text("#view-runs")
+    pg.screenshot(path=f"{EV}/jB_project_runs.png", full_page=True)
+    # context carry across the shell links: go to Command (tenant) and come back
+    pg.click(".nav-item[data-view=home]"); pg.wait_for_timeout(200)
+    pg.goto(base + "/app/command/"); pg.wait_for_timeout(600); out["B_command_needs_login"] = pg.is_visible("form:has(input[type=password])")
+    login(pg, base + "/app/", "u@audit.test")
+    out["B_context_after_roundtrip"] = {"project_value_nonempty": pg.input_value("#ask-project") != "", "ws_selected_text": re.sub(r"\s+", " ", pg.inner_text("#view-home"))[:120]}
+    # ---- D: failures ----
+    pg.evaluate("() => { const s=document.getElementById('ask-project'); const o=document.createElement('option'); o.value='00000000-0000-0000-0000-000000000000'; o.textContent='stale'; s.appendChild(o); s.value=o.value; }")
+    pg.fill("#ask-input", "x"); pg.click("#ask-submit"); pg.wait_for_selector("#ask-result:not([hidden]), #ask-error:not([hidden])", timeout=30000)
+    out["D_stale_project_error"] = pg.inner_text("#ask-error") if pg.is_visible("#ask-error") else "no error shown"
+    pg.screenshot(path=f"{EV}/jD_error.png", full_page=True)
+    pg.select_option("#ask-project", ""); pg.check("#ask-async"); pg.fill("#ask-input", "async run"); pg.click("#ask-submit")
+    pg.wait_for_selector("#run-timeline li.evt-final, #run-timeline li.evt-error, #ask-error:not([hidden])", timeout=30000)
+    out["D_async_timeline"] = pg.eval_on_selector_all("#run-timeline li", "els => els.map(e => e.textContent)")
+    pg.screenshot(path=f"{EV}/jD_async_timeline.png", full_page=True)
+    # empty ask
+    pg.uncheck("#ask-async"); pg.fill("#ask-input", ""); pg.click("#ask-submit"); pg.wait_for_timeout(800)
+    out["D_empty_ask"] = pg.inner_text("#ask-error") if pg.is_visible("#ask-error") else "no error shown / nothing happened"
+    # expired token simulation: server restart is not possible mid-run; instead inject bad token via sessionStorage? token is memory-only -> skip (NOT VERIFIED)
+    b.close(); p.stop()
+finally:
+    proc.terminate()
+print(json.dumps(out, indent=1, ensure_ascii=False, default=str))
