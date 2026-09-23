@@ -224,7 +224,8 @@ def test_workbench_clears_context_on_logout() -> None:
 
 def test_frozen_counts_and_ceiling() -> None:
     app_raw = _app_raw()
-    assert app_raw.count("/v1/") <= 22 and app_raw.count("fetch(") == 4
+    # 23 = the R202 declared ceiling (operator ruling, R202-DEC-01)
+    assert app_raw.count("/v1/") <= 23 and app_raw.count("fetch(") == 4
     assert _admin_raw().count("/v1/") == 73
     assert "/v1/" not in _read(COMMAND / "command.css")
     html = _read(COMMAND / "index.html")

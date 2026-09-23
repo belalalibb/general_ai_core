@@ -725,6 +725,18 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+R202_POINTER (2026-09-22) — R202 OPEN (Templates + App Factory UX; UI-only layer A/B; production ceiling 0; ui/app/app.js /v1/ 22 -> 23 declared)
+BASE: main 22111694. BRANCH: genspark_ai_developer_r202.
+OPERATOR: "APPROVE R202" D1 = a (consume GET /v1/templates/{ref} in the Workbench detail panel), D2 = i (one read per choice; never at boot; none for 'none'),
+       D3 = i (render as served; no second surface; no code-gen affordance), D4 = i (timeline rows labelled kind · role from the loaded detail),
+       D5 = i (Command templates href unchanged; no Command read), D6 = i (show AUTO posture; no selector; override wiring deferred),
+       D7 = yes (register section C flip at closure), D8 = defer (template ref on the record).
+SCOPE: ui/app/{app.js,index.html,styles.css}; tests/ui/test_template_detail_r202.py (RED first); R197 D4 pin flipped 1:1; R201 count pin <= 23; evidence/r202/*; records.
+FROZEN: core/ apps/ infrastructure/ (0); contracts + freeze 46; all /v1/admin/* + /v1/agent/* gates; CAPABILITY_IDS; command.js 12/1; ui/admin/app.js 73; /v1/execute wire shape.
+NEXT: RED -> A/B -> GREEN + browser proof -> gate of record -> PR (merge commit) -> post-merge -> closure PR (+ register flip) -> STOP.
+```
+
+```
 R201_POINTER (2026-09-22) — R201 CLOSED (Context-carrying execution; UI-only layer A/B; ceiling 0 used 0)
 MAIN: 2140e541 (PR #60 merge commit) + records-only closure PR.
 DELIVERED: executionHref() from the routing table ('&execution=<uuid>'); Command admin tier: Workbench/Admin record links for the selected execution (R200 permission rule);

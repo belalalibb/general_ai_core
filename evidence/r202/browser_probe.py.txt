@@ -1,0 +1,225 @@
+"""R202 real-browser proof (stored as .py.txt: evidence, not a test).
+
+Boots apps.main on a free port, registers a tenant, logs into /app/ in real
+Chromium and proves the R202-A/B behaviour against the SERVED template:
+  1. choosing a template issues exactly ONE GET /v1/templates/{ref} and the
+     detail panel renders served fields (stages/kind/role/depends_on/
+     instruction/model_policy posture) with zero controls inside the panel;
+  2. the empty option hides the panel and issues no request;
+  3. a restored context (R201-C) re-issues exactly one detail read;
+  4. an unknown ref surfaces the served 404 body verbatim;
+  5. a template run posts exactly one /v1/execute with
+     execution_strategy={mode:template,template_id} and NO model_policy;
+     FINDING: async+template is refused by the server (422, R188 C3) and is
+     rendered verbatim; the sync 200 path never opens the SSE stream, so the
+     R202-B labelled timeline is not reachable in the shipped UI (the API-level
+     SSE replay does carry node_started per stage);
+  6. no localStorage; sessionStorage context carries no token.
+"""
+import json, os, re, socket, subprocess, sys, time, urllib.parse, urllib.request, urllib.error
+from playwright.sync_api import sync_playwright
+
+ROOT = "/home/user/webapp"
+s = socket.socket(); s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]; s.close()
+T = "tenant-r202@example.test"
+env = dict(os.environ, HOST="127.0.0.1", PORT=str(port), ADMIN_EMAILS="admin-r202@example.test",
+           LOG_LEVEL="warning", PYTHONUNBUFFERED="1")
+for k in list(env):
+    if k in ("DATABASE_URL", "REDIS_URL") or k.startswith(("GROQ_API_KEY", "GSK_API_KEY", "GW_GROQ")):
+        env.pop(k)
+log = open("/tmp/probe202_server.txt", "w")
+proc = subprocess.Popen([sys.executable, "-m", "apps.main"], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+base = f"http://127.0.0.1:{port}"
+PW = "correct horse battery staple"
+
+
+def http(m, u, b=None, tok=None):
+    data = json.dumps(b).encode() if b is not None else None
+    req = urllib.request.Request(base + u, data=data, method=m, headers={"content-type": "application/json"})
+    if tok:
+        req.add_header("authorization", f"Bearer {tok}")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return r.status, json.loads(r.read() or b"null")
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read() or b"null")
+
+
+for _ in range(60):
+    try:
+        if http("GET", "/healthz")[0] == 200:
+            break
+    except Exception:
+        time.sleep(0.5)
+
+
+def mk(email):
+    http("POST", "/v1/auth/register", {"email": email, "password": PW})
+    time.sleep(0.5)
+    txt = open("/tmp/probe202_server.txt").read()
+    toks = re.findall(r'"token": "([^"]+)"', txt)
+    http("POST", "/v1/auth/verify", {"token": toks[-1]})
+    st, body = http("POST", "/v1/auth/login", {"email": email, "password": PW})
+    assert st == 200, (st, body)
+    return body["token"]
+
+
+def login(pg, url, email):
+    pg.goto(url)
+    pg.fill("#login-email", email)
+    pg.fill("#login-password", PW)
+    pg.click("#login-form button[type=submit]")
+    pg.wait_for_selector("#main-view:not([hidden])", timeout=15000)
+    pg.wait_for_timeout(800)
+
+
+out = {"port": port}
+try:
+    tok = mk(T)
+    st, served = http("GET", "/v1/templates", tok=tok)
+    assert st == 200, (st, served)
+    ref = served["templates"][0]["ref"]
+    st, detail = http("GET", f"/v1/templates/{ref}", tok=tok)
+    assert st == 200, (st, detail)
+    stages = detail["strategy"]["stages"]
+    out["served_ref"] = ref
+    out["served_stage_keys"] = [x["key"] for x in stages]
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        ctx = b.new_context(viewport={"width": 1280, "height": 900})
+        pg = ctx.new_page()
+        reqs = []
+        # paths are URL-decoded: the client encodes the ref with encodeURIComponent ('@' -> '%40'); the server decodes it
+        pg.on("request", lambda r: reqs.append((r.method, urllib.parse.unquote(r.url.split(base, 1)[-1]), r.post_data)) if "/v1/" in r.url else None)
+        login(pg, f"{base}/app/", T)
+        assert not [r for r in reqs if "/v1/templates/" in r[1]], "detail read before a choice"
+        assert pg.is_hidden("#template-detail"), "panel visible before a choice"
+        # 1 choose
+        reqs.clear()
+        pg.select_option("#ask-template", ref)
+        pg.wait_for_selector("#template-detail:not([hidden])", timeout=10000)
+        pg.wait_for_timeout(500)
+        detail_reads = [r[1] for r in reqs if r[0] == "GET" and "/v1/templates/" in r[1]]
+        assert detail_reads == [f"/v1/templates/{ref}"], detail_reads
+        out["choose_detail_reads"] = detail_reads
+        out["panel_name"] = pg.inner_text("#template-detail-name")
+        out["panel_meta"] = pg.inner_text("#template-detail-meta")
+        out["panel_description"] = pg.inner_text("#template-detail-description")
+        out["panel_chips"] = pg.eval_on_selector_all("#template-detail-tags .template-chip", "els => els.map(e => e.textContent)")
+        rows = pg.eval_on_selector_all("#template-stages tr", "trs => trs.slice(1).map(tr => Array.from(tr.querySelectorAll('td')).map(td => td.textContent))")
+        out["panel_rows"] = rows
+        assert [r[1] for r in rows] == [x["key"] for x in stages], rows
+        for row, stg in zip(rows, stages):
+            assert row[2] == stg["kind"] and row[3] == stg["role"], (row, stg)
+            assert row[4] == ", ".join(stg.get("depends_on") or []) or (row[4] in ("", "—") and not stg.get("depends_on")), (row, stg)
+            assert row[6] == (stg.get("instruction") or ""), (row[6], stg.get("instruction"))
+            if stg.get("model_policy") is None:
+                assert row[5] == "auto (Router decides)", row
+        assert out["panel_description"] == (detail.get("description") or ""), out["panel_description"]
+        assert detail["id"] in out["panel_name"] and detail["name"] in out["panel_name"], out["panel_name"]
+        out["panel_controls"] = pg.eval_on_selector_all("#template-detail select, #template-detail button, #template-detail input", "els => els.length")
+        assert out["panel_controls"] == 0
+        pg.screenshot(path=f"{ROOT}/evidence/r202/workbench_template_detail.png", full_page=True)
+        # 2 empty option
+        reqs.clear()
+        pg.select_option("#ask-template", "")
+        pg.wait_for_timeout(400)
+        assert pg.is_hidden("#template-detail"), "panel not hidden on empty choice"
+        assert not [r for r in reqs if "/v1/templates/" in r[1]], reqs
+        out["empty_hides_panel_no_request"] = True
+        # 3 restored context
+        pg.select_option("#ask-template", ref)
+        pg.wait_for_selector("#template-detail:not([hidden])", timeout=10000)
+        pg.goto(f"{base}/admin/")
+        pg.wait_for_timeout(300)
+        reqs.clear()
+        login(pg, f"{base}/app/", T)  # token is memory-only; context (R201-C) lives in sessionStorage
+        pg.wait_for_timeout(600)
+        out["restored_value"] = pg.input_value("#ask-template")
+        assert out["restored_value"] == ref, out["restored_value"]
+        restored_reads = [r[1] for r in reqs if r[0] == "GET" and "/v1/templates/" in r[1]]
+        assert restored_reads == [f"/v1/templates/{ref}"], restored_reads
+        assert pg.is_visible("#template-detail")
+        out["restored_detail_reads"] = restored_reads
+        # 4 unknown ref -> served 404 body
+        reqs.clear()
+        pg.evaluate("() => { const s = document.getElementById('ask-template'); const o = document.createElement('option'); o.value = 'nope@9'; o.textContent = 'nope@9'; s.appendChild(o); s.value = 'nope@9'; s.dispatchEvent(new Event('change')); }")
+        pg.wait_for_selector("#template-detail-error:not([hidden])", timeout=10000)
+        out["unknown_error_text"] = pg.inner_text("#template-detail-error")
+        assert "unknown template" in out["unknown_error_text"].lower(), out["unknown_error_text"]
+        out["unknown_rows"] = pg.eval_on_selector_all("#template-stages tr", "trs => Math.max(0, trs.length - 1)")
+        assert out["unknown_rows"] == 0
+        out["unknown_status"] = [r[1] for r in reqs if "/v1/templates/" in r[1]]
+        pg.screenshot(path=f"{ROOT}/evidence/r202/workbench_template_unknown_404.png", full_page=True)
+        # 5 template run. FINDING (recorded, not worked around): the server refuses
+        # execution_strategy + execution_policy.async with 422 (R188 C3,
+        # "execution_strategy runs synchronously in this slice"); template runs are
+        # therefore always sync 200 and the Workbench opens the SSE stream only after
+        # a 202 -> the R202-B labelled timeline is NOT reachable through the shipped UI.
+        # 5a async + template -> exactly one POST; served 422 rendered verbatim; no timeline rows
+        pg.select_option("#ask-template", ref)
+        pg.wait_for_selector("#template-detail:not([hidden])", timeout=10000)
+        if not pg.is_checked("#ask-async"):
+            pg.check("#ask-async")
+        pg.fill("#ask-input", "R202 probe: summarize the inventory of a two-page notes app.")
+        reqs.clear()
+        pg.click("#ask-submit")
+        pg.wait_for_selector("#ask-error:not([hidden])", timeout=20000)
+        pg.wait_for_timeout(300)
+        posts = [r for r in reqs if r[0] == "POST" and r[1] == "/v1/execute"]
+        assert len(posts) == 1, posts
+        body = json.loads(posts[0][2])
+        assert body["execution_strategy"] == {"mode": "template", "template_id": ref}, body["execution_strategy"]
+        assert "model_policy" not in body, body
+        out["async_execute_body_keys"] = sorted(body)
+        out["async_execute_strategy"] = body["execution_strategy"]
+        out["async_error_text"] = pg.inner_text("#ask-error")
+        assert "runs synchronously" in out["async_error_text"], out["async_error_text"]
+        out["async_timeline_rows"] = pg.eval_on_selector_all("#run-timeline li", "els => els.length")
+        assert out["async_timeline_rows"] == 0
+        pg.screenshot(path=f"{ROOT}/evidence/r202/workbench_template_async_422.png", full_page=True)
+        # 5b sync template run -> 200 rendered verbatim (no timeline: sync path never opens SSE)
+        pg.uncheck("#ask-async")
+        reqs.clear()
+        pg.click("#ask-submit")
+        pg.wait_for_selector("#ask-result:not([hidden])", timeout=60000)
+        pg.wait_for_timeout(300)
+        posts = [r for r in reqs if r[0] == "POST" and r[1] == "/v1/execute"]
+        assert len(posts) == 1, posts
+        body = json.loads(posts[0][2])
+        assert body["execution_strategy"] == {"mode": "template", "template_id": ref}
+        assert "execution_policy" not in body and "model_policy" not in body, body
+        out["sync_execute_body_keys"] = sorted(body)
+        out["sync_result_text"] = pg.inner_text("#ask-result")[:600]
+        out["sync_timeline_rows"] = pg.eval_on_selector_all("#run-timeline li", "els => els.length")
+        out["sync_event_stream_opened"] = bool([r for r in reqs if "/events" in r[1]])
+        assert out["sync_event_stream_opened"] is False
+        m = re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", out["sync_result_text"])
+        pg.screenshot(path=f"{ROOT}/evidence/r202/workbench_template_sync_200.png", full_page=True)
+        # 5c API-level: the SSE replay of that template execution DOES carry node events
+        # per stage (the emitter exists; the Workbench sync path simply never consumes it)
+        if m:
+            req = urllib.request.Request(f"{base}/v1/executions/{m.group(0)}/events", headers={"authorization": f"Bearer {tok}"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                frames = r.read().decode()
+            types = re.findall(r'"type": "([a-z_]+)"', frames)
+            nodes = re.findall(r'"node": "([^"]+)"', frames)
+            out["api_sse_types"] = types
+            out["api_sse_nodes_started"] = [n for n, t in zip(nodes, [t for t in types if t.startswith("node_")]) if t == "node_started"]
+            assert out["api_sse_nodes_started"] == [x["key"] for x in stages], out["api_sse_nodes_started"]
+        out["r202_b_reachable_in_ui"] = False
+        # 6 storage posture
+        out["localStorage_keys"] = pg.evaluate("() => Object.keys(localStorage)")
+        assert out["localStorage_keys"] == []
+        sctx = pg.evaluate("() => sessionStorage.getItem('qevion.app.context')")
+        assert sctx and "token" not in sctx, sctx
+        out["session_context"] = json.loads(sctx)
+        b.close()
+finally:
+    proc.terminate()
+    try:
+        proc.wait(timeout=10)
+    except Exception:
+        proc.kill()
+out["result"] = "OK"
+print(json.dumps(out, indent=1, ensure_ascii=False))

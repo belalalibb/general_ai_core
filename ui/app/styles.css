@@ -753,3 +753,16 @@ kbd {
   .topbar { gap: 8px; padding: 10px 12px; }
   .brand-sub { display: none; }
 }
+
+/* R202 — served template detail (shared tokens only; no route literals) */
+.template-detail { margin: 12px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); }
+.template-detail-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.template-detail-head h3 { margin: 0; font-size: 15px; }
+.template-description { margin: 8px 0; }
+.template-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.template-chip { font-size: 12px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-dim); }
+.template-stages-wrap { overflow-x: auto; }
+.template-stages { width: 100%; border-collapse: collapse; font-size: 13px; }
+.template-stages th, .template-stages td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--line); }
+.template-stages th { color: var(--ink-dim); font-weight: 600; border-top: none; }
+.template-instruction { min-width: 240px; overflow-wrap: anywhere; }

@@ -1,0 +1,102 @@
+{
+ "port": 55147,
+ "served_ref": "app_factory.plan@1",
+ "served_stage_keys": [
+  "inventory-summary",
+  "architecture-plan",
+  "review"
+ ],
+ "choose_detail_reads": [
+  "/v1/templates/app_factory.plan@1"
+ ],
+ "panel_name": "App Factory — application plan · app_factory.plan@1 · system/active",
+ "panel_meta": "mode custom · 3 stages · max_parallel 1",
+ "panel_description": "Inventory the target project and QEVION's own capabilities, draft an architecture plan, review it. Generation is a later, separate template.",
+ "panel_chips": [
+  "tag: app-factory",
+  "tag: planning"
+ ],
+ "panel_rows": [
+  [
+   "1",
+   "inventory-summary",
+   "generate",
+   "analyst",
+   "—",
+   "auto (Router decides)",
+   "Summarise the project inventory (languages, manifests, layout) and the QEVION inventory (models, skills, capabilities) as facts only."
+  ],
+  [
+   "2",
+   "architecture-plan",
+   "generate",
+   "architect",
+   "inventory-summary",
+   "auto (Router decides)",
+   "Propose an application plan for the ask on top of the inventory: components, boundaries, data flow, risks. Do NOT write code."
+  ],
+  [
+   "3",
+   "review",
+   "review",
+   "reviewer",
+   "architecture-plan",
+   "auto (Router decides)",
+   "Review the plan for gaps and contradictions with the inventory."
+  ]
+ ],
+ "panel_controls": 0,
+ "empty_hides_panel_no_request": true,
+ "restored_value": "app_factory.plan@1",
+ "restored_detail_reads": [
+  "/v1/templates/app_factory.plan@1"
+ ],
+ "unknown_error_text": "validation_error: unknown template.",
+ "unknown_rows": 0,
+ "unknown_status": [
+  "/v1/templates/nope@9"
+ ],
+ "async_execute_body_keys": [
+  "ask",
+  "execution_policy",
+  "execution_strategy"
+ ],
+ "async_execute_strategy": {
+  "mode": "template",
+  "template_id": "app_factory.plan@1"
+ },
+ "async_error_text": "validation_error: execution_strategy runs synchronously in this slice.",
+ "async_timeline_rows": 0,
+ "sync_execute_body_keys": [
+  "ask",
+  "execution_strategy"
+ ],
+ "sync_result_text": "succeeded\n6d16e77a-06a7-4fb8-9daf-76a736c2d06c\nOpen in Runs\n{\"context_blocks\": [{\"content\": \"R202 probe: summarize the inventory of a two-page notes app.\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"R202 probe: summarize the inventory of a two-page notes app.\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+ "sync_timeline_rows": 0,
+ "sync_event_stream_opened": false,
+ "api_sse_types": [
+  "execution_started",
+  "node_started",
+  "node_completed",
+  "node_started",
+  "node_completed",
+  "node_started",
+  "node_completed",
+  "ask",
+  "final"
+ ],
+ "api_sse_nodes_started": [
+  "inventory-summary",
+  "architecture-plan",
+  "review"
+ ],
+ "r202_b_reachable_in_ui": false,
+ "localStorage_keys": [],
+ "session_context": {
+  "view": "home",
+  "selectedWorkspace": null,
+  "project": null,
+  "template": "app_factory.plan@1"
+ },
+ "result": "OK"
+}

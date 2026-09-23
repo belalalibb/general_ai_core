@@ -1,0 +1,9 @@
+# RED: R202 guard + flipped R197 pin against the opening tree 114c6307 (declaration only; no UI code)
+FFF.FF.F.......F...............                                          [100%]
+FAILED tests/ui/test_template_detail_r202.py::test_detail_route_is_consumed_exactly_once_through_api
+FAILED tests/ui/test_template_detail_r202.py::test_detail_read_fires_on_choice_never_at_boot_never_for_none
+FAILED tests/ui/test_template_detail_r202.py::test_render_uses_only_served_fields_and_derives_auto_posture
+FAILED tests/ui/test_template_detail_r202.py::test_panel_markup_present_and_wired
+FAILED tests/ui/test_template_detail_r202.py::test_timeline_rows_carry_stage_kind_and_role_from_loaded_detail
+FAILED tests/ui/test_template_detail_r202.py::test_counts_and_declared_ceiling
+FAILED tests/ui/test_workbench_template_picker_r197.py::test_templates_route_is_the_only_template_source
