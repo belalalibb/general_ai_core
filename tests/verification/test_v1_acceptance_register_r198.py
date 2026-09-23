@@ -106,7 +106,8 @@ def test_ui_unconsumed_routes_declared() -> None:
     for route in CONSUMED_ROUTES_R202:
         row = _row_for(route)
         assert _status_of(row) == "ACCEPTED-AS-MEASURED"
-        assert "R202-A" in row and "R202-B" in row and "DEFERRED" in row, (
+        text = " | ".join(row)
+        assert "R202-A" in text and "R202-B" in text and "DEFERRED" in text, (
             "the R202 flip must name its scope (R202-A only) and the deferred R202-B"
         )
 
