@@ -18,7 +18,10 @@ try:
     reqs = []; pg.on("request", lambda r: reqs.append((r.method, r.url.split(base, 1)[-1], r.post_data)) if "/v1/" in r.url else None)
     login(pg, base + "/app/", "u@audit.test")
     pg.click("#ws-new-btn"); modal_fill(pg, "Audit workspace")
-    pg.wait_for_selector("#ws-tree .ws-node", timeout=5000); pg.click("#ws-tree .ws-node"); pg.wait_for_timeout(500)
+    pg.wait_for_selector("#ws-tree .ws-node", timeout=5000); pg.wait_for_timeout(500)
+    # createWorkspace auto-selects; clicking the selected node TOGGLES it off (selectWorkspace toggles) — recorded as a UX finding
+    out["B_ws_autoselected"] = pg.is_visible("#ws-detail")
+    pg.click("#ws-tree .ws-node"); pg.wait_for_timeout(300); out["B_click_selected_toggles_off"] = not pg.is_visible("#ws-detail"); pg.click("#ws-tree .ws-node"); pg.wait_for_timeout(300)
     out["B_ws_detail_visible"] = pg.is_visible("#ws-detail"); out["B_ws_detail_text"] = re.sub(r"\s+", " ", pg.inner_text("#ws-detail"))[:300]
     pg.click("#prj-new-btn"); modal_fill(pg, "Project Alpha")
     out["B_ws_detail_after_project"] = re.sub(r"\s+", " ", pg.inner_text("#ws-detail"))[:400]
