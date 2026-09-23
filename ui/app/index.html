@@ -171,6 +171,21 @@
           <div id="ask-error" class="error-box" hidden></div>
         </div>
 
+        <!-- R202: the served template detail (one read of the detail route per choice; nothing derived
+             beyond the model posture of a stage whose served policy is null = Router decides). -->
+        <section id="template-detail" class="template-detail" aria-labelledby="template-detail-name" hidden>
+          <div class="template-detail-head">
+            <h3 id="template-detail-name"></h3>
+            <span id="template-detail-meta" class="muted small mono"></span>
+          </div>
+          <p id="template-detail-description" class="template-description"></p>
+          <div id="template-detail-tags" class="template-tags"></div>
+          <div class="template-stages-wrap">
+            <table id="template-stages" class="template-stages" aria-label="Template stages as served"></table>
+          </div>
+          <div id="template-detail-error" class="error-box small" hidden></div>
+        </section>
+
         <!-- Active run: real events only -->
         <div id="run-live" class="run-live" hidden>
           <div class="run-live-head">

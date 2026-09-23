@@ -28,6 +28,7 @@ const state = {
   workspaces: [],           // as the API reported them — never synthesized
   projects: [],             // flat list (all projects for the tenant)
   selectedWorkspace: null,  // workspace_id or null
+  templateDetail: null,     // R202: the served StrategyTemplate for the chosen ref, or null
 };
 
 /* Status → badge class. KEYS MUST BE CONTRACT VALUES ONLY. */
@@ -203,6 +204,7 @@ function restoreContext() {
     const select = $(field);
     if (typeof value === "string" && [...select.options].some((o) => o.value === value)) {
       select.value = value;
+      if (field === "ask-template") loadTemplateDetail(value);
     }
   }
   const hashHasView = /^#view=/.test(location.hash || "");
@@ -411,6 +413,118 @@ async function populateTemplateSelect() {
     opt.textContent = `${row.name} \u00b7 ${row.ref} \u00b7 ${row.stage_count} stage${row.stage_count === 1 ? "" : "s"}`;
     select.appendChild(opt);
   }
+}
+
+/* --- R202 (operator D1 = a, D2 = i, D3 = i, D6 = i): the served template detail ------------
+   ONE read of the EXISTING detail route per choice — on the picker change and when a stored
+   choice is restored; never at module load; the empty choice clears the panel with NO request.
+   Everything rendered is a served field of the StrategyTemplate; the model posture is DERIVED
+   from the served stage model_policy (null = the Router decides). No selector, no override,
+   no second surface — the template IS the App Factory UX. A refused read shows the server's
+   own error verbatim. */
+async function loadTemplateDetail(ref) {
+  const panel = $("template-detail");
+  clearError($("template-detail-error"));
+  if (!ref) {
+    state.templateDetail = null;
+    panel.hidden = true;
+    return;
+  }
+  const result = await api(`/v1/templates/${encodeURIComponent(ref)}`);
+  if (!result.ok) {
+    state.templateDetail = null;
+    panel.hidden = false;
+    $("template-detail-name").textContent = ref;
+    $("template-detail-meta").textContent = "";
+    $("template-detail-description").textContent = "";
+    $("template-detail-tags").replaceChildren();
+    $("template-stages").replaceChildren();
+    renderError($("template-detail-error"), result.body);
+    return;
+  }
+  state.templateDetail = result.body;
+  renderTemplateDetail(result.body);
+}
+
+function stagePolicyText(policy) {
+  /* Served model_policy of ONE stage: null means the Router decides (AUTO); a present
+     policy is repeated as served (type + its fields), never interpreted. */
+  if (!policy) return "auto (Router decides)";
+  const parts = [String(policy.type || "policy")];
+  for (const key of ["tier", "model_id", "provider_id"]) {
+    if (policy[key] !== undefined && policy[key] !== null) parts.push(`${key}=${policy[key]}`);
+  }
+  return parts.join(" \u00b7 ");
+}
+
+function renderTemplateDetail(template) {
+  const panel = $("template-detail");
+  panel.hidden = false;
+  $("template-detail-name").textContent =
+    `${template.name} \u00b7 ${template.id}@${template.version} \u00b7 ${template.origin}/${template.status}`;
+  $("template-detail-description").textContent = template.description || "";
+  const tags = $("template-detail-tags");
+  tags.replaceChildren();
+  const chips = [
+    ...(template.tags || []).map((t) => ["tag", t]),
+    ...(template.skills || []).map((t) => ["skill", t]),
+    ...(template.required_capabilities || []).map((t) => ["requires", t]),
+  ];
+  if (chips.length === 0) {
+    const none = document.createElement("span");
+    none.className = "muted small";
+    none.textContent = "no tags, skills or required capabilities declared";
+    tags.appendChild(none);
+  }
+  for (const [kind, text] of chips) {
+    const chip = document.createElement("span");
+    chip.className = "template-chip";
+    chip.textContent = `${kind}: ${text}`;
+    tags.appendChild(chip);
+  }
+  const strategy = template.strategy || {};
+  const stages = strategy.stages || [];
+  const table = $("template-stages");
+  table.replaceChildren();
+  const head = document.createElement("tr");
+  for (const label of ["#", "stage", "kind", "role", "depends on", "model policy", "instruction"]) {
+    const th = document.createElement("th");
+    th.textContent = label;
+    head.appendChild(th);
+  }
+  table.appendChild(head);
+  stages.forEach((stage, index) => {
+    const tr = document.createElement("tr");
+    const cells = [
+      String(index + 1),
+      stage.key,
+      stage.kind,
+      stage.role || "\u2014",
+      (stage.depends_on || []).join(", ") || "\u2014",
+      stagePolicyText(stage.model_policy),
+      stage.instruction || "\u2014",
+    ];
+    cells.forEach((text, i) => {
+      const td = document.createElement("td");
+      td.textContent = text;
+      if (i === 1) td.className = "mono";
+      if (i === 6) td.className = "template-instruction";
+      tr.appendChild(td);
+    });
+    table.appendChild(tr);
+  });
+  $("template-detail-meta").textContent =
+    `mode ${strategy.mode || "\u2014"} \u00b7 ${stages.length} stage${stages.length === 1 ? "" : "s"} \u00b7 max_parallel ${strategy.max_parallel ?? "\u2014"}`;
+}
+
+function stageLabel(nodeKey) {
+  /* R202-B (operator D4 = i): label a timeline node with the kind · role of the matching stage
+     from the ALREADY-LOADED template detail. No read; unknown keys stay bare. */
+  const detail = state.templateDetail;
+  const stages = detail && detail.strategy ? detail.strategy.stages || [] : [];
+  const stage = stages.find((s) => s.key === nodeKey);
+  if (!stage) return nodeKey;
+  return `${nodeKey} \u00b7 ${stage.kind}${stage.role ? ` \u00b7 ${stage.role}` : ""}`;
 }
 
 /* --- workspaces & projects (GAP-1 API — real state only) ---------------------------- */
@@ -687,7 +801,7 @@ async function followEvents(executionId) {
         renderResult("failed", executionId,
           JSON.stringify(event.error, null, 2));
       } else {
-        timelineEntry(`${event.type}${event.node ? `: ${event.node}` : ""}`);
+        timelineEntry(`${event.type}${event.node ? `: ${stageLabel(event.node)}` : ""}`);
       }
     }
   }
@@ -740,7 +854,10 @@ async function submitAsk() {
 function wireAsk() {
   $("ask-submit").addEventListener("click", submitAsk);
   $("ask-project").addEventListener("change", saveContext);
-  $("ask-template").addEventListener("change", saveContext);
+  $("ask-template").addEventListener("change", () => {
+    saveContext();
+    loadTemplateDetail($("ask-template").value);
+  });
   $("ask-input").addEventListener("keydown", (event) => {
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
