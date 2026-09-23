@@ -210,7 +210,8 @@ def test_truth_strip_has_no_invented_vocabulary() -> None:
 
 def test_workbench_static_guard_unchanged_22_4() -> None:
     js = _read(APP / "app.js")
-    assert js.count("/v1/") == 22, "ui/app/app.js /v1/ count moved — R199 adds NO route literal"
+    # R199 added no literal (22); R202-DEC-01 declared 23 (one detail-route literal) — flipped 1:1
+    assert js.count("/v1/") == 23, "ui/app/app.js /v1/ count moved beyond the declared ceiling"
     assert js.count("fetch(") == 4, "ui/app/app.js fetch( count moved — R199 adds NO transport"
 
 
