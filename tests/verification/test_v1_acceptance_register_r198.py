@@ -30,9 +30,12 @@ OPEN_PROPOSALS = ("P-R191-01", "P-R192-03")
 UNCONSUMED_ROUTES = (
     "/v1/admin/evaluations/{",
     "/v1/admin/learning/dashboard",
-    "/v1/templates/{",
     "/v1/webhooks/{",
 )
+# R202-DEC-02 (operator ruling (a), step 7): GET /v1/templates/{ref} left this tuple and is
+# pinned ACCEPTED-AS-MEASURED — R202-A only (Workbench detail panel; evidence/r202/).
+# Lineage: DECLARED-UNCONSUMED since R197 D4 / R198 (this pin flipped 1:1, count unchanged).
+CONSUMED_ROUTES_R202 = ("/v1/templates/{",)
 
 
 def _register() -> str:
@@ -100,6 +103,12 @@ def test_not_evaluated_item_registered() -> None:
 def test_ui_unconsumed_routes_declared() -> None:
     for route in UNCONSUMED_ROUTES:
         assert _status_of(_row_for(route)) == "DECLARED-UNCONSUMED"
+    for route in CONSUMED_ROUTES_R202:
+        row = _row_for(route)
+        assert _status_of(row) == "ACCEPTED-AS-MEASURED"
+        assert "R202-A" in row and "R202-B" in row and "DEFERRED" in row, (
+            "the R202 flip must name its scope (R202-A only) and the deferred R202-B"
+        )
 
 
 def test_d03_and_n9_operator_owned_until_evidence() -> None:
