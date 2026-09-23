@@ -105,7 +105,9 @@ def test_detail_read_fires_on_choice_never_at_boot_never_for_none() -> None:
 
 def test_render_uses_only_served_fields_and_derives_auto_posture() -> None:
     body = _body(_app(), "renderTemplateDetail")
-    for field in ("name", "description", "tags", "skills", "required_capabilities", "strategy", "stages"):
+    served = ("name", "description", "tags", "skills", "required_capabilities", "strategy",
+              "stages")
+    for field in served:
         assert field in body, field
     for field in ("key", "kind", "role", "depends_on", "instruction", "model_policy"):
         assert field in body, field
@@ -162,7 +164,8 @@ def test_timeline_rows_carry_stage_kind_and_role_from_loaded_detail() -> None:
 def test_command_reads_no_templates_and_href_unchanged() -> None:
     cmd = _read(COMMAND / "command.js")
     assert cmd.count("/v1/") == 12 and _strip(cmd).count("fetch(") == 1
-    assert 'templates: { tree: "Workbench", view: "home", href: "/app/#view=home", admin: false }' in cmd
+    owner = 'templates: { tree: "Workbench", view: "home", href: "/app/#view=home", admin: false }'
+    assert owner in cmd
 
 
 def test_counts_and_declared_ceiling() -> None:
@@ -181,4 +184,4 @@ def test_counts_and_declared_ceiling() -> None:
 def test_execute_wire_shape_unchanged() -> None:
     body = _body(_app(), "submitAsk")
     assert re.search(r"if\s*\(\s*templateRef\s*\)\s*body\.execution_strategy\s*=", body)
-    assert "template_override" not in body and "model_policy" not in body, "D6: nothing new on the wire"
+    assert "template_override" not in body and "model_policy" not in body, "D6: wire unchanged"

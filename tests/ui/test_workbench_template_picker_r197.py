@@ -163,7 +163,7 @@ def test_templates_route_is_the_only_template_source() -> None:
     assert f'api("{TEMPLATES_ROUTE}")' in code, "Workbench does not read GET /v1/templates"
     # R197 D4 kept the detail route unconsumed; R202-DEC-01 (operator D1 = a) consumes it EXACTLY
     # once (loadTemplateDetail). Flipped 1:1 — the count, not the posture, is what is pinned.
-    assert _app_js().count("/v1/templates/") == 1, "R202: /v1/templates/{ref} has exactly ONE consumer"
+    assert _app_js().count("/v1/templates/") == 1, "R202: detail route has exactly ONE consumer"
     assert "app_factory" not in _app_js().lower(), "hardcoded template id/ref in the Workbench"
     # options are built from the server rows (server order), keyed by ref
     body = _function_body(code, "populateTemplateSelect")
