@@ -18,3 +18,22 @@ Status: **OPEN** (R202-DEC-01). Base: `main 22111694` (post-R201 closure). Branc
 
 ## 4. Not in this round (operator ruling)
 `TemplateOverride` / model selection in template mode (D6); template ref on the execution record (D8); project filtering; Command template reads or a Command picker; template persistence; user/workspace templates; App Factory code generation; token custody across trees. Each needs its own `APPROVE`.
+
+## §4a Decision gate (2026-09-23) — STOPPED before ratchet / PR
+
+State on `genspark_ai_developer_r202 @ faa6c74a` (production diff vs `main 22111694`: 0 lines):
+GREEN 43/43 + static UI/composition 205/0; real-browser proof `evidence/r202/browser_probe_9a6f89cb.json` + 4 PNGs;
+gate of record `a4a8aad9` fresh clone `RESULT: PASS` passed=3993 (min 3984) f=0 e=0 s=64; gateway 194; regression 3139/13/0.
+**NOT done on purpose:** `min_passed` ratchet, head re-gate, PR, merge, closure, register flip.
+
+**FINDING R202-F1** (ledger row 3a): `POST /v1/execute` refuses `execution_strategy` + `execution_policy.async` with 422
+(`apps/api/app.py` R188 C3 — "execution_strategy runs synchronously in this slice"). Template runs are therefore always sync 200,
+and the Workbench opens the SSE stream only after a 202 ⇒ **R202-B** (`stageLabel` in `followEvents`, operator D4 = i) is code that
+the shipped UI cannot reach in this slice. The R202 proposal's exit criterion "async run → labelled stage rows" rested on a false
+premise (mine). The API-level SSE replay of the same execution DOES emit `node_started/node_completed` per stage (emitter exists).
+R202-A (detail panel, the ONE new `/v1/` literal) is fully proven and unaffected.
+
+Options for the operator (none pre-approved): **(a)** accept R202-A as the proven scope, keep R202-B latent (0 literals, 0 reads,
+statically guarded; F1 recorded in R202-DEC-02) → ratchet 3984→3993, head re-gate, PR, closure; **(b)** remove R202-B
+(`stageLabel` + the `followEvents` wiring; flip its guard) → re-GREEN, re-gate, then PR; **(c)** hold R202 and propose a separate
+backend round lifting R188 C3 for template mode (production ceiling ≥ 1 under `apps/`) so R202-B becomes reachable.
