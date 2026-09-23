@@ -1,0 +1,8 @@
+# static UI + composition suite at 9a6f89cb (tests/ui minus 4 browser files + tests/composition/test_ui_app_pd2.py + test_admin_console_runtime.py)
+........................................................................ [ 35%]
+........................................................................ [ 70%]
+.............................................................            [100%]
+
+freeze --check: contract freeze baseline: MATCHES current tree
+git diff origin/main -- core apps infrastructure | wc -l = 0
+ui/app/app.js /v1/=23 fetch(=4 localStorage=0 ; ui/app/command/command.js /v1/=12 ; ui/admin/app.js /v1/=73

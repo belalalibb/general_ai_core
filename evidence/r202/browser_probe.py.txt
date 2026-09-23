@@ -8,12 +8,15 @@ Chromium and proves the R202-A/B behaviour against the SERVED template:
   2. the empty option hides the panel and issues no request;
   3. a restored context (R201-C) re-issues exactly one detail read;
   4. an unknown ref surfaces the served 404 body verbatim;
-  5. an async template run posts exactly one /v1/execute with
-     execution_strategy={mode:template,template_id} and NO model_policy; the
-     timeline labels node events with stage kind/role;
+  5. a template run posts exactly one /v1/execute with
+     execution_strategy={mode:template,template_id} and NO model_policy;
+     FINDING: async+template is refused by the server (422, R188 C3) and is
+     rendered verbatim; the sync 200 path never opens the SSE stream, so the
+     R202-B labelled timeline is not reachable in the shipped UI (the API-level
+     SSE replay does carry node_started per stage);
   6. no localStorage; sessionStorage context carries no token.
 """
-import json, os, re, socket, subprocess, sys, time, urllib.request, urllib.error
+import json, os, re, socket, subprocess, sys, time, urllib.parse, urllib.request, urllib.error
 from playwright.sync_api import sync_playwright
 
 ROOT = "/home/user/webapp"
@@ -86,7 +89,8 @@ try:
         ctx = b.new_context(viewport={"width": 1280, "height": 900})
         pg = ctx.new_page()
         reqs = []
-        pg.on("request", lambda r: reqs.append((r.method, r.url.split(base, 1)[-1], r.post_data)) if "/v1/" in r.url else None)
+        # paths are URL-decoded: the client encodes the ref with encodeURIComponent ('@' -> '%40'); the server decodes it
+        pg.on("request", lambda r: reqs.append((r.method, urllib.parse.unquote(r.url.split(base, 1)[-1]), r.post_data)) if "/v1/" in r.url else None)
         login(pg, f"{base}/app/", T)
         assert not [r for r in reqs if "/v1/templates/" in r[1]], "detail read before a choice"
         assert pg.is_hidden("#template-detail"), "panel visible before a choice"
@@ -129,9 +133,8 @@ try:
         pg.goto(f"{base}/admin/")
         pg.wait_for_timeout(300)
         reqs.clear()
-        pg.goto(f"{base}/app/")
-        pg.wait_for_selector("#main-view:not([hidden])", timeout=15000)
-        pg.wait_for_timeout(1200)
+        login(pg, f"{base}/app/", T)  # token is memory-only; context (R201-C) lives in sessionStorage
+        pg.wait_for_timeout(600)
         out["restored_value"] = pg.input_value("#ask-template")
         assert out["restored_value"] == ref, out["restored_value"]
         restored_reads = [r[1] for r in reqs if r[0] == "GET" and "/v1/templates/" in r[1]]
@@ -148,7 +151,12 @@ try:
         assert out["unknown_rows"] == 0
         out["unknown_status"] = [r[1] for r in reqs if "/v1/templates/" in r[1]]
         pg.screenshot(path=f"{ROOT}/evidence/r202/workbench_template_unknown_404.png", full_page=True)
-        # 5 async template run
+        # 5 template run. FINDING (recorded, not worked around): the server refuses
+        # execution_strategy + execution_policy.async with 422 (R188 C3,
+        # "execution_strategy runs synchronously in this slice"); template runs are
+        # therefore always sync 200 and the Workbench opens the SSE stream only after
+        # a 202 -> the R202-B labelled timeline is NOT reachable through the shipped UI.
+        # 5a async + template -> exactly one POST; served 422 rendered verbatim; no timeline rows
         pg.select_option("#ask-template", ref)
         pg.wait_for_selector("#template-detail:not([hidden])", timeout=10000)
         if not pg.is_checked("#ask-async"):
@@ -156,21 +164,50 @@ try:
         pg.fill("#ask-input", "R202 probe: summarize the inventory of a two-page notes app.")
         reqs.clear()
         pg.click("#ask-submit")
-        pg.wait_for_selector("#run-timeline li.evt-final, #run-timeline li.evt-error", timeout=120000)
-        pg.wait_for_timeout(500)
+        pg.wait_for_selector("#ask-error:not([hidden])", timeout=20000)
+        pg.wait_for_timeout(300)
         posts = [r for r in reqs if r[0] == "POST" and r[1] == "/v1/execute"]
         assert len(posts) == 1, posts
         body = json.loads(posts[0][2])
         assert body["execution_strategy"] == {"mode": "template", "template_id": ref}, body["execution_strategy"]
         assert "model_policy" not in body, body
-        out["execute_body_keys"] = sorted(body)
-        out["execute_strategy"] = body["execution_strategy"]
-        timeline = pg.eval_on_selector_all("#run-timeline li", "els => els.map(e => e.textContent)")
-        out["timeline"] = timeline
-        for stg in stages:
-            label = f"node_started: {stg['key']} · {stg['kind']}"
-            assert any(label in t for t in timeline), (label, timeline)
-        pg.screenshot(path=f"{ROOT}/evidence/r202/workbench_template_run_timeline.png", full_page=True)
+        out["async_execute_body_keys"] = sorted(body)
+        out["async_execute_strategy"] = body["execution_strategy"]
+        out["async_error_text"] = pg.inner_text("#ask-error")
+        assert "runs synchronously" in out["async_error_text"], out["async_error_text"]
+        out["async_timeline_rows"] = pg.eval_on_selector_all("#run-timeline li", "els => els.length")
+        assert out["async_timeline_rows"] == 0
+        pg.screenshot(path=f"{ROOT}/evidence/r202/workbench_template_async_422.png", full_page=True)
+        # 5b sync template run -> 200 rendered verbatim (no timeline: sync path never opens SSE)
+        pg.uncheck("#ask-async")
+        reqs.clear()
+        pg.click("#ask-submit")
+        pg.wait_for_selector("#ask-result:not([hidden])", timeout=60000)
+        pg.wait_for_timeout(300)
+        posts = [r for r in reqs if r[0] == "POST" and r[1] == "/v1/execute"]
+        assert len(posts) == 1, posts
+        body = json.loads(posts[0][2])
+        assert body["execution_strategy"] == {"mode": "template", "template_id": ref}
+        assert "execution_policy" not in body and "model_policy" not in body, body
+        out["sync_execute_body_keys"] = sorted(body)
+        out["sync_result_text"] = pg.inner_text("#ask-result")[:600]
+        out["sync_timeline_rows"] = pg.eval_on_selector_all("#run-timeline li", "els => els.length")
+        out["sync_event_stream_opened"] = bool([r for r in reqs if "/events" in r[1]])
+        assert out["sync_event_stream_opened"] is False
+        m = re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", out["sync_result_text"])
+        pg.screenshot(path=f"{ROOT}/evidence/r202/workbench_template_sync_200.png", full_page=True)
+        # 5c API-level: the SSE replay of that template execution DOES carry node events
+        # per stage (the emitter exists; the Workbench sync path simply never consumes it)
+        if m:
+            req = urllib.request.Request(f"{base}/v1/executions/{m.group(0)}/events", headers={"authorization": f"Bearer {tok}"})
+            with urllib.request.urlopen(req, timeout=20) as r:
+                frames = r.read().decode()
+            types = re.findall(r'"type": "([a-z_]+)"', frames)
+            nodes = re.findall(r'"node": "([^"]+)"', frames)
+            out["api_sse_types"] = types
+            out["api_sse_nodes_started"] = [n for n, t in zip(nodes, [t for t in types if t.startswith("node_")]) if t == "node_started"]
+            assert out["api_sse_nodes_started"] == [x["key"] for x in stages], out["api_sse_nodes_started"]
+        out["r202_b_reachable_in_ui"] = False
         # 6 storage posture
         out["localStorage_keys"] = pg.evaluate("() => Object.keys(localStorage)")
         assert out["localStorage_keys"] == []
