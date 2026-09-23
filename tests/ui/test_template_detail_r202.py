@@ -111,7 +111,10 @@ def test_render_uses_only_served_fields_and_derives_auto_posture() -> None:
         assert field in body, field
     for field in ("key", "kind", "role", "depends_on", "instruction", "model_policy"):
         assert field in body, field
-    assert "auto" in body.lower() and "router" in body.lower(), (
+    assert "stagePolicyText(" in body, "the model cell goes through stagePolicyText()"
+    policy = _body(_app(), "stagePolicyText")
+    assert re.search(r"if\s*\(\s*!policy\s*\)", policy), "null policy is the AUTO branch"
+    assert "auto" in policy.lower() and "router" in policy.lower(), (
         "null model_policy must be shown as the Router AUTO posture"
     )
     assert "<select" not in body and 'createElement("select")' not in body, "no model selector (D6)"
