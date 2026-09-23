@@ -1,0 +1,146 @@
+{
+ "admin_system": {
+  "profile": "in-memory",
+  "identity_mode": "auth",
+  "provider_keys": [
+   "genspark_llm"
+  ],
+  "admin_emails_configured": 1,
+  "resource_signals": [],
+  "scope": "process"
+ },
+ "models_names": [
+  "claude-opus-4-5",
+  "claude-sonnet-4-5",
+  "deep-seek-v4-flash",
+  "gpt-5-mini",
+  "gpt-5-nano",
+  "gpt-5.2",
+  "grok-4.6",
+  "kimi-k3"
+ ],
+ "exec_sync_live": [
+  403,
+  {
+   "error": {
+    "code": "entitlement_exceeded",
+    "message": "provider plan refused inference; no tokens were consumed",
+    "retryable": false,
+    "details": {
+     "execution_id": "d4037fb5-7226-40c4-a263-dd179bd8a461",
+     "provider_error_category": "quota_exceeded"
+    }
+   }
+  },
+  0.2
+ ],
+ "exec_async_live_accept": 202,
+ "exec_async_live_final": {
+  "execution_id": "dd449d6c-31b4-4186-8c63-1f985e9cfaf3",
+  "status": "failed",
+  "progress": {
+   "current_stage": "single",
+   "percent": 100
+  },
+  "error": {
+   "code": "entitlement_exceeded",
+   "message": "provider plan refused inference; no tokens were consumed",
+   "retryable": false,
+   "details": {
+    "execution_id": "dd449d6c-31b4-4186-8c63-1f985e9cfaf3",
+    "provider_error_category": "quota_exceeded"
+   }
+  }
+ },
+ "events_replay": "data: {\"execution_id\": \"dd449d6c-31b4-4186-8c63-1f985e9cfaf3\", \"type\": \"execution_started\"}\n\ndata: {\"node\": \"single\", \"type\": \"node_started\"}\n\ndata: {\"node\": \"single\", \"type\": \"node_completed\"}\n\ndata: {\"error\": {\"category\": \"quota_exceeded\", \"provider_code\": \"plan_refusal_200\", \"retryable\": false, \"safe_message\": \"provider plan refused inference; no tokens were consumed\"}, \"type\": \"error\"}\n\n",
+ "exec_agent_live": [
+  502,
+  {
+   "error": {
+    "code": "execution_failed",
+    "message": "Execution failed: agent stopped (propose_failed).",
+    "retryable": false,
+    "details": {
+     "execution_id": "27109936-8691-4ff3-9ab1-9e046fbba0df",
+     "agent": {
+      "stop_reason": "propose_failed",
+      "node": "plan-2",
+      "error": {
+       "reason": "propose_failed",
+       "detail": "ReasoningFailed: reasoning execution did not succeed (quota_exceeded/plan_refusal_200)"
+      }
+     }
+    }
+   }
+  }
+ ],
+ "agent_trace_as_tenant": 403,
+ "agent_trace_as_admin": 404,
+ "agent_diagnosis_as_tenant": 403,
+ "exec_template_live": [
+  502,
+  {
+   "error": {
+    "code": "execution_failed",
+    "message": "Execution failed.",
+    "retryable": false,
+    "details": {
+     "execution_id": "ad1312bc-4386-434f-bf11-0a103b06eef4"
+    }
+   }
+  }
+ ],
+ "exec_template_live_record": {
+  "execution_id": "ad1312bc-4386-434f-bf11-0a103b06eef4",
+  "status": "failed",
+  "progress": {
+   "current_stage": "review",
+   "percent": 100
+  },
+  "error": {
+   "code": "execution_failed",
+   "message": "Execution failed.",
+   "retryable": false,
+   "details": {
+    "execution_id": "ad1312bc-4386-434f-bf11-0a103b06eef4"
+   }
+  }
+ },
+ "explicit_model_policy_unknown": [
+  503,
+  {
+   "error": {
+    "code": "model_unavailable",
+    "message": "No eligible model candidates for this request.",
+    "retryable": false,
+    "details": {
+     "excluded": [
+      {
+       "model_key": "00000000-0000-0000-0000-000000000000",
+       "reason": "explicit model not registered or not active"
+      }
+     ]
+    },
+    "trace_id": null
+   }
+  }
+ ],
+ "agent_converse_admin_live": [
+  200,
+  {
+   "rounds": 1,
+   "stop_reason": "reasoning_failed",
+   "note": "reasoning execution failed; nothing to report",
+   "claims": []
+  }
+ ],
+ "usage_after": {
+  "plan": "local-default",
+  "task_units": {
+   "limit": 1000000.0,
+   "used": 0.0,
+   "remaining": 1000000.0
+  },
+  "modality_limits": {}
+ }
+}

@@ -1,0 +1,114 @@
+{
+ "A_root": "{\"detail\":\"Not Found\"}",
+ "A_landing_text": "Durable profile — accounts and executions survive restarts. Verification tokens print on the\nserver console\n(no real email is sent).\nQEVION · Workbench\n\nQEVION Control Plane — sign in to your intelligent workspace.\n\nSign in\nCreate account\nEmail \nPassword \nSign in",
+ "A_after_register": "Account created (status: pending). Copy the verification token from the server console and paste it below.",
+ "A_after_verify": "QEVION · Workbench\n\nQEVION Control Plane — sign in to your intelligent workspace.\n\nSign in\nCreate account\nEmail \nPassword \nSign in",
+ "A_login_error": null,
+ "A_main_visible": true,
+ "A_home_text": "Workspace no workspace selected Project — none — Template — none (auto) — App Factory — application plan · app_factory.plan@1 · 3 stages live activity (async + real event stream) Run ▸",
+ "A_shell_links": [
+  "Command admin -> /app/command/",
+  "Admin admin -> /admin/"
+ ],
+ "A_orientation": {
+  "what is": false,
+  "get started": false,
+  "start here": false,
+  "welcome": false,
+  "describe what you want": false
+ },
+ "A_placeholder": "Describe what you want done… (Ctrl+Enter to run)",
+ "A_result": "succeeded\n419cbd38-8fdd-44dd-b70c-a227bc2e8369\nOpen in Runs\n{\"context_blocks\": [{\"content\": \"Write a haiku about rivers\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"Write a haiku about rivers\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+ "A_result_reqs": [
+  [
+   "POST",
+   "/v1/execute"
+  ]
+ ],
+ "A_open_in_runs": "Open in Runs",
+ "A_runs_visible": true,
+ "A_run_detail": "Runs Refresh Every run is a platform execution record — listed as the API reports it, nothing synthesized. 419cbd38… succeeded 2026-09-23T23:35:43.211218+00:00 Run detail succeeded 419cbd38-8fdd-44dd-b70c-a227bc2e8369 { \"execution_id\": \"419cbd38-8fdd-44dd-b70c-a227bc2e8369\", \"status\": \"succeeded\", \"progress\": { \"current_stage\": \"single\", \"percent\": 100 }, \"result\": { \"type\": \"message\", \"content\": \"{\\\"context_blocks\\\": [{\\\"content\\\": \\\"Write a haiku about rivers\\\", \\\"source\\\": \\\"request\\\", \\\"type\\\": \\\"ask\\\"}], \\\"echo\\\": \\\"Write a haiku about rivers\\\", \\\"note\\\": \\\"hermetic local adapter \\\\u2014 ",
+ "B_ws_modal": true,
+ "B_ws_tree": "▣\nAudit workspace\n0",
+ "B_home_after_ws": "Workspace no workspace selected Project — none — Template — none (auto) — App Factory — application plan · app_factory.plan@1 · 3 stages live activity (async + real event stream) Run ▸ succeeded 419cbd38-8fdd-44dd-b70c-a227bc2e8369 Open in Runs {\"context_blocks\": [{\"content\": \"Write a haiku about rivers\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"Write a haiku about rivers\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+ "B_project_buttons": [],
+ "B_project_options": [
+  "— none —"
+ ],
+ "B_exec_posts": [
+  [
+   "POST",
+   "/v1/execute"
+  ]
+ ],
+ "B_runs_text": "Runs Refresh Every run is a platform execution record — listed as the API reports it, nothing synthesized. 4057494f… succeeded 2026-09-23T23:35:47.618898+00:00 419cbd38… succeeded 2026-09-23T23:35:43.211218+00:00 Run detail succeeded 419cbd38-8fdd-44dd-b70c-a227bc2e8369 { \"execution_id\": \"419cbd38-8fdd-44dd-b70c-a227bc2e8369\", \"status\": \"succeeded\", \"progress\": { \"current_stage\": \"single\", \"percent\": 100 }, \"result\": { \"type\": \"message\", \"content\": \"{\\\"context_blocks\\\": [{\\\"content\\\": \\\"Write a ",
+ "B_runs_show_project": false,
+ "B_reload_requires_login": true,
+ "B_context_restored": {
+  "project": "",
+  "template": "",
+  "ws_tree": "▣\nAudit workspace\n0"
+ },
+ "C_template_options": [
+  "— none (auto) —",
+  "App Factory — application plan · app_factory.plan@1 · 3 stages"
+ ],
+ "C_template_result": "succeeded\n429bd8b7-4836-47a1-8870-540f1a09c69d\nOpen in Runs\n{\"context_blocks\": [{\"content\": \"Plan a two-page notes app\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"Plan a two-page notes app\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+ "C_home_controls": [
+  "ask-project",
+  "ask-template",
+  "ask-async",
+  "ask-submit",
+  "result-to-runs"
+ ],
+ "C_agent_word_in_ui": false,
+ "C_models_view": "Models Refresh MODELS 1 PROVIDERS local_echo AVAILABILITY available 1 local-echo-1 available tier: medium providers: local_echo reasoning",
+ "C_command_as_tenant_landing": "Skip to the capability list QEVION · Command Workbench Admin ADMIN QEVION · Command QEVION Control Plane — Command Center. This surface reads admin-gated routes: an admin account is required. Tenant users: open the Workbench. Email Password Sign in health: unreachable core: — nodes: — available/iner",
+ "C_command_as_tenant_after_login": "Skip to the capability list QEVION · Command Workbench Admin ADMIN newbie@audit.test · tenant a759fbb3… Sign out Surfaces Every link below is a served QEVION surface you can open with this session. Admin-only surfaces stay visible and are marked; the server decides access. Workbench · models Workbench · home Workbench · usage Workbench · runs executions in this tenant: 6 Open Workbench · runs 20a50201-9c13-4d8f-9776-58f7729b1181 succeeded · 2026-09-23T23:35:53.137368+00:00 Open Workbench · runs 6027b39f-d283-41ed-a16d-bbc4c380bbce succeeded · 2026-09-23T23:35:53.136714+00:00 Open Workbench · r",
+ "ERR_D": "TimeoutError('Page.select_option: Timeout 30000ms exceeded.\\nCall log:\\n  - waiting for locator(\"#ask-template\")\\n    - locator resolved to <select id=\"ask-template\">…</select>\\n  - attempting select option action\\n    2 × waiting for element to be visible and enabled\\n      - element is not visible",
+ "E_admin_nav": [
+  "Workbench",
+  "Command admin",
+  "◎ Overview",
+  "◍ Notifications",
+  "▸ Executions",
+  "◔ Tenants & Usage",
+  "⬡ Models & Providers",
+  "⊕ Provider onboarding",
+  "✦ Capabilities & Scenarios",
+  "◇ Learning",
+  "⌬ Skills acquisition",
+  "⎈ Changes & Audit",
+  "⌥ Source Changes",
+  "⌘ Engineering Authorizations",
+  "⚙ System"
+ ],
+ "E_admin_body": "Data shown is since process start — in-memory registries, no persistence layer bound. QEVION Admin Workbench Command ADMIN alive admin@audit.test · tenant 102a889e… Logout ◨ Agent ATTENTION ◎ Overview ◍ Notifications OPERATIONS ▸ Executions ◔ Tenants & Usage CATALOG ⬡ Models & Providers ⊕ Provider onboarding INTELLIGENCE ✦ Capabilities & Scenarios ◇ Learning ⌬ Skills acquisition GOVERNANCE ⎈ Changes & Audit ⌥ Source Changes ⌘ Engineering Authorizations SYSTEM ⚙ System Overview Refresh Attention ",
+ "E_command_admin": "Skip to the capability list QEVION · Command Workbench Admin ADMIN newbie@audit.test · tenant a759fbb3… Sign out Surfaces Every link below is a served QEVION surface you can open with this session. Admin-only surfaces stay visible and are marked; the server decides access. Workbench · models Workbench · home Workbench · usage Workbench · runs executions in this tenant: 6 Open Workbench · runs 20a50201-9c13-4d8f-9776-58f7729b1181 succeeded · 2026-09-23T23:35:53.137368+00:00 Open Workbench · runs 6027b39f-d283-41ed-a16d-bbc4c380bbce succeeded · 2026-09-23T23:35:53.136714+00:00 Open Workbench · runs a69645ae-707b-4009-953a-b57e965498a9 succeeded · 2026-09-23T23:35:53.135885+00:00 Open Workbench · runs 429bd8b7-4836-47a1-8870-540f1a09c69d succeeded · 2026-09-23T23:35:53.135287+00:00 Open Workbench · runs 4057494f-b97b-405f-8caf-db99b331acbd succeeded · 2026-09-23T23:35:47.618898+00:00 Open W",
+ "E_admin_usage_tenants_seen": 0,
+ "console_errors": [
+  "Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+  "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+  "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+  "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+ ],
+ "http_errors": [
+  [
+   401,
+   "/v1/auth/session"
+  ],
+  [
+   401,
+   "/v1/auth/session"
+  ],
+  [
+   401,
+   "/v1/auth/session"
+  ],
+  [
+   401,
+   "/v1/auth/session"
+  ]
+ ]
+}
