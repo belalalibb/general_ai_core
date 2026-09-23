@@ -1,0 +1,55 @@
+"""AUDIT V2 probe 1 — hermetic in-memory profile (no provider keys)."""
+import sys, json, time; sys.path.insert(0, "/tmp"); from audit_boot import *
+proc, base, log = boot("hermetic"); api = Api(base, log); out = {}
+try:
+    out["root_status"] = api("GET", "/", raw=True)[0]
+    out["anon_execute"] = api("POST", "/v1/execute", {"ask": "hi"})[0]
+    t1 = api.user("t1@audit.test"); t2 = api.user("t2@audit.test"); adm = api.user("admin@audit.test")
+    out["models"] = api("GET", "/v1/models", tok=t1)[1]
+    out["skills"] = api("GET", "/v1/skills", tok=t1)[1]
+    out["agent_tools"] = api("GET", "/v1/agent-tools", tok=t1)[1]
+    st, b, _ = api("POST", "/v1/execute", {"ask": "Write a haiku about rivers"}, tok=t1); out["exec_sync"] = (st, b); eid = b["execution_id"]
+    out["exec_get_keys"] = list(api("GET", f"/v1/executions/{eid}", tok=t1)[1].keys())
+    out["exec_get_by_other_tenant"] = api("GET", f"/v1/executions/{eid}", tok=t2)[0]
+    out["exec_list_row_keys"] = list(api("GET", "/v1/executions", tok=t1)[1]["executions"][0].keys())
+    st, b, _ = api("POST", "/v1/execute", {"ask": "async hello", "execution_policy": {"async": True}}, tok=t1); out["exec_async"] = st
+    time.sleep(1.5); out["exec_async_final"] = api("GET", f"/v1/executions/{b['execution_id']}", tok=t1)[1]["status"]
+    st, b, _ = api("POST", "/v1/execute", {"ask": "list files", "execution_policy": {"strategy": "agent"}}, tok=t1); out["exec_agent_on_echo"] = (st, b)
+    out["agent_converse_tenant"] = api("POST", "/v1/agent/converse", {"message": "hello"}, tok=t1)[0]
+    st, b, _ = api("POST", "/v1/agent/converse", {"message": "hello"}, tok=adm); out["agent_converse_admin"] = (st, {k: b.get(k) for k in ("rounds", "stop_reason", "claims", "tool_calls")})
+    st, b, _ = api("POST", "/v1/workspaces", {"name": "Audit WS"}, tok=t1); wsid = b["workspace_id"]
+    st, b, _ = api("POST", "/v1/projects", {"workspace_id": wsid, "name": "P1"}, tok=t1); pid = b["project_id"]
+    out["ws_other_tenant"] = (api("GET", "/v1/workspaces", tok=t2)[1], api("GET", f"/v1/workspaces/{wsid}", tok=t2)[0])
+    st, b, _ = api("POST", "/v1/execute", {"ask": "with project", "project_id": pid}, tok=t1); out["exec_with_project_record"] = api("GET", f"/v1/executions/{b['execution_id']}", tok=t1)[1]
+    out["exec_foreign_project"] = api("POST", "/v1/execute", {"ask": "x", "project_id": pid}, tok=t2)[:2]
+    out["exec_list_project_filter_ignored"] = len(api("GET", f"/v1/executions?project_id={pid}", tok=t1)[1]["executions"])
+    st, b, _ = api("POST", "/v1/execute", {"ask": "Plan a notes app", "execution_strategy": {"mode": "template", "template_id": "app_factory.plan@1"}}, tok=t1); out["exec_template_echo"] = (st, b)
+    out["exec_template_record"] = api("GET", f"/v1/executions/{b['execution_id']}", tok=t1)[1]
+    out["exec_list_after_template_count"] = len(api("GET", "/v1/executions", tok=t1)[1]["executions"])
+    out["usage_t1"] = api("GET", "/v1/usage", tok=t1)[1]
+    out["memory_prefs"] = api("GET", "/v1/memory/preferences", tok=t1)[1]
+    out["webhooks_list"] = api("GET", "/v1/webhooks", tok=t1)[1]
+    st, b, _ = api("POST", "/v1/webhooks", {"url": "https://example.com/hook", "events": ["execution.completed"]}, tok=t1); out["webhook_register"] = (st, b)
+    out["admin_system_as_tenant"] = api("GET", "/v1/admin/system", tok=t1)[0]
+    out["admin_system"] = api("GET", "/v1/admin/system", tok=adm)[1]
+    out["admin_learning_dashboard"] = api("GET", "/v1/admin/learning/dashboard", tok=adm)[1]
+    out["admin_self_review_keys"] = list(api("GET", "/v1/admin/self-review", tok=adm)[1].keys())
+    caps = api("GET", "/v1/admin/capabilities", tok=adm)[1]["capabilities"]; out["capabilities_by_state"] = {c["id"]: c["state"] for c in caps}
+    # LEARNING LOOP (admin) — full lifecycle, then does GOLD reach a tenant execution?
+    L = {}
+    st, b, _ = api("POST", "/v1/admin/learning/samples", {"knowledge_key": "audit.fact", "knowledge_value": {"answer": "QEVION audit gold fact"}}, tok=adm); L["create"] = (st, b); sid = (b or {}).get("sample_id") or (b or {}).get("id")
+    if sid:
+        L["evaluate"] = api("POST", f"/v1/admin/learning/samples/{sid}/evaluate", {"output": {"answer": "QEVION audit gold fact"}}, tok=adm)[:2]
+        L["scan"] = api("POST", f"/v1/admin/learning/samples/{sid}/scan", {}, tok=adm)[:2]
+        L["sanitize"] = api("POST", f"/v1/admin/learning/samples/{sid}/sanitize", {"passed": True}, tok=adm)[:2]
+        L["admit"] = api("POST", f"/v1/admin/learning/samples/{sid}/admit", {"privacy_policy_allows": True, "tenant_user_policy_allows": True, "sensitive_data_handled": True, "not_poisoned": True}, tok=adm)[:2]
+        L["promote"] = api("POST", f"/v1/admin/learning/samples/{sid}/promote", {"offline_eval_pass": True, "regression_pass": True, "security_eval_pass": True, "shadow_performance_acceptable": True, "canary_performance_acceptable": True, "rollback_plan_exists": True, "approval_required": True, "admin_approved": True}, tok=adm)[:2]
+        L["learned"] = api("GET", "/v1/admin/learning/learned?key=audit.fact", tok=adm)[:2]
+        # does the promoted GOLD reach the ADMIN's own tenant execution context? (knowledge is tenant-scoped to the admin's tenant)
+        st, b, _ = api("POST", "/v1/execute", {"ask": "what is the audit fact?"}, tok=adm); L["admin_exec_after_promote_artifacts"] = (b.get("result") or {}).get("artifacts")
+        st, b, _ = api("POST", "/v1/execute", {"ask": "what is the audit fact?"}, tok=t1); L["tenant_exec_after_promote_artifacts"] = (b.get("result") or {}).get("artifacts")
+        L["dashboard_after"] = api("GET", "/v1/admin/learning/dashboard", tok=adm)[1]
+    out["learning_loop"] = L
+finally:
+    proc.terminate()
+print(json.dumps(out, indent=1, default=str, ensure_ascii=False))

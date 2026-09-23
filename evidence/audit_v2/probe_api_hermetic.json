@@ -1,0 +1,394 @@
+{
+ "root_status": 404,
+ "anon_execute": 401,
+ "models": {
+  "models": [
+   {
+    "id": "f910f480-6341-4717-853d-f8a00a3f65f0",
+    "name": "local-echo-1",
+    "tier": "medium",
+    "modalities": [
+     "text"
+    ],
+    "capabilities": [
+     "reasoning"
+    ],
+    "availability": "available",
+    "providers": [
+     "local_echo"
+    ]
+   }
+  ]
+ },
+ "skills": {
+  "skills": []
+ },
+ "agent_tools": {
+  "strategy": "agent",
+  "max_steps": 8,
+  "tools": []
+ },
+ "exec_sync": [
+  200,
+  {
+   "execution_id": "35b18d39-1d01-42d6-b5c9-90a8fc495ad0",
+   "status": "succeeded",
+   "result": {
+    "type": "message",
+    "content": "{\"context_blocks\": [{\"content\": \"Write a haiku about rivers\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"Write a haiku about rivers\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+    "artifacts": [
+     {
+      "type": "context_provenance",
+      "blocks_total": 1,
+      "memory_blocks": [],
+      "gold_blocks": 0,
+      "excluded": 0
+     }
+    ]
+   },
+   "usage": {
+    "units_reserved": 1,
+    "units_settled": 1,
+    "details": {
+     "status": "settled"
+    }
+   }
+  }
+ ],
+ "exec_get_keys": [
+  "execution_id",
+  "status",
+  "progress",
+  "result"
+ ],
+ "exec_get_by_other_tenant": 404,
+ "exec_list_row_keys": [
+  "execution_id",
+  "status",
+  "initiated_by",
+  "created_at",
+  "progress"
+ ],
+ "exec_async": 202,
+ "exec_async_final": "succeeded",
+ "exec_agent_on_echo": [
+  502,
+  {
+   "error": {
+    "code": "execution_failed",
+    "message": "Execution failed: agent stopped (invalid_proposal).",
+    "retryable": false,
+    "details": {
+     "execution_id": "28186e26-3218-4c91-83fc-d50e6c111168",
+     "agent": {
+      "stop_reason": "invalid_proposal",
+      "node": "plan-2",
+      "error": {
+       "reason": "invalid_proposal",
+       "detail": "action must be one of ['final', 'tool_call'], got None"
+      }
+     }
+    }
+   }
+  }
+ ],
+ "agent_converse_tenant": 403,
+ "agent_converse_admin": [
+  200,
+  {
+   "rounds": 1,
+   "stop_reason": "final",
+   "claims": [],
+   "tool_calls": []
+  }
+ ],
+ "ws_other_tenant": [
+  {
+   "workspaces": []
+  },
+  404
+ ],
+ "exec_with_project_record": {
+  "execution_id": "1c1717cd-00e2-4965-a941-70154eff65e3",
+  "status": "succeeded",
+  "progress": {
+   "current_stage": "single",
+   "percent": 100
+  },
+  "result": {
+   "type": "message",
+   "content": "{\"context_blocks\": [{\"content\": \"with project\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"with project\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+   "artifacts": [
+    {
+     "type": "context_provenance",
+     "blocks_total": 1,
+     "memory_blocks": [],
+     "gold_blocks": 0,
+     "excluded": 0
+    }
+   ]
+  }
+ },
+ "exec_foreign_project": [
+  404,
+  {
+   "error": {
+    "code": "validation_error",
+    "message": "Unknown project id.",
+    "retryable": false,
+    "details": {
+     "project_id": "b6496206-2ecf-4cc9-9916-cd0d6c558d40"
+    },
+    "trace_id": null
+   }
+  }
+ ],
+ "exec_list_project_filter_ignored": 6,
+ "exec_template_echo": [
+  200,
+  {
+   "execution_id": "dabbbed4-82aa-4b74-926a-a7520f860b64",
+   "status": "succeeded",
+   "result": {
+    "type": "message",
+    "content": "{\"context_blocks\": [{\"content\": \"Plan a notes app\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"Plan a notes app\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+    "artifacts": []
+   }
+  }
+ ],
+ "exec_template_record": {
+  "execution_id": "dabbbed4-82aa-4b74-926a-a7520f860b64",
+  "status": "succeeded",
+  "progress": {
+   "current_stage": "review",
+   "percent": 100
+  },
+  "result": {
+   "type": "message",
+   "content": "{\"context_blocks\": [{\"content\": \"Plan a notes app\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"Plan a notes app\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+   "artifacts": []
+  }
+ },
+ "exec_list_after_template_count": 10,
+ "usage_t1": {
+  "plan": "local-default",
+  "task_units": {
+   "limit": 1000000.0,
+   "used": 8.0,
+   "remaining": 999992.0
+  },
+  "modality_limits": {}
+ },
+ "memory_prefs": {
+  "preferences": []
+ },
+ "webhooks_list": {
+  "webhooks": []
+ },
+ "webhook_register": [
+  422,
+  {
+   "error": {
+    "code": "validation_error",
+    "message": "Request body failed contract validation.",
+    "retryable": false,
+    "details": {
+     "errors": [
+      "Input should be 'execution.queued', 'execution.started', 'execution.waiting_approval', 'execution.succeeded', 'execution.failed' or 'execution.cancelled'"
+     ]
+    },
+    "trace_id": null
+   }
+  }
+ ],
+ "admin_system_as_tenant": 403,
+ "admin_system": {
+  "profile": "in-memory",
+  "identity_mode": "auth",
+  "provider_keys": [
+   "local_echo"
+  ],
+  "admin_emails_configured": 1,
+  "resource_signals": [
+   {
+    "provider_id": "a947f77d-4ca2-4dba-be7b-6427841e5d65",
+    "model_id": "f910f480-6341-4717-853d-f8a00a3f65f0",
+    "state": "available",
+    "reason": null,
+    "cooldown_until": null,
+    "rpm_used": 9,
+    "rpm_limit": null,
+    "last_category": null
+   }
+  ],
+  "scope": "process"
+ },
+ "admin_learning_dashboard": {
+  "placeholder": true,
+  "verified_samples": 0,
+  "gold_samples": 0,
+  "dataset_coverage": {},
+  "task_coverage": {},
+  "specialist_models": [],
+  "accuracy_trends": [],
+  "promotion_history": [],
+  "rollback_actions": []
+ },
+ "admin_self_review_keys": [
+  "capabilities",
+  "config_lifecycle",
+  "scenarios",
+  "review_state",
+  "evolution",
+  "posture"
+ ],
+ "capabilities_by_state": {
+  "admin.control_plane": "available",
+  "agent.runtime": "available",
+  "auth.sessions": "available",
+  "context.composition": "available",
+  "conversations.persistence": "available",
+  "dev.publish_modes": "inert",
+  "evaluation.records": "available",
+  "execute.async": "available",
+  "execute.sync": "available",
+  "execute.token_streaming": "unavailable",
+  "executions.progress_sse": "available",
+  "health.liveness": "available",
+  "learning.custody_governance": "inert",
+  "learning.lifecycle": "available",
+  "models.listing": "available",
+  "rate_limits.execute": "inert",
+  "skills.import": "available",
+  "skills.listing": "available",
+  "sourcechange.workflow": "available",
+  "templates.listing": "available",
+  "usage.reporting": "available",
+  "webhooks.delivery_staging": "available",
+  "webhooks.registration": "available",
+  "workspaces.projects": "available"
+ },
+ "learning_loop": {
+  "create": [
+   201,
+   {
+    "id": "af7a893b-921a-49bd-8398-13c93e05f226",
+    "source_execution_id": "260b673b-a990-4b9b-ab81-4a49611b58e3",
+    "tenant_id": "026d6d42-1492-437f-8b88-05492dcfd8fc",
+    "eligibility": "pending",
+    "sanitization_state": "pending",
+    "verification_level": "RAW",
+    "dataset_id": null
+   }
+  ],
+  "evaluate": [
+   200,
+   {
+    "evaluated": true,
+    "evaluation_id": "c1faa860-aa30-44fb-a222-03c9692640a6",
+    "sample": {
+     "id": "af7a893b-921a-49bd-8398-13c93e05f226",
+     "source_execution_id": "260b673b-a990-4b9b-ab81-4a49611b58e3",
+     "tenant_id": "026d6d42-1492-437f-8b88-05492dcfd8fc",
+     "eligibility": "pending",
+     "sanitization_state": "pending",
+     "verification_level": "VALIDATED",
+     "dataset_id": null
+    }
+   }
+  ],
+  "scan": [
+   200,
+   {
+    "clean": true,
+    "scanned_paths": 3,
+    "findings": []
+   }
+  ],
+  "sanitize": [
+   200,
+   {
+    "id": "af7a893b-921a-49bd-8398-13c93e05f226",
+    "source_execution_id": "260b673b-a990-4b9b-ab81-4a49611b58e3",
+    "tenant_id": "026d6d42-1492-437f-8b88-05492dcfd8fc",
+    "eligibility": "pending",
+    "sanitization_state": "passed",
+    "verification_level": "VALIDATED",
+    "dataset_id": null
+   }
+  ],
+  "admit": [
+   200,
+   {
+    "admitted": true,
+    "sample": {
+     "id": "af7a893b-921a-49bd-8398-13c93e05f226",
+     "source_execution_id": "260b673b-a990-4b9b-ab81-4a49611b58e3",
+     "tenant_id": "026d6d42-1492-437f-8b88-05492dcfd8fc",
+     "eligibility": "eligible",
+     "sanitization_state": "passed",
+     "verification_level": "VALIDATED",
+     "dataset_id": "26d3e777-e860-4e21-ae7c-9a7e4cc2b8a0"
+    }
+   }
+  ],
+  "promote": [
+   200,
+   {
+    "promoted": false,
+    "reason": "promotion of 'af7a893b-921a-49bd-8398-13c93e05f226' denied; failed: ['offline_eval_pass', 'regression_pass', 'security_eval_pass']",
+    "evidence": {
+     "strict": true,
+     "artifact_evidence_required": true,
+     "resolved": {},
+     "unverified": [
+      "shadow_performance_acceptable",
+      "canary_performance_acceptable",
+      "rollback_plan_exists",
+      "admin_approved"
+     ],
+     "refused_unbacked": [
+      "offline_eval_pass",
+      "regression_pass",
+      "security_eval_pass"
+     ]
+    }
+   }
+  ],
+  "learned": [
+   200,
+   {
+    "keys": []
+   }
+  ],
+  "admin_exec_after_promote_artifacts": [
+   {
+    "type": "context_provenance",
+    "blocks_total": 1,
+    "memory_blocks": [],
+    "gold_blocks": 0,
+    "excluded": 0
+   }
+  ],
+  "tenant_exec_after_promote_artifacts": [
+   {
+    "type": "context_provenance",
+    "blocks_total": 1,
+    "memory_blocks": [],
+    "gold_blocks": 0,
+    "excluded": 0
+   }
+  ],
+  "dashboard_after": {
+   "placeholder": true,
+   "verified_samples": 0,
+   "gold_samples": 0,
+   "dataset_coverage": {},
+   "task_coverage": {},
+   "specialist_models": [],
+   "accuracy_trends": [],
+   "promotion_history": [],
+   "rollback_actions": []
+  }
+ }
+}
