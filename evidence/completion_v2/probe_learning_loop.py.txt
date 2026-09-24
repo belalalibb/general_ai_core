@@ -1,0 +1,71 @@
+"""Completion v2 Phase 3 probe — the bounded governed learning loop over HTTP ONLY.
+
+execution → capture(source_execution_id) → evaluate → scan → sanitize → admit →
+scenario save + replay (regression artefact) → promote(evidence_refs) → GOLD →
+later /v1/execute → context_provenance.gold_blocks > 0. Real runtime profile,
+local echo adapter, admin principal (learning routes are admin-admitted).
+"""
+from __future__ import annotations
+
+import asyncio, json, sys
+import httpx
+from apps.composition.runtime import build_runtime_profile
+
+ADMIN = "admin@completion.test"; PW = "correct horse battery staple"
+H = {"X-Requested-With": "QEVION"}
+OUT: dict[str, object] = {}
+
+async def main() -> None:
+    profile = build_runtime_profile(environ={"ADMIN_EMAILS": ADMIN})
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=profile.app), base_url="http://t") as c:
+        reg = await c.post("/v1/auth/register", json={"email": ADMIN, "password": PW})
+        await c.post("/v1/auth/verify", json={"token": reg.json()["dev_verification_token"]})
+        login = await c.post("/v1/auth/login", json={"email": ADMIN, "password": PW})
+        hdr = {"Authorization": f"Bearer {login.json()['token']}", **H}
+        # 1. a real execution
+        ask = "what is the rollback procedure for a failed deploy"
+        ex = await c.post("/v1/execute", json={"ask": ask}, headers=hdr)
+        OUT["execute_before"] = [ex.status_code, ex.json()["result"]["artifacts"]]
+        exec_id = ex.json()["execution_id"]
+        # 2. capture FROM that execution (C-14)
+        cap = await c.post("/v1/admin/learning/samples", json={
+            "knowledge_key": "ops.rollback_procedure",
+            "knowledge_value": {"procedure": "revert the release tag, redeploy previous artefact, verify healthz"},
+            "source_execution_id": exec_id}, headers=hdr)
+        OUT["capture"] = [cap.status_code, cap.json()]
+        sid = cap.json().get("sample", cap.json()).get("id") if isinstance(cap.json(), dict) else None
+        if sid is None: sid = cap.json()["id"]
+        # 3. evaluate (offline eval + SECURITY grader row in the same record)
+        ev = await c.post(f"/v1/admin/learning/samples/{sid}/evaluate", json={"output": {"text": "revert tag; redeploy; verify"}}, headers=hdr)
+        OUT["evaluate"] = [ev.status_code, ev.json()]
+        eval_id = ev.json().get("evaluation_id")
+        rec = await c.get(f"/v1/admin/evaluations/{eval_id}", headers=hdr)
+        OUT["evaluation_record"] = [rec.status_code, rec.json()]
+        # 4. scan, sanitize, admit
+        sc = await c.post(f"/v1/admin/learning/samples/{sid}/scan", headers=hdr); OUT["scan"] = [sc.status_code, sc.json()]
+        sa = await c.post(f"/v1/admin/learning/samples/{sid}/sanitize", json={"passed": True}, headers=hdr); OUT["sanitize"] = [sa.status_code, sa.json()]
+        ad = await c.post(f"/v1/admin/learning/samples/{sid}/admit", json={"privacy_policy_allows": True, "tenant_user_policy_allows": True, "sensitive_data_handled": True, "not_poisoned": True}, headers=hdr)
+        OUT["admit"] = [ad.status_code, ad.json()]
+        # 5. regression artefact: scenario save + replay (C-15)
+        sv = await c.post("/v1/admin/scenarios", json={"name": "rollback-regression", "ask": ask}, headers=hdr)
+        OUT["scenario_save"] = [sv.status_code, sv.json()]
+        scen_id = sv.json().get("id") or sv.json().get("scenario_id")
+        rp = await c.post(f"/v1/admin/scenarios/{scen_id}/replay", headers=hdr)
+        OUT["scenario_replay"] = [rp.status_code, rp.json()]
+        # 6. promote with REAL evidence refs
+        pr = await c.post(f"/v1/admin/learning/samples/{sid}/promote", json={
+            "rollback_plan_exists": True, "approval_required": True, "admin_approved": True,
+            "shadow_performance_acceptable": True, "canary_performance_acceptable": True,
+            "evidence_refs": {"evaluation_id": eval_id, "security_evaluation_id": eval_id,
+                              "regression_execution_id": rp.json().get("execution_id")}}, headers=hdr)
+        OUT["promote"] = [pr.status_code, pr.json()]
+        # 7. later execution → gold reaches production
+        ex2 = await c.post("/v1/execute", json={"ask": ask}, headers=hdr)
+        OUT["execute_after"] = [ex2.status_code, ex2.json()["result"]["artifacts"], ex2.json().get("context")]
+        db = await c.get("/v1/admin/learning/dashboard", headers=hdr); OUT["dashboard"] = [db.status_code, db.json()]
+        # tenant view of the later run
+        st = await c.get(f"/v1/executions/{ex2.json()['execution_id']}", headers=hdr)
+        OUT["status_after"] = [st.status_code, st.json()["result"]["artifacts"]]
+
+asyncio.run(main())
+json.dump(OUT, sys.stdout, indent=1, default=str)
