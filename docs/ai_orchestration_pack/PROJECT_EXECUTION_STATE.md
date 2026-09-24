@@ -726,7 +726,8 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 
 ```
 COMPLETION_V2_POINTER (2026-09-24) — COMPLETION PROGRAM v2 (operator APPROVE D-1..D-7; three phases C-01..C-17 executed as ONE round from main 7d9524eb; production ceiling 13 used 13)
-BRANCH: completion_v2 (PR → main; merge commit recorded in COMPLETION-V2-DEC-02 and evidence/completion_v2/ledger.md).
+MAIN: b8195e3c (PR #65 merge commit) + this records-only closure. GATES: fresh-clone gate of record 0a25f476 PASS 4016/0/0/58; post-merge b8195e3c PASS 4016/0/0/58 (min_passed 3993 -> 4016).
+STATUS: CLOSED — hermetically complete and verified; live-provider path NOT VERIFIED; Production Ready NOT claimed (COMPLETION-V2-DEC-02 §D–F).
 DELIVERED: root entry 307 → /app/; dev-token onboarding (in-memory only, labelled); HttpOnly SameSite=Strict cookie session + CSRF header rule (Bearer unchanged);
        additive execution context (mode/strategy/project_id/template_ref) on sync/status/list; failed stage names itself + real provider category (details.stage);
        readable answer + facts; orientation/first-run; idempotent workspace select; error hints; template stage replay; tenant own agent trace/diagnosis (D-3);
