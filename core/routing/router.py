@@ -133,6 +133,13 @@ class SimpleScoringRouter:
         """The weight set used when a request carries none (11 §6)."""
         return self._default_weights
 
+    @property
+    def signals(self) -> ResourceSignalPort | None:
+        """C-12 (completion v2): the SAME runtime signal board the Router
+        consults — read-only, so a listing can show the truth the Router
+        would act on instead of a static availability (audit F-6)."""
+        return self._signals
+
     def set_default_weights(self, weights: ScoringWeights) -> None:
         """Replace the default scoring weights (admin control plane, 21 §6).
 

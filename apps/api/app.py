@@ -216,6 +216,7 @@ from core.contracts.execute import (
 )
 from core.contracts.execution import Execution, ExecutionNodeStatus, ExecutionStrategy
 from core.contracts.execution_strategy import ExecutionStrategySpec
+from core.contracts.domain import BindingAvailability
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
 from core.contracts.model_policy import (
     AgentNodeMappingPolicy,
@@ -1772,16 +1773,50 @@ def create_app(
             same registries the router selects over; availability is the
             recorded best-across-bindings projection (empty ⇒ unavailable).
             """
-            response = ModelsListResponse(
-                models=[
-                    ModelListEntry.from_model(
-                        model,
-                        binding_registry.bindings_for_model(model.id),
-                        provider_keys=_provider_key,
+            rows: list[ModelListEntry] = []
+            signal_board = router.signals
+            for model in model_registry.active_models():
+                bindings_for = binding_registry.bindings_for_model(model.id)
+                entry = ModelListEntry.from_model(
+                    model, bindings_for, provider_keys=_provider_key
+                )
+                if signal_board is not None and bindings_for:
+                    # C-12 (audit F-6): the SAME eligibility answer the Router
+                    # gives per binding, so a plan-refused / rate-limited model
+                    # is not shown as "available". Static availability is the
+                    # floor; runtime signals can only DEGRADE it (some bindings
+                    # blocked ⇒ degraded; all blocked ⇒ unavailable).
+                    runtime_rows: list[JsonObject] = []
+                    blocked = 0
+                    for binding in bindings_for:
+                        eligibility = signal_board.eligibility(
+                            binding.provider_id, model.id, limits=binding.limits_metadata
+                        )
+                        if not eligibility.eligible:
+                            blocked += 1
+                        runtime_rows.append(
+                            {
+                                "provider": (
+                                    _provider_key(binding.provider_id)
+                                    if _provider_key is not None
+                                    else None
+                                ),
+                                "binding_availability": binding.availability.value,
+                                "eligible": eligibility.eligible,
+                                "reason": eligibility.reason,
+                                "retry_after_ms": eligibility.retry_after_ms,
+                            }
+                        )
+                    availability = entry.availability
+                    if blocked == len(bindings_for):
+                        availability = BindingAvailability.UNAVAILABLE
+                    elif blocked and availability is BindingAvailability.AVAILABLE:
+                        availability = BindingAvailability.DEGRADED
+                    entry = entry.model_copy(
+                        update={"availability": availability, "runtime": runtime_rows}
                     )
-                    for model in model_registry.active_models()
-                ]
-            )
+                rows.append(entry)
+            response = ModelsListResponse(models=rows)
             return JSONResponse(
                 status_code=200,
                 content=response.model_dump(mode="json", exclude_none=True),
