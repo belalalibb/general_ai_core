@@ -224,8 +224,8 @@ def test_counts_hold_as_ceilings() -> None:
     assert command_raw.count("/v1/") == 12
     assert _command().count("fetch(") == 1
     app_raw = _read(APP / "app.js")
-    # 22 at R200; 23 since R202-DEC-01 (operator-declared ceiling re-measure, flipped 1:1)
-    assert app_raw.count("/v1/") == 23 and app_raw.count("fetch(") == 4
+    # 22 at R200; 23 since R202-DEC-01; 32 / 6 since COMPLETION-V2-DEC (declared, flipped 1:1)
+    assert app_raw.count("/v1/") == 32 and app_raw.count("fetch(") == 6
     assert _read(ADMIN / "app.js").count("/v1/") == 73
 
 

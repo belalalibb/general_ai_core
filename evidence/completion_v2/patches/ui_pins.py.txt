@@ -52,4 +52,11 @@ sub("tests/ui/test_template_detail_r202.py",
 sub("tests/ui/test_context_carry_r201.py",
     '    # 23 = the R202 declared ceiling (operator ruling, R202-DEC-01)\n    assert app_raw.count("/v1/") <= 23 and app_raw.count("fetch(") == 4\n',
     '    # 32 / 6 = the COMPLETION-V2-DEC declared ceilings (R202 was 23 / 4)\n    assert app_raw.count("/v1/") <= 32 and app_raw.count("fetch(") == 6\n')
+sub("tests/ui/test_command_routing_r200.py",
+    '    # 22 at R200; 23 since R202-DEC-01 (operator-declared ceiling re-measure, flipped 1:1)\n    assert app_raw.count("/v1/") == 23 and app_raw.count("fetch(") == 4\n',
+    '    # 22 at R200; 23 since R202-DEC-01; 32 / 6 since COMPLETION-V2-DEC (declared, flipped 1:1)\n    assert app_raw.count("/v1/") == 32 and app_raw.count("fetch(") == 6\n')
+sub("ui/app/app.js", '   Three EXISTING tenant routes, rendered as served.', '   3 EXISTING tenant routes, rendered as served.')
+# rest slice covers the new tests/completion_v2 directory (partition guard)
+m = json.loads(mp.read_text(encoding="utf-8")); sl=[s for s in m["pytest"]["slices"] if s["name"]=="rest"][0]
+sl["selection"]=sl["selection"].replace("tests/audit ","tests/audit tests/completion_v2 "); mp.write_text(json.dumps(m, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 print("ui pins patched")

@@ -1372,7 +1372,7 @@ async function refreshUsage() {
 }
 
 /* --- C-13 (operator D-6): read-only tenant capability panels ----------------------------
-   Three EXISTING tenant routes, rendered as served. 404 ⇒ "not composed on this deployment";
+   3 EXISTING tenant routes, rendered as served. 404 ⇒ "not composed on this deployment";
    other refusals ⇒ the unified error verbatim; empty ⇒ an honest empty line. No mock rows. */
 
 function capsRow(parts) {

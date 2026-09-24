@@ -28,7 +28,7 @@
       },
       {
         "name": "rest",
-        "selection": "tests/agent tests/agent_dev tests/audit tests/context tests/db tests/engineering tests/events tests/identity tests/learning tests/memory tests/observability tests/roles tests/routing tests/runtime tests/secrets tests/skills tests/sourcechange tests/storage tests/tools tests/ui tests/unit tests/usage tests/verification tests/workspace",
+        "selection": "tests/agent tests/agent_dev tests/audit tests/completion_v2 tests/context tests/db tests/engineering tests/events tests/identity tests/learning tests/memory tests/observability tests/roles tests/routing tests/runtime tests/secrets tests/skills tests/sourcechange tests/storage tests/tools tests/ui tests/unit tests/usage tests/verification tests/workspace",
         "time_ceiling_s": 300
       }
     ],
