@@ -319,6 +319,7 @@ class DurableLearningCustody:
             self._repository.save(sample, state, expected_revision=expected_revision)
         )
 
+
     # --- operator governance (core LearningGovernancePort) ----------------------
 
     def revoke_policy(self, tenant_id: UUID, policy_id: UUID) -> int:

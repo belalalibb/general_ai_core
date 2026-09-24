@@ -1557,6 +1557,113 @@
         }
       ],
       "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. FINAL: 9 distinct production files (apps/composition/memory.py, apps/composition/runtime.py, apps/api/capabilities.py, apps/api/app.py, apps/api/admin.py, infrastructure/db/learning.py, apps/composition/learning.py, core/learning/lifecycle.py, apps/api/intake.py); 4.5 triggered (evidence/r179/durability_measured_before.json) and the 4.7 design note was committed at 60d09d95 BEFORE the 4.7 production commit ccfa9a7d. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."
+    },
+    "round_completion_v2": {
+      "ceiling": 13,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 13,
+      "items": [
+        "COMPLETION-V2-C-01 root entry: GET / → 307 /app/ (apps/composition/runtime.py).",
+        "COMPLETION-V2-C-02 dev onboarding (D-1 = b): dev_verification_token in the register response, in-memory profile only, labelled (apps/api/auth.py, apps/composition/runtime.py).",
+        "COMPLETION-V2-C-04 additive execution context mode/strategy/project_id/template_ref on sync/status/list from authoritative data (apps/api/execution_context.py, apps/api/app.py, apps/api/worker.py, core/contracts/execute.py).",
+        "COMPLETION-V2-C-05 HttpOnly cookie session + CSRF header rule (D-2), Bearer unchanged (apps/api/auth.py, apps/api/app.py, apps/composition/runtime.py).",
+        "COMPLETION-V2-C-06 failed template/custom stage names itself + real provider category (core/execution/strategy.py, apps/api/errors.py, apps/api/app.py).",
+        "COMPLETION-V2-C-11 tenant reads own agent trace/diagnosis (D-3); cross-tenant 404; no second agent engine (apps/admin_agent/http.py).",
+        "COMPLETION-V2-C-12 /v1/models runtime truth from the ONE ResourceSignalBoard (core/routing/router.py, core/contracts/model_listing.py, apps/api/app.py).",
+        "COMPLETION-V2-C-17 measured learning dashboard (core/contracts/admin.py, apps/api/admin.py).",
+        "UI-only (uncounted): C-03 readable result, C-07 orientation/first-run, C-08 idempotent workspace select + Close, C-09 error hints, C-10 template stage replay, C-13 capability panels (D-6), C-14/C-15 admin capture-from-execution + evidence-backed Promote, C-16 gold provenance chips — ui/app/{app.js,index.html,styles.css} (ceilings 32/6 declared), ui/admin/{app.js,index.html} (73 held).",
+        "D-5 loop proven over HTTP in tests/completion_v2/test_phase3_learning_loop.py + evidence/completion_v2/probe_learning_loop.json (gold_blocks 0→1).",
+        "D-7: live-provider success NOT VERIFIED (hermetic local-echo only); plan-refused never relabelled healthy."
+      ],
+      "log": [
+        {
+          "item": "COMPLETION-V2-C-02",
+          "file": "apps/api/auth.py",
+          "loc": "+127/-17",
+          "summary": "C-02/C-05: D-1=b dev verification token in the register response when the runtime binds a capture (in-memory only, labelled verification=dev_token + dev_note); D-2 HttpOnly SameSite=Strict session cookie set on login, cleared on logout; session_token() resolves Bearer first then cookie; csrf_ok()/csrf_rejected() — cookie-only state changes require X-Requested-With: QEVION."
+        },
+        {
+          "item": "COMPLETION-V2-C-04",
+          "file": "apps/api/app.py",
+          "loc": "+100/-14",
+          "summary": "C-04/C-05/C-06/C-12: admission uses session_token + CSRF rule; /v1/execute derives request_context (mode/async/project_id/template_ref) and folds it into cost_snapshot (sync) or the outbox payload (async); sync/status/list carry the additive `context`; /v1/models runtime rows from the ONE ResourceSignalBoard (eligible/reason/retry_after_ms, DEGRADED/UNAVAILABLE derived); _failed_stage() hands details.stage to both failure sites."
+        },
+        {
+          "item": "COMPLETION-V2-C-04",
+          "file": "apps/api/execution_context.py",
+          "loc": "+76/-0",
+          "summary": "C-04: NEW: request_context / with_request_context / context_info — one derivation of the additive execution context from authoritative request + report data."
+        },
+        {
+          "item": "COMPLETION-V2-C-04",
+          "file": "apps/api/worker.py",
+          "loc": "+11/-0",
+          "summary": "C-04: async worker folds the staged request_context into the terminal record before store.put."
+        },
+        {
+          "item": "COMPLETION-V2-C-06",
+          "file": "apps/api/errors.py",
+          "loc": "+15/-4",
+          "summary": "C-06: execution_failure_detail(stage=) → details.stage; historical shapes unchanged when absent."
+        },
+        {
+          "item": "COMPLETION-V2-C-17",
+          "file": "apps/api/admin.py",
+          "loc": "+76/-14",
+          "summary": "C-17: GET /learning/dashboard is MEASURED when the lifecycle is composed (LearningDashboardMeasured: counts over samples / evaluation records / TRAINING_DATASET_PROMOTED audit events; `deferred` names the 8 unmeasured metrics); placeholder only when no lifecycle."
+        },
+        {
+          "item": "COMPLETION-V2-C-11",
+          "file": "apps/admin_agent/http.py",
+          "loc": "+16/-4",
+          "summary": "C-11: D-3: trace/diagnosis admit ANY authenticated caller and resolve in the caller's tenant (foreign == absent == 404); tools/converse stay admin-only; session_token resolution."
+        },
+        {
+          "item": "COMPLETION-V2-C-01",
+          "file": "apps/composition/runtime.py",
+          "loc": "+30/-2",
+          "summary": "C-01/C-02/C-05: GET / → 307 /app/; ConsoleEmailSender(capture=) binds the dev token capture ONLY for the in-memory profile; AuthSurface(dev_verification_tokens=, cookie_secure=SESSION_COOKIE_SECURE=1)."
+        },
+        {
+          "item": "COMPLETION-V2-C-06",
+          "file": "core/execution/strategy.py",
+          "loc": "+29/-4",
+          "summary": "C-06: a FAILED stage node names its stage and carries the child's normalized provider error (category + safe_message); the child's attempt trail rides the projected node so the API maps the real category."
+        },
+        {
+          "item": "COMPLETION-V2-C-04",
+          "file": "core/contracts/execute.py",
+          "loc": "+20/-0",
+          "summary": "C-04: ExecutionContextInfo; additive `context: ExecutionContextInfo | None` on ExecuteSyncResponse and ExecutionStatusResponse (freeze re-derived, declared)."
+        },
+        {
+          "item": "COMPLETION-V2-C-12",
+          "file": "core/contracts/model_listing.py",
+          "loc": "+6/-1",
+          "summary": "C-12: additive ModelListEntry.runtime: list[JsonObject] | None."
+        },
+        {
+          "item": "COMPLETION-V2-C-17",
+          "file": "core/contracts/admin.py",
+          "loc": "+27/-0",
+          "summary": "C-17: LearningDashboardMeasured (placeholder: Literal[False])."
+        },
+        {
+          "item": "COMPLETION-V2-C-12",
+          "file": "core/routing/router.py",
+          "loc": "+7/-0",
+          "summary": "C-12: SimpleScoringRouter.signals read-only property exposing the composed ResourceSignalPort."
+        }
+      ],
+      "ceiling_history": [
+        "declared 13 at COMPLETION-V2-DEC (operator APPROVE D-1..D-7, 2026-09-24) from main 7d9524eb: ONE product completion program, three phases, executed as one round; 13 = the exact production file set touched (2 ruff-format-only drifts reverted to main bytes and NOT counted)."
+      ],
+      "note": "COMPLETION PROGRAM v2 (operator verbatim: 'Execute ALL THREE phases as ONE PRODUCT COMPLETION PROGRAM'; 'Do NOT reinterpret these as separate future engineering rounds'). USE→COMPOSE→WIRE→REPAIR→SIMPLIFY→ADD: no second Router/StrategyExecutor/agent runtime/TemplateRegistry/SkillRegistry/ToolExecutor/capability registry/provider manager/credential/tenancy. Contract freeze re-derived for round completion_v2 (additive only). UI ceilings ui/app/app.js 23/4 → 32/6 declared (rules carry lineage); ui/admin/app.js 73 held; command.js 12 held."
     }
   },
   "baseline": {
