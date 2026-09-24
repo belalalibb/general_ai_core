@@ -1,0 +1,179 @@
+{
+ "C01_root": [
+  307,
+  "/app/"
+ ],
+ "C02_register": [
+  201,
+  {
+   "user_id": "70074153-656f-4200-a931-837b7317f72b",
+   "tenant_id": "a2104ed6-55f4-42f0-b86e-4885da67cc8b",
+   "email": "newuser@c.test",
+   "status": "pending",
+   "verification": "dev_token",
+   "dev_verification_token": "<present>",
+   "dev_note": "development / in-memory profile only: no email was sent; this token is returned so the local onboarding journey can complete. The durable profile never returns it."
+  }
+ ],
+ "C02_verify": [
+  200,
+  "active"
+ ],
+ "C05_set_cookie": {
+  "httponly": true,
+  "samesite_strict": true,
+  "name": "qevion_session"
+ },
+ "C05_cookie_only_session": [
+  200,
+  "newuser@c.test"
+ ],
+ "C05_cookie_post_no_csrf": [
+  403,
+  "unauthorized"
+ ],
+ "C05_cookie_post_with_csrf": [
+  201,
+  true
+ ],
+ "C05_logout": [
+  204,
+  true
+ ],
+ "C05_after_logout": 401,
+ "C04_sync_context": [
+  200,
+  {
+   "strategy": "single",
+   "mode": "single",
+   "project_id": "0a0ae3bd-7444-4ac5-81fc-41373898c22b"
+  }
+ ],
+ "C04_status_context": {
+  "strategy": "single",
+  "mode": "single",
+  "project_id": "0a0ae3bd-7444-4ac5-81fc-41373898c22b"
+ },
+ "C04_template_context": [
+  200,
+  {
+   "strategy": "hybrid",
+   "mode": "custom"
+  },
+  null
+ ],
+ "C04_async_context": [
+  "succeeded",
+  {
+   "strategy": "single",
+   "mode": "single"
+  }
+ ],
+ "C04_list_contexts": [
+  "{\"mode\": \"custom\", \"strategy\": \"hybrid\"}",
+  "{\"mode\": \"single\", \"project_id\": \"0a0ae3bd-7444-4ac5-81fc-41373898c22b\", \"strategy\": \"single\"}",
+  "{\"mode\": \"single\", \"strategy\": \"single\"}",
+  "{\"strategy\": \"single\"}"
+ ],
+ "C06_template_stage_failure": [
+  200,
+  {
+   "execution_id": "94da66e5-9eb0-4c57-978f-46b69c5571cf",
+   "status": "succeeded",
+   "result": {
+    "type": "message",
+    "content": "{\"context_blocks\": [{\"content\": \"fail me\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"fail me\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+    "artifacts": []
+   },
+   "context": {
+    "strategy": "hybrid",
+    "mode": "custom"
+   }
+  }
+ ],
+ "C11_agent_execute": [
+  502,
+  "execution_failed",
+  "4f9f6ff3-ccda-458a-a690-4a62e47e9223",
+  null
+ ],
+ "C11_own_trace": [
+  200,
+  [
+   "execution_id",
+   "status",
+   "strategy",
+   "created_at",
+   "completed_at",
+   "stages"
+  ]
+ ],
+ "C11_own_diagnosis": [
+  200,
+  [
+   "execution_id",
+   "tier",
+   "claims",
+   "missing_evidence"
+  ]
+ ],
+ "C11_foreign_trace": [
+  404,
+  "validation_error"
+ ],
+ "C11_tools_tenant": [
+  403,
+  "unauthorized"
+ ],
+ "C11_converse_tenant": [
+  403,
+  "unauthorized"
+ ],
+ "C11_agent_tools_offered": [
+  200,
+  0
+ ],
+ "C12_models": [
+  200,
+  [
+   {
+    "name": "local-echo-1",
+    "availability": "available",
+    "runtime": [
+     {
+      "provider": "local_echo",
+      "binding_availability": "available",
+      "eligible": true,
+      "reason": null,
+      "retry_after_ms": null
+     }
+    ]
+   }
+  ]
+ ],
+ "C17_dashboard": [
+  200,
+  {
+   "placeholder": false,
+   "samples_total": 0,
+   "gold_samples": 0,
+   "learned_keys": [],
+   "evaluations_recorded": 0
+  },
+  [
+   "accuracy_trends",
+   "canary_status",
+   "cost_reduction",
+   "dataset_coverage",
+   "rollback_actions",
+   "specialist_models",
+   "task_coverage",
+   "teacher_agreement"
+  ]
+ ],
+ "tenancy_admin_403": 403,
+ "tenancy_foreign_exec_404": [
+  404,
+  "validation_error"
+ ]
+}

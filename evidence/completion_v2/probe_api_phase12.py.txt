@@ -1,0 +1,73 @@
+"""completion v2 — hermetic API probe for C-01/02/04/05/06/11/12/17 (evidence, not a test)."""
+import json, sys, time, http.cookiejar, urllib.request, urllib.error
+sys.path.insert(0, "/tmp"); from probe_boot import boot, Api
+out = {}
+proc, base, log = boot("c12")
+api = Api(base, log)
+try:
+    # C-01 root
+    req = urllib.request.Request(base + "/", method="GET")
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, *a, **k): return None
+    op = urllib.request.build_opener(NoRedirect)
+    try: r = op.open(req); out["C01_root"] = [r.status, r.headers.get("location")]
+    except urllib.error.HTTPError as e: out["C01_root"] = [e.code, e.headers.get("location")]
+    # C-02 dev token in register response (in-memory profile)
+    st, b, _ = api("POST", "/v1/auth/register", {"email": "newuser@c.test", "password": "correct horse battery staple"})
+    out["C02_register"] = [st, {k: (v if k != "dev_verification_token" else "<present>") for k, v in b.items()}]
+    tok = b.get("dev_verification_token")
+    st, vb, _ = api("POST", "/v1/auth/verify", {"token": tok}); out["C02_verify"] = [st, vb.get("status")]
+    # C-05 cookie session: login sets HttpOnly cookie; cookie-only GET works; cookie-only POST w/o header -> 403; with header -> ok
+    jar = http.cookiejar.CookieJar(); cop = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    r = cop.open(urllib.request.Request(base + "/v1/auth/login", data=json.dumps({"email": "newuser@c.test", "password": "correct horse battery staple"}).encode(), method="POST", headers={"content-type": "application/json"}))
+    sc = r.headers.get("set-cookie", ""); out["C05_set_cookie"] = {"httponly": "HttpOnly" in sc, "samesite_strict": "SameSite=strict" in sc.lower().replace("samesite=strict","SameSite=strict"), "name": sc.split("=")[0]}
+    r = cop.open(urllib.request.Request(base + "/v1/auth/session")); out["C05_cookie_only_session"] = [r.status, json.loads(r.read())["email"]]
+    try:
+        cop.open(urllib.request.Request(base + "/v1/workspaces", data=b'{"name":"x"}', method="POST", headers={"content-type": "application/json"})); out["C05_cookie_post_no_csrf"] = "UNEXPECTED 2xx"
+    except urllib.error.HTTPError as e: out["C05_cookie_post_no_csrf"] = [e.code, json.loads(e.read())["error"]["code"]]
+    r = cop.open(urllib.request.Request(base + "/v1/workspaces", data=b'{"name":"ws1"}', method="POST", headers={"content-type": "application/json", "X-Requested-With": "QEVION"})); wsb = json.loads(r.read()); out["C05_cookie_post_with_csrf"] = [r.status, "workspace_id" in wsb]
+    r = cop.open(urllib.request.Request(base + "/v1/projects", data=json.dumps({"name": "p1", "workspace_id": wsb["workspace_id"]}).encode(), method="POST", headers={"content-type": "application/json", "X-Requested-With": "QEVION"})); pj = json.loads(r.read())
+    # logout clears cookie; cookie-only session afterwards -> 401
+    r = cop.open(urllib.request.Request(base + "/v1/auth/logout", method="POST", headers={"X-Requested-With": "QEVION"})); out["C05_logout"] = [r.status, "Max-Age=0" in r.headers.get("set-cookie", "") or 'expires' in r.headers.get("set-cookie","").lower()]
+    try: cop.open(urllib.request.Request(base + "/v1/auth/session")); out["C05_after_logout"] = "UNEXPECTED 200"
+    except urllib.error.HTTPError as e: out["C05_after_logout"] = e.code
+    # bearer path unchanged
+    st, lb, _ = api("POST", "/v1/auth/login", {"email": "newuser@c.test", "password": "correct horse battery staple"}); t1 = lb["token"]
+    # C-04 context on sync + status + list (single / template / project)
+    st, b, _ = api("POST", "/v1/execute", {"ask": "hello single", "project_id": pj["project_id"]}, tok=t1); out["C04_sync_context"] = [st, b.get("context")]
+    eid = b["execution_id"]
+    st, sb, _ = api("GET", f"/v1/executions/{eid}", tok=t1); out["C04_status_context"] = sb.get("context")
+    st, tl, _ = api("GET", "/v1/templates", tok=t1); tref = tl["templates"][0]["ref"]
+    st, tb, _ = api("POST", "/v1/execute", {"ask": "hello template", "execution_strategy": {"mode": "template", "template_id": tref}}, tok=t1); out["C04_template_context"] = [st, tb.get("context"), (tb.get("error") or {}).get("code")]
+    st, ab, _ = api("POST", "/v1/execute", {"ask": "hello async", "execution_policy": {"async": True}}, tok=t1); aid = ab.get("execution_id")
+    time.sleep(2.5)
+    st, asb, _ = api("GET", f"/v1/executions/{aid}", tok=t1); out["C04_async_context"] = [asb.get("status"), asb.get("context")]
+    st, lst, _ = api("GET", "/v1/executions", tok=t1); out["C04_list_contexts"] = sorted({json.dumps(r.get("context"), sort_keys=True) for r in lst["executions"]})
+    # C-06: template with unknown explicit model -> stage failure names stage + provider category
+    st, fb, _ = api("POST", "/v1/execute", {"ask": "fail me", "model_policy": {"type": "explicit_model", "model_id": "does-not-exist"}, "execution_strategy": {"mode": "template", "template_id": tref}}, tok=t1)
+    out["C06_template_stage_failure"] = [st, fb]
+    if st >= 400 and isinstance(fb, dict) and fb.get("error", {}).get("details", {}).get("execution_id"):
+        st2, fs, _ = api("GET", f"/v1/executions/{fb['error']['details']['execution_id']}", tok=t1); out["C06_failed_record_error"] = fs.get("error")
+    # C-11: tenant may read OWN agent trace (agent run on echo -> may fail; trace still readable); foreign 404; tools/converse still admin-only
+    st, ag, _ = api("POST", "/v1/execute", {"ask": "list tools", "execution_policy": {"strategy": "agent"}}, tok=t1); out["C11_agent_execute"] = [st, (ag.get("error") or {}).get("code"), (ag.get("error") or {}).get("details", {}).get("execution_id"), ag.get("context")]
+    agent_eid = ag.get("execution_id") or (ag.get("error") or {}).get("details", {}).get("execution_id")
+    if agent_eid:
+        st, tr, _ = api("GET", f"/v1/agent/executions/{agent_eid}/trace", tok=t1); out["C11_own_trace"] = [st, list(tr)[:6] if isinstance(tr, dict) else tr]
+        st, dg, _ = api("GET", f"/v1/agent/executions/{agent_eid}/diagnosis", tok=t1); out["C11_own_diagnosis"] = [st, list(dg)[:6] if isinstance(dg, dict) else dg]
+        t2 = api.user("other@c.test")
+        st, ftr, _ = api("GET", f"/v1/agent/executions/{agent_eid}/trace", tok=t2); out["C11_foreign_trace"] = [st, (ftr.get("error") or {}).get("code")]
+    st, tt, _ = api("GET", "/v1/agent/tools", tok=t1); out["C11_tools_tenant"] = [st, (tt.get("error") or {}).get("code")]
+    st, cv, _ = api("POST", "/v1/agent/converse", {"message": "hi"}, tok=t1); out["C11_converse_tenant"] = [st, (cv.get("error") or {}).get("code")]
+    st, at, _ = api("GET", "/v1/agent-tools", tok=t1); out["C11_agent_tools_offered"] = [st, len(at.get("tools", [])) if isinstance(at, dict) else at]
+    # C-12: models runtime[]
+    st, mb, _ = api("GET", "/v1/models", tok=t1); out["C12_models"] = [st, [{"name": m["name"], "availability": m["availability"], "runtime": m.get("runtime")} for m in mb["models"]]]
+    # C-17: dashboard measured (admin)
+    adm = api.user("admin@audit.test")
+    st, db, _ = api("GET", "/v1/admin/learning/dashboard", tok=adm); out["C17_dashboard"] = [st, {k: db.get(k) for k in ("placeholder", "samples_total", "gold_samples", "learned_keys", "evaluations_recorded")}, sorted((db.get("deferred") or {}).keys())]
+    # tenancy sweep: tenant on admin routes -> 403; foreign execution -> 404
+    st, _, _ = api("GET", "/v1/admin/system", tok=t1); out["tenancy_admin_403"] = st
+    st, fe, _ = api("GET", f"/v1/executions/{eid}", tok=t2); out["tenancy_foreign_exec_404"] = [st, fe.get("error", {}).get("code")]
+finally:
+    proc.terminate()
+json.dump(out, open("/home/user/webapp/evidence/completion_v2/probe_api_phase12.json", "w"), indent=1, default=str)
+print(json.dumps(out, indent=1, default=str)[:6000])

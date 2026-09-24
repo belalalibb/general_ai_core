@@ -1138,7 +1138,9 @@ def create_app(
             agent_tools = agent.select(body.tools, admitted_skill_objects)
 
         # --- C-04 (D-4): the run's request context, from ADMITTED facts only ---
-        run_context = request_context(body, agent=agent_strategy, spec=strategy_spec)
+        # The REQUEST's own spec (mode/template_id) — the resolved plan is the
+        # expanded custom stage list and would hide the template reference.
+        run_context = request_context(body, agent=agent_strategy, spec=body.execution_strategy)
 
         # --- idempotent replay (10 §10) ----------------------------------------
         # BEFORE persistence/composition: a replay must not duplicate turns.
