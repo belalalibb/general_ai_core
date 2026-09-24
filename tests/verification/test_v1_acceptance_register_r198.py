@@ -29,9 +29,12 @@ DECISION_IDS = ("AD-1", "AD-2", "AD-3", "AD-4", "AD-5", "AD-6", "AD-7", "D-03", 
 OPEN_PROPOSALS = ("P-R191-01", "P-R192-03")
 UNCONSUMED_ROUTES = (
     "/v1/admin/evaluations/{",
-    "/v1/admin/learning/dashboard",
     "/v1/webhooks/{",
 )
+# COMPLETION-V2-DEC-01 (C-17, operator D-5): GET /v1/admin/learning/dashboard left this tuple —
+# it is MEASURED when the lifecycle is composed and consumed by the admin console Learning
+# surface (1:1 swap for /learning/learned; 73 literals held). Pinned ACCEPTED-AS-MEASURED below.
+CONSUMED_ROUTES_COMPLETION_V2 = ("/v1/admin/learning/dashboard",)
 # R202-DEC-02 (operator ruling (a), step 7): GET /v1/templates/{ref} left this tuple and is
 # pinned ACCEPTED-AS-MEASURED — R202-A only (Workbench detail panel; evidence/r202/).
 # Lineage: DECLARED-UNCONSUMED since R197 D4 / R198 (this pin flipped 1:1, count unchanged).
@@ -109,6 +112,13 @@ def test_ui_unconsumed_routes_declared() -> None:
         text = " | ".join(row)
         assert "R202-A" in text and "R202-B" in text and "DEFERRED" in text, (
             "the R202 flip must name its scope (R202-A only) and the deferred R202-B"
+        )
+    for route in CONSUMED_ROUTES_COMPLETION_V2:
+        row = _row_for(route)
+        assert _status_of(row) == "ACCEPTED-AS-MEASURED"
+        text = " | ".join(row)
+        assert "COMPLETION-V2" in text and "deferred" in text.lower(), (
+            "the dashboard flip must name its program and that unmeasured metrics stay deferred"
         )
 
 
