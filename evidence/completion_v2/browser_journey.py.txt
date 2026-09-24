@@ -1,0 +1,206 @@
+"""Completion v2 — REAL Chromium journey against `python3 -m apps.main` (in-memory profile).
+
+Journeys: A root→/app, register via dev token, sign in (cookie), orientation;
+B run a real task → readable answer + facts; reload → session survives (cookie);
+C Runs view: context/mode/project filter; run detail; D template run → stage replay;
+E Models runtime rows; F Capabilities panels; G error hint (bad template ref);
+H admin console: capture from execution → evaluate → scan → sanitize → admit →
+scenario save+replay → Promote (evidence refs, prompts auto-answered) → dashboard;
+then Workbench run again → gold chip. Screenshots + facts → evidence/completion_v2/browser/.
+"""
+from __future__ import annotations
+import json, os, socket, subprocess, sys, time, urllib.request
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / "evidence" / "completion_v2" / "browser"; OUT.mkdir(parents=True, exist_ok=True)
+ADMIN = "admin@journey.test"; USER = "user@journey.test"; PW = "correct horse battery staple"
+FACTS: dict[str, object] = {}
+
+def free_port() -> int:
+    s = socket.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close(); return p
+
+def wait_http(url: str, timeout: float = 60) -> None:
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        try:
+            urllib.request.urlopen(url, timeout=2); return
+        except Exception:
+            time.sleep(0.4)
+    raise RuntimeError("server did not come up")
+
+def snap(page, name):
+    page.screenshot(path=str(OUT / f"{name}.png"), full_page=True)
+
+def register_and_login(page, base, email):
+    page.goto(base + "/")
+    page.wait_for_selector("#auth-view:not([hidden])")
+    page.click("#tab-register")
+    page.fill("#register-email", email); page.fill("#register-password", PW)
+    page.click("#register-form button[type=submit]")
+    page.wait_for_function("document.getElementById('verify-token').value.length > 10")
+    token_prefilled = page.input_value("#verify-token")
+    info = page.inner_text("#register-info")
+    page.click("#verify-button")
+    page.wait_for_function("document.getElementById('login-form').hidden === false", timeout=15000)
+    page.fill("#login-email", email); page.fill("#login-password", PW)
+    page.click("#login-form button[type=submit]")
+    page.wait_for_selector("#main-view:not([hidden])")
+    return token_prefilled, info
+
+def main() -> None:
+    port = free_port(); base = f"http://127.0.0.1:{port}"
+    env = dict(os.environ, ADMIN_EMAILS=ADMIN, HOST="127.0.0.1", PORT=str(port))
+    env.pop("GSK_API_KEY", None); env.pop("GROQ_API_KEY", None); env.pop("OPENAI_API_KEY", None)
+    srv = subprocess.Popen([sys.executable, "-m", "apps.main"], cwd=ROOT, env=env,
+                           stdout=open(OUT / "server.log", "w"), stderr=subprocess.STDOUT)
+    try:
+        wait_http(base + "/healthz")
+        # A. root entry
+        r = urllib.request.urlopen(base + "/", timeout=5)
+        FACTS["A_root_final_url"] = r.geturl()
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            ctx = browser.new_context(viewport={"width": 1360, "height": 900})
+            page = ctx.new_page()
+            console: list[str] = []
+            page.on("console", lambda m: console.append(f"{m.type}: {m.text}") if m.type in ("error", "warning") else None)
+            page.on("pageerror", lambda e: console.append(f"pageerror: {e}"))
+            token, info = register_and_login(page, base, USER)
+            FACTS["A_dev_token_prefilled"] = bool(token); FACTS["A_register_info"] = info
+            FACTS["A_url_after_root"] = page.url
+            page.wait_for_selector("#orientation")
+            FACTS["A_orientation"] = page.inner_text("#orientation")[:600]
+            FACTS["A_storage"] = page.evaluate("({local: Object.keys(localStorage), session: Object.keys(sessionStorage), sessionValues: Object.values(sessionStorage)})")
+            cookies = ctx.cookies(); FACTS["A_cookies"] = [{k: c[k] for k in ("name", "httpOnly", "sameSite", "path")} for c in cookies]
+            snap(page, "A_home_after_login")
+            # B. real task
+            page.fill("#ask-input", "what is the rollback procedure for a failed deploy")
+            page.click("#ask-submit")
+            page.wait_for_selector("#ask-result:not([hidden])", timeout=30000)
+            page.wait_for_function("document.getElementById('ask-result-answer').textContent.length > 0", timeout=15000)
+            FACTS["B_answer"] = page.inner_text("#ask-result-answer")[:400]
+            FACTS["B_facts"] = page.inner_text("#ask-result-facts")[:600]
+            snap(page, "B_result")
+            # reload → session survives via cookie
+            page.reload(); page.wait_for_selector("#main-view:not([hidden])", timeout=15000)
+            FACTS["B_reload_main_visible"] = True
+            FACTS["B_reload_storage"] = page.evaluate("({local: Object.keys(localStorage), session: Object.keys(sessionStorage)})")
+            snap(page, "B_after_reload")
+            # C. runs
+            page.click(".nav-item[data-view=runs]"); page.wait_for_timeout(800)
+            FACTS["C_runs"] = page.inner_text("#runs-list")[:600]
+            FACTS["C_project_filter_options"] = page.eval_on_selector_all("#runs-filter-project option", "els => els.map(e => e.textContent)")
+            row = page.query_selector("#runs-list .run-row, #runs-list [data-execution-id], #runs-list button, #runs-list li")
+            if row:
+                row.click(); page.wait_for_timeout(800)
+                FACTS["C_run_detail"] = {"facts": page.inner_text("#run-detail-facts")[:400], "answer": page.inner_text("#run-detail-answer")[:200] if page.is_visible("#run-detail-answer") else None}
+            snap(page, "C_runs")
+            # D. template run
+            page.click(".nav-item[data-view=home]"); page.wait_for_timeout(500)
+            opts = page.eval_on_selector_all("#ask-template option", "els => els.map(e => e.value)")
+            FACTS["D_template_options"] = opts
+            tpl = next((o for o in opts if o), None)
+            if tpl:
+                page.select_option("#ask-template", tpl); page.wait_for_timeout(800)
+                page.fill("#ask-input", "build a small CLI that prints hello")
+                page.click("#ask-submit")
+                page.wait_for_selector("#ask-result:not([hidden])", timeout=60000)
+                page.wait_for_timeout(1000)
+                FACTS["D_timeline"] = page.eval_on_selector_all("#run-timeline li", "els => els.map(e => e.textContent)")
+                FACTS["D_facts"] = page.inner_text("#ask-result-facts")[:600]
+                snap(page, "D_template_run")
+                page.select_option("#ask-template", "")
+            # G. error hint: entitlement — use a nonexistent project id via template ref? use invalid template ref
+            page.evaluate("document.getElementById('ask-template').innerHTML += '<option value=\"nope.missing@9\">bogus</option>'")
+            page.select_option("#ask-template", "nope.missing@9"); page.wait_for_timeout(500)
+            page.fill("#ask-input", "x"); page.click("#ask-submit")
+            page.wait_for_selector("#ask-error:not([hidden])", timeout=15000)
+            FACTS["G_error"] = page.inner_text("#ask-error")[:500]
+            snap(page, "G_error_hint")
+            page.select_option("#ask-template", "")
+            # E. models
+            page.click(".nav-item[data-view=models]"); page.wait_for_timeout(1000)
+            FACTS["E_models"] = page.inner_text("#models-grid")[:800]
+            FACTS["E_truth"] = page.inner_text("#models-truth")[:300] if page.is_visible("#models-truth") else None
+            snap(page, "E_models")
+            # F. capabilities
+            page.click(".nav-item[data-view=capabilities]"); page.wait_for_timeout(1000)
+            FACTS["F_caps"] = {k: page.inner_text(f"#caps-{k}")[:300] for k in ("skills", "memory", "webhooks")}
+            snap(page, "F_capabilities")
+            # agent toggle honesty
+            FACTS["F_agent_toggle"] = {"disabled": page.is_disabled("#ask-agent"), "note": page.inner_text("#ask-agent-note")}
+            # H. admin console (separate context = separate cookie jar)
+            actx = browser.new_context(viewport={"width": 1360, "height": 900}); apage = actx.new_page()
+            token2, _ = register_and_login(apage, base, ADMIN)
+            apage.fill("#ask-input", "what is the rollback procedure for a failed deploy"); apage.click("#ask-submit")
+            apage.wait_for_selector("#ask-result:not([hidden])", timeout=30000); apage.wait_for_timeout(500)
+            FACTS["H_admin_before_facts"] = apage.inner_text("#ask-result-facts")[:400]
+            exec_id = apage.inner_text("#ask-result").split("execution")[-1].strip().split()[0] if "execution" in apage.inner_text("#ask-result") else None
+            # admin console login (bearer via its own form; cookie already set — console uses Bearer)
+            apage.goto(base + "/admin/"); apage.wait_for_selector("#login-form")
+            apage.fill("#login-email", ADMIN); apage.fill("#login-password", PW); apage.click("#login-form button[type=submit]")
+            apage.wait_for_selector(".rail-item[data-surface=learning]", timeout=15000)
+            apage.click(".rail-item[data-surface=learning]"); apage.wait_for_timeout(1000)
+            FACTS["H_dashboard_before"] = apage.inner_text("#learning-dashboard")
+            # find a real execution id of the admin tenant from the executions surface
+            apage.click(".rail-item[data-surface=executions]"); apage.wait_for_timeout(1000)
+            ids = apage.eval_on_selector_all("#surface-executions .mono", "els => els.map(e => e.textContent.trim()).filter(t => /^[0-9a-f-]{36}$/.test(t))")
+            exec_id = ids[0] if ids else exec_id
+            FACTS["H_source_execution_id"] = exec_id
+            apage.click(".rail-item[data-surface=learning]"); apage.wait_for_timeout(500)
+            apage.fill("#capture-key", "ops.rollback_procedure")
+            apage.fill("#capture-value", json.dumps({"procedure": "revert tag, redeploy previous artefact, verify healthz"}))
+            apage.fill("#capture-execution", exec_id or "")
+            apage.click("#learning-capture-form button[type=submit]"); apage.wait_for_timeout(1000)
+            # dialogs: prompt → evaluate output JSON / evidence ids; confirm → true
+            answers = {"queue": []}
+            def on_dialog(d):
+                if d.type == "prompt":
+                    msg = d.message
+                    if "OUTPUT" in msg: d.accept(json.dumps({"text": "revert tag; redeploy; verify"}))
+                    else: d.accept(d.default_value)  # harvested evidence ids
+                else: d.accept()
+            apage.on("dialog", on_dialog)
+            def act(label):
+                apage.click(f"#samples-table tbody tr:first-child button:has-text('{label}')"); apage.wait_for_timeout(900)
+            act("Evaluate"); act("Scan"); act("Sanitize ✓"); act("Admit")
+            # scenario save + replay on Intelligence
+            apage.click(".rail-item[data-surface=intelligence]"); apage.wait_for_timeout(800)
+            apage.fill("#scenario-name", "rollback-regression"); apage.fill("#scenario-ask", "what is the rollback procedure for a failed deploy")
+            apage.click("#scenario-form button[type=submit]"); apage.wait_for_timeout(1200)
+            apage.click("#scenarios-table tbody tr:first-child button:has-text('Replay')"); apage.wait_for_timeout(2500)
+            FACTS["H_replay"] = apage.inner_text("#scenario-result")[:300]
+            harvested = apage.evaluate("({ev: Object.values(state.learningEvidence), reg: state.lastRegressionExecutionId})")
+            FACTS["H_harvested_evidence"] = harvested
+            apage.click(".rail-item[data-surface=learning]"); apage.wait_for_timeout(800)
+            act("Promote"); apage.wait_for_timeout(1200)
+            FACTS["H_sample_row"] = apage.inner_text("#samples-table tbody tr:first-child")[:300]
+            FACTS["H_dashboard_after"] = apage.inner_text("#learning-dashboard")
+            FACTS["H_learned_keys"] = apage.inner_text("#learned-keys")
+            snap(apage, "H_admin_learning_after_promote")
+            # gold reaches a later Workbench run (same admin tenant)
+            apage.goto(base + "/app/"); apage.wait_for_selector("#main-view:not([hidden])", timeout=15000)
+            apage.fill("#ask-input", "what is the rollback procedure for a failed deploy"); apage.click("#ask-submit")
+            apage.wait_for_selector("#ask-result:not([hidden])", timeout=30000); apage.wait_for_timeout(600)
+            FACTS["I_after_promotion_facts"] = apage.inner_text("#ask-result-facts")[:600]
+            snap(apage, "I_gold_chip")
+            # user tenant must NOT see admin tenant's gold
+            page.click(".nav-item[data-view=home]"); page.fill("#ask-input", "what is the rollback procedure for a failed deploy"); page.click("#ask-submit")
+            page.wait_for_selector("#ask-result:not([hidden])", timeout=30000); page.wait_for_timeout(600)
+            FACTS["I_other_tenant_facts"] = page.inner_text("#ask-result-facts")[:400]
+            # logout clears cookie
+            page.click("#logout-button"); page.wait_for_selector("#auth-view:not([hidden])", timeout=10000)
+            page.reload(); page.wait_for_timeout(800)
+            FACTS["J_after_logout_auth_visible"] = page.is_visible("#auth-view")
+            FACTS["console_errors"] = console[:20]
+            browser.close()
+    finally:
+        srv.terminate()
+        try: srv.wait(timeout=10)
+        except Exception: srv.kill()
+    (OUT / "facts.json").write_text(json.dumps(FACTS, indent=1, default=str), encoding="utf-8")
+    print(json.dumps(FACTS, indent=1, default=str)[:6000])
+
+main()
