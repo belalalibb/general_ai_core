@@ -175,9 +175,9 @@ def test_counts_and_declared_ceiling() -> None:
     raw = _app_raw()
     m = _manifest()
     ceiling = int(m["ui_workbench_static_check"]["v1_count_ceiling_app_js"])
-    assert ceiling == 23, "operator-declared ceiling for R202"
-    assert raw.count("/v1/") == 23, f"measured {raw.count('/v1/')}"
-    assert raw.count("fetch(") == 4
+    assert ceiling == 32, "operator-declared ceiling (R202: 23; COMPLETION-V2-DEC: 32)"
+    assert raw.count("/v1/") == 32, f"measured {raw.count('/v1/')}"
+    assert raw.count("fetch(") == 6
     assert _read(ADMIN / "app.js").count("/v1/") == 73
     block = m["change_budget"]["round_r202"]
     assert int(block["ceiling"]) == 0 and int(block["changes_used"]) == 0

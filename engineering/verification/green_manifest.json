@@ -28,7 +28,7 @@
       },
       {
         "name": "rest",
-        "selection": "tests/agent tests/agent_dev tests/audit tests/context tests/db tests/engineering tests/events tests/identity tests/learning tests/memory tests/observability tests/roles tests/routing tests/runtime tests/secrets tests/skills tests/sourcechange tests/storage tests/tools tests/ui tests/unit tests/usage tests/verification tests/workspace",
+        "selection": "tests/agent tests/agent_dev tests/audit tests/completion_v2 tests/context tests/db tests/engineering tests/events tests/identity tests/learning tests/memory tests/observability tests/roles tests/routing tests/runtime tests/secrets tests/skills tests/sourcechange tests/storage tests/tools tests/ui tests/unit tests/usage tests/verification tests/workspace",
         "time_ceiling_s": 300
       }
     ],
@@ -36,20 +36,18 @@
       "failed": 0,
       "errors": 0,
       "max_skipped": 64,
-      "min_passed": 3993,
-      "min_passed_history": "R202 gate of record a4a8aad9 (2026-09-23): 3984 -> 3993 (+9 = tests/ui/test_template_detail_r202.py 9 items; UI-only round, ui/ outside counted roots, round_r202 0/0; ratchet authorized by operator ruling (a) after FINDING R202-F1 — R202-A accepted-as-measured, R202-B deferred/latent). R201 gate of record 798903ca (2026-09-22): 3972 -> 3984 (+12 = tests/ui/test_context_carry_r201.py 12 items (11 functions, one 2-way tree parametrize); UI-only round, ui/ outside counted roots, round_r201 0/0). R200 gate of record c57d4c88 (2026-09-22): 3951 -> 3972 (+21 = tests/ui/test_command_routing_r200.py 21 items; UI-only round, ui/ outside counted roots, round_r200 0/0). R199 gate of record d8f39043 (2026-09-21): 3929 -> 3951 (+22 = tests/ui/test_unified_shell_r199.py 22 items (16 functions incl. two 3-way tree parametrizes); UI-only round, ui/ outside counted roots, round_r199 0/0). R198 gate of record 8805e024 (2026-09-21): 3914 -> 3929 (+15 = tests/verification/test_ad5_topology_artefact_r198.py 7 + tests/verification/test_v1_acceptance_register_r198.py 8; records + evidence round, round_r198 0/0). R197 gate of record cf00399a (2026-09-21): 3888 -> 3914 (+26 = tests/ui/test_workbench_template_picker_r197.py 22 items (18 functions, one 5-way provider parametrize) + tests/ui/test_r197_admin_actions_discovered.py 4; ui/ outside counted roots, round_r197 0/0). 3872 -> 3888 at the R196 gate of record (D-6): fresh clone of 63f7b876, PASS passed=3888 failed=0 errors=0 skipped=64 (evidence/r196/gate_head_63f7b876.txt; evidence/r196_state_ledger.md row 6); +16 = tests/contract/test_agent_template_read_models_r196.py (3) + tests/api/test_r196_templates_routes.py (10) + tests/composition/test_r196_template_composition.py (3). Previous: 3852 -> 3872 at the R195 gate of record (D-6): fresh clone of 2a636b50, PASS passed=3872 failed=0 errors=0 skipped=64 (evidence/r195/gate_head_2a636b50.txt; evidence/r195_state_ledger.md row 6); +20 = tests/admin/test_r195_governed_dev_bindings.py (16) + tests/composition/test_r195_secret_custody.py (4). Previous: 3837 -> 3852 at the R194 gate of record (D-6): fresh clone of 141eb531, PASS passed=3852 failed=0 errors=0 skipped=64 (evidence/r194/gate_head_141eb531.txt; evidence/r194_state_ledger.md row 9); +15 = tests/security/test_r194_security_headers.py (9) + tests/composition/test_r194_webhook_delivery.py (6). Earlier: 3826 -> 3837 at the R193 gate of record (D-6): fresh clone of 9ae8b6b6, PASS passed=3837 failed=0 errors=0 skipped=64 (evidence/r193/gate_head_9ae8b6b6.txt; evidence/r193_state_ledger.md row 9); +11 = tests/composition/test_r193_dev_bindings_composition.py (11); the IMPL-024 pin in tests/api/test_dev_router_mount_r172.py was flipped 1:1 (count unchanged). Earlier: 3809 -> 3826 at the R192 gate of record (D-6): fresh clone of 1eab7790, PASS passed=3826 failed=0 errors=0 skipped=64 (evidence/r192/gate_head_1eab7790.txt; evidence/r192_state_ledger.md row 7); +17 = tests/agent_dev/test_r192_bound_inspector.py (11) + tests/agent/test_r192_layering_guard.py (6). Earlier: 3779 -> 3809 at the R191 gate of record (D-6): fresh clone of f608c669, PASS passed=3809 failed=0 errors=0 skipped=64 (evidence/r191/gate_head_f608c669.txt; evidence/r191_state_ledger.md row 13); +30 = tests/execution/test_r191_templates.py (8) + tests/agent/test_r191_general_agent.py (11) + tests/agent/test_r191_app_factory_slice.py (11). Earlier: 3769 -> 3779 at the R190 gate of record (D-6): fresh clone of 7ef3b15b, PASS passed=3779 failed=0 errors=0 skipped=64 (evidence/r190/gate_head_7ef3b15b.txt; evidence/r190_state_ledger.md row 8); +10 = tests/providers/test_r190_logical_model_identity.py (8) + tests/composition/test_r190_hydration_shared_model.py (1) + one added pin in tests/providers/test_onboarding_service.py (default-prefix collision still refused; the R189 duplicate-key pin was inverted 1:1). Earlier: 3758 -> 3769 at the R189 gate of record (D-6): fresh clone of 7af925d4, PASS passed=3769 failed=0 errors=0 skipped=64 (evidence/r189/gate_head_7af925d4.txt; evidence/r189_state_ledger.md row 14); +11 = tests/api/test_r189_onboarding_model_key_prefix.py (5) + tests/verification/test_contract_freeze_baseline.py (6). Earlier: 3719 -> 3758 at the R188 gate of record (D-6): fresh clone of 3524b00e, PASS passed=3758 failed=0 errors=0 skipped=64 (evidence/r188/gate_head_3524b00e.txt; evidence/r188_state_ledger.md row 12); +39 = tests/routing/test_r188_capacity_signals.py (7) + tests/execution/test_r188_strategy_executor.py (11) + tests/api/test_r188_execute_strategy_requirements.py (13) + tests/learning/test_r188_learning_closure.py (8). Earlier: 3712 -> 3719 at the R187 gate of record (D-6): fresh clone of 460694bc, PASS passed=3719 failed=0 errors=0 skipped=64 (evidence/r187/gate_head_460694bc.txt; evidence/r187_state_ledger.md row 6); +7 = tests/ui/test_command_center_fix_r187.py (7: 6 static + 1 browser). Earlier: 3703 -> 3712 at the R186 gate of record (D-6): fresh clone of 44fc99b6, PASS passed=3712 failed=0 errors=0 skipped=64 (evidence/r186/gate_head_44fc99b6.txt:23-24; evidence/r186_state_ledger.md row 5); +9 = tests/ui/test_command_center_fix_r186.py (9). Earlier: 3677 -> 3703 at the R185 gate of record (D-6): fresh clone of 4b0d76e2, PASS passed=3703 failed=0 errors=0 skipped=64 (evidence/r185/gate_head_4b0d76e2.txt:23-24; evidence/r185_state_ledger.md row 9); +26 = tests/ui/test_command_center_experience_r185.py (25) + tests/ui/test_command_center_browser_r185.py (1). Earlier: 3669 -> 3677 at the R184 gate of record (D-6): fresh clone of 865010bc, PASS passed=3677 failed=0 errors=0 skipped=64 (evidence/r184/gate_head_865010bc.txt:23-24; evidence/r184_state_ledger.md row 6); +8 = tests/contract/test_evaluation_status_q7_r184.py (4) + tests/api/test_admin_usage_evaluation_status_q7_r184.py (4). Earlier: 3666 -> 3669 at the R183 gate of record (D-6: raise only at the gate of record, by the measured number, with a ledger line): fresh clone of 256058bf, PASS passed=3669 failed=0 errors=0 skipped=64 (evidence/r183/gate_head_256058bf.txt:23-24; evidence/r183_state_ledger.md row 6); +3 = tests/db/test_tables_usage_ledger_doc_r183.py. Earlier: 3658 -> 3666 at the R182-IMPL round-close gate of record (operator authorized PR #22 merge; D-6: raise only at the gate of record, by the measured number, with a ledger line): fresh clone of f1d289c2, PASS passed=3666 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_f1d289c2.txt; evidence/r182_impl_state_ledger.md row 33). Earlier: 3504 -> 3658 at the R182-IMPL gate of record (operator ruling D-6, R182-DEC-02: raise only at the round's gate of record, by the measured number, with a ledger line): fresh clone of 534649e8, PASS passed=3658 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_534649e8.txt; evidence/r182_impl_state_ledger.md row 16). Not ratcheted in R181/R182 readiness (no authorization then)."
+      "min_passed": 4016,
+      "min_passed_history": "COMPLETION-V2 gate a400ec14 (2026-09-24): 3993 -> 4016 (+23 = tests/completion_v2/ 17 (test_phase12_runtime 11, test_phase3_learning_loop 3, test_c06_stage_failure 3) + 6 net from 1:1 pin flips/updates; production round, round_completion_v2 13/13; skipped 64 -> 58 measured). R202 gate of record a4a8aad9 (2026-09-23): 3984 -> 3993 (+9 = tests/ui/test_template_detail_r202.py 9 items; UI-only round, ui/ outside counted roots, round_r202 0/0; ratchet authorized by operator ruling (a) after FINDING R202-F1 — R202-A accepted-as-measured, R202-B deferred/latent). R201 gate of record 798903ca (2026-09-22): 3972 -> 3984 (+12 = tests/ui/test_context_carry_r201.py 12 items (11 functions, one 2-way tree parametrize); UI-only round, ui/ outside counted roots, round_r201 0/0). R200 gate of record c57d4c88 (2026-09-22): 3951 -> 3972 (+21 = tests/ui/test_command_routing_r200.py 21 items; UI-only round, ui/ outside counted roots, round_r200 0/0). R199 gate of record d8f39043 (2026-09-21): 3929 -> 3951 (+22 = tests/ui/test_unified_shell_r199.py 22 items (16 functions incl. two 3-way tree parametrizes); UI-only round, ui/ outside counted roots, round_r199 0/0). R198 gate of record 8805e024 (2026-09-21): 3914 -> 3929 (+15 = tests/verification/test_ad5_topology_artefact_r198.py 7 + tests/verification/test_v1_acceptance_register_r198.py 8; records + evidence round, round_r198 0/0). R197 gate of record cf00399a (2026-09-21): 3888 -> 3914 (+26 = tests/ui/test_workbench_template_picker_r197.py 22 items (18 functions, one 5-way provider parametrize) + tests/ui/test_r197_admin_actions_discovered.py 4; ui/ outside counted roots, round_r197 0/0). 3872 -> 3888 at the R196 gate of record (D-6): fresh clone of 63f7b876, PASS passed=3888 failed=0 errors=0 skipped=64 (evidence/r196/gate_head_63f7b876.txt; evidence/r196_state_ledger.md row 6); +16 = tests/contract/test_agent_template_read_models_r196.py (3) + tests/api/test_r196_templates_routes.py (10) + tests/composition/test_r196_template_composition.py (3). Previous: 3852 -> 3872 at the R195 gate of record (D-6): fresh clone of 2a636b50, PASS passed=3872 failed=0 errors=0 skipped=64 (evidence/r195/gate_head_2a636b50.txt; evidence/r195_state_ledger.md row 6); +20 = tests/admin/test_r195_governed_dev_bindings.py (16) + tests/composition/test_r195_secret_custody.py (4). Previous: 3837 -> 3852 at the R194 gate of record (D-6): fresh clone of 141eb531, PASS passed=3852 failed=0 errors=0 skipped=64 (evidence/r194/gate_head_141eb531.txt; evidence/r194_state_ledger.md row 9); +15 = tests/security/test_r194_security_headers.py (9) + tests/composition/test_r194_webhook_delivery.py (6). Earlier: 3826 -> 3837 at the R193 gate of record (D-6): fresh clone of 9ae8b6b6, PASS passed=3837 failed=0 errors=0 skipped=64 (evidence/r193/gate_head_9ae8b6b6.txt; evidence/r193_state_ledger.md row 9); +11 = tests/composition/test_r193_dev_bindings_composition.py (11); the IMPL-024 pin in tests/api/test_dev_router_mount_r172.py was flipped 1:1 (count unchanged). Earlier: 3809 -> 3826 at the R192 gate of record (D-6): fresh clone of 1eab7790, PASS passed=3826 failed=0 errors=0 skipped=64 (evidence/r192/gate_head_1eab7790.txt; evidence/r192_state_ledger.md row 7); +17 = tests/agent_dev/test_r192_bound_inspector.py (11) + tests/agent/test_r192_layering_guard.py (6). Earlier: 3779 -> 3809 at the R191 gate of record (D-6): fresh clone of f608c669, PASS passed=3809 failed=0 errors=0 skipped=64 (evidence/r191/gate_head_f608c669.txt; evidence/r191_state_ledger.md row 13); +30 = tests/execution/test_r191_templates.py (8) + tests/agent/test_r191_general_agent.py (11) + tests/agent/test_r191_app_factory_slice.py (11). Earlier: 3769 -> 3779 at the R190 gate of record (D-6): fresh clone of 7ef3b15b, PASS passed=3779 failed=0 errors=0 skipped=64 (evidence/r190/gate_head_7ef3b15b.txt; evidence/r190_state_ledger.md row 8); +10 = tests/providers/test_r190_logical_model_identity.py (8) + tests/composition/test_r190_hydration_shared_model.py (1) + one added pin in tests/providers/test_onboarding_service.py (default-prefix collision still refused; the R189 duplicate-key pin was inverted 1:1). Earlier: 3758 -> 3769 at the R189 gate of record (D-6): fresh clone of 7af925d4, PASS passed=3769 failed=0 errors=0 skipped=64 (evidence/r189/gate_head_7af925d4.txt; evidence/r189_state_ledger.md row 14); +11 = tests/api/test_r189_onboarding_model_key_prefix.py (5) + tests/verification/test_contract_freeze_baseline.py (6). Earlier: 3719 -> 3758 at the R188 gate of record (D-6): fresh clone of 3524b00e, PASS passed=3758 failed=0 errors=0 skipped=64 (evidence/r188/gate_head_3524b00e.txt; evidence/r188_state_ledger.md row 12); +39 = tests/routing/test_r188_capacity_signals.py (7) + tests/execution/test_r188_strategy_executor.py (11) + tests/api/test_r188_execute_strategy_requirements.py (13) + tests/learning/test_r188_learning_closure.py (8). Earlier: 3712 -> 3719 at the R187 gate of record (D-6): fresh clone of 460694bc, PASS passed=3719 failed=0 errors=0 skipped=64 (evidence/r187/gate_head_460694bc.txt; evidence/r187_state_ledger.md row 6); +7 = tests/ui/test_command_center_fix_r187.py (7: 6 static + 1 browser). Earlier: 3703 -> 3712 at the R186 gate of record (D-6): fresh clone of 44fc99b6, PASS passed=3712 failed=0 errors=0 skipped=64 (evidence/r186/gate_head_44fc99b6.txt:23-24; evidence/r186_state_ledger.md row 5); +9 = tests/ui/test_command_center_fix_r186.py (9). Earlier: 3677 -> 3703 at the R185 gate of record (D-6): fresh clone of 4b0d76e2, PASS passed=3703 failed=0 errors=0 skipped=64 (evidence/r185/gate_head_4b0d76e2.txt:23-24; evidence/r185_state_ledger.md row 9); +26 = tests/ui/test_command_center_experience_r185.py (25) + tests/ui/test_command_center_browser_r185.py (1). Earlier: 3669 -> 3677 at the R184 gate of record (D-6): fresh clone of 865010bc, PASS passed=3677 failed=0 errors=0 skipped=64 (evidence/r184/gate_head_865010bc.txt:23-24; evidence/r184_state_ledger.md row 6); +8 = tests/contract/test_evaluation_status_q7_r184.py (4) + tests/api/test_admin_usage_evaluation_status_q7_r184.py (4). Earlier: 3666 -> 3669 at the R183 gate of record (D-6: raise only at the gate of record, by the measured number, with a ledger line): fresh clone of 256058bf, PASS passed=3669 failed=0 errors=0 skipped=64 (evidence/r183/gate_head_256058bf.txt:23-24; evidence/r183_state_ledger.md row 6); +3 = tests/db/test_tables_usage_ledger_doc_r183.py. Earlier: 3658 -> 3666 at the R182-IMPL round-close gate of record (operator authorized PR #22 merge; D-6: raise only at the gate of record, by the measured number, with a ledger line): fresh clone of f1d289c2, PASS passed=3666 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_f1d289c2.txt; evidence/r182_impl_state_ledger.md row 33). Earlier: 3504 -> 3658 at the R182-IMPL gate of record (operator ruling D-6, R182-DEC-02: raise only at the round's gate of record, by the measured number, with a ledger line): fresh clone of 534649e8, PASS passed=3658 failed=0 errors=0 skipped=64 (evidence/r182_impl/gate_head_534649e8.txt; evidence/r182_impl_state_ledger.md row 16). Not ratcheted in R181/R182 readiness (no authorization then)."
     },
     "last_measured": {
-        "passed": 3993,
-        "failed": 0,
-        "errors": 0,
-        "skipped": 64,
-        "at_head": "5ac352be",
-        "hermetic": true,
-        "command": "fresh clone of main 5ac352be under /home/user/gates/; pip install -e '.[dev]'; env -i PATH=$PWD/.venv/bin:/usr/bin:/bin HOME=/tmp PLAYWRIGHT_BROWSERS_PATH=/home/user/.cache/ms-playwright bash engineering/verification/check_repo.sh (env -i: no provider key or DATABASE_URL/REDIS_URL present)",
-        "evidence": "evidence/r202/gate_merge_5ac352be.txt",
-        "note": "R202 round close (R202-DEC-02): main 5ac352be = merge commit of PR #62 (R202-A served template detail — ACCEPTED-AS-MEASURED by operator ruling (a); R202-B labelled timeline rows DEFERRED/latent per FINDING R202-F1: POST /v1/execute refuses execution_strategy + execution_policy.async (R188 C3, untouched); production ceiling 0 / used 0; ui/app/app.js /v1/ 23 == declared ceiling; contract shape unchanged, 46 routes). Post-merge fresh-clone gate PASS 3993/0/0/64, gateway 194, regression 18 roots 3139/13/0. min_passed ratcheted 3984 -> 3993 at the gate of record a4a8aad9 (D-6)."
-      }
+      "head": "a400ec14",
+      "passed": 4016,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 58,
+      "when": "2026-09-24",
+      "note": "COMPLETION-V2 worktree gate (evidence/completion_v2/gate_worktree_a400ec14.txt); ratchet 3993 -> 4016 (+17 tests/completion_v2 + 3 C-06 … see decision log E); fresh-clone gate of record recorded in COMPLETION-V2-DEC-02"
+    }
   },
   "non_test_items": [
     {
@@ -170,10 +168,10 @@
       "ui/app/index.html",
       "ui/app/styles.css"
     ],
-    "v1_count_ceiling_app_js": 23,
-    "v1_count_ceiling_rule": "23 = 22 (R197 measure) + exactly ONE served literal added by operator ruling in R202-DEC-01 (2026-09-22, declared BEFORE code): /v1/templates/${ref} in loadTemplateDetail — the ONLY consumer of GET /v1/templates/{ref} (register section C flip at R202 closure). Down-only from 23 thereafter. Previous rule: 22 = raw /v1/ occurrence count of ui/app/app.js MEASURED at the first GREEN of R197 (2026-09-21): 21 pre-round literals + exactly ONE served literal (/v1/templates in populateTemplateSelect); set ONCE, moves DOWN only (R182 D-2 pattern). History: null (declared before code at addec78d; guard failed closed — evidence/r197/red.txt)",
-    "fetch_count_ceiling_app_js": 4,
-    "fetch_count_rule": "4 = MEASURED at b8f2f706 BEFORE R197: api() + two DELETE 204 no-body calls (workspaces, projects) + one SSE reader (executions/{id}/events); the inherited 'exactly one fetch( inside api()' rule is therefore NOT claimed for this tree — declared honestly as measured; moves DOWN only; R197 adds NO fetch( call",
+    "v1_count_ceiling_app_js": 32,
+    "v1_count_ceiling_rule": "32 = 23 (R202 ceiling) + exactly NINE served literals declared in COMPLETION-V2-DEC (operator APPROVE, D-3/D-6/C-10/C-13), each consuming an EXISTING tenant route: /v1/agent-tools (C-11 offer probe), /v1/agent/executions/${id}/trace + /diagnosis (C-11 own-trace), /v1/skills, /v1/memory/preferences, /v1/memory/preferences/${id} DELETE, /v1/webhooks (C-13 capability panels), a second /v1/executions/${id}/events reader (C-10 stored-SSE stage replay), plus ONE prose mention of POST /v1/webhooks in the empty-state text. Down-only from 32 thereafter. Previous rule: 23 = 22 (R197 measure) + exactly ONE served literal added by operator ruling in R202-DEC-01 (2026-09-22, declared BEFORE code): /v1/templates/${ref} in loadTemplateDetail — the ONLY consumer of GET /v1/templates/{ref} (register section C flip at R202 closure). Down-only from 23 thereafter. Previous rule: 22 = raw /v1/ occurrence count of ui/app/app.js MEASURED at the first GREEN of R197 (2026-09-21): 21 pre-round literals + exactly ONE served literal (/v1/templates in populateTemplateSelect); set ONCE, moves DOWN only (R182 D-2 pattern). History: null (declared before code at addec78d; guard failed closed — evidence/r197/red.txt)",
+    "fetch_count_ceiling_app_js": 6,
+    "fetch_count_rule": "6 = 4 (R197 measure) + TWO raw fetch( sites declared in COMPLETION-V2-DEC: the C-10 stored-SSE log reader (text body, not JSON — same posture as the R197 SSE reader) and the C-13 memory DELETE (204 no-body — same posture as the two R197 DELETE sites). Every JSON read/write still goes through the ONE api() helper. Moves DOWN only. Previous rule: 4 = MEASURED at b8f2f706 BEFORE R197: api() + two DELETE 204 no-body calls (workspaces, projects) + one SSE reader (executions/{id}/events); the inherited 'exactly one fetch( inside api()' rule is therefore NOT claimed for this tree — declared honestly as measured; moves DOWN only; R197 adds NO fetch( call",
     "exception_count_ceiling": 0,
     "transport": "fetch( only (count-ceilinged above); EventSource( / WebSocket( / XMLHttpRequest / axios banned (inherited ui/admin policy)",
     "forbidden_in_source": "quoted CAPABILITY_IDS, roster arrays, hardcoded template ids/refs, provider branching, fabricated states (thinking|speaking|listening|energized|processing|reasoning)"
@@ -419,23 +417,53 @@
     },
     "round_r178_dec01": {
       "ceiling": 5,
-      "counts_production_code_under": ["apps/"],
+      "counts_production_code_under": [
+        "apps/"
+      ],
       "changes_used": 5,
-      "items": ["R178-DEC-01 immutable promotion evidence"],
+      "items": [
+        "R178-DEC-01 immutable promotion evidence"
+      ],
       "log": [
-        {"item": "R178-DEC-01", "file": "apps/api/regression_evidence.py", "summary": "Versioned provenance codec and deterministic per-run evaluation identity"},
-        {"item": "R178-DEC-01", "file": "apps/api/scenarios.py", "summary": "Append actual required-check verdicts after real execution persistence"},
-        {"item": "R178-DEC-01", "file": "apps/api/promotion_evidence.py", "summary": "Require stored evidence and reject legacy, mismatched or failed verification"},
-        {"item": "R178-DEC-01", "file": "apps/api/app.py", "summary": "Share admin evaluation store with replay producer"},
-        {"item": "R178-DEC-01", "file": "apps/api/admin.py", "summary": "Compatibility flags cannot bypass required artifact-backed verification"}
+        {
+          "item": "R178-DEC-01",
+          "file": "apps/api/regression_evidence.py",
+          "summary": "Versioned provenance codec and deterministic per-run evaluation identity"
+        },
+        {
+          "item": "R178-DEC-01",
+          "file": "apps/api/scenarios.py",
+          "summary": "Append actual required-check verdicts after real execution persistence"
+        },
+        {
+          "item": "R178-DEC-01",
+          "file": "apps/api/promotion_evidence.py",
+          "summary": "Require stored evidence and reject legacy, mismatched or failed verification"
+        },
+        {
+          "item": "R178-DEC-01",
+          "file": "apps/api/app.py",
+          "summary": "Share admin evaluation store with replay producer"
+        },
+        {
+          "item": "R178-DEC-01",
+          "file": "apps/api/admin.py",
+          "summary": "Compatibility flags cannot bypass required artifact-backed verification"
+        }
       ],
       "note": "Explicit operator approval R178-DEC-01 option B. Independent five-production-file cap; DEC-02 design only. No schema, closed-set or historical-budget changes."
     },
     "round_r178": {
       "ceiling": 1,
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 1,
-      "items": ["R178-FIX-01 evaluation duplicate exception contract"],
+      "items": [
+        "R178-FIX-01 evaluation duplicate exception contract"
+      ],
       "log": [
         {
           "item": "R178-FIX-01",
@@ -658,7 +686,11 @@
       "ceiling": 10,
       "ceiling_history": "declared 8 BEFORE the first production commit (5e16d0a6) -> 10 with the Q3 design note in evidence/r179_state_ledger.md committed BEFORE the Q3 production commit: Q3 = 4 files (the designed activation path spans graders.py + policy.py + the app.py composition, and the 201 the ruling names is the promote route in admin.py), Q4 = 2 (rules declared in core/admin/service.py, read by the shelf in apps/api/capabilities.py), Q2 = 2 (migration 0021 + tables.py metadata mirror); 2 + 4 + 2 + 2 = 10, no slack",
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 10,
       "items": [
         "Q1 durable audit + usage bound in the DATABASE_URL profile (4.5 seam pattern); measured before/after with a real SIGKILL",
@@ -744,13 +776,13 @@
         "Q5 ui/ thaw: the console consumes GET /v1/admin/capabilities/actions and drops the ADMIN_ACTIONS hand-list; F-R179-07 annotation corrected in the same thaw"
       ],
       "log": [
-      {
-        "item": "Q5",
-        "file": "apps/admin_agent/tools.py",
-        "loc": "+6/-2",
-        "summary": "F-R179-07: AgentToolSurface.usage annotated as the UsageAccountingPort (the only call is .summary); import switched from core.usage.memory to core.usage.ports; no behaviour change; the runtime call site needs no type: ignore when Q6 flips the usage binding"
-      }
-    ],
+        {
+          "item": "Q5",
+          "file": "apps/admin_agent/tools.py",
+          "loc": "+6/-2",
+          "summary": "F-R179-07: AgentToolSurface.usage annotated as the UsageAccountingPort (the only call is .summary); import switched from core.usage.memory to core.usage.ports; no behaviour change; the runtime call site needs no type: ignore when Q6 flips the usage binding"
+        }
+      ],
       "note": "R180 opening commit per R179 ruling Q5 (N0=73 arithmetic binding: the /v1/ occurrence count in ui/admin/app.js may not exceed the manifest ceiling). Frozen trees this round: core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only). ui/ and apps/admin_agent/ are THAWED for exactly the Q5 items; any other edit there is a finding."
     },
     "round_r182": {
@@ -784,7 +816,12 @@
         "F-R182-01 stale usage_ledger module documentation: infrastructure/db/tables.py module docstring (lines 140-141) must describe execution_id as NOT NULL + UNIQUE with NO foreign key (migration 0022, R181 Q6, F-R179-06) — the column-level comment (lines 683-687) is already correct; pinned by a red test in tests/db BEFORE the edit"
       ],
       "log": [
-        {"item": "F-R182-01", "file": "infrastructure/db/tables.py", "loc": "+6/-2 (module docstring only, lines 137-145)", "summary": "usage_ledger paragraph: 'UNIQUE + FK (RESTRICT: accounting records must never dangle)' -> 'NOT NULL + UNIQUE; NOT a foreign key (migration 0022, R181 Q6, F-R179-06)' with the reserve-before-work / tool call_id reason; no Column, constraint, default or behaviour touched; pinned by tests/db/test_tables_usage_ledger_doc_r183.py (RED 5c7e42ab -> GREEN)"}
+        {
+          "item": "F-R182-01",
+          "file": "infrastructure/db/tables.py",
+          "loc": "+6/-2 (module docstring only, lines 137-145)",
+          "summary": "usage_ledger paragraph: 'UNIQUE + FK (RESTRICT: accounting records must never dangle)' -> 'NOT NULL + UNIQUE; NOT a foreign key (migration 0022, R181 Q6, F-R179-06)' with the reserve-before-work / tool call_id reason; no Column, constraint, default or behaviour touched; pinned by tests/db/test_tables_usage_ledger_doc_r183.py (RED 5c7e42ab -> GREEN)"
+        }
       ],
       "note": "R183 is a CARRY-FORWARD CLOSURE round (backend records), not a UI round and not an implementation of new scope. THAWED for exactly one doc-only edit: infrastructure/db/tables.py. FROZEN: core/, apps/ (incl. apps/admin_agent/), ui/ (R182 Command Center + admin console; ui_static_check / ui_command_static_check guard frames unchanged), core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines). Q7 / Provider slice / App Factory / API keys / webhook delivery / provider verification: UNDEFINED in the repository — STOP for an operator contract; nothing speculative may be created under this round id. Evidence of record under evidence/r183/ (tracked names, never raw_*); the R182 browser proof must not be re-run in the working clone (F-R182I-06) — run it from a fresh clone or restore evidence/r182_impl/ before committing."
     },
@@ -802,8 +839,18 @@
         "Q7-A evaluation_status on the execution admin read: closed StrEnum EvaluationStatus {NEVER_EVALUATED, EVALUATED} in core/contracts/evaluation.py; GET /v1/admin/usage rows gain evaluation_status derived from surface.evaluations.list_for_execution (EVALUATED iff any record above RAW, 22 s3); evaluation-list route unchanged; user routes unchanged; RED tests first in tests/api + tests/contract"
       ],
       "log": [
-        {"item": "Q7-A", "file": "core/contracts/evaluation.py", "loc": "+33/-0", "summary": "Closed StrEnum EvaluationStatus {NEVER_EVALUATED, EVALUATED} (operator-accepted values verbatim) placed with the other closed sets; pure evaluation_status_of(records) derives it positionally on VERIFICATION_LEVEL_ORDER (EVALUATED iff any record above RAW, 22 s3); no existing shape, validator, or value changed. RED tests/contract/test_evaluation_status_q7_r184.py (ImportError at 6805515c) -> GREEN"},
-        {"item": "Q7-A", "file": "apps/api/admin.py", "loc": "+9/-0", "summary": "GET /v1/admin/usage rows gain the additive key evaluation_status derived via surface.evaluations.list_for_execution(admitted.tenant_id, report.execution.id) for rows the tenant-scoped store.list already returned; /evaluations/{id}, /executions/{id}/evaluations and every user route byte-identical. RED tests/api/test_admin_usage_evaluation_status_q7_r184.py (4 failed KeyError at 6805515c) -> GREEN"}
+        {
+          "item": "Q7-A",
+          "file": "core/contracts/evaluation.py",
+          "loc": "+33/-0",
+          "summary": "Closed StrEnum EvaluationStatus {NEVER_EVALUATED, EVALUATED} (operator-accepted values verbatim) placed with the other closed sets; pure evaluation_status_of(records) derives it positionally on VERIFICATION_LEVEL_ORDER (EVALUATED iff any record above RAW, 22 s3); no existing shape, validator, or value changed. RED tests/contract/test_evaluation_status_q7_r184.py (ImportError at 6805515c) -> GREEN"
+        },
+        {
+          "item": "Q7-A",
+          "file": "apps/api/admin.py",
+          "loc": "+9/-0",
+          "summary": "GET /v1/admin/usage rows gain the additive key evaluation_status derived via surface.evaluations.list_for_execution(admitted.tenant_id, report.execution.id) for rows the tenant-scoped store.list already returned; /evaluations/{id}, /executions/{id}/evaluations and every user route byte-identical. RED tests/api/test_admin_usage_evaluation_status_q7_r184.py (4 failed KeyError at 6805515c) -> GREEN"
+        }
       ],
       "note": "R184 executes the accepted Q7 option (a) and nothing else. THAWED: core/contracts/evaluation.py, apps/api/admin.py (exactly the two budgeted files). FROZEN: the rest of core/ and apps/, infrastructure/, ui/ (ui/admin N0=73 zero headroom; ui/app/command /v1/ ceiling 12 spent — rendering the new field is NOT part of the accepted decision), core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only, <=45 lines). Provider slice / App Factory / API keys / webhook delivery: still UNDEFINED — STOP. Evidence of record under evidence/r184/ (tracked names, never raw_*); the R182 browser proof must not be re-run in the working clone before a commit (F-R182I-06)."
     },
@@ -843,94 +890,94 @@
       ]
     },
     "round_r202": {
-        "ceiling": 0,
-        "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-        "counts_production_code_under": [
-            "core/",
-            "apps/",
-            "infrastructure/"
-        ],
-        "changes_used": 0,
-        "items": [
-            "R202-A (operator D1 = a, D2 = i, D3 = i) ui/app/{app.js,index.html,styles.css}: loadTemplateDetail(ref) reads GET /v1/templates/{ref} ONCE per choice (on #ask-template change and after restoreContext re-applies a stored ref; never at module load; never for the empty choice); renderTemplateDetail renders the served StrategyTemplate verbatim — name, description, tags, skills, required_capabilities, strategy.stages[] {key, kind, role, depends_on, instruction} and the stage model posture derived from the served model_policy (null -> 'auto (Router decides)'). No model selector, no code-generation affordance, no 'App Factory engine' vocabulary beyond the served name; server errors rendered verbatim. ui/app/app.js /v1/ ceiling 22 -> 23 (this ONE literal), fetch( 4 holds.",
-            "R202-B (operator D4 = i) ui/app/app.js followEvents: node timeline rows are labelled 'kind · role' from the ALREADY-LOADED template detail when the run used that template (no new read).",
-            "R202-C (operator D5 = i) Command: SURFACE_BY_SEGMENT.templates href unchanged (/app/#view=home); Command reads no templates (no 13th literal; no receiver without an emitter).",
-            "R202-D (operator D7 = yes, at closure, records only) V1_ACCEPTANCE_REGISTER section C: GET /v1/templates/{ref} DECLARED-UNCONSUMED -> ACCEPTED-AS-MEASURED with R202 evidence.",
-            "DEFERRED by operator ruling: D6 TemplateOverride / model selection in template mode (request model_policy is ignored by StrategyExecutor.resolve for templates — the UI shows the served AUTO posture and offers no selector); D8 template ref on the execution record (backend/contract); D4/D5/D7 of R201 stay deferred (token custody, project filter, Command project_id). No template persistence, no user/workspace templates, no App Factory code generation."
-        ],
-        "log": [],
-        "note": "Ceiling 0 declared in R202-DEC-01 BEFORE any commit (operator: 'APPROVE R202. Confirm the proposed rulings: D1 = a, D2 = i, D3 = i, D4 = i, D5 = i, D6 = i, D7 = yes, D8 = defer. Confirm the declared ui/app/app.js /v1/ ceiling adjustment: 22 → 23. Execute R202 exactly as proposed. Preserve the unified QEVION direction, existing shared multi-tenant architecture, security/authorization boundaries, one Router, one StrategyExecutor, one TemplateRegistry, and the existing execution path. Do not add TemplateOverride/model selection, project filtering, Command template reads, template persistence, user/workspace templates, or App Factory code generation. Stop at the next decision gate.'). UI-only round (layer A/B). Consumes the EXISTING tenant-authenticated GET /v1/templates/{ref} (R196) through the EXISTING api() helper; the ONE TemplateRegistry / StrategyExecutor / Router and POST /v1/execute template mode are untouched. FROZEN: core/ apps/ infrastructure/ (0 files); contracts + freeze baseline (46); every /v1/admin/* and /v1/agent/* gate; command.js /v1/ 12 + one fetch(; ui/admin/app.js 73; CAPABILITY_IDS. The R197 D4 pin ('/v1/templates/ not consumed') is flipped 1:1 to 'consumed exactly once' with its lineage note kept.",
-        "ceiling_history": [
-            "declared 0 at the R202 opening (2026-09-22, R202-DEC-01) from post-R201 main 22111694; ui/app/app.js /v1/ ceiling re-measured 22 -> 23 by operator ruling in the same declaration.",
+      "ceiling": 0,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R202-A (operator D1 = a, D2 = i, D3 = i) ui/app/{app.js,index.html,styles.css}: loadTemplateDetail(ref) reads GET /v1/templates/{ref} ONCE per choice (on #ask-template change and after restoreContext re-applies a stored ref; never at module load; never for the empty choice); renderTemplateDetail renders the served StrategyTemplate verbatim — name, description, tags, skills, required_capabilities, strategy.stages[] {key, kind, role, depends_on, instruction} and the stage model posture derived from the served model_policy (null -> 'auto (Router decides)'). No model selector, no code-generation affordance, no 'App Factory engine' vocabulary beyond the served name; server errors rendered verbatim. ui/app/app.js /v1/ ceiling 22 -> 23 (this ONE literal), fetch( 4 holds.",
+        "R202-B (operator D4 = i) ui/app/app.js followEvents: node timeline rows are labelled 'kind · role' from the ALREADY-LOADED template detail when the run used that template (no new read).",
+        "R202-C (operator D5 = i) Command: SURFACE_BY_SEGMENT.templates href unchanged (/app/#view=home); Command reads no templates (no 13th literal; no receiver without an emitter).",
+        "R202-D (operator D7 = yes, at closure, records only) V1_ACCEPTANCE_REGISTER section C: GET /v1/templates/{ref} DECLARED-UNCONSUMED -> ACCEPTED-AS-MEASURED with R202 evidence.",
+        "DEFERRED by operator ruling: D6 TemplateOverride / model selection in template mode (request model_policy is ignored by StrategyExecutor.resolve for templates — the UI shows the served AUTO posture and offers no selector); D8 template ref on the execution record (backend/contract); D4/D5/D7 of R201 stay deferred (token custody, project filter, Command project_id). No template persistence, no user/workspace templates, no App Factory code generation."
+      ],
+      "log": [],
+      "note": "Ceiling 0 declared in R202-DEC-01 BEFORE any commit (operator: 'APPROVE R202. Confirm the proposed rulings: D1 = a, D2 = i, D3 = i, D4 = i, D5 = i, D6 = i, D7 = yes, D8 = defer. Confirm the declared ui/app/app.js /v1/ ceiling adjustment: 22 → 23. Execute R202 exactly as proposed. Preserve the unified QEVION direction, existing shared multi-tenant architecture, security/authorization boundaries, one Router, one StrategyExecutor, one TemplateRegistry, and the existing execution path. Do not add TemplateOverride/model selection, project filtering, Command template reads, template persistence, user/workspace templates, or App Factory code generation. Stop at the next decision gate.'). UI-only round (layer A/B). Consumes the EXISTING tenant-authenticated GET /v1/templates/{ref} (R196) through the EXISTING api() helper; the ONE TemplateRegistry / StrategyExecutor / Router and POST /v1/execute template mode are untouched. FROZEN: core/ apps/ infrastructure/ (0 files); contracts + freeze baseline (46); every /v1/admin/* and /v1/agent/* gate; command.js /v1/ 12 + one fetch(; ui/admin/app.js 73; CAPABILITY_IDS. The R197 D4 pin ('/v1/templates/ not consumed') is flipped 1:1 to 'consumed exactly once' with its lineage note kept.",
+      "ceiling_history": [
+        "declared 0 at the R202 opening (2026-09-22, R202-DEC-01) from post-R201 main 22111694; ui/app/app.js /v1/ ceiling re-measured 22 -> 23 by operator ruling in the same declaration.",
         "gate of record a4a8aad9 (2026-09-23): fresh clone RESULT: PASS passed=3993 failed=0 errors=0 skipped=64; gateway 194; regression 18 roots 3139/13/0; production diff vs main 22111694 = 0 lines (changes_used 0); app.js /v1/ 23 (== ceiling), fetch( 4. min_passed ratcheted 3984 -> 3993 here (D-6). Operator ruling (a): R202-A accepted-as-measured; R202-B DEFERRED (latent, unreachable in the shipped UI because POST /v1/execute refuses execution_strategy + execution_policy.async — R188 C3 — FINDING R202-F1; not claimed as reachable/proven; R188 C3 untouched)."
-        ]
+      ]
     },
     "round_r201": {
-        "ceiling": 0,
-        "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-        "counts_production_code_under": [
-            "core/",
-            "apps/",
-            "infrastructure/"
-        ],
-        "changes_used": 0,
-        "items": [
-            "R201-A (operator D1 = a, D3 = i) ui/app/command/{command.js,index.html,command.css}: executionHref(owner, id) builds '<owner.href>&execution=<uuid>' from the EXISTING SURFACE_BY_SEGMENT entries (no /v1/ literal; command.js stays 12 + one fetch()); admin tier renders 'Open Workbench . runs' / 'Open Admin . executions' affordances for the selected execution under the R200 permission rule (session.is_admin labels, server 403 decides); tenant tier lists the ALREADY-FETCHED state.executions rows as execution-carrying links (no new request).",
-            "R201-B (operator D1 = a, D3 = i) boot-once receivers accept an optional '&execution=<uuid>': ui/app/app.js applyDeepLink -> showView(view) then openRun(id) iff view == runs; ui/admin/app.js applyDeepLink -> rail click then openExecution(id) iff surface == executions. Anchored regex: malformed hash is ignored whole; no hashchange listener, no timer, no new read; the server's own 404/422 is rendered verbatim (no client tenancy logic). No receiver parameter without an emitter (no project=/template= params).",
-            "R201-C (operator D2 = i) ui/app/app.js: Workbench self-restores its NON-SECRET selection across the round trip via sessionStorage key 'qevion.app.context' = {view, selectedWorkspace, project, template}; written on selectWorkspace / #ask-project / #ask-template change / showView; read in enterMain AFTER refreshWorkspaces() and populateTemplateSelect() resolve; applied only when the option exists in the served list; explicit hash wins over the stored view; cleared on logout; never the token; never localStorage.",
-            "DEFERRED by operator ruling: D4 token custody across trees (memory -> re-login stays; security posture round); D5 project filter on GET /v1/executions / project on the execution record (architectural: contract + schema + store + repos + route); D6 model/provider selection (no UI supports a selection; model_policy unused); D7 Command converse-execute attaching project_id (Command holds no project; would add /v1/ literals)."
-        ],
-        "log": [],
-        "note": "Ceiling 0 declared in R201-DEC-01 BEFORE any commit (operator: 'APPROVE R201 with D1–D7 confirmed (recommended: D1=a, D2=i, D3=i, D4=defer, D5=defer, D6=defer, D7=defer)'). UI-only round (layer A/B). Reuses the existing hash mechanism (R200), openRun/openExecution, SURFACE_BY_SEGMENT, the session read and served rows. FROZEN: core/ apps/ infrastructure/ (0 files); contracts + freeze baseline (46); every /v1/admin/* and /v1/agent/* gate; command.js /v1/ 12 + one fetch(; ui/app/app.js <= 22 / 4; ui/admin/app.js 73; register section C; CAPABILITY_IDS.",
-        "ceiling_history": [
-            "declared 0 at the R201 opening (2026-09-22, R201-DEC-01) from post-R200 main daa88afd.",
-        "gate of record 798903ca (2026-09-22): changes_used 0 of 0 \u2014 git diff origin/main -- core apps infrastructure EMPTY; command.js 12 + one fetch(; ui/app/app.js 22 / 4; ui/admin/app.js 73; freeze --check MATCHES (46); PASS 3984/0/0/64, gateway 194; regression 18 roots 3139 passed / 13 skipped / 0 failed; real-browser proof browser_probe_b67c0a09.json OK."
-        ]
+      "ceiling": 0,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R201-A (operator D1 = a, D3 = i) ui/app/command/{command.js,index.html,command.css}: executionHref(owner, id) builds '<owner.href>&execution=<uuid>' from the EXISTING SURFACE_BY_SEGMENT entries (no /v1/ literal; command.js stays 12 + one fetch()); admin tier renders 'Open Workbench . runs' / 'Open Admin . executions' affordances for the selected execution under the R200 permission rule (session.is_admin labels, server 403 decides); tenant tier lists the ALREADY-FETCHED state.executions rows as execution-carrying links (no new request).",
+        "R201-B (operator D1 = a, D3 = i) boot-once receivers accept an optional '&execution=<uuid>': ui/app/app.js applyDeepLink -> showView(view) then openRun(id) iff view == runs; ui/admin/app.js applyDeepLink -> rail click then openExecution(id) iff surface == executions. Anchored regex: malformed hash is ignored whole; no hashchange listener, no timer, no new read; the server's own 404/422 is rendered verbatim (no client tenancy logic). No receiver parameter without an emitter (no project=/template= params).",
+        "R201-C (operator D2 = i) ui/app/app.js: Workbench self-restores its NON-SECRET selection across the round trip via sessionStorage key 'qevion.app.context' = {view, selectedWorkspace, project, template}; written on selectWorkspace / #ask-project / #ask-template change / showView; read in enterMain AFTER refreshWorkspaces() and populateTemplateSelect() resolve; applied only when the option exists in the served list; explicit hash wins over the stored view; cleared on logout; never the token; never localStorage.",
+        "DEFERRED by operator ruling: D4 token custody across trees (memory -> re-login stays; security posture round); D5 project filter on GET /v1/executions / project on the execution record (architectural: contract + schema + store + repos + route); D6 model/provider selection (no UI supports a selection; model_policy unused); D7 Command converse-execute attaching project_id (Command holds no project; would add /v1/ literals)."
+      ],
+      "log": [],
+      "note": "Ceiling 0 declared in R201-DEC-01 BEFORE any commit (operator: 'APPROVE R201 with D1–D7 confirmed (recommended: D1=a, D2=i, D3=i, D4=defer, D5=defer, D6=defer, D7=defer)'). UI-only round (layer A/B). Reuses the existing hash mechanism (R200), openRun/openExecution, SURFACE_BY_SEGMENT, the session read and served rows. FROZEN: core/ apps/ infrastructure/ (0 files); contracts + freeze baseline (46); every /v1/admin/* and /v1/agent/* gate; command.js /v1/ 12 + one fetch(; ui/app/app.js <= 22 / 4; ui/admin/app.js 73; register section C; CAPABILITY_IDS.",
+      "ceiling_history": [
+        "declared 0 at the R201 opening (2026-09-22, R201-DEC-01) from post-R200 main daa88afd.",
+        "gate of record 798903ca (2026-09-22): changes_used 0 of 0 — git diff origin/main -- core apps infrastructure EMPTY; command.js 12 + one fetch(; ui/app/app.js 22 / 4; ui/admin/app.js 73; freeze --check MATCHES (46); PASS 3984/0/0/64, gateway 194; regression 18 roots 3139 passed / 13 skipped / 0 failed; real-browser proof browser_probe_b67c0a09.json OK."
+      ]
     },
     "round_r200": {
-          "ceiling": 0,
-          "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-          "counts_production_code_under": [
-                "core/",
-                "apps/",
-                "infrastructure/"
-          ],
-          "changes_used": 0,
-          "items": [
-                "R200-A (operator D1 = B, D2 = i, D5) command.js: probeSession admits ANY authenticated session (server 403 remains the authority); loadCenter branches on session.is_admin — admin path byte-for-byte the same request set as R185 (healthz, admin/system, admin/capabilities, executions, admin/usage); tenant path reads ONLY tenant-readable routes already literal in command.js (healthz, auth/session, executions) and renders a surfaces list + ONE locked 'admin control plane' node whose label quotes session.is_admin — it never calls /v1/admin/* or /v1/agent/*. Capability → surface routing is DERIVED from the served evidence route prefix (/v1/models → Workbench·Models, /v1/templates → Workbench·Home, /v1/usage → Workbench·Usage, /v1/workspaces|/v1/projects → Workbench·Home, /v1/execute|/v1/executions → Workbench·Runs, /v1/admin/* → Admin·<surface>, /v1/agent* → Admin·agent, /v1/skills → Admin·skills, /v1/webhooks → Admin·system); no CAPABILITY_IDS quoted (R182 guard holds); routeless rows render 'no surface owns this route'. Node affordance: available+owned+permitted → <a href>; available+owned+admin-only for a tenant → disabled link labelled admin; inert/unavailable → no link, evidence verbatim. Nothing hidden. ZERO new /v1/ literals (12 holds); one fetch( in api() holds.",
-                "R200-B (operator D3 = i incl. /admin receiver) deep-link receivers, boot-once, no hashchange listener/timer: ui/app/app.js reads location.hash '#view=<name>' once after enterMain and calls showView(name) iff name ∈ VIEWS; ui/admin/app.js reads '#surface=<name>' once after login and clicks the matching .rail-item iff it exists. Unknown values ignored silently (no state, no fabricated view). 0 new /v1/ literals, 0 new fetch( in either tree (22 / 4 and 73 hold as COUNT ceilings; the R197/R199 'byte-identical' wording for ui/admin/app.js becomes a count pin — 73 was always a ceiling).",
-                "R200-C ui/app/command/{index.html,command.css}: tenant surfaces list markup + disabled-link style from the shared token set (R199-B); hrefs carry no /v1/.",
-                "R200-D (operator D4 = defer) Command execute parity with the Workbench template picker is NOT done (would add a 13th /v1/ literal against the down-only rule); the Ask affordance links to /app/#view=home instead."
-          ],
-          "log": [],
-          "note": "Ceiling 0 declared in R200-DEC-01 BEFORE any commit (operator: 'APPROVE R200. Confirm: D1 = B, D2 = I, D3 = I, including the /admin receiver, D4 = defer, D5 = accept as proposed. Execute R200 exactly as proposed. Preserve the unified shared multi-tenant QEVION direction: Command is the unified entry point, admin-only capabilities remain protected by the server, nothing implemented may become hidden, and no duplicate engine/router/agent or backend authority may be introduced. Do not pre-approve future rounds or broaden scope.'). UI-only round (layer A/B): core/ apps/ infrastructure/ FROZEN; contracts + freeze baseline FROZEN (46; --check must MATCH); CAPABILITY_IDS FROZEN; every /v1/admin/* and /v1/agent/* gate FROZEN; register §C untouched (no route newly consumed). Allowed files: ui/app/command/{command.js,index.html,command.css}, ui/app/app.js, ui/admin/app.js, tests/ui/test_command_routing_r200.py, pins that name the old identity wording, evidence/r200/*, records.",
-          "ceiling_history": [
-                "declared 0 at the R200 opening (2026-09-22, R200-DEC-01) from post-R199 main f6991e16.",
-        "gate of record c57d4c88 (2026-09-22): changes_used 0 of 0 \u2014 git diff origin/main -- core apps infrastructure EMPTY; command.js 12 + one fetch(; ui/app/app.js 22 / 4; ui/admin/app.js 73; freeze --check MATCHES (46); PASS 3972/0/0/64, gateway 194; real-browser request-set proof evidence/r200/browser_probe_2744fde0.json (tenant tier issues zero /v1/admin/* or /v1/agent/* requests; admin tier == R185 set)."
-          ]
+      "ceiling": 0,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R200-A (operator D1 = B, D2 = i, D5) command.js: probeSession admits ANY authenticated session (server 403 remains the authority); loadCenter branches on session.is_admin — admin path byte-for-byte the same request set as R185 (healthz, admin/system, admin/capabilities, executions, admin/usage); tenant path reads ONLY tenant-readable routes already literal in command.js (healthz, auth/session, executions) and renders a surfaces list + ONE locked 'admin control plane' node whose label quotes session.is_admin — it never calls /v1/admin/* or /v1/agent/*. Capability → surface routing is DERIVED from the served evidence route prefix (/v1/models → Workbench·Models, /v1/templates → Workbench·Home, /v1/usage → Workbench·Usage, /v1/workspaces|/v1/projects → Workbench·Home, /v1/execute|/v1/executions → Workbench·Runs, /v1/admin/* → Admin·<surface>, /v1/agent* → Admin·agent, /v1/skills → Admin·skills, /v1/webhooks → Admin·system); no CAPABILITY_IDS quoted (R182 guard holds); routeless rows render 'no surface owns this route'. Node affordance: available+owned+permitted → <a href>; available+owned+admin-only for a tenant → disabled link labelled admin; inert/unavailable → no link, evidence verbatim. Nothing hidden. ZERO new /v1/ literals (12 holds); one fetch( in api() holds.",
+        "R200-B (operator D3 = i incl. /admin receiver) deep-link receivers, boot-once, no hashchange listener/timer: ui/app/app.js reads location.hash '#view=<name>' once after enterMain and calls showView(name) iff name ∈ VIEWS; ui/admin/app.js reads '#surface=<name>' once after login and clicks the matching .rail-item iff it exists. Unknown values ignored silently (no state, no fabricated view). 0 new /v1/ literals, 0 new fetch( in either tree (22 / 4 and 73 hold as COUNT ceilings; the R197/R199 'byte-identical' wording for ui/admin/app.js becomes a count pin — 73 was always a ceiling).",
+        "R200-C ui/app/command/{index.html,command.css}: tenant surfaces list markup + disabled-link style from the shared token set (R199-B); hrefs carry no /v1/.",
+        "R200-D (operator D4 = defer) Command execute parity with the Workbench template picker is NOT done (would add a 13th /v1/ literal against the down-only rule); the Ask affordance links to /app/#view=home instead."
+      ],
+      "log": [],
+      "note": "Ceiling 0 declared in R200-DEC-01 BEFORE any commit (operator: 'APPROVE R200. Confirm: D1 = B, D2 = I, D3 = I, including the /admin receiver, D4 = defer, D5 = accept as proposed. Execute R200 exactly as proposed. Preserve the unified shared multi-tenant QEVION direction: Command is the unified entry point, admin-only capabilities remain protected by the server, nothing implemented may become hidden, and no duplicate engine/router/agent or backend authority may be introduced. Do not pre-approve future rounds or broaden scope.'). UI-only round (layer A/B): core/ apps/ infrastructure/ FROZEN; contracts + freeze baseline FROZEN (46; --check must MATCH); CAPABILITY_IDS FROZEN; every /v1/admin/* and /v1/agent/* gate FROZEN; register §C untouched (no route newly consumed). Allowed files: ui/app/command/{command.js,index.html,command.css}, ui/app/app.js, ui/admin/app.js, tests/ui/test_command_routing_r200.py, pins that name the old identity wording, evidence/r200/*, records.",
+      "ceiling_history": [
+        "declared 0 at the R200 opening (2026-09-22, R200-DEC-01) from post-R199 main f6991e16.",
+        "gate of record c57d4c88 (2026-09-22): changes_used 0 of 0 — git diff origin/main -- core apps infrastructure EMPTY; command.js 12 + one fetch(; ui/app/app.js 22 / 4; ui/admin/app.js 73; freeze --check MATCHES (46); PASS 3972/0/0/64, gateway 194; real-browser request-set proof evidence/r200/browser_probe_2744fde0.json (tenant tier issues zero /v1/admin/* or /v1/agent/* requests; admin tier == R185 set)."
+      ]
     },
     "round_r199": {
-          "ceiling": 0,
-          "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-          "counts_production_code_under": [
-                "core/",
-                "apps/",
-                "infrastructure/"
-          ],
-          "changes_used": 0,
-          "items": [
-                "R199-A one brand string per surface (operator D3): <title>/<h1> = 'QEVION · Workbench' (ui/app/index.html), 'QEVION · Command' (ui/app/command/index.html), 'QEVION · Admin' (ui/admin/index.html); 'QEVION Control Plane' stays as the platform descriptor line under each sign-in heading. The three test pins on the old Command title (tests/ui/test_command_center_topology_r182.py, tests/ui/test_command_center_browser_r182.py, tests/ui/test_command_center_browser_r185.py) move to the new string in the same commit — tests are not production and not UI-frozen.",
-                "R199-B command.css adopts the shared token set of ui/app/styles.css + ui/admin/styles.css (identical :root blocks measured at f1a9752a): --bg-0/--bg-1/--bg-2/--bg-3, --line, --ink/--ink-dim, --accent #4fd6ff, --accent-2 #8b7bff, --ok/--warn/--err/--info, --unknown #ff45e0; Command-local names (--brand, --panel, --text, --muted, state colours) become aliases of shared tokens; the divergent hex values #7dd3fc / #38bdf8 leave the tree. No motion/keyframe change (R185 collapse under prefers-reduced-motion untouched).",
-                "R199-C cross-navigation: plain <a href> links between the three served mounts (/app/, /app/command/, /admin/) in each header; zero /v1/ in any href (inherited rule); admin-only destinations labelled as such. ui/app/command/command.js and ui/admin/app.js are NOT touched (12 / 73 hold by identity).",
-                "R199-D /app Models renders the served providers[] of each GET /v1/models row (R188 C4 field, present in the response, previously not rendered) and a runtime-truth strip computed ONLY from that same response (operator D4: distinct provider keys as served, model count, availability counts — no invented prose, no provider branching, no second read). No new /v1/ literal, no new fetch( — ui_workbench_static_check stays 22 / 4.",
-                "R199-E Command honesty (operator D1 = A, admin-only posture kept this round): the sign-in copy names the admin requirement and links tenant users to the Workbench; no gate change in command.js."
-          ],
-          "log": [],
-          "note": "Ceiling 0 declared in R199-DEC-01 BEFORE any commit (operator: 'APPROVE R199. Accept D1–D5 as proposed: D1 = A, D2 = A, D3 = QEVION · Command / QEVION · Workbench / QEVION · Admin, D4 = use only real catalog/API provider-state values, D5 = standard gate ratchet. Execute R199 exactly as proposed. Do not pre-approve R200 or R204.'). UI-only round (layer A): core/ apps/ infrastructure/ FROZEN; contracts + freeze baseline FROZEN (46; --check must MATCH); root '/' stays 404 (D2 = A; /app/command/ documented as the entry). Allowed files: ui/app/command/{index.html,command.css}, ui/app/{index.html,app.js,styles.css}, ui/admin/{index.html,styles.css}, tests/ui/test_unified_shell_r199.py, the three title pins named in R199-A, evidence/r199/*, records.",
-          "ceiling_history": [
-                "declared 0 at the R199 opening (2026-09-21, R199-DEC-01) from post-R198 main f1a9752a.",
-        "gate of record d8f39043 (2026-09-21): changes_used 0 of 0 \u2014 git diff origin/main -- core apps infrastructure EMPTY; ui/app/command/command.js (12) and ui/admin/app.js (73) byte-identical to main; ui/app/app.js 22 / fetch 4; freeze --check MATCHES (46); PASS 3951/0/0/64, gateway 194; regression 18 roots 3163 markers (21 skipped, 1 xfail, 0 failed) at d8f39043; real-browser probe evidence/r199/browser_probe_1607ee75.json (titles, links, truth strip == served /v1/models, Command --brand resolves #4fd6ff)."
-          ]
+      "ceiling": 0,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "R199-A one brand string per surface (operator D3): <title>/<h1> = 'QEVION · Workbench' (ui/app/index.html), 'QEVION · Command' (ui/app/command/index.html), 'QEVION · Admin' (ui/admin/index.html); 'QEVION Control Plane' stays as the platform descriptor line under each sign-in heading. The three test pins on the old Command title (tests/ui/test_command_center_topology_r182.py, tests/ui/test_command_center_browser_r182.py, tests/ui/test_command_center_browser_r185.py) move to the new string in the same commit — tests are not production and not UI-frozen.",
+        "R199-B command.css adopts the shared token set of ui/app/styles.css + ui/admin/styles.css (identical :root blocks measured at f1a9752a): --bg-0/--bg-1/--bg-2/--bg-3, --line, --ink/--ink-dim, --accent #4fd6ff, --accent-2 #8b7bff, --ok/--warn/--err/--info, --unknown #ff45e0; Command-local names (--brand, --panel, --text, --muted, state colours) become aliases of shared tokens; the divergent hex values #7dd3fc / #38bdf8 leave the tree. No motion/keyframe change (R185 collapse under prefers-reduced-motion untouched).",
+        "R199-C cross-navigation: plain <a href> links between the three served mounts (/app/, /app/command/, /admin/) in each header; zero /v1/ in any href (inherited rule); admin-only destinations labelled as such. ui/app/command/command.js and ui/admin/app.js are NOT touched (12 / 73 hold by identity).",
+        "R199-D /app Models renders the served providers[] of each GET /v1/models row (R188 C4 field, present in the response, previously not rendered) and a runtime-truth strip computed ONLY from that same response (operator D4: distinct provider keys as served, model count, availability counts — no invented prose, no provider branching, no second read). No new /v1/ literal, no new fetch( — ui_workbench_static_check stays 22 / 4.",
+        "R199-E Command honesty (operator D1 = A, admin-only posture kept this round): the sign-in copy names the admin requirement and links tenant users to the Workbench; no gate change in command.js."
+      ],
+      "log": [],
+      "note": "Ceiling 0 declared in R199-DEC-01 BEFORE any commit (operator: 'APPROVE R199. Accept D1–D5 as proposed: D1 = A, D2 = A, D3 = QEVION · Command / QEVION · Workbench / QEVION · Admin, D4 = use only real catalog/API provider-state values, D5 = standard gate ratchet. Execute R199 exactly as proposed. Do not pre-approve R200 or R204.'). UI-only round (layer A): core/ apps/ infrastructure/ FROZEN; contracts + freeze baseline FROZEN (46; --check must MATCH); root '/' stays 404 (D2 = A; /app/command/ documented as the entry). Allowed files: ui/app/command/{index.html,command.css}, ui/app/{index.html,app.js,styles.css}, ui/admin/{index.html,styles.css}, tests/ui/test_unified_shell_r199.py, the three title pins named in R199-A, evidence/r199/*, records.",
+      "ceiling_history": [
+        "declared 0 at the R199 opening (2026-09-21, R199-DEC-01) from post-R198 main f1a9752a.",
+        "gate of record d8f39043 (2026-09-21): changes_used 0 of 0 — git diff origin/main -- core apps infrastructure EMPTY; ui/app/command/command.js (12) and ui/admin/app.js (73) byte-identical to main; ui/app/app.js 22 / fetch 4; freeze --check MATCHES (46); PASS 3951/0/0/64, gateway 194; regression 18 roots 3163 markers (21 skipped, 1 xfail, 0 failed) at d8f39043; real-browser probe evidence/r199/browser_probe_1607ee75.json (titles, links, truth strip == served /v1/models, Command --brand resolves #4fd6ff)."
+      ]
     },
     "round_r198": {
       "ceiling": 0,
@@ -1020,7 +1067,7 @@
       "note": "Ceiling 4 declared in R196-DEC-01 BEFORE the first production commit (operator: 'APPROVE R196 with confirmation' of D1 freeze re-derive in-round, D2 CAPABILITY_IDS +1, D3 full template detail, D4 tenant-authenticated reads, D5 template-mode execution resolvable). SHAPE CHANGE DECLARED: two ADDITIVE served routes (served_routes_v1 44 -> 46); the 15 frozen modules and 116 contracts are untouched; engineering/verification/contract_freeze_derive.py binds the templates seam in its hermetic composition and the baseline is re-derived with --write in this round (verification tooling; not counted). No write route, no durability, no ownership rule (workspace ownership recorded as the later direction per AD-3). Reads are tenant-neutral platform data behind tenant authentication.",
       "ceiling_history": [
         "declared 4 at the R196 opening (2026-09-20, R196-DEC-01) from post-R195 main f7a127fd.",
-        "gate of record 63f7b876 (2026-09-20): changes_used 4 of 4 \u2014 core/contracts/agent_template.py, apps/api/app.py, apps/composition/runtime.py, apps/api/capabilities.py; freeze baseline RE-DERIVED in-round (served_routes_v1 44 -> 46: +GET /v1/templates, +GET /v1/templates/{ref}; 15 modules identical) and --check MATCHES; PASS 3888/0/0/64, gateway 194; regression 18 roots 3123 passed / 14 skipped-xfail / 0 failed at 8f084086."
+        "gate of record 63f7b876 (2026-09-20): changes_used 4 of 4 — core/contracts/agent_template.py, apps/api/app.py, apps/composition/runtime.py, apps/api/capabilities.py; freeze baseline RE-DERIVED in-round (served_routes_v1 44 -> 46: +GET /v1/templates, +GET /v1/templates/{ref}; 15 modules identical) and --check MATCHES; PASS 3888/0/0/64, gateway 194; regression 18 roots 3123 passed / 14 skipped-xfail / 0 failed at 8f084086."
       ]
     },
     "round_r195": {
@@ -1067,13 +1114,17 @@
       "note": "Ceiling 4 declared in R195-DEC-01 BEFORE the first production commit (operator: 'APPROVE R195. Accept the proposed R195 engineering decisions: D1 AdminAction +3 members; D2 map all three actions to AdminArea.TOOLS; D3 use the one shared durable Vault SecretManagerPort; D4 exclude N-9 from R195. Execute R195 exactly as proposed.'). Core touched ONLY in core/contracts/admin.py (non-frozen closed set, +3 approved) and core/admin/service.py (Protocol seams + lifecycle branches). No served route added/removed; contract freeze baseline expected to MATCH. Shared multi-tenant preserved: bindings carry explicit tenant_id; trust grants are keyed (tenant_id, remote_url); runtime lookups keep BINDING_TENANT_MISMATCH / fail-closed trust. Secrets never ride admin payloads (R176 FIX-04 unchanged).",
       "ceiling_history": [
         "declared 4 at the R195 opening (2026-09-20, R195-DEC-01) from post-R194 main 26e24f1e.",
-        "gate of record 2a636b50 (2026-09-20): changes_used 4 of 4 \u2014 core/contracts/admin.py, core/admin/service.py, apps/agent_dev/git_tools.py, apps/composition/runtime.py; freeze --check MATCHES (core.contracts.admin is not frozen; served_routes_v1 44 unchanged); PASS 3872/0/0/64, gateway 194; regression 18 roots 3107 passed / 14 skipped-xfail / 0 failed at fd31a8cd."
+        "gate of record 2a636b50 (2026-09-20): changes_used 4 of 4 — core/contracts/admin.py, core/admin/service.py, apps/agent_dev/git_tools.py, apps/composition/runtime.py; freeze --check MATCHES (core.contracts.admin is not frozen; served_routes_v1 44 unchanged); PASS 3872/0/0/64, gateway 194; regression 18 roots 3107 passed / 14 skipped-xfail / 0 failed at fd31a8cd."
       ]
     },
     "round_r194": {
       "ceiling": 3,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 3,
       "items": [
         "R194-A security hardening (CS1 I-1/I-2; operator APPROVED R194): apps/api/app.py — one response-header middleware (nosniff, frame DENY, referrer no-referrer, CSP self-only with style-src unsafe-inline for the existing static UIs, HSTS only when the composition asks) + /openapi.json & /redoc admin-gated when the composition asks (default: public on the in-memory profile, gated on the durable profile, OPENAPI_PUBLIC overrides). No route added/removed; contract SHAPE unchanged.",
@@ -1081,9 +1132,24 @@
         "R194-C (headroom, NOT used unless a RED test proves it): none declared. N-5 checkpoints is NOT in this round (finding R194-F1: build_dev_surface is uncomposed; ws_write has no checkpoint seam → operator decision)."
       ],
       "log": [
-        {"item": "R194-A", "file": "apps/api/app.py", "loc": "+69/-0", "summary": "create_app(hsts=False, openapi_public=True): ONE outermost response-header middleware (X-Content-Type-Options nosniff, X-Frame-Options DENY, Referrer-Policy no-referrer, self-only CSP with style-src 'unsafe-inline' for the frozen static UIs; HSTS only when hsts=True); openapi_public=False admits /openapi.json + /redoc under the /v1/admin/* posture (401 tokenless, 403 non-admin with PERMISSION_DENIED audit, 200 admin) through the EXISTING _principal resolver; refuses gating without the auth seam. No route added/removed. Commits 03e378a0, ec58893a."},
-        {"item": "R194-B", "file": "apps/composition/runtime.py", "loc": "+85/-0", "summary": "ONE tenant-scoped webhook_subscriptions map passed to create_app AND ExecutionMessageHandler(outbox=, subscriptions=) so terminal events are staged; build_webhook_sender (httpx at the root, follow_redirects=False, WEBHOOK_TIMEOUT_SECONDS, non-2xx raises → Worker retry/dead-letter unchanged); second existing-class Worker on WEBHOOK_STREAM → RuntimeProfile.webhook_worker; openapi_public_from_env (OPENAPI_PUBLIC or not durable) and HSTS=1 passed to create_app. Commit adf5a644."},
-        {"item": "R194-B", "file": "apps/main.py", "loc": "+16/-4", "summary": "lifespan drives the webhook worker ('webhook-worker' task) beside the execute worker via one shared _drive_worker loop; cancelled first at shutdown. Commit 74939eab."}
+        {
+          "item": "R194-A",
+          "file": "apps/api/app.py",
+          "loc": "+69/-0",
+          "summary": "create_app(hsts=False, openapi_public=True): ONE outermost response-header middleware (X-Content-Type-Options nosniff, X-Frame-Options DENY, Referrer-Policy no-referrer, self-only CSP with style-src 'unsafe-inline' for the frozen static UIs; HSTS only when hsts=True); openapi_public=False admits /openapi.json + /redoc under the /v1/admin/* posture (401 tokenless, 403 non-admin with PERMISSION_DENIED audit, 200 admin) through the EXISTING _principal resolver; refuses gating without the auth seam. No route added/removed. Commits 03e378a0, ec58893a."
+        },
+        {
+          "item": "R194-B",
+          "file": "apps/composition/runtime.py",
+          "loc": "+85/-0",
+          "summary": "ONE tenant-scoped webhook_subscriptions map passed to create_app AND ExecutionMessageHandler(outbox=, subscriptions=) so terminal events are staged; build_webhook_sender (httpx at the root, follow_redirects=False, WEBHOOK_TIMEOUT_SECONDS, non-2xx raises → Worker retry/dead-letter unchanged); second existing-class Worker on WEBHOOK_STREAM → RuntimeProfile.webhook_worker; openapi_public_from_env (OPENAPI_PUBLIC or not durable) and HSTS=1 passed to create_app. Commit adf5a644."
+        },
+        {
+          "item": "R194-B",
+          "file": "apps/main.py",
+          "loc": "+16/-4",
+          "summary": "lifespan drives the webhook worker ('webhook-worker' task) beside the execute worker via one shared _drive_worker loop; cancelled first at shutdown. Commit 74939eab."
+        }
       ],
       "note": "Ceiling 3 declared in R194-DEC-01 BEFORE the first production commit (operator: 'APPROVE R194. Execute R194 exactly as proposed.'). Core untouched. No served route added/removed; the only reachability change is that /openapi.json and /redoc may require an admin bearer on the durable profile. Shared multi-tenant preserved: subscriptions stay keyed by tenant_id; delivery payloads carry only the owning tenant's events (stage_execution_event never widens scope, 20 §6). No admin-only execution introduced.",
       "ceiling_history": [
@@ -1094,16 +1160,35 @@
     "round_r193": {
       "ceiling": 3,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 3,
       "items": [
         "R193-A dev-bindings composition (operator APPROVED R193 = P-R192-04 as scoped): apps/composition/dev_bindings.py (NEW builder: AGENT_DEV_STATE_DIR env gate, §14 refusal, JsonBindingStore + JsonRemoteTrustStore behind the EXISTING RepoBindingRegistry / RemoteTrustRegistry, per-tenant GitToolset + BoundProjectInspector factories, tenant-bound AgentToolSpecs reading the admitted caller from apps.api.run_context), apps/composition/runtime.py (env-gated wiring; passes dev_bindings= to create_app; appends the REST-git tool specs; unset env => byte-identical behaviour), apps/composition/agent.py (build_agent accepts extra tool specs — same pattern as engineering_tool_specs / repo_map_tool_spec).",
         "R193-B (headroom, NOT used unless a RED test proves it): none declared."
       ],
       "log": [
-        {"item": "R193-A", "file": "apps/composition/dev_bindings.py", "loc": "+296/-0", "summary": "NEW env-gated composition root: build_dev_bindings(env) returns None when AGENT_DEV_STATE_DIR is blank; else refuses a state dir inside the platform root (ADR-0009 §14), builds JsonBindingStore+RepoBindingRegistry, JsonRemoteTrustStore+RemoteTrustRegistry, GitHubRestTransport/GitHubProjectInspector, per-tenant GitToolset/BoundProjectInspector factories, and 5 AgentToolSpecs (git.fetch/status/commit/publish, project.inspect) whose handlers take the tenant from the admitted run context (refuse when unbound). Commits b148f517, bb646e6d."},
-        {"item": "R193-A", "file": "apps/composition/agent.py", "loc": "+15/-2", "summary": "build_agent accepts an optional shared ToolRegistry and extra_tool_specs; each extra spec must already be registered (ToolRegistry.get raises otherwise) before it enters the catalog. Commit 3ba48552."},
-        {"item": "R193-A", "file": "apps/composition/runtime.py", "loc": "+21/-0", "summary": "RuntimeProfile.dev_bindings (None by default); after build_engineering: shared ToolRegistry + dev = build_dev_bindings(env, secrets=onboarding_secrets, outside_of=(engineering.root,)); build_agent(tool_registry=..., extra_tool_specs=dev.tool_specs or ()); create_app(dev_bindings=dev.bindings or None). Unset env ⇒ byte-identical behaviour. Commit c3eddc22."}
+        {
+          "item": "R193-A",
+          "file": "apps/composition/dev_bindings.py",
+          "loc": "+296/-0",
+          "summary": "NEW env-gated composition root: build_dev_bindings(env) returns None when AGENT_DEV_STATE_DIR is blank; else refuses a state dir inside the platform root (ADR-0009 §14), builds JsonBindingStore+RepoBindingRegistry, JsonRemoteTrustStore+RemoteTrustRegistry, GitHubRestTransport/GitHubProjectInspector, per-tenant GitToolset/BoundProjectInspector factories, and 5 AgentToolSpecs (git.fetch/status/commit/publish, project.inspect) whose handlers take the tenant from the admitted run context (refuse when unbound). Commits b148f517, bb646e6d."
+        },
+        {
+          "item": "R193-A",
+          "file": "apps/composition/agent.py",
+          "loc": "+15/-2",
+          "summary": "build_agent accepts an optional shared ToolRegistry and extra_tool_specs; each extra spec must already be registered (ToolRegistry.get raises otherwise) before it enters the catalog. Commit 3ba48552."
+        },
+        {
+          "item": "R193-A",
+          "file": "apps/composition/runtime.py",
+          "loc": "+21/-0",
+          "summary": "RuntimeProfile.dev_bindings (None by default); after build_engineering: shared ToolRegistry + dev = build_dev_bindings(env, secrets=onboarding_secrets, outside_of=(engineering.root,)); build_agent(tool_registry=..., extra_tool_specs=dev.tool_specs or ()); create_app(dev_bindings=dev.bindings or None). Unset env ⇒ byte-identical behaviour. Commit c3eddc22."
+        }
       ],
       "note": "Ceiling 3 declared in the approved R193 proposal and R193-DEC-01 BEFORE the first production commit. Core untouched. No /v1/dev write route, no trust-grant endpoint (SHAPE), no admin-only execution, no new isolation model: tenant scope comes from RepoBindingRegistry.get(tenant_id=) + run-context caller tenant, exactly as repo_map (R177-FIX-06).",
       "ceiling_history": [
@@ -1114,7 +1199,11 @@
     "round_r192": {
       "ceiling": 2,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 2,
       "items": [
         "R192-G1 governed project inspection (proven gap H5/H10 in evidence/r192/REVIEW_IMPACT_MATRIX.md): apps/agent_dev/project_inspector.py BoundProjectInspector reusing RepoBindingRegistry (tenant-scoped) -> RemoteTrustPort (BEFORE credential, fail closed) -> SecretManagerPort.resolve (last moment) -> read-only GitHubProjectInspector; core/agent/app_factory.py BindingInspectorPort + AppFactoryCapability(binding_inspector=) resolving context.binding_id. No second trust/credential/binding system.",
@@ -1143,7 +1232,11 @@
     "round_r191": {
       "ceiling": 6,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 5,
       "items": [
         "R191-A General Agent foundation (operator APPROVED, R191 directive): core/contracts/agent_template.py (StrategyTemplate + TemplateOverride + AgentPlan contracts — NEW module, not in the frozen set), core/execution/templates.py (TemplateRegistry with origin/version semantics + override application producing a runtime ExecutionStrategySpec; exposes a Mapping view so the EXISTING StrategyExecutor consumes it unchanged), core/agent/general.py (GeneralAgent: capability discovery via an AgentCapabilityRegistry, skill composition via the EXISTING SkillRegistry, skill requirements -> capability requirements, template/custom/auto strategy + overrides -> the ONE StrategyExecutor).",
@@ -1191,7 +1284,11 @@
     "round_r190": {
       "ceiling": 2,
       "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 2,
       "items": [
         "P-R189-01 (operator YES, R190 directive): logical Model identity across providers — when an EXPLICIT model_key_prefix resolves to an EXISTING Model, onboarding binds the new Provider to that Model (one logical Model, many ProviderModelBindings) instead of refusing on duplicate key. Default (no prefix) behavior unchanged. Sites: core/providers/onboarding.py step 12 (reuse + rollback that removes only what THIS onboarding created) and apps/composition/provider_onboarding.py hydration (a Model row already registered by an earlier provider's binding must not be re-registered)."
@@ -1219,7 +1316,11 @@
     "round_r189": {
       "ceiling": 2,
       "budget_unit": "one production FILE under the counted roots (same rule as round_r179)",
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 1,
       "items": [
         "P-R188-01 (operator YES, R189 directive): additive `model_key_prefix: str | None = None` on the EXISTING onboarding request body `apps/api/provider_onboarding.py:GatewayOnboardRequest` (extra=forbid, so the field must be declared) threaded verbatim into the EXISTING `ProviderOnboardingService.onboard(model_key_prefix=...)` parameter that the service already accepts. No model-identity redesign, no Model.aliases. Old payloads (field absent) produce the identical stored model key `<provider_key>/<name>`.",
@@ -1254,17 +1355,72 @@
         "C. Agent execution customization foundation: an ADDITIVE caller-defined execution strategy (stages with per-stage NodeModelPolicy, sequential/parallel where the execution model permits, review/retest stages) resolved by the ONE router and executed by the ONE ExecutionService; AUTO stays a real bounded strategy; templates optional, never enforced."
       ],
       "log": [
-        {"item": "A.", "file": "core/routing/capacity.py", "loc": "+264/-0", "summary": "NEW ResourceSignalBoard + ResourceSignalPort + Eligibility: process-local runtime resource signals (RPM window from binding limits_metadata, cooldown on RATE_LIMITED/QUOTA_EXCEEDED, unavailable on PROVIDER_UNAVAILABLE/AUTH_EXPIRED/INVALID_CREDENTIAL); snapshot() with a closed vocabulary (no provider internals). RED tests/routing/test_r188_capacity_signals.py -> GREEN 7/7."},
-        {"item": "A.", "file": "core/routing/router.py", "loc": "+45/-7", "summary": "SimpleScoringRouter(signals=...) consults ResourceSignalPort per binding; ineligible bindings become ExclusionRecords ('resource signal: ...'); earliest retry hint rides NoEligibleCandidates.retry_after_ms."},
-        {"item": "A.", "file": "core/routing/errors.py", "loc": "+11/-1", "summary": "NoEligibleCandidates gains keyword-only retry_after_ms (WAIT data)."},
-        {"item": "A.", "file": "core/routing/__init__.py", "loc": "+4/-0", "summary": "Export Eligibility, ResourceSignalBoard, ResourceSignalPort."},
-        {"item": "A.", "file": "core/execution/service.py", "loc": "+29/-0", "summary": "ExecutionService(signals=...): record_attempt before each provider call, record_success/record_error after - outcomes feed the router's runtime signals (no second health system)."},
-        {"item": "A.", "file": "core/contracts/execute.py", "loc": "+23/-0", "summary": "ADDITIVE CapabilityRequirements + ExecuteRequest.requirements (A5); ADDITIVE ExecuteRequest.execution_strategy: ExecutionStrategySpec | None (C3)."},
-        {"item": "A.", "file": "apps/api/app.py", "loc": "+114/-10", "summary": "A5 requirements threaded into every RoutingRequest; A6 MODEL_UNAVAILABLE detail carries retry_after_ms; C3 execution_strategy branch (StrategyExecutor over the SAME router+service; sync only; agent/agent_node_mapping/async combos + unknown template refused loudly; child executions stored); C4 /v1/models rows gain providers[] when the provider registry seam is bound; create_app(providers=, strategy_templates=). tests/api/test_r188_execute_strategy_requirements.py 13/13."},
-        {"item": "A.", "file": "apps/composition/runtime.py", "loc": "+14/-1", "summary": "Compose ONE ResourceSignalBoard into router + both ExecutionService instances; _system_info.resource_signals snapshot; pass providers= to create_app."},
-        {"item": "C.", "file": "core/contracts/execution_strategy.py", "loc": "+125/-0", "summary": "NEW ExecutionStrategySpec (auto|custom|template), StrategyStage (kind generate|review|retest, role, instruction, per-stage NodeModelPolicy, DAG depends_on), bounded (MAX_STAGES=16, MAX_PARALLEL=4), well-formedness + cycle validation, waves(). RED tests/execution/test_r188_strategy_executor.py (ModuleNotFoundError) -> GREEN 11/11."},
-        {"item": "C.", "file": "core/execution/strategy.py", "loc": "+383/-0", "summary": "NEW StrategyExecutor: per-stage routing via the ONE router, per-stage execute_single via the ONE service, topological waves with bounded parallelism, review/retest subject threading, AUTO composer (no imposed methodology), optional templates (UnknownTemplate loud), hybrid ExecutionReport projection with child_execution_ids."},
-        {"item": "C.", "file": "core/contracts/model_listing.py", "loc": "+20/-1", "summary": "ModelListEntry.providers (additive, None unless a provider_keys resolver is supplied - pre-R188 row shape unchanged)."}
+        {
+          "item": "A.",
+          "file": "core/routing/capacity.py",
+          "loc": "+264/-0",
+          "summary": "NEW ResourceSignalBoard + ResourceSignalPort + Eligibility: process-local runtime resource signals (RPM window from binding limits_metadata, cooldown on RATE_LIMITED/QUOTA_EXCEEDED, unavailable on PROVIDER_UNAVAILABLE/AUTH_EXPIRED/INVALID_CREDENTIAL); snapshot() with a closed vocabulary (no provider internals). RED tests/routing/test_r188_capacity_signals.py -> GREEN 7/7."
+        },
+        {
+          "item": "A.",
+          "file": "core/routing/router.py",
+          "loc": "+45/-7",
+          "summary": "SimpleScoringRouter(signals=...) consults ResourceSignalPort per binding; ineligible bindings become ExclusionRecords ('resource signal: ...'); earliest retry hint rides NoEligibleCandidates.retry_after_ms."
+        },
+        {
+          "item": "A.",
+          "file": "core/routing/errors.py",
+          "loc": "+11/-1",
+          "summary": "NoEligibleCandidates gains keyword-only retry_after_ms (WAIT data)."
+        },
+        {
+          "item": "A.",
+          "file": "core/routing/__init__.py",
+          "loc": "+4/-0",
+          "summary": "Export Eligibility, ResourceSignalBoard, ResourceSignalPort."
+        },
+        {
+          "item": "A.",
+          "file": "core/execution/service.py",
+          "loc": "+29/-0",
+          "summary": "ExecutionService(signals=...): record_attempt before each provider call, record_success/record_error after - outcomes feed the router's runtime signals (no second health system)."
+        },
+        {
+          "item": "A.",
+          "file": "core/contracts/execute.py",
+          "loc": "+23/-0",
+          "summary": "ADDITIVE CapabilityRequirements + ExecuteRequest.requirements (A5); ADDITIVE ExecuteRequest.execution_strategy: ExecutionStrategySpec | None (C3)."
+        },
+        {
+          "item": "A.",
+          "file": "apps/api/app.py",
+          "loc": "+114/-10",
+          "summary": "A5 requirements threaded into every RoutingRequest; A6 MODEL_UNAVAILABLE detail carries retry_after_ms; C3 execution_strategy branch (StrategyExecutor over the SAME router+service; sync only; agent/agent_node_mapping/async combos + unknown template refused loudly; child executions stored); C4 /v1/models rows gain providers[] when the provider registry seam is bound; create_app(providers=, strategy_templates=). tests/api/test_r188_execute_strategy_requirements.py 13/13."
+        },
+        {
+          "item": "A.",
+          "file": "apps/composition/runtime.py",
+          "loc": "+14/-1",
+          "summary": "Compose ONE ResourceSignalBoard into router + both ExecutionService instances; _system_info.resource_signals snapshot; pass providers= to create_app."
+        },
+        {
+          "item": "C.",
+          "file": "core/contracts/execution_strategy.py",
+          "loc": "+125/-0",
+          "summary": "NEW ExecutionStrategySpec (auto|custom|template), StrategyStage (kind generate|review|retest, role, instruction, per-stage NodeModelPolicy, DAG depends_on), bounded (MAX_STAGES=16, MAX_PARALLEL=4), well-formedness + cycle validation, waves(). RED tests/execution/test_r188_strategy_executor.py (ModuleNotFoundError) -> GREEN 11/11."
+        },
+        {
+          "item": "C.",
+          "file": "core/execution/strategy.py",
+          "loc": "+383/-0",
+          "summary": "NEW StrategyExecutor: per-stage routing via the ONE router, per-stage execute_single via the ONE service, topological waves with bounded parallelism, review/retest subject threading, AUTO composer (no imposed methodology), optional templates (UnknownTemplate loud), hybrid ExecutionReport projection with child_execution_ids."
+        },
+        {
+          "item": "C.",
+          "file": "core/contracts/model_listing.py",
+          "loc": "+20/-1",
+          "summary": "ModelListEntry.providers (additive, None unless a provider_keys resolver is supplied - pre-R188 row shape unchanged)."
+        }
       ],
       "note": "Operator directive R188 (2026-09-16): 'NO ARTIFICIAL CHANGE CEILING ... The safety boundary is architectural, not numerical.' The number 24 is therefore NOT a budget the operator set; it is the guard's bookkeeping ceiling so that check_repo.sh step 6 (changes_used <= ceiling, log consistent) keeps counting every production file touched. Every counted file MUST still appear in `log` with loc + summary. If the coherent slice genuinely needs more files, raise this number in the same commit that adds the log rows and say so in ceiling_history — never leave a file unlogged.",
       "ceiling_history": [
@@ -1306,9 +1462,24 @@
         "Q6 durable usage: migration 0022 drops the FK usage_ledger.execution_id -> executions.id (keeps NOT NULL + UNIQUE: the ledger key stays one row per execution/call id); metadata mirror; runtime binds the already-composed DurableUsageAccounting in the DATABASE_URL profile; measured live with a real SIGKILL (P4 usage survives restart)"
       ],
       "log": [
-        {"item": "Q6", "file": "infrastructure/db/migrations/versions/0022_usage_ledger_key.py", "loc": "+45/-0 (new)", "summary": "Drops ONLY fk_usage_ledger_execution_id_executions (op.drop_constraint); execution_id stays NOT NULL + UNIQUE (one ledger row per execution/call id). Downgrade recreates the same constraint (name, target, ondelete=RESTRICT) and fails closed on ledger rows the FK could never represent. No data, column, default or check touched."},
-        {"item": "Q6", "file": "infrastructure/db/tables.py", "loc": "+5/-1", "summary": "Metadata mirror of 0022: usage_ledger.execution_id Column loses ForeignKey('executions.id'); nullable=False and unique=True kept; reason comment at the column (F-R179-06, 03 s7 reserve-before-work, tool call_id keys)."},
-        {"item": "Q6", "file": "apps/composition/runtime.py", "loc": "+6/-12", "summary": "One-name flip documented at the R179 decision point: `audit, usage = build_durable_audit_usage(bindings, bridge)` binds the already-composed DurableUsageAccounting in the DATABASE_URL profile; annotation widened to the structural UsageBinding; `del durable_usage` residue removed. In-memory profile byte-identical (single InMemoryUsageAccounting() remains in the else-branch)."}
+        {
+          "item": "Q6",
+          "file": "infrastructure/db/migrations/versions/0022_usage_ledger_key.py",
+          "loc": "+45/-0 (new)",
+          "summary": "Drops ONLY fk_usage_ledger_execution_id_executions (op.drop_constraint); execution_id stays NOT NULL + UNIQUE (one ledger row per execution/call id). Downgrade recreates the same constraint (name, target, ondelete=RESTRICT) and fails closed on ledger rows the FK could never represent. No data, column, default or check touched."
+        },
+        {
+          "item": "Q6",
+          "file": "infrastructure/db/tables.py",
+          "loc": "+5/-1",
+          "summary": "Metadata mirror of 0022: usage_ledger.execution_id Column loses ForeignKey('executions.id'); nullable=False and unique=True kept; reason comment at the column (F-R179-06, 03 s7 reserve-before-work, tool call_id keys)."
+        },
+        {
+          "item": "Q6",
+          "file": "apps/composition/runtime.py",
+          "loc": "+6/-12",
+          "summary": "One-name flip documented at the R179 decision point: `audit, usage = build_durable_audit_usage(bindings, bridge)` binds the already-composed DurableUsageAccounting in the DATABASE_URL profile; annotation widened to the structural UsageBinding; `del durable_usage` residue removed. In-memory profile byte-identical (single InMemoryUsageAccounting() remains in the else-branch)."
+        }
       ],
       "note": "R181 backend-closure pre-round (NOT the UI phase). Frozen: ui/, apps/admin_agent/, core/tools/gate.py, PROJECT_EXECUTION_STATE.md, final_docs_v3 (60_DECISION_LOG.md append-only). Q7 and the Provider slice have NO repository definition and are recorded UNDEFINED/deferred, not worked."
     },
@@ -1316,7 +1487,11 @@
       "ceiling": 9,
       "budget_unit": "one production FILE under the counted roots (a file edited twice in the round is ONE change; every edit is described in that file's summary)",
       "ceiling_history": "declared 6 (B7) -> elastic 8 when 4.5 triggered (evidence/r179/durability_measured_before.json) -> absolute 9 with the 4.7 ledger design note committed at 60d09d95 BEFORE the 4.7 production commit ccfa9a7d",
-      "counts_production_code_under": ["core/", "apps/", "infrastructure/"],
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
       "changes_used": 9,
       "items": [
         "R179-SD capability self-description: custody governance ids + action discovery derived from the canonical vocabulary",
@@ -1380,6 +1555,114 @@
         }
       ],
       "note": "R179 operator directive: declared ceiling 6 production files; elastic to 8 if 4.5 (durability correction) triggers, absolute 9 with a ledger design note BEFORE the commit. FINAL: 9 distinct production files (apps/composition/memory.py, apps/composition/runtime.py, apps/api/capabilities.py, apps/api/app.py, apps/api/admin.py, infrastructure/db/learning.py, apps/composition/learning.py, core/learning/lifecycle.py, apps/api/intake.py); 4.5 triggered (evidence/r179/durability_measured_before.json) and the 4.7 design note was committed at 60d09d95 BEFORE the 4.7 production commit ccfa9a7d. The verifier has no git awareness: this log IS the declared budget, cross-checked by the diff==log table in docs/ai_orchestration_pack/R179_READINESS.md. See evidence/r179_state_ledger.md."
+    },
+    "round_completion_v2": {
+      "ceiling": 13,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 13,
+      "items": [
+        "COMPLETION-V2-C-01 root entry: GET / → 307 /app/ (apps/composition/runtime.py).",
+        "COMPLETION-V2-C-02 dev onboarding (D-1 = b): dev_verification_token in the register response, in-memory profile only, labelled (apps/api/auth.py, apps/composition/runtime.py).",
+        "COMPLETION-V2-C-04 additive execution context mode/strategy/project_id/template_ref on sync/status/list from authoritative data (apps/api/execution_context.py, apps/api/app.py, apps/api/worker.py, core/contracts/execute.py).",
+        "COMPLETION-V2-C-05 HttpOnly cookie session + CSRF header rule (D-2), Bearer unchanged (apps/api/auth.py, apps/api/app.py, apps/composition/runtime.py).",
+        "COMPLETION-V2-C-06 failed template/custom stage names itself + real provider category (core/execution/strategy.py, apps/api/errors.py, apps/api/app.py).",
+        "COMPLETION-V2-C-11 tenant reads own agent trace/diagnosis (D-3); cross-tenant 404; no second agent engine (apps/admin_agent/http.py).",
+        "COMPLETION-V2-C-12 /v1/models runtime truth from the ONE ResourceSignalBoard (core/routing/router.py, core/contracts/model_listing.py, apps/api/app.py).",
+        "COMPLETION-V2-C-17 measured learning dashboard (core/contracts/admin.py, apps/api/admin.py).",
+        "UI-only (uncounted): C-03 readable result, C-07 orientation/first-run, C-08 idempotent workspace select + Close, C-09 error hints, C-10 template stage replay, C-13 capability panels (D-6), C-14/C-15 admin capture-from-execution + evidence-backed Promote, C-16 gold provenance chips — ui/app/{app.js,index.html,styles.css} (ceilings 32/6 declared), ui/admin/{app.js,index.html} (73 held).",
+        "D-5 loop proven over HTTP in tests/completion_v2/test_phase3_learning_loop.py + evidence/completion_v2/probe_learning_loop.json (gold_blocks 0→1).",
+        "D-7: live-provider success NOT VERIFIED (hermetic local-echo only); plan-refused never relabelled healthy."
+      ],
+      "log": [
+        {
+          "item": "COMPLETION-V2-C-02",
+          "file": "apps/api/auth.py",
+          "loc": "+127/-17",
+          "summary": "C-02/C-05: D-1=b dev verification token in the register response when the runtime binds a capture (in-memory only, labelled verification=dev_token + dev_note); D-2 HttpOnly SameSite=Strict session cookie set on login, cleared on logout; session_token() resolves Bearer first then cookie; csrf_ok()/csrf_rejected() — cookie-only state changes require X-Requested-With: QEVION."
+        },
+        {
+          "item": "COMPLETION-V2-C-04",
+          "file": "apps/api/app.py",
+          "loc": "+100/-14",
+          "summary": "C-04/C-05/C-06/C-12: admission uses session_token + CSRF rule; /v1/execute derives request_context (mode/async/project_id/template_ref) and folds it into cost_snapshot (sync) or the outbox payload (async); sync/status/list carry the additive `context`; /v1/models runtime rows from the ONE ResourceSignalBoard (eligible/reason/retry_after_ms, DEGRADED/UNAVAILABLE derived); _failed_stage() hands details.stage to both failure sites."
+        },
+        {
+          "item": "COMPLETION-V2-C-04",
+          "file": "apps/api/execution_context.py",
+          "loc": "+76/-0",
+          "summary": "C-04: NEW: request_context / with_request_context / context_info — one derivation of the additive execution context from authoritative request + report data."
+        },
+        {
+          "item": "COMPLETION-V2-C-04",
+          "file": "apps/api/worker.py",
+          "loc": "+11/-0",
+          "summary": "C-04: async worker folds the staged request_context into the terminal record before store.put."
+        },
+        {
+          "item": "COMPLETION-V2-C-06",
+          "file": "apps/api/errors.py",
+          "loc": "+15/-4",
+          "summary": "C-06: execution_failure_detail(stage=) → details.stage; historical shapes unchanged when absent."
+        },
+        {
+          "item": "COMPLETION-V2-C-17",
+          "file": "apps/api/admin.py",
+          "loc": "+76/-14",
+          "summary": "C-17: GET /learning/dashboard is MEASURED when the lifecycle is composed (LearningDashboardMeasured: counts over samples / evaluation records / TRAINING_DATASET_PROMOTED audit events; `deferred` names the 8 unmeasured metrics); placeholder only when no lifecycle."
+        },
+        {
+          "item": "COMPLETION-V2-C-11",
+          "file": "apps/admin_agent/http.py",
+          "loc": "+16/-4",
+          "summary": "C-11: D-3: trace/diagnosis admit ANY authenticated caller and resolve in the caller's tenant (foreign == absent == 404); tools/converse stay admin-only; session_token resolution."
+        },
+        {
+          "item": "COMPLETION-V2-C-01",
+          "file": "apps/composition/runtime.py",
+          "loc": "+30/-2",
+          "summary": "C-01/C-02/C-05: GET / → 307 /app/; ConsoleEmailSender(capture=) binds the dev token capture ONLY for the in-memory profile; AuthSurface(dev_verification_tokens=, cookie_secure=SESSION_COOKIE_SECURE=1)."
+        },
+        {
+          "item": "COMPLETION-V2-C-06",
+          "file": "core/execution/strategy.py",
+          "loc": "+29/-4",
+          "summary": "C-06: a FAILED stage node names its stage and carries the child's normalized provider error (category + safe_message); the child's attempt trail rides the projected node so the API maps the real category."
+        },
+        {
+          "item": "COMPLETION-V2-C-04",
+          "file": "core/contracts/execute.py",
+          "loc": "+20/-0",
+          "summary": "C-04: ExecutionContextInfo; additive `context: ExecutionContextInfo | None` on ExecuteSyncResponse and ExecutionStatusResponse (freeze re-derived, declared)."
+        },
+        {
+          "item": "COMPLETION-V2-C-12",
+          "file": "core/contracts/model_listing.py",
+          "loc": "+6/-1",
+          "summary": "C-12: additive ModelListEntry.runtime: list[JsonObject] | None."
+        },
+        {
+          "item": "COMPLETION-V2-C-17",
+          "file": "core/contracts/admin.py",
+          "loc": "+27/-0",
+          "summary": "C-17: LearningDashboardMeasured (placeholder: Literal[False])."
+        },
+        {
+          "item": "COMPLETION-V2-C-12",
+          "file": "core/routing/router.py",
+          "loc": "+7/-0",
+          "summary": "C-12: SimpleScoringRouter.signals read-only property exposing the composed ResourceSignalPort."
+        }
+      ],
+      "ceiling_history": [
+        "declared 13 at COMPLETION-V2-DEC (operator APPROVE D-1..D-7, 2026-09-24) from main 7d9524eb: ONE product completion program, three phases, executed as one round; 13 = the exact production file set touched (2 ruff-format-only drifts reverted to main bytes and NOT counted).",
+        "worktree gate a400ec14 (2026-09-24): RESULT: PASS passed=4016 failed=0 errors=0 skipped=58; mypy/ruff/import-linter/secret scan PASS; change budget 13/13; min_passed ratcheted 3993 -> 4016."
+      ],
+      "note": "COMPLETION PROGRAM v2 (operator verbatim: 'Execute ALL THREE phases as ONE PRODUCT COMPLETION PROGRAM'; 'Do NOT reinterpret these as separate future engineering rounds'). USE→COMPOSE→WIRE→REPAIR→SIMPLIFY→ADD: no second Router/StrategyExecutor/agent runtime/TemplateRegistry/SkillRegistry/ToolExecutor/capability registry/provider manager/credential/tenancy. Contract freeze re-derived for round completion_v2 (additive only). UI ceilings ui/app/app.js 23/4 → 32/6 declared (rules carry lineage); ui/admin/app.js 73 held; command.js 12 held."
     }
   },
   "baseline": {

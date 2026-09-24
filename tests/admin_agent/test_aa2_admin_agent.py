@@ -629,6 +629,13 @@ class TestAgentHttpSurface:
                     if method == "POST":
                         kwargs["json"] = {"message": "hi"}
                     response = await c.request(method, path, **kwargs)
+                    if path.endswith(("/trace", "/diagnosis")):
+                        # Completion program v2 (operator D-3): the OWNING tenant may
+                        # read its own agent trace/diagnosis; an id it does not own is
+                        # absent == foreign (404) — never a leak, never admin-only.
+                        assert response.status_code == 404, (method, path)
+                        assert response.json()["error"]["code"] == "validation_error"
+                        continue
                     assert response.status_code == 403, (method, path)
                     assert response.json()["error"]["code"] == "unauthorized"
 

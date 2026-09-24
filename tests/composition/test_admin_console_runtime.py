@@ -469,12 +469,17 @@ class TestAdminSurfacesR160:
             "privacy_policy_allows",
             "tenant_user_policy_allows",
             "sensitive_data_handled",
-            "offline_eval_pass",
-            "regression_pass",
-            "security_eval_pass",
         ):
             assert f"{key}: true" not in js, key
             assert key in js
+        # Completion program v2 (C-15, operator D-5): the artefact-backed promotion
+        # conditions are NOT asserted by the console at all — they are RESOLVED
+        # server-side from recorded evidence handed over as ``evidence_refs``
+        # (served profiles refuse self-asserted passes, R177-FIX-08).
+        for key in ("offline_eval_pass", "regression_pass", "security_eval_pass"):
+            assert f"{key}:" not in js, f"{key} must not be asserted by the console"
+        assert "evidence_refs" in js
+        assert "security_evaluation_id" in js and "regression_execution_id" in js
         assert '"sanitize", { passed: true }' in js and '"sanitize", { passed: false }' in js
 
     def test_learning_surface_drives_the_real_lifecycle(self) -> None:

@@ -122,11 +122,17 @@ from core.admin.service import (
     UsageConfigurationPort,
 )
 from core.audit.ports import AuditLogPort
-from core.contracts.admin import AdminDraftRequest, ConfigChange, LearningDashboard
+from core.contracts.admin import (
+    AdminDraftRequest,
+    ConfigChange,
+    LearningDashboard,
+    LearningDashboardMeasured,
+)
 from core.contracts.audit import AuditEvent, AuditEventType
-from core.contracts.base import BoundedStr, ContractModel, JsonObject
+from core.contracts.base import BoundedStr, ContractModel, JsonObject, utc_now
 from core.contracts.errors import ErrorCode
-from core.contracts.evaluation import evaluation_status_of
+from core.contracts.evaluation import VerificationLevel, evaluation_status_of
+from core.contracts.learning import LearningEligibility
 from core.evaluation.errors import EvaluationNotFound
 from core.evaluation.ports import EvaluationStorePort
 from core.learning import (
@@ -651,11 +657,64 @@ def create_admin_router(
         admitted = _admit(request)
         if isinstance(admitted, JSONResponse):
             return admitted
-        # Honest zeros/empties + the structural placeholder marker — the
-        # learning lifecycle (22 §8-§11) is NOT built this phase and this
-        # response cannot pretend otherwise (LearningDashboard.placeholder
-        # is Literal[True]).
-        return _json(LearningDashboard().model_dump(mode="json", exclude_none=True))
+        # C-17 (completion v2, D-5): when the learning lifecycle IS composed the
+        # dashboard is MEASURED from the same authorities the lifecycle routes
+        # read (samples, learned keys, evaluations per source execution, the
+        # TRAINING_DATASET_PROMOTED audit trail of THIS tenant). Metrics the
+        # platform does not measure are named under ``deferred`` — never a
+        # zero that could read as a measurement. Without the lifecycle seam
+        # the historical placeholder answers (Literal[True]) unchanged.
+        if learning_lifecycle is None:
+            return _json(LearningDashboard().model_dump(mode="json", exclude_none=True))
+        samples = learning_lifecycle.list_samples(admitted.tenant_id)
+        by_level: dict[str, int] = {}
+        for sample in samples:
+            level = sample.verification_level.value
+            by_level[level] = by_level.get(level, 0) + 1
+        verified_levels = {VerificationLevel.VERIFIED.value, VerificationLevel.GOLD.value}
+        evaluations_recorded = 0
+        for execution_id in {sample.source_execution_id for sample in samples}:
+            evaluations_recorded += len(
+                surface.evaluations.list_for_execution(admitted.tenant_id, execution_id)
+            )
+        promotions: list[JsonObject] = []
+        if surface.audit is not None:
+            for event in surface.audit.read(
+                admitted.tenant_id, AuditEventType.TRAINING_DATASET_PROMOTED
+            ):
+                promotions.append(
+                    {
+                        "at": event.occurred_at.isoformat(),
+                        "actor_id": str(event.actor_id) if event.actor_id else None,
+                        "details": dict(event.details),
+                    }
+                )
+        measured = LearningDashboardMeasured(
+            measured_at=utc_now(),
+            samples_total=len(samples),
+            samples_by_level=dict(by_level),
+            verified_samples=sum(n for lvl, n in by_level.items() if lvl in verified_levels),
+            gold_samples=by_level.get(VerificationLevel.GOLD.value, 0),
+            eligible_samples=sum(
+                1 for s in samples if s.eligibility is LearningEligibility.ELIGIBLE
+            ),
+            learned_keys=tuple(learning_lifecycle.learned_keys(admitted.tenant_id)),
+            evaluations_recorded=evaluations_recorded,
+            promotion_history=tuple(promotions),
+            rollback_actions=(),
+            deferred={
+                "dataset_coverage": "not measured: no dataset registry composed",
+                "task_coverage": "not measured: no task taxonomy binding composed",
+                "specialist_models": "not measured: no model-weight training exists (D-5)",
+                "accuracy_trends": "not measured: no longitudinal evaluation series stored",
+                "cost_reduction": "not measured",
+                "teacher_agreement": "not measured: model judge is optional composition data",
+                "canary_status": "not measured: no canary rollout exists",
+                "rollback_actions": "learning custody revoke/sweep are the rollback path; "
+                "not aggregated here",
+            },
+        )
+        return _json(measured.model_dump(mode="json", exclude_none=True))
 
     # --- V7 chunk 6: Self-Review + Change Impact Simulator ---------------------
     # Absent seam = absent routes (20 §4). The self-review is a pure read
@@ -1191,12 +1250,12 @@ def create_admin_router(
             return _json(result)
 
         @router.post("/learning/custody/revoke")
-        async def revoke_learning_policy(
-            request: Request, body: LearningRevokeRequest
-        ) -> Response:
+        async def revoke_learning_policy(request: Request, body: LearningRevokeRequest) -> Response:
             """POST .../custody/revoke: durable policy revocation + redaction (audited)."""
             return _govern(
-                request, "learning_policy_revoked", {"policy_id": str(body.policy_id)},
+                request,
+                "learning_policy_revoked",
+                {"policy_id": str(body.policy_id)},
                 lambda p: governance_lifecycle.revoke_policy(p.tenant_id, body.policy_id),
             )
 
@@ -1204,7 +1263,9 @@ def create_admin_router(
         async def sweep_learning_retention(request: Request) -> Response:
             """POST .../custody/sweep: server-clock expiry + derived-copy reconciliation."""
             return _govern(
-                request, "learning_retention_swept", {},
+                request,
+                "learning_retention_swept",
+                {},
                 lambda p: governance_lifecycle.sweep_retention(p.tenant_id),
             )
 
@@ -1262,7 +1323,8 @@ def create_admin_router(
             (never held); an invariant break refuses with 409.
             """
             return _govern(
-                request, "learning_legacy_hold_released",
+                request,
+                "learning_legacy_hold_released",
                 {"reconciliation_ref": str(body.reconciliation_ref)},
                 lambda p: _release_with_outcome(p, body.reconciliation_ref),
             )

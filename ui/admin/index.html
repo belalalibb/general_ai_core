@@ -416,7 +416,7 @@
         <div id="learning-unavailable" class="muted small" hidden></div>
         <div class="cards">
           <div class="card">
-            <h3>Learned knowledge <span class="muted small">(GOLD keys — GET /learning/learned)</span></h3>
+            <h3>Learned knowledge <span class="muted small">(GOLD keys — GET /learning/dashboard, measured)</span></h3>
             <div id="learned-keys" class="mono small"></div>
             <form id="learning-ask-form" class="inline-form">
               <input type="text" id="learning-ask-key" placeholder="knowledge key" required>
@@ -450,6 +450,8 @@
         </table>
         <h3>Sample report</h3>
         <div id="learning-sample-report" class="panel mono small">Pick a sample's <em>Report</em> to see its verdicts, machine-scan findings (path + label, never content) and derived signals.</div>
+        <h3>Learning dashboard <span class="muted small">(measured counts over stored records; deferred metrics named)</span></h3>
+        <div id="learning-dashboard" class="panel mono small"></div>
         <h3>Changes since last review</h3>
         <div id="learning-since-review" class="panel mono small"></div>
         <button id="learning-mark-reviewed" class="btn-ghost small" type="button">Mark reviewed (explicit admin act)</button>

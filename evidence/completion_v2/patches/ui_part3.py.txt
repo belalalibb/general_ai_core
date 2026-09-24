@@ -1,0 +1,357 @@
+# completion-v2 UI patch part 3: index.html + styles.css + app.js (C-07 orientation, C-13 panels)
+def patch(path, pairs):
+    s=open(path).read()
+    for old,new in pairs:
+        assert s.count(old)==1, (path, old[:70], s.count(old))
+        s=s.replace(old,new)
+    open(path,'w').write(s)
+
+patch('ui/app/index.html', [
+# register form: honest dev-token wording
+('''      <p class="muted small">After registering, copy the verification token from
+      the <strong>server console</strong> and paste it below.</p>''',
+'''      <p class="muted small">After registering: on the <strong>development (in-memory) profile</strong>
+      the server returns the verification token (labelled) and it is filled in below; on the durable
+      profile copy it from the <strong>server console</strong>. No email is sent by QEVION.</p>'''),
+# nav: capabilities view
+('''        <button class="nav-item" data-view="usage">
+          <span class="nav-glyph">◔</span> Usage
+        </button>
+      </div>''',
+'''        <button class="nav-item" data-view="usage">
+          <span class="nav-glyph">◔</span> Usage
+        </button>
+        <button class="nav-item" data-view="capabilities">
+          <span class="nav-glyph">⚙</span> Capabilities
+        </button>
+      </div>'''),
+# home: orientation + first run + composer agent toggle
+('''      <section id="view-home" class="view">
+        <div class="view-head">
+          <h2>Workspace</h2>
+          <span id="home-context" class="context-chip muted">no workspace selected</span>
+        </div>
+''',
+'''      <section id="view-home" class="view">
+        <div class="view-head">
+          <h2>Workspace</h2>
+          <span id="home-context" class="context-chip muted">no workspace selected</span>
+        </div>
+
+        <!-- C-07: product orientation — what QEVION is and how the surfaces relate. Static
+             product prose + SERVED facts (who you are, admin or not, profile). -->
+        <section id="orientation" class="orientation">
+          <div class="orientation-head">
+            <strong>QEVION</strong> is a governed AI execution platform: you describe a task,
+            the <em>Router</em> picks a model, an <em>execution</em> runs it (single shot, a
+            multi-stage <em>template</em>, or the tool-using <em>agent</em>), and every run is a
+            stored record you can inspect.
+            <button id="orientation-toggle" class="btn-ghost small" type="button">hide</button>
+          </div>
+          <ol id="orientation-steps" class="orientation-steps">
+            <li><strong>Organise</strong> — create a workspace and a project (left rail) so runs carry context.</li>
+            <li><strong>Run</strong> — write the task in the composer; pick a project / template; press Run.</li>
+            <li><strong>Read</strong> — the answer appears with its facts (provider, mode, learned context); raw JSON is one click away.</li>
+            <li><strong>Inspect</strong> — <em>Runs</em> lists every execution with project and mode; <em>Models</em> shows runtime availability; <em>Usage</em> your budget; <em>Capabilities</em> skills, memory, webhooks.</li>
+          </ol>
+          <div id="orientation-facts" class="orientation-facts muted small"></div>
+        </section>
+
+        <!-- C-07: first-run empty state (shown only when the tenant has no workspace yet) -->
+        <div id="first-run" class="first-run" hidden>
+          <p>You have no workspace yet. A workspace groups projects; a project gives runs their context.</p>
+          <button id="first-run-ws-btn" class="btn-primary" type="button">Create your first workspace</button>
+          <p class="muted small">You can also run a task right away without one — the run will simply carry no project.</p>
+        </div>
+'''),
+('''              <label class="inline small">
+                <input type="checkbox" id="ask-async"> live activity
+                <span class="muted">(async + real event stream)</span>
+              </label>''',
+'''              <label class="inline small">
+                <input type="checkbox" id="ask-async"> live activity
+                <span class="muted">(async + real event stream)</span>
+              </label>
+              <label class="inline small" title="C-11: the platform's agent strategy — offered only when the deployment serves tools">
+                <input type="checkbox" id="ask-agent" disabled> agent
+                <span id="ask-agent-note" class="muted">agent: probing…</span>
+              </label>'''),
+# result card: answer + facts + raw toggle
+('''        <div id="ask-result" class="result-card" hidden>
+          <div class="result-head">
+            <span id="ask-result-status"></span>
+            <span id="ask-result-id" class="mono muted"></span>
+            <button id="result-to-runs" class="btn-ghost small" type="button">Open in Runs</button>
+          </div>
+          <pre id="ask-result-content" class="result-body"></pre>
+        </div>''',
+'''        <div id="ask-result" class="result-card" hidden>
+          <div class="result-head">
+            <span id="ask-result-status"></span>
+            <span id="ask-result-id" class="mono muted"></span>
+            <label class="inline small"><input type="checkbox" id="ask-result-raw-toggle"> raw</label>
+            <button id="result-to-runs" class="btn-ghost small" type="button">Open in Runs</button>
+          </div>
+          <!-- C-03: the answer a person reads; C-04/C-16 facts as served chips; raw JSON on demand -->
+          <div id="ask-result-answer" class="result-answer" hidden></div>
+          <div id="ask-result-facts" class="result-facts"></div>
+          <pre id="ask-result-content" class="result-body" hidden></pre>
+        </div>'''),
+# ws detail: close button (C-08)
+('''            <div class="panel-head">
+              <h3 id="ws-detail-name"></h3>
+              <button id="ws-delete-btn" class="btn-danger small" type="button">Delete workspace</button>
+            </div>''',
+'''            <div class="panel-head">
+              <h3 id="ws-detail-name"></h3>
+              <span class="panel-actions">
+                <button id="ws-close-btn" class="btn-ghost small" type="button" title="Deselect this workspace">Close</button>
+                <button id="ws-delete-btn" class="btn-danger small" type="button">Delete workspace</button>
+              </span>
+            </div>'''),
+# runs: filter + detail panels
+('''        <div class="view-head">
+          <h2>Runs</h2>
+          <button id="runs-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <p class="muted small">Every run is a platform execution record —
+        listed as the API reports it, nothing synthesized.</p>
+        <div id="runs-error" class="error-box" hidden></div>
+        <div id="runs-list" class="runs-list"></div>
+        <div id="run-detail" class="panel" hidden>
+          <div class="panel-head">
+            <h3>Run detail</h3>
+            <span id="run-detail-status"></span>
+          </div>
+          <div class="mono muted small" id="run-detail-id"></div>
+          <pre id="run-detail-body" class="result-body"></pre>
+        </div>''',
+'''        <div class="view-head">
+          <h2>Runs</h2>
+          <label class="select-wrap inline small"><span class="muted">project</span>
+            <select id="runs-filter-project"><option value="">all projects</option></select>
+          </label>
+          <button id="runs-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <p class="muted small">Every run is a platform execution record —
+        listed as the API reports it (status · mode · template · project), nothing synthesized.</p>
+        <div id="runs-error" class="error-box" hidden></div>
+        <div id="runs-list" class="runs-list"></div>
+        <div id="run-detail" class="panel" hidden>
+          <div class="panel-head">
+            <h3>Run detail</h3>
+            <span id="run-detail-status"></span>
+            <button id="run-detail-trace-btn" class="btn-ghost small" type="button" hidden>Agent trace</button>
+          </div>
+          <div class="mono muted small" id="run-detail-id"></div>
+          <div id="run-detail-answer" class="result-answer" hidden></div>
+          <div id="run-detail-facts" class="result-facts"></div>
+          <div id="run-detail-error" class="error-box small" hidden></div>
+          <pre id="run-detail-trace" class="result-body" hidden></pre>
+          <pre id="run-detail-body" class="result-body"></pre>
+        </div>'''),
+# capabilities view (C-13)
+('''      <!-- ---------- VIEW: USAGE ---------- -->''',
+'''      <!-- ---------- VIEW: CAPABILITIES (C-13, operator D-6) — read-only tenant panels over the
+           EXISTING tenant routes: skills, memory preferences, webhooks. Empty ⇒ honest empty
+           state; absent seam (404) ⇒ honest unavailable state. Never mock records. ---------- -->
+      <section id="view-capabilities" class="view" hidden>
+        <div class="view-head">
+          <h2>Capabilities</h2>
+          <button id="caps-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <div class="caps-grid">
+          <div class="panel">
+            <div class="panel-head"><h3>Skills</h3><span id="caps-skills-count" class="muted small"></span></div>
+            <p class="muted small">Selectable skills this deployment offers to your runs (data only — tools stay gated).</p>
+            <div id="caps-skills" class="caps-list"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Memory · preferences</h3><span id="caps-memory-count" class="muted small"></span></div>
+            <p class="muted small">Preferences the platform learned from your own requests (13 §8). You may delete any item.</p>
+            <div id="caps-memory" class="caps-list"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Webhooks</h3><span id="caps-webhooks-count" class="muted small"></span></div>
+            <p class="muted small">Your tenant's execution-event subscriptions.</p>
+            <div id="caps-webhooks" class="caps-list"></div>
+          </div>
+        </div>
+        <div id="caps-error" class="error-box" hidden></div>
+      </section>
+
+      <!-- ---------- VIEW: USAGE ---------- -->'''),
+])
+
+patch('ui/app/styles.css', [
+])
+with open('ui/app/styles.css','a') as f:
+    f.write('''
+/* --- completion v2 (C-03 / C-07 / C-09 / C-12 / C-13) ------------------------------- */
+.orientation { border: 1px solid var(--line, #2a2f3a); border-radius: 10px; padding: 12px 14px; margin: 0 0 14px; background: var(--panel, rgba(255,255,255,0.02)); }
+.orientation-head { display: flex; gap: 10px; align-items: flex-start; line-height: 1.45; }
+.orientation-head button { margin-left: auto; flex: 0 0 auto; }
+.orientation-steps { margin: 10px 0 6px; padding-left: 20px; line-height: 1.5; }
+.orientation-facts { display: flex; gap: 12px; flex-wrap: wrap; }
+.orientation.collapsed .orientation-steps, .orientation.collapsed .orientation-facts { display: none; }
+.first-run { border: 1px dashed var(--accent); border-radius: 10px; padding: 14px; margin: 0 0 14px; }
+.result-answer { white-space: pre-wrap; line-height: 1.5; font-size: 1rem; padding: 10px 12px; border-left: 3px solid var(--accent); margin: 8px 0; }
+.result-facts { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.fact-chip { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line, #2a2f3a); font-family: var(--mono, monospace); }
+.fact-chip.warn { border-color: #b8860b; color: #e0b64a; }
+.fact-chip.ok { border-color: #2f9e6a; color: #5fd39a; }
+.error-hint { margin-top: 4px; opacity: 0.9; font-style: italic; }
+.warn-text { color: #e0b64a; }
+.model-runtime { margin-top: 6px; display: grid; gap: 2px; }
+.caps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.caps-list { display: grid; gap: 6px; }
+.caps-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 6px 8px; border: 1px solid var(--line, #2a2f3a); border-radius: 8px; }
+.caps-row .grow { flex: 1 1 auto; }
+.panel-actions { display: inline-flex; gap: 6px; }
+.run-row .badge.neutral { opacity: 0.85; }
+''')
+
+# --- app.js: C-07 orientation + first-run, C-13 capabilities panels
+patch('ui/app/app.js', [
+('''/* --- view router ------------------------------------------------------------------ */''',
+'''/* --- C-07: orientation + first-run (served facts only) -------------------------------- */
+
+function renderOrientation() {
+  const facts = $("orientation-facts");
+  facts.replaceChildren();
+  const rows = [
+    ["you", state.email || (state.profile === "demo" ? "demo principal" : "\\u2014")],
+    ["role", state.isAdmin ? "admin (Command + Admin surfaces open to you)" : "tenant user (Command/Admin are admin-only)"],
+    ["profile", state.profile === "demo" ? "demo (no sign-in)" : "authenticated session (HttpOnly cookie)"],
+  ];
+  for (const [k, v] of rows) {
+    const span = document.createElement("span");
+    span.textContent = `${k}: ${v}`;
+    facts.appendChild(span);
+  }
+}
+
+function renderFirstRun() {
+  $("first-run").hidden = state.workspaces.length !== 0;
+}
+
+/* --- view router ------------------------------------------------------------------ */'''),
+('''function wireNav() {
+  for (const item of document.querySelectorAll(".nav-item")) {
+    item.addEventListener("click", () => showView(item.dataset.view));
+  }''',
+'''function wireNav() {
+  for (const item of document.querySelectorAll(".nav-item")) {
+    item.addEventListener("click", () => showView(item.dataset.view));
+  }
+  $("orientation-toggle").addEventListener("click", () => {
+    const box = $("orientation");
+    box.classList.toggle("collapsed");
+    $("orientation-toggle").textContent = box.classList.contains("collapsed") ? "show" : "hide";
+  });'''),
+('''/* --- command palette (search / command discovery — §14) --------------------------------- */''',
+'''/* --- C-13 (operator D-6): read-only tenant capability panels ----------------------------
+   Three EXISTING tenant routes, rendered as served. 404 ⇒ "not composed on this deployment";
+   other refusals ⇒ the unified error verbatim; empty ⇒ an honest empty line. No mock rows. */
+
+function capsRow(parts) {
+  const row = document.createElement("div");
+  row.className = "caps-row";
+  for (const part of parts) row.appendChild(part);
+  return row;
+}
+
+function capsText(text, cls) {
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = text;
+  return span;
+}
+
+function capsState(container, countEl, result, emptyText) {
+  container.replaceChildren();
+  if (result.status === 404) {
+    countEl.textContent = "";
+    container.appendChild(capsText("not composed on this deployment", "muted small"));
+    return null;
+  }
+  if (!result.ok) {
+    countEl.textContent = "";
+    const box = document.createElement("div");
+    box.className = "error-box small";
+    renderError(box, result.body);
+    container.appendChild(box);
+    return null;
+  }
+  return emptyText;
+}
+
+async function refreshCapabilities() {
+  clearError($("caps-error"));
+  const [skills, memory, webhooks] = await Promise.all([
+    api("/v1/skills"),
+    api("/v1/memory/preferences"),
+    api("/v1/webhooks"),
+  ]);
+  /* skills */
+  const skillsEl = $("caps-skills");
+  if (capsState(skillsEl, $("caps-skills-count"), skills, "") !== null) {
+    const rows = skills.body.skills || [];
+    $("caps-skills-count").textContent = `${rows.length} selectable`;
+    if (rows.length === 0) skillsEl.appendChild(capsText("no selectable skills on this deployment", "muted small"));
+    for (const s of rows) {
+      skillsEl.appendChild(capsRow([
+        capsText(s.name || s.id, "grow"),
+        capsText(`${s.id}${s.version ? ` @${s.version}` : ""}`, "mono muted small"),
+        ...(Array.isArray(s.tags) && s.tags.length ? [capsText(s.tags.join(", "), "muted small")] : []),
+      ]));
+    }
+  }
+  /* memory preferences */
+  const memEl = $("caps-memory");
+  if (capsState(memEl, $("caps-memory-count"), memory, "") !== null) {
+    const rows = memory.body.preferences || memory.body.items || [];
+    $("caps-memory-count").textContent = `${rows.length} item${rows.length === 1 ? "" : "s"}`;
+    if (rows.length === 0) memEl.appendChild(capsText("nothing learned yet — preferences appear after your runs repeat a language or output format", "muted small"));
+    for (const m of rows) {
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn-danger small";
+      del.textContent = "Delete";
+      del.addEventListener("click", async () => {
+        const response = await fetch(`/v1/memory/preferences/${encodeURIComponent(m.memory_id || m.id)}`, {
+          method: "DELETE", headers: csrfHeaders(), credentials: "same-origin",
+        });
+        if (response.status !== 204) renderError($("caps-error"), await response.json().catch(() => null));
+        refreshCapabilities();
+      });
+      memEl.appendChild(capsRow([
+        capsText(`${m.key}: ${typeof m.value === "string" ? m.value : JSON.stringify(m.value)}`, "grow"),
+        capsText(`${m.source || ""}${m.confidence !== undefined ? ` · confidence ${m.confidence}` : ""}`, "muted small"),
+        del,
+      ]));
+    }
+  }
+  /* webhooks */
+  const whEl = $("caps-webhooks");
+  if (capsState(whEl, $("caps-webhooks-count"), webhooks, "") !== null) {
+    const rows = webhooks.body.subscriptions || [];
+    $("caps-webhooks-count").textContent = `${rows.length} subscription${rows.length === 1 ? "" : "s"}`;
+    if (rows.length === 0) whEl.appendChild(capsText("no webhook subscriptions (register one through the API: POST /v1/webhooks)", "muted small"));
+    for (const w of rows) {
+      whEl.appendChild(capsRow([
+        capsText(w.url, "mono grow"),
+        capsText((w.events || []).join(", "), "muted small"),
+        capsText(w.subscription_id || w.id || "", "mono muted small"),
+      ]));
+    }
+  }
+}
+
+/* --- command palette (search / command discovery — §14) --------------------------------- */'''),
+('''    { label: "Go to Usage", hint: "view", run: () => showView("usage") },''',
+'''    { label: "Go to Usage", hint: "view", run: () => showView("usage") },
+    { label: "Go to Capabilities", hint: "view", run: () => showView("capabilities") },'''),
+])
+s=open('ui/app/app.js').read()
+print("part3 ok", s.count("/v1/"), s.count("fetch("))

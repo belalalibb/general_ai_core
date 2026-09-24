@@ -36,7 +36,7 @@ from uuid import UUID
 
 from pydantic import Field
 
-from core.contracts.base import BoundedStr, ContractModel
+from core.contracts.base import BoundedStr, ContractModel, JsonObject
 from core.contracts.domain import BindingAvailability, Model, ProviderModelBinding
 
 
@@ -70,6 +70,11 @@ class ModelListEntry(ContractModel):
     # first-class; the router still decides). Absent when no key resolver
     # is supplied so the pre-R188 row shape is unchanged.
     providers: list[BoundedStr] | None = None
+    # C-12 (completion v2, additive): the RUNTIME truth behind ``availability``
+    # when the deployment binds resource signals — per bound provider key the
+    # Router's own eligibility answer. Absent when no signal board is
+    # composed, so the pre-C-12 row shape is unchanged.
+    runtime: list[JsonObject] | None = None
 
     @classmethod
     def from_model(

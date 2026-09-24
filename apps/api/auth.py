@@ -51,10 +51,33 @@ Recorded decisions (P-D.1 — operator-authorized end-user surface):
   CLOSED set carried verbatim and contains no registration value —
   inventing one would widen a frozen contract (41 §49: never fake a
   record type the spec does not name).
+
+Recorded decisions (completion program v2, operator rulings D-1 = b and D-2):
+
+- DEV ONBOARDING (C-02, D-1 = b): on the IN-MEMORY profile ONLY, the
+  composition may hand the router a ``dev_verification_tokens`` capture
+  (the SAME token the ConsoleEmailSender prints). The register response
+  then carries ``verification: "dev_token"`` plus
+  ``dev_verification_token`` and an explicit ``dev_note`` naming this as
+  development / in-memory behaviour. The durable profile never binds the
+  capture, so its response is byte-identical (``verification: "sent"``).
+  This is NOT email verification and is labelled so in the body.
+- COOKIE SESSION (C-05, D-2): the SAME opaque session token the identity
+  service issues is ALSO set as an ``HttpOnly; SameSite=Strict; Path=/``
+  cookie (``qevion_session``) on login and cleared on logout. Resolution
+  order is Bearer FIRST, cookie second (``session_token``): API clients
+  are unchanged; browsers no longer hold the token in script-reachable
+  storage. CSRF posture: state-changing requests carrying ONLY the cookie
+  must also present ``X-Requested-With: QEVION`` (a custom header a
+  cross-site form cannot set; SameSite=Strict is the second layer) —
+  enforced in the app admission middleware, never here. Expiry is the
+  identity service's (revocation on logout; no separate cookie lifetime
+  is invented — the cookie is a session cookie).
 """
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -81,6 +104,12 @@ if TYPE_CHECKING:  # annotation only — apps.api.app imports this module (no cy
 #: One constant client-facing message for EVERY auth failure (20 §6).
 _AUTH_FAILED_MESSAGE = "Authentication failed."
 
+#: C-05 (D-2): the HttpOnly session cookie name and the CSRF header a
+#: cookie-only state-changing request must carry (browser same-origin fact).
+SESSION_COOKIE = "qevion_session"
+CSRF_HEADER = "X-Requested-With"
+CSRF_HEADER_VALUE = "QEVION"
+
 
 @dataclass(frozen=True)
 class AuthSurface:
@@ -100,6 +129,13 @@ class AuthSurface:
     rate_limits: RateLimitPort | None = None
     register_rate_limit: int = 0
     register_rate_window_seconds: float = 3600.0
+    #: C-02 (D-1 = b): IN-MEMORY profile only — the composition's capture of
+    #: issued verification tokens (email -> token). ``None`` (durable) ⇒ the
+    #: register response is byte-identical to the pre-C-02 shape.
+    dev_verification_tokens: MutableMapping[str, str] | None = None
+    #: C-05 (D-2): set ``Secure`` on the session cookie (composition data;
+    #: the local HTTP dev profile leaves it False or the browser drops it).
+    cookie_secure: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -138,6 +174,63 @@ def bearer_token(request: Request) -> str | None:
     if scheme.lower() != "bearer" or not token:
         return None
     return token
+
+
+def cookie_token(request: Request) -> str | None:
+    """C-05: the HttpOnly session cookie value or None."""
+    value = request.cookies.get(SESSION_COOKIE)
+    return value if value else None
+
+
+def session_token(request: Request) -> str | None:
+    """The ONE session-token resolution: Bearer first, HttpOnly cookie second.
+
+    A present-but-malformed Authorization header still yields None (the
+    Bearer rule is unchanged); the cookie is consulted only when no Bearer
+    token was presented, so API clients see byte-identical behaviour.
+    """
+    token = bearer_token(request)
+    if token is not None:
+        return token
+    return cookie_token(request)
+
+
+def csrf_ok(request: Request) -> bool:
+    """C-05 CSRF rule for COOKIE-ONLY state-changing requests.
+
+    Safe methods and Bearer-carrying requests are always fine; a request
+    authenticated ONLY by the cookie must carry the custom header.
+    """
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return True
+    if bearer_token(request) is not None or cookie_token(request) is None:
+        return True
+    return request.headers.get(CSRF_HEADER) == CSRF_HEADER_VALUE
+
+
+def csrf_rejected() -> JSONResponse:
+    """The ONE refusal for a cookie-only state change without the CSRF header."""
+    return error_response(
+        ErrorCode.UNAUTHORIZED,
+        f"Cookie-authenticated state changes require the {CSRF_HEADER} header.",
+        details={"header": CSRF_HEADER},
+    )
+
+
+def set_session_cookie(response: Response, token: str, *, secure: bool) -> None:
+    """Bind the session token as an HttpOnly, SameSite=Strict session cookie."""
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        httponly=True,
+        samesite="strict",
+        secure=secure,
+        path="/",
+    )
+
+
+def clear_session_cookie(response: Response) -> None:
+    response.delete_cookie(SESSION_COOKIE, path="/")
 
 
 def unauthenticated() -> JSONResponse:
@@ -183,19 +276,30 @@ def create_auth_router(surface: AuthSurface, *, fallback: Principal | None = Non
                 "Registration rejected.",
                 details={"field": "email"},
             )
-        # 201: the account is PENDING until the emailed token is redeemed
-        # (deny-by-default, 41 §41). The token itself NEVER appears here —
-        # it travels only through the composed EmailSenderPort.
-        return JSONResponse(
-            status_code=201,
-            content={
-                "user_id": str(user.id),
-                "tenant_id": str(user.tenant_id),
-                "email": user.email,
-                "status": user.status.value,
-                "verification": "sent",
-            },
-        )
+        # 201: the account is PENDING until the verification token is
+        # redeemed (deny-by-default, 41 §41). Durable profile: the token
+        # NEVER appears here — it travels only through the composed
+        # EmailSenderPort. In-memory profile (C-02, D-1 = b): the SAME
+        # token the console sender printed is returned, explicitly labelled
+        # as development behaviour — never implied to be email delivery.
+        content: dict[str, object] = {
+            "user_id": str(user.id),
+            "tenant_id": str(user.tenant_id),
+            "email": user.email,
+            "status": user.status.value,
+            "verification": "sent",
+        }
+        if surface.dev_verification_tokens is not None:
+            dev_token = surface.dev_verification_tokens.pop(user.email, None)
+            if dev_token is not None:
+                content["verification"] = "dev_token"
+                content["dev_verification_token"] = dev_token
+                content["dev_note"] = (
+                    "development / in-memory profile only: no email was sent; "
+                    "this token is returned so the local onboarding journey can "
+                    "complete. The durable profile never returns it."
+                )
+        return JSONResponse(status_code=201, content=content)
 
     @router.post("/verify")
     async def verify(body: VerifyRequest) -> Response:
@@ -234,16 +338,20 @@ def create_auth_router(surface: AuthSurface, *, fallback: Principal | None = Non
                     actor_id=session.user_id,
                 )
             )
-        return JSONResponse(
+        response = JSONResponse(
             status_code=200,
             content={"token": session.token},
         )
+        # C-05 (D-2): the SAME token, also as the HttpOnly session cookie.
+        set_session_cookie(response, session.token, secure=surface.cookie_secure)
+        return response
 
     @router.post("/logout", status_code=204)
     async def logout(request: Request) -> Response:
         # ALWAYS 204 (idempotent; no token-validity oracle). Audit only
         # a real revocation — never a no-op (recorded decision).
-        token = bearer_token(request)
+        # C-05: the cookie is cleared on every logout (idempotent too).
+        token = session_token(request)
         if token is not None:
             try:
                 session = surface.identity.resolve_session(token)
@@ -259,11 +367,13 @@ def create_auth_router(surface: AuthSurface, *, fallback: Principal | None = Non
                             actor_id=session.user_id,
                         )
                     )
-        return Response(status_code=204)
+        response = Response(status_code=204)
+        clear_session_cookie(response)
+        return response
 
     @router.get("/session")
     async def session_info(request: Request) -> Response:
-        token = bearer_token(request)
+        token = session_token(request)
         if token is None:
             if fallback is not None:
                 return JSONResponse(

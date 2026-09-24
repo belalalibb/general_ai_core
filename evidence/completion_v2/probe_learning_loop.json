@@ -1,0 +1,265 @@
+{
+ "execute_before": [
+  200,
+  [
+   {
+    "type": "context_provenance",
+    "blocks_total": 1,
+    "memory_blocks": [],
+    "gold_blocks": 0,
+    "excluded": 0
+   }
+  ]
+ ],
+ "capture": [
+  201,
+  {
+   "id": "71ea114f-906a-41e3-a77a-2cf2cf322f9e",
+   "source_execution_id": "be55eccb-a99e-4365-b514-195bdac1a84c",
+   "tenant_id": "fddeab68-2690-44d0-8c05-95f5543964a1",
+   "eligibility": "pending",
+   "sanitization_state": "pending",
+   "verification_level": "RAW",
+   "dataset_id": null
+  }
+ ],
+ "evaluate": [
+  200,
+  {
+   "evaluated": true,
+   "evaluation_id": "f5306cf0-eb08-4469-8f5a-e563d5f3cdba",
+   "sample": {
+    "id": "71ea114f-906a-41e3-a77a-2cf2cf322f9e",
+    "source_execution_id": "be55eccb-a99e-4365-b514-195bdac1a84c",
+    "tenant_id": "fddeab68-2690-44d0-8c05-95f5543964a1",
+    "eligibility": "pending",
+    "sanitization_state": "pending",
+    "verification_level": "VALIDATED",
+    "dataset_id": null
+   }
+  }
+ ],
+ "evaluation_record": [
+  200,
+  {
+   "id": "f5306cf0-eb08-4469-8f5a-e563d5f3cdba",
+   "tenant_id": "fddeab68-2690-44d0-8c05-95f5543964a1",
+   "execution_id": "be55eccb-a99e-4365-b514-195bdac1a84c",
+   "level": "VALIDATED",
+   "evidence_ref": "object://evidence/f5306cf0-eb08-4469-8f5a-e563d5f3cdba",
+   "graders": [
+    {
+     "type": "deterministic",
+     "name": "output_present",
+     "passed": true
+    },
+    {
+     "type": "deterministic",
+     "name": "error_free_output",
+     "passed": true
+    },
+    {
+     "type": "security",
+     "name": "secret_material:none",
+     "passed": true
+    }
+   ]
+  }
+ ],
+ "scan": [
+  200,
+  {
+   "clean": true,
+   "scanned_paths": 3,
+   "findings": []
+  }
+ ],
+ "sanitize": [
+  200,
+  {
+   "id": "71ea114f-906a-41e3-a77a-2cf2cf322f9e",
+   "source_execution_id": "be55eccb-a99e-4365-b514-195bdac1a84c",
+   "tenant_id": "fddeab68-2690-44d0-8c05-95f5543964a1",
+   "eligibility": "pending",
+   "sanitization_state": "passed",
+   "verification_level": "VALIDATED",
+   "dataset_id": null
+  }
+ ],
+ "admit": [
+  200,
+  {
+   "admitted": true,
+   "sample": {
+    "id": "71ea114f-906a-41e3-a77a-2cf2cf322f9e",
+    "source_execution_id": "be55eccb-a99e-4365-b514-195bdac1a84c",
+    "tenant_id": "fddeab68-2690-44d0-8c05-95f5543964a1",
+    "eligibility": "eligible",
+    "sanitization_state": "passed",
+    "verification_level": "VALIDATED",
+    "dataset_id": "24fb0825-54c3-457c-94b7-9a4d034e4f39"
+   }
+  }
+ ],
+ "scenario_save": [
+  201,
+  {
+   "scenario_id": "1bf747b3-1cf7-47d9-82a6-afcf4aeae4ae",
+   "name": "rollback-regression",
+   "ask": "what is the rollback procedure for a failed deploy",
+   "checks": [
+    "error_free_output",
+    "output_present"
+   ],
+   "created_at": "2026-09-24T03:30:03.480931+00:00"
+  }
+ ],
+ "scenario_replay": [
+  200,
+  {
+   "scenario_id": "1bf747b3-1cf7-47d9-82a6-afcf4aeae4ae",
+   "replayed": true,
+   "evaluation_id": "7b6449e2-6136-5c2a-a217-1f34a30ef1dc",
+   "execution_id": "3b9ecaf9-d5aa-459f-9505-b472eedfca21",
+   "execution_status": "succeeded",
+   "passed": true,
+   "checks": [
+    {
+     "name": "error_free_output",
+     "passed": true
+    },
+    {
+     "name": "output_present",
+     "passed": true
+    }
+   ]
+  }
+ ],
+ "promote": [
+  201,
+  {
+   "promoted": true,
+   "memory_item_id": "fb5a7510-f730-485a-a7e4-084b71a365df",
+   "knowledge_key": "ops.rollback_procedure",
+   "evidence": {
+    "strict": true,
+    "artifact_evidence_required": true,
+    "resolved": {
+     "offline_eval_pass": {
+      "held": true,
+      "ref": "f5306cf0-eb08-4469-8f5a-e563d5f3cdba",
+      "reason": "recorded evaluation",
+      "level": "VALIDATED"
+     },
+     "security_eval_pass": {
+      "held": true,
+      "ref": "f5306cf0-eb08-4469-8f5a-e563d5f3cdba",
+      "reason": "recorded evaluation",
+      "level": "VALIDATED"
+     },
+     "regression_pass": {
+      "held": true,
+      "ref": "3b9ecaf9-d5aa-459f-9505-b472eedfca21",
+      "reason": "recorded verified scenario replay"
+     }
+    },
+    "unverified": [
+     "shadow_performance_acceptable",
+     "canary_performance_acceptable",
+     "rollback_plan_exists",
+     "admin_approved"
+    ],
+    "refused_unbacked": []
+   }
+  }
+ ],
+ "execute_after": [
+  200,
+  [
+   {
+    "type": "context_provenance",
+    "blocks_total": 2,
+    "memory_blocks": [
+     {
+      "memory_id": "fb5a7510-f730-485a-a7e4-084b71a365df",
+      "source": "learning.gold",
+      "type": "preference"
+     }
+    ],
+    "gold_blocks": 1,
+    "excluded": 0
+   }
+  ],
+  {
+   "strategy": "single",
+   "mode": "single"
+  }
+ ],
+ "dashboard": [
+  200,
+  {
+   "placeholder": false,
+   "measured_at": "2026-09-24T03:30:03.491751Z",
+   "samples_total": 1,
+   "samples_by_level": {
+    "GOLD": 1
+   },
+   "verified_samples": 1,
+   "gold_samples": 1,
+   "eligible_samples": 1,
+   "learned_keys": [
+    "ops.rollback_procedure"
+   ],
+   "evaluations_recorded": 1,
+   "promotion_history": [
+    {
+     "at": "2026-09-24T03:30:03.486470+00:00",
+     "actor_id": "8ec37021-fdf5-4c19-b998-d96c2ab0faf3",
+     "details": {
+      "sample_id": "71ea114f-906a-41e3-a77a-2cf2cf322f9e",
+      "knowledge_key": "ops.rollback_procedure",
+      "memory_item_id": "fb5a7510-f730-485a-a7e4-084b71a365df",
+      "verdicts": {
+       "offline_eval_pass": true,
+       "regression_pass": true,
+       "security_eval_pass": true,
+       "shadow_performance_acceptable": true,
+       "canary_performance_acceptable": true,
+       "rollback_plan_exists": true,
+       "admin_approval_where_required": true
+      }
+     }
+    }
+   ],
+   "rollback_actions": [],
+   "deferred": {
+    "dataset_coverage": "not measured: no dataset registry composed",
+    "task_coverage": "not measured: no task taxonomy binding composed",
+    "specialist_models": "not measured: no model-weight training exists (D-5)",
+    "accuracy_trends": "not measured: no longitudinal evaluation series stored",
+    "cost_reduction": "not measured",
+    "teacher_agreement": "not measured: model judge is optional composition data",
+    "canary_status": "not measured: no canary rollout exists",
+    "rollback_actions": "learning custody revoke/sweep are the rollback path; not aggregated here"
+   }
+  }
+ ],
+ "status_after": [
+  200,
+  [
+   {
+    "type": "context_provenance",
+    "blocks_total": 2,
+    "memory_blocks": [
+     {
+      "memory_id": "fb5a7510-f730-485a-a7e4-084b71a365df",
+      "source": "learning.gold",
+      "type": "preference"
+     }
+    ],
+    "gold_blocks": 1,
+    "excluded": 0
+   }
+  ]
+ ]
+}

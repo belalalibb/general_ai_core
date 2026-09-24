@@ -110,7 +110,9 @@ def test_documented_sync_response_validates() -> None:
     assert resp.result.content == "final answer"
     assert resp.usage is not None and resp.usage.units_settled == 2
     assert resp.evaluation is not None and resp.evaluation.level == "EVALUATED"
-    assert resp.model_dump(mode="json") == payload
+    # completion v2 C-04: ``context`` is ADDITIVE and optional — the documented
+    # 10 §3 example still validates and round-trips with it absent (None).
+    assert resp.model_dump(mode="json") == {**payload, "context": None}
 
 
 def test_negative_usage_units_rejected() -> None:
@@ -157,7 +159,8 @@ def test_documented_status_response_validates() -> None:
     resp = ExecutionStatusResponse.model_validate(payload)
     assert resp.status is ExecutionStatus.RUNNING
     assert resp.progress is not None and resp.progress.percent == 65
-    assert resp.model_dump(mode="json") == payload
+    # completion v2 C-04: additive optional ``context`` (None when absent).
+    assert resp.model_dump(mode="json") == {**payload, "context": None}
 
 
 def test_execution_status_set_matches_domain_model() -> None:

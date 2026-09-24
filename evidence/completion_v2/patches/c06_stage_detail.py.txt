@@ -1,0 +1,1 @@
+# recorded: apps/api/errors.py execution_failure_detail(stage=) -> details.stage; apps/api/app.py _failed_stage(report) passed at both sync + status failure sites (see commit for exact diff)

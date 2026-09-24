@@ -1,0 +1,85 @@
+{
+ "A_root_final_url": "http://127.0.0.1:33593/app/",
+ "A_dev_token_prefilled": true,
+ "A_register_info": "Account created (status: pending). Development profile: development / in-memory profile only: no email was sent; this token is returned so the local onboarding journey can complete. The durable profile never returns it. \u2014 it has been filled in below; press \u201cVerify email\u201d to continue.",
+ "A_url_after_root": "http://127.0.0.1:33593/app/",
+ "A_orientation": "QEVION\nis a governed AI execution platform: you describe a task, the\nRouter\npicks a model, an\nexecution\nruns it (single shot, a multi-stage\ntemplate\n, or the tool-using\nagent\n), and every run is a stored record you can inspect.\nhide\nOrganise \u2014 create a workspace and a project (left rail) so runs carry context.\nRun \u2014 write the task in the composer; pick a project / template; press Run.\nRead \u2014 the answer appears with its facts (provider, mode, learned context); raw JSON is one click away.\nInspect \u2014 Runs lists every execution with project and mode; Models shows runtime availability; Usage your bu",
+ "A_storage": {
+  "local": [],
+  "session": [],
+  "sessionValues": []
+ },
+ "A_cookies": [
+  {
+   "name": "qevion_session",
+   "httpOnly": true,
+   "sameSite": "Strict",
+   "path": "/"
+  }
+ ],
+ "B_answer": "what is the rollback procedure for a failed deploy",
+ "B_facts": "mode: single\nprovider: local-echo\nnote: hermetic local adapter \u2014 no real model was called\ncontext blocks: 1\ngold blocks: 0",
+ "B_reload_main_visible": true,
+ "B_reload_storage": {
+  "local": [],
+  "session": []
+ },
+ "C_runs": "8070543b\u2026\nsucceeded\nsingle\n2026-09-24T09:46:15.734313+00:00",
+ "C_project_filter_options": [
+  "all projects"
+ ],
+ "C_run_detail": {
+  "facts": "mode: single\nprovider: local-echo\nnote: hermetic local adapter \u2014 no real model was called\ncontext blocks: 1\ngold blocks: 0",
+  "answer": "what is the rollback procedure for a failed deploy"
+ },
+ "D_template_options": [
+  "",
+  "app_factory.plan@1"
+ ],
+ "D_timeline": [
+  "stages (replayed from the stored record)",
+  "execution_started",
+  "node_started: inventory-summary \u00b7 generate \u00b7 analyst",
+  "node_completed: inventory-summary \u00b7 generate \u00b7 analyst",
+  "node_started: architecture-plan \u00b7 generate \u00b7 architect",
+  "node_completed: architecture-plan \u00b7 generate \u00b7 architect",
+  "node_started: review \u00b7 review \u00b7 reviewer",
+  "node_completed: review \u00b7 review \u00b7 reviewer",
+  "final"
+ ],
+ "D_facts": "mode: template\nstrategy: hybrid\ntemplate: app_factory.plan@1\nprovider: local-echo\nnote: hermetic local adapter \u2014 no real model was called",
+ "G_error": "validation_error: unknown strategy template 'nope.missing@9'\nNext: Check the highlighted input; the server refused the request shape or a reference it could not find in your tenant.",
+ "E_models": "local-echo-1\navailable\ntier: medium\nproviders:\nlocal_echo\nreasoning\nlocal_echo: eligible",
+ "E_truth": "MODELS\n1\nPROVIDERS\nlocal_echo\nAVAILABILITY\navailable 1",
+ "F_caps": {
+  "skills": "no selectable skills on this deployment",
+  "memory": "nothing learned yet \u2014 preferences appear after your runs repeat a language or output format",
+  "webhooks": "no webhook subscriptions (register one through the API: POST /v1/webhooks)"
+ },
+ "F_agent_toggle": {
+  "disabled": true,
+  "note": "agent: no tools offered on this deployment \u2014 unavailable"
+ },
+ "H_admin_before_facts": "mode: single\nprovider: local-echo\nnote: hermetic local adapter \u2014 no real model was called\ncontext blocks: 1\ngold blocks: 0",
+ "H_dashboard_before": "measured_at 2026-09-24T09:46:26.724090Z\nsamples 0 \u00b7 by level {}\nverified 0 \u00b7 gold 0 \u00b7 eligible 0\nevaluations recorded 0 \u00b7 promotions 0\nNOT measured (deferred): dataset_coverage, task_coverage, specialist_models, accuracy_trends, cost_reduction, teacher_agreement, canary_status, rollback_actions",
+ "H_source_execution_id": "872de7cc-baec-4350-84d8-7ecc328bfd03",
+ "H_replay": "scenario dcf1945b-adad-443d-944b-2999603a5fa3 \u2192 execution 3a671ed6-0d89-416b-ac6f-573360716744 succeeded \u00b7 verdict passed\noutput_present: passed\nerror_free_output: passed",
+ "H_harvested_evidence": {
+  "ev": [
+   "ebb703e1-f56d-4417-8c90-5ab012353c34"
+  ],
+  "reg": "3a671ed6-0d89-416b-ac6f-573360716744"
+ },
+ "H_sample_row": "fb12cf60-b877-4eeb-8325-ca08e30e5396\t872de7cc-baec-4350-84d8-7ecc328bfd03\teligible\tpassed\tGOLD\t\nEvaluate\nReport\nScan\nSanitize \u2713\nSanitize \u2717\nAdmit\nPromote",
+ "H_dashboard_after": "measured_at 2026-09-24T09:46:40.353693Z\nsamples 1 \u00b7 by level {\"GOLD\":1}\nverified 1 \u00b7 gold 1 \u00b7 eligible 1\nevaluations recorded 1 \u00b7 promotions 1\n  \u00b7 2026-09-24T09:46:40.340381+00:00 promoted ops.rollback_procedure \u2192 memory b650848f-be23-464a-af86-6274f7d1a771\nNOT measured (deferred): dataset_coverage, task_coverage, specialist_models, accuracy_trends, cost_reduction, teacher_agreement, canary_status, rollback_actions",
+ "H_learned_keys": "ops.rollback_procedure",
+ "I_after_promotion_facts": "mode: single\nprovider: local-echo\nnote: hermetic local adapter \u2014 no real model was called\ncontext blocks: 2\ngold blocks: 1\nmemory sources: learning.gold",
+ "I_other_tenant_facts": "mode: single\nprovider: local-echo\nnote: hermetic local adapter \u2014 no real model was called\ncontext blocks: 1\ngold blocks: 0",
+ "J_after_logout_auth_visible": true,
+ "console_errors": [
+  "error: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+  "error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+  "error: Failed to load resource: the server responded with a status of 422 (Unprocessable Content)",
+  "error: Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+ ]
+}

@@ -725,6 +725,22 @@ RESUME_RULE: the next session starts from main; reads this pointer, then the las
 ```
 
 ```
+COMPLETION_V2_POINTER (2026-09-24) — COMPLETION PROGRAM v2 (operator APPROVE D-1..D-7; three phases C-01..C-17 executed as ONE round from main 7d9524eb; production ceiling 13 used 13)
+BRANCH: completion_v2 (PR → main; merge commit recorded in COMPLETION-V2-DEC-02 and evidence/completion_v2/ledger.md).
+DELIVERED: root entry 307 → /app/; dev-token onboarding (in-memory only, labelled); HttpOnly SameSite=Strict cookie session + CSRF header rule (Bearer unchanged);
+       additive execution context (mode/strategy/project_id/template_ref) on sync/status/list; failed stage names itself + real provider category (details.stage);
+       readable answer + facts; orientation/first-run; idempotent workspace select; error hints; template stage replay; tenant own agent trace/diagnosis (D-3);
+       /v1/models runtime rows from the ONE ResourceSignalBoard; capabilities view (skills/memory/webhooks, honest states); D-5 loop CLOSED over HTTP —
+       capture from execution → evaluate (deterministic+security) → scan → sanitize → admit → scenario replay → promote(evidence_refs, strict) → GOLD → gold_blocks 1 on the next run;
+       admin Promote hands harvested evidence refs; measured learning dashboard (deferred metrics NAMED).
+GUARDS: tests/completion_v2/ 17; UI pins flipped 1:1 (app.js 32/6 declared; admin 73; command 12); contract freeze re-derived (round completion_v2); round_completion_v2 budget 13/13.
+EVIDENCE: evidence/completion_v2/ (probe_api_phase12.json, probe_learning_loop.json, browser/facts.json + 9 PNGs, patches/*.py.txt, ledger.md).
+NOT VERIFIED (D-7): live-provider 200 (hermetic local echo only, labelled verbatim); live agent run with tools (0 offered hermetically ⇒ toggle honestly disabled).
+NOT CLAIMED: Production Ready (D-03 / N-9 operator-owned-open unchanged).
+NEXT: none pre-approved.
+```
+
+```
 R202_POINTER (2026-09-23) — R202 CLOSED (Templates + App Factory UX; UI-only layer A/B; ceiling 0 used 0; app.js /v1/ 22 -> 23 by declaration)
 MAIN: 5ac352be (PR #62 merge commit) + records-only closure PR.
 DELIVERED (R202-A, ACCEPTED-AS-MEASURED): Workbench detail panel reads GET /v1/templates/{ref} exactly once per choice (change + restored context; never at boot; none for 'none')

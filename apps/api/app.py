@@ -139,7 +139,14 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from apps.agent_dev.git_tools import RepoBindingRegistry
 from apps.api.admin import AdminSurface, create_admin_router
 from apps.api.agent import AGENT_STRATEGY, AgentSurface, AgentToolSelection, AgentToolsRejected
-from apps.api.auth import AuthSurface, bearer_token, create_auth_router, unauthenticated
+from apps.api.auth import (
+    AuthSurface,
+    create_auth_router,
+    csrf_ok,
+    csrf_rejected,
+    session_token,
+    unauthenticated,
+)
 from apps.api.capabilities import Capability, CapabilityState
 from apps.api.context_lab import ContextLabService
 from apps.api.engineering_admin import EngineeringAdminSurface
@@ -147,6 +154,12 @@ from apps.api.errors import (
     HTTP_STATUS_BY_CODE,
     error_response,
     execution_failure_detail,
+)
+from apps.api.execution_context import (
+    REQUEST_CONTEXT_KEY,
+    context_info,
+    request_context,
+    with_request_context,
 )
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
 from apps.api.ingestion import ExternalIngestionRecorder
@@ -187,6 +200,7 @@ from core.contracts.conversation import (
     Message,
     MessageRole,
 )
+from core.contracts.domain import BindingAvailability
 from core.contracts.errors import ErrorCode
 from core.contracts.evaluation import VerificationLevel
 from core.contracts.execute import (
@@ -380,6 +394,21 @@ def _last_provider_error(report: ExecutionReport) -> ProviderError | None:
         for attempt in reversed(node_report.attempts):
             if attempt.error is not None:
                 return attempt.error
+    return None
+
+
+def _failed_stage(report: ExecutionReport) -> str | None:
+    """C-06: the FAILED stage key of a multi-stage run, from the projected node.
+
+    The StrategyExecutor stamps ``error.stage`` on a failed stage node (one
+    derivation); single-node runs carry no stage ⇒ ``None`` (shape unchanged).
+    """
+    for node_report in report.nodes:
+        node = node_report.node
+        if node.status is ExecutionNodeStatus.FAILED and node.error:
+            stage = node.error.get("stage")
+            if isinstance(stage, str):
+                return stage
     return None
 
 
@@ -701,7 +730,8 @@ def create_app(
         fallback_principal = principal  # None ⇒ strict; set ⇒ hybrid
 
         def _principal(_request: Request) -> Principal | JSONResponse:
-            token = bearer_token(_request)
+            # C-05 (D-2): Bearer first, HttpOnly session cookie second.
+            token = session_token(_request)
             if token is None:
                 if fallback_principal is not None:
                     return fallback_principal
@@ -732,12 +762,21 @@ def create_app(
         ) -> Response:
             path = request.url.path
             if path in admitted_public or not path.startswith("/v1/"):
+                # C-05: logout is public by construction but is a state change;
+                # a cookie-only logout still needs the CSRF header.
+                if path.startswith("/v1/") and not csrf_ok(request):
+                    return csrf_rejected()
                 return await call_next(request)
+            # C-05 (D-2) CSRF rule: a state-changing request authenticated ONLY
+            # by the HttpOnly cookie must carry the custom header (a cross-site
+            # form cannot set it; SameSite=Strict is the second layer).
+            if not csrf_ok(request):
+                return csrf_rejected()
             # Admin surfaces ALWAYS authenticate: the hybrid fallback principal
             # is never admin, so an anonymous caller gets the ONE constant 401
             # (the console's own posture) rather than a 403 that presumes an
             # identity it never presented.
-            if path.startswith("/v1/admin/") and bearer_token(request) is None:
+            if path.startswith("/v1/admin/") and session_token(request) is None:
                 return unauthenticated()
             caller = _principal(request)
             if isinstance(caller, JSONResponse):
@@ -762,7 +801,7 @@ def create_app(
             ) -> Response:
                 if request.url.path not in _OPENAPI_DOCUMENT_PATHS:
                     return await call_next(request)
-                if bearer_token(request) is None:
+                if session_token(request) is None:
                     return unauthenticated()
                 caller = _principal(request)
                 if isinstance(caller, JSONResponse):
@@ -1113,6 +1152,11 @@ def create_app(
             assert agent is not None
             agent_tools = agent.select(body.tools, admitted_skill_objects)
 
+        # --- C-04 (D-4): the run's request context, from ADMITTED facts only ---
+        # The REQUEST's own spec (mode/template_id) — the resolved plan is the
+        # expanded custom stage list and would hide the template reference.
+        run_context = request_context(body, agent=agent_strategy, spec=body.execution_strategy)
+
         # --- idempotent replay (10 §10) ----------------------------------------
         # BEFORE persistence/composition: a replay must not duplicate turns.
         if idempotency_key is not None:
@@ -1401,6 +1445,8 @@ def create_app(
                 message_payload["idempotency_key"] = idempotency_key
             if conversation_id is not None:
                 message_payload["conversation_id"] = str(conversation_id)
+            # C-04: the worker folds the SAME context into the terminal record.
+            message_payload[REQUEST_CONTEXT_KEY] = json.dumps(run_context)
             await outbox.append(execute_stream, message_payload, f"execute:{execution_id}")
             # V6 chunk 3: stage execution.queued (10 §12) for the caller
             # tenant's matching subscriptions — SAME outbox, SAME durability
@@ -1432,7 +1478,7 @@ def create_app(
                     idempotency_key=idempotency_key,
                     status=ExecutionStatus.QUEUED,
                     strategy=ExecutionStrategy.SINGLE,
-                    cost_snapshot={},
+                    cost_snapshot={REQUEST_CONTEXT_KEY: dict(run_context)},
                     created_at=utc_now(),
                 ),
                 nodes=(),
@@ -1565,6 +1611,8 @@ def create_app(
                 ErrorCode.ENTITLEMENT_EXCEEDED,
                 "No task-unit entitlement is configured for this tenant.",
             )
+        # C-04: ONE stored record carries the run's request context (additive).
+        report = with_request_context(report, run_context)
         execution_store.put(report)
         if idempotency_key is not None:
             idempotency_index[(caller.tenant_id, idempotency_key)] = report.execution.id
@@ -1613,6 +1661,7 @@ def create_app(
                 ),
                 usage=_usage_report(report.usage),
                 evaluation=None,
+                context=context_info(report),
             )
             return JSONResponse(
                 status_code=200,
@@ -1624,6 +1673,7 @@ def create_app(
             str(report.execution.id),
             _last_provider_error(report),
             agent_failure=_agent_failure(report),
+            stage=_failed_stage(report),
         )
         return JSONResponse(
             status_code=HTTP_STATUS_BY_CODE[detail.code],
@@ -1741,16 +1791,48 @@ def create_app(
             same registries the router selects over; availability is the
             recorded best-across-bindings projection (empty ⇒ unavailable).
             """
-            response = ModelsListResponse(
-                models=[
-                    ModelListEntry.from_model(
-                        model,
-                        binding_registry.bindings_for_model(model.id),
-                        provider_keys=_provider_key,
+            rows: list[ModelListEntry] = []
+            signal_board = router.signals
+            for model in model_registry.active_models():
+                bindings_for = binding_registry.bindings_for_model(model.id)
+                entry = ModelListEntry.from_model(model, bindings_for, provider_keys=_provider_key)
+                if signal_board is not None and bindings_for:
+                    # C-12 (audit F-6): the SAME eligibility answer the Router
+                    # gives per binding, so a plan-refused / rate-limited model
+                    # is not shown as "available". Static availability is the
+                    # floor; runtime signals can only DEGRADE it (some bindings
+                    # blocked ⇒ degraded; all blocked ⇒ unavailable).
+                    runtime_rows: list[JsonObject] = []
+                    blocked = 0
+                    for binding in bindings_for:
+                        eligibility = signal_board.eligibility(
+                            binding.provider_id, model.id, limits=binding.limits_metadata
+                        )
+                        if not eligibility.eligible:
+                            blocked += 1
+                        runtime_rows.append(
+                            {
+                                "provider": (
+                                    _provider_key(binding.provider_id)
+                                    if _provider_key is not None
+                                    else None
+                                ),
+                                "binding_availability": binding.availability.value,
+                                "eligible": eligibility.eligible,
+                                "reason": eligibility.reason,
+                                "retry_after_ms": eligibility.retry_after_ms,
+                            }
+                        )
+                    availability = entry.availability
+                    if blocked == len(bindings_for):
+                        availability = BindingAvailability.UNAVAILABLE
+                    elif blocked and availability is BindingAvailability.AVAILABLE:
+                        availability = BindingAvailability.DEGRADED
+                    entry = entry.model_copy(
+                        update={"availability": availability, "runtime": runtime_rows}
                     )
-                    for model in model_registry.active_models()
-                ]
-            )
+                rows.append(entry)
+            response = ModelsListResponse(models=rows)
             return JSONResponse(
                 status_code=200,
                 content=response.model_dump(mode="json", exclude_none=True),
@@ -1971,6 +2053,8 @@ def create_app(
                 "initiated_by": str(r.execution.user_id),
                 "created_at": r.execution.created_at.isoformat(),
                 "progress": _progress(r).model_dump(mode="json", exclude_none=True),
+                # C-04 (additive): project / mode / template of the run.
+                "context": context_info(r).model_dump(mode="json", exclude_none=True),
             }
             for r in reports
         ]
@@ -2016,6 +2100,7 @@ def create_app(
                 execution_id,
                 _last_provider_error(report),
                 agent_failure=_agent_failure(report),
+                stage=_failed_stage(report),
             )
         status_response = ExecutionStatusResponse(
             execution_id=execution_id,
@@ -2023,6 +2108,7 @@ def create_app(
             progress=_progress(report),
             result=result,
             error=error_detail,
+            context=context_info(report),
         )
         return JSONResponse(
             status_code=200,

@@ -58,6 +58,7 @@ from uuid import UUID, uuid4, uuid5
 
 import httpx
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -314,12 +315,23 @@ class ConsoleEmailSender:
     The write targets ``stream`` (stdout by default; injectable for tests).
     """
 
-    def __init__(self, stream: TextIO | None = None) -> None:
+    def __init__(
+        self,
+        stream: TextIO | None = None,
+        *,
+        capture: dict[str, str] | None = None,
+    ) -> None:
         # Resolved LAZILY at send time so stdout redirection (tests,
         # process managers) always reaches the current stream.
         self._stream = stream
+        # C-02 (operator D-1 = b): IN-MEMORY profile only — the composition
+        # binds a capture map so the /v1/auth/register response can return
+        # the SAME token (labelled dev behaviour). Durable profile: None.
+        self._capture = capture
 
     def send_verification(self, email: str, token: str) -> None:
+        if self._capture is not None:
+            self._capture[email] = token
         message = json.dumps(
             {
                 "event": "email_verification_token_issued",
@@ -886,7 +898,12 @@ def build_runtime_profile(
     demo_principal: Principal | None = None
 
     hasher = Argon2idPasswordHasher()
-    email_sender = ConsoleEmailSender()
+    # C-02 (operator D-1 = b): the in-memory profile captures the issued
+    # verification token so the register response can return it (labelled
+    # development behaviour). The durable profile keeps console-only delivery
+    # and a byte-identical register response.
+    dev_verification_tokens: dict[str, str] | None = None if durable else {}
+    email_sender = ConsoleEmailSender(capture=dev_verification_tokens)
     admin_emails = frozenset(
         e.strip().lower() for e in env.get(_ENV_ADMIN_EMAILS, "").split(",") if e.strip()
     )
@@ -1025,6 +1042,10 @@ def build_runtime_profile(
         audit=audit,
         rate_limits=InMemoryRateLimiter(),
         register_rate_limit=int(env.get("REGISTER_RATE_LIMIT", "0") or "0"),
+        dev_verification_tokens=dev_verification_tokens,
+        # C-05 (D-2): Secure cookie is composition data — SESSION_COOKIE_SECURE=1
+        # (a TLS-terminated deployment); the local HTTP profile leaves it off.
+        cookie_secure=env.get("SESSION_COOKIE_SECURE", "") == "1",
     )
 
     # --- budgets (composition DATA; recorded decision 5) ---------------------
@@ -1339,6 +1360,13 @@ def build_runtime_profile(
     # additive; no route shadowing — /v1/* and /healthz stay untouched).
     # Absent directory ⇒ no mount at all, never a broken route (20 §4).
     if UI_APP_DIR.is_dir():
+        # C-01: the product has ONE front door. ``/`` was a 404 (audit F-1);
+        # it now redirects to the Workbench shell. Added BEFORE the mount so
+        # the route table owns ``/`` (a mount never shadows an exact route).
+        @app.get("/", include_in_schema=False)
+        async def root_entry() -> RedirectResponse:
+            return RedirectResponse(url="/app/", status_code=307)
+
         app.mount(
             "/app",
             StaticFiles(directory=str(UI_APP_DIR), html=True),

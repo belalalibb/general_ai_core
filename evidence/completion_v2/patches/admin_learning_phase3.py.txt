@@ -1,0 +1,131 @@
+"""completion_v2 Phase 3 — admin console: C-15 evidence-backed Promote, C-17 measured dashboard.
+ui/admin/app.js stays at 73 /v1/ literals (N0, down-only): evidence refs are harvested from
+responses the console ALREADY receives; /learning/learned is swapped 1:1 for /learning/dashboard
+(its measured shape carries learned_keys — a superset)."""
+import pathlib
+ROOT = pathlib.Path(".")
+def sub(path, old, new):
+    p = ROOT / path; s = p.read_text(encoding="utf-8")
+    assert s.count(old) == 1, (path, old[:70], s.count(old)); p.write_text(s.replace(old, new), encoding="utf-8")
+
+JS = "ui/admin/app.js"
+# state: harvested evidence (ids only — never content)
+sub(JS, 'const state = { token: null, surface: "overview", tenantId: null };',
+    'const state = { token: null, surface: "overview", tenantId: null,\n'
+    '  /* C-15: evidence refs HARVESTED from served responses (ids only): evaluation_id per sample\n'
+    '     from Evaluate; the last PASSED scenario replay execution id from Replay. */\n'
+    '  learningEvidence: {}, lastRegressionExecutionId: null };')
+# harvest evaluation_id on a successful Evaluate
+sub(JS, '''  const result = await api(`/v1/admin/learning/samples/${encodeURIComponent(sampleId)}/${step}`, { method: "POST", body });
+''', '''  const result = await api(`/v1/admin/learning/samples/${encodeURIComponent(sampleId)}/${step}`, { method: "POST", body });
+  if (step === "evaluate" && result.ok && result.body && result.body.evaluation_id) {
+    state.learningEvidence[sampleId] = result.body.evaluation_id;  /* C-15: the record the resolver reads */
+  }
+''')
+# harvest the regression artefact on a passed replay
+sub(JS, '''  if (!result.ok) { renderError(out, result.body); return; }
+  renderScenarioVerdict(out, result.body);
+}''', '''  if (!result.ok) { renderError(out, result.body); return; }
+  if (result.body.replayed === true && result.body.passed === true) {
+    state.lastRegressionExecutionId = result.body.execution_id;  /* C-15: regression_execution_id */
+  }
+  renderScenarioVerdict(out, result.body);
+}''')
+# Promote: artefact conditions are RESOLVED from records, human conditions asserted
+sub(JS, '''    actionButton("Promote", () => {
+      const offline = window.confirm("Attest: offline evaluation PASSED?");
+      const regression = window.confirm("Attest: regression PASSED?");
+      const security = window.confirm("Attest: security evaluation PASSED?");
+      learningStep(id, "promote", {
+        offline_eval_pass: offline,
+        regression_pass: regression,
+        security_eval_pass: security,
+      });
+    }),''', '''    actionButton("Promote", () => {
+      /* C-15 (operator D-5): the artefact-backed conditions (offline eval, security eval,
+         regression) are NOT asserted here — they are RESOLVED server-side from recorded
+         evidence: the sample's Evaluate record (deterministic + security grader rows) and a
+         PASSED scenario replay execution. Served profiles refuse self-asserted passes. */
+      const evaluationId = window.prompt(
+        "evidence: evaluation_id (from this sample's Evaluate; used for offline AND security eval)",
+        state.learningEvidence[id] || "");
+      if (evaluationId === null) return;
+      const regressionId = window.prompt(
+        "evidence: regression_execution_id (a PASSED scenario Replay on the Intelligence surface)",
+        state.lastRegressionExecutionId || "");
+      if (regressionId === null) return;
+      const rollback = window.confirm("Attest: a rollback plan exists (custody revoke/sweep)?");
+      const approved = window.confirm("Attest: admin approval granted for this promotion?");
+      const shadow = window.confirm("Attest: shadow performance acceptable?");
+      const canary = window.confirm("Attest: canary performance acceptable?");
+      const evidenceRefs = {};
+      if (evaluationId.trim()) { evidenceRefs.evaluation_id = evaluationId.trim(); evidenceRefs.security_evaluation_id = evaluationId.trim(); }
+      if (regressionId.trim()) evidenceRefs.regression_execution_id = regressionId.trim();
+      learningStep(id, "promote", {
+        rollback_plan_exists: rollback,
+        approval_required: true,
+        admin_approved: approved,
+        shadow_performance_acceptable: shadow,
+        canary_performance_acceptable: canary,
+        evidence_refs: evidenceRefs,
+      });
+    }),''')
+# dashboard replaces the learned-keys read (1:1 literal swap)
+sub(JS, '''  const [samples, learned, since] = await Promise.all([
+    api("/v1/admin/learning/samples"),
+    api("/v1/admin/learning/learned"),
+    api("/v1/admin/learning/changes-since-review"),
+  ]);''', '''  const [samples, dashboard, since] = await Promise.all([
+    api("/v1/admin/learning/samples"),
+    api("/v1/admin/learning/dashboard"),  /* C-17: MEASURED (placeholder=false) or honest placeholder */
+    api("/v1/admin/learning/changes-since-review"),
+  ]);''')
+sub(JS, '''  const keys = document.getElementById("learned-keys");
+  keys.textContent = learned.ok ? ((learned.body.keys || []).join(", ") || "(nothing learned yet)") : `unavailable (${learned.status})`;
+''', '''  const keys = document.getElementById("learned-keys");
+  const d = dashboard.ok ? dashboard.body : null;
+  keys.textContent = d && d.placeholder === false
+    ? ((d.learned_keys || []).join(", ") || "(nothing learned yet)")
+    : (dashboard.ok ? "(dashboard is a placeholder in this profile — no lifecycle composed)" : `unavailable (${dashboard.status})`);
+  renderLearningDashboard(document.getElementById("learning-dashboard"), dashboard);
+''')
+sub(JS, '''document.getElementById("learning-capture-form").addEventListener("submit", async (event) => {''',
+'''/* C-17: the measured learning dashboard — every number is a COUNT over stored records
+   (samples, evaluation records, TRAINING_DATASET_PROMOTED audit events); `deferred` names
+   what is NOT measured. placeholder=true renders as the placeholder it is. */
+function renderLearningDashboard(el, result) {
+  el.textContent = "";
+  if (!result.ok) { el.textContent = `unavailable (${result.status})`; return; }
+  const d = result.body;
+  if (d.placeholder !== false) { el.textContent = "placeholder — the lifecycle is not composed in this profile; nothing is measured."; return; }
+  const lines = [
+    `measured_at ${d.measured_at}`,
+    `samples ${d.samples_total} · by level ${JSON.stringify(d.samples_by_level)}`,
+    `verified ${d.verified_samples} · gold ${d.gold_samples} · eligible ${d.eligible_samples}`,
+    `evaluations recorded ${d.evaluations_recorded} · promotions ${(d.promotion_history || []).length}`,
+  ];
+  for (const p of d.promotion_history || []) {
+    lines.push(`  · ${p.at} promoted ${p.details && p.details.knowledge_key} → memory ${p.details && p.details.memory_item_id}`);
+  }
+  const deferred = Object.keys(d.deferred || {});
+  if (deferred.length) lines.push(`NOT measured (deferred): ${deferred.join(", ")}`);
+  el.textContent = lines.join("\\n");
+}
+
+document.getElementById("learning-capture-form").addEventListener("submit", async (event) => {''')
+
+HTML = "ui/admin/index.html"
+sub(HTML, '<h3>Learned knowledge <span class="muted small">(GOLD keys — GET /learning/learned)</span></h3>',
+          '<h3>Learned knowledge <span class="muted small">(GOLD keys — GET /learning/dashboard, measured)</span></h3>')
+sub(HTML, '''        <h3>Changes since last review</h3>
+        <div id="learning-since-review" class="panel mono small"></div>''',
+'''        <h3>Learning dashboard <span class="muted small">(measured counts over stored records; deferred metrics named)</span></h3>
+        <div id="learning-dashboard" class="panel mono small"></div>
+        <h3>Changes since last review</h3>
+        <div id="learning-since-review" class="panel mono small"></div>''')
+print("admin phase3 patched")
+
+# --- follow-up (browser journey finding): admin console + Command api() send the CSRF header ---
+for p in ("ui/admin/app.js", "ui/app/command/command.js"):
+    sub(p, '  const headers = Object.assign({}, options.headers || {});\n',
+        '  /* C-05 (completion v2): the Workbench session is an HttpOnly cookie the browser also\n     attaches here; cookie-accompanied state changes need the CSRF header (server rule). */\n  const headers = Object.assign({ "X-Requested-With": "QEVION" }, options.headers || {});\n')

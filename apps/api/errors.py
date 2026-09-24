@@ -85,6 +85,7 @@ def execution_failure_detail(
     provider_error: ProviderError | None,
     *,
     agent_failure: JsonObject | None = None,
+    stage: str | None = None,
 ) -> ErrorDetail:
     """Map a failed execution's last normalized error to the unified shape.
 
@@ -96,9 +97,16 @@ def execution_failure_detail(
     the caller — so a client sees WHY the bounded loop stopped (invalid
     proposal detail, refused capability, deadline) instead of an opaque
     "Execution failed.". Absent ⇒ the historical shape, unchanged.
+
+    ``stage`` (C-06, completion program v2) is the FAILED stage key of a
+    multi-stage (template/custom) run as the StrategyExecutor projected it —
+    carried as ``details.stage`` so the client can name the failing stage.
+    Absent ⇒ the historical shape, unchanged.
     """
     if provider_error is None:
         details: JsonObject = {"execution_id": execution_id}
+        if stage is not None:
+            details["stage"] = stage
         message = "Execution failed."
         if agent_failure:
             details["agent"] = dict(agent_failure)
@@ -112,12 +120,15 @@ def execution_failure_detail(
             details=details,
         )
     code = _CODE_BY_PROVIDER_CATEGORY.get(provider_error.category, ErrorCode.EXECUTION_FAILED)
+    mapped: JsonObject = {
+        "execution_id": execution_id,
+        "provider_error_category": provider_error.category.value,
+    }
+    if stage is not None:
+        mapped["stage"] = stage
     return ErrorDetail(
         code=code,
         message=provider_error.safe_message,
         retryable=provider_error.retryable,
-        details={
-            "execution_id": execution_id,
-            "provider_error_category": provider_error.category.value,
-        },
+        details=mapped,
     )

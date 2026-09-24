@@ -128,7 +128,9 @@ function setTransportPending(step) {
 }
 
 async function api(path, options = {}) {
-  const headers = Object.assign({}, options.headers || {});
+  /* C-05 (completion v2): the Workbench session is an HttpOnly cookie the browser also
+     attaches here; cookie-accompanied state changes need the CSRF header (server rule). */
+  const headers = Object.assign({ "X-Requested-With": "QEVION" }, options.headers || {});
   if (state.token) headers["Authorization"] = `Bearer ${state.token}`;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   let response;

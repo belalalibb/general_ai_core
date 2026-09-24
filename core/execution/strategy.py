@@ -60,9 +60,9 @@ from core.contracts.execution_strategy import (
     StrategyStage,
 )
 from core.contracts.model_policy import NodeModelPolicy
-from core.contracts.provider import ProviderGenerateResponse, ProviderOperation
+from core.contracts.provider import ProviderError, ProviderGenerateResponse, ProviderOperation
 from core.contracts.routing import RoutingRequest
-from core.execution.service import ExecutionReport, ExecutionService, NodeReport
+from core.execution.service import AttemptRecord, ExecutionReport, ExecutionService, NodeReport
 from core.routing.errors import RoutingError
 from core.routing.router import SimpleScoringRouter
 
@@ -107,6 +107,17 @@ class StrategyReport:
     @property
     def succeeded(self) -> bool:
         return self.report.execution.status is ExecutionStatus.SUCCEEDED
+
+
+def _last_child_error(report: ExecutionReport | None) -> ProviderError | None:
+    """The last normalized provider error recorded in a child report (or None)."""
+    if report is None:
+        return None
+    for entry in reversed(report.nodes):
+        for attempt in reversed(entry.attempts):
+            if attempt.error is not None:
+                return attempt.error
+    return None
 
 
 def compose_auto_strategy(
@@ -320,7 +331,15 @@ class StrategyExecutor:
                 status, error = ExecutionNodeStatus.SUCCEEDED, None
             else:
                 status = ExecutionNodeStatus.FAILED
-                error = {"reason": "stage execution failed"}
+                # C-06: name the stage AND carry the child's normalized provider
+                # error (category + safe_message only, 30 §14 — never raw
+                # internals) so the API maps the failure to its real category
+                # instead of an opaque "Execution failed." (audit F-4).
+                error = {"reason": "stage execution failed", "stage": outcome.stage.key}
+                child_error = _last_child_error(outcome.report)
+                if child_error is not None:
+                    error["provider_error_category"] = child_error.category.value
+                    error["safe_message"] = child_error.safe_message
             child = outcome.report
             node = ExecutionNode(
                 id=self._id_factory(),
@@ -345,7 +364,13 @@ class StrategyExecutor:
                 if outcome.succeeded
                 else None
             )
-            nodes.append(NodeReport(node=node, attempts=(), response=response))
+            # C-06: a FAILED stage's child attempt trail rides the projected
+            # node (same AttemptRecord objects — one derivation), so the API's
+            # last-provider-error mapping sees the stage's real cause.
+            attempts: tuple[AttemptRecord, ...] = ()
+            if status is ExecutionNodeStatus.FAILED and child is not None:
+                attempts = tuple(a for entry in child.nodes for a in entry.attempts)
+            nodes.append(NodeReport(node=node, attempts=attempts, response=response))
 
         all_ok = all(o.succeeded for o in outcomes)
         execution = Execution(

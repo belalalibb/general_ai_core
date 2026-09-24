@@ -567,13 +567,17 @@ class TestExecutionsList:
             async with _client(app) as c:
                 response = await c.get("/v1/executions", headers=bearer(token))
                 row = response.json()["executions"][0]
+                # completion v2 C-04: ``context`` (project/mode/template) is the
+                # ONE additive key; still no result/content/error bodies here.
                 assert set(row) == {
                     "execution_id",
                     "status",
                     "initiated_by",
                     "created_at",
                     "progress",
+                    "context",
                 }
+                assert set(row["context"]) <= {"strategy", "mode", "project_id", "template_ref"}
 
         run(scenario())
 

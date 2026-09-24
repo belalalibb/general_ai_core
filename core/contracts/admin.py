@@ -362,3 +362,30 @@ class LearningDashboard(ContractModel):
     canary_status: BoundedStr | None = None
     promotion_history: tuple[JsonObject, ...] = ()
     rollback_actions: tuple[JsonObject, ...] = ()
+
+
+class LearningDashboardMeasured(ContractModel):
+    """C-17 (completion v2, operator D-5): the MEASURED learning dashboard.
+
+    The conscious replacement the placeholder docstring promised: every
+    count is derived from the composed lifecycle / evaluation / audit
+    authorities of the caller's tenant at request time. Metrics the
+    platform does NOT measure carry an explicit ``deferred`` entry naming
+    the reason instead of a zero that could read as a measurement.
+    ``placeholder`` is ``Literal[False]`` so the two shapes can never be
+    confused by a reader.
+    """
+
+    placeholder: Literal[False] = False
+    measured_at: datetime
+    samples_total: Annotated[int, Field(ge=0)] = 0
+    samples_by_level: JsonObject = Field(default_factory=dict)
+    verified_samples: Annotated[int, Field(ge=0)] = 0
+    gold_samples: Annotated[int, Field(ge=0)] = 0
+    eligible_samples: Annotated[int, Field(ge=0)] = 0
+    learned_keys: tuple[BoundedStr, ...] = ()
+    evaluations_recorded: Annotated[int, Field(ge=0)] = 0
+    promotion_history: tuple[JsonObject, ...] = ()
+    rollback_actions: tuple[JsonObject, ...] = ()
+    #: metric name -> reason it is NOT measured on this deployment.
+    deferred: JsonObject = Field(default_factory=dict)

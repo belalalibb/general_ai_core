@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict
 from apps.admin_agent.dispatcher import ToolRegistry
 from apps.admin_agent.service import AdminAgentService
 from apps.api.app import Principal
-from apps.api.auth import AuthSurface, bearer_token, unauthenticated
+from apps.api.auth import AuthSurface, session_token, unauthenticated
 from apps.api.errors import error_response
 from core.contracts.errors import ErrorCode
 from core.identity.errors import SessionInvalid
@@ -32,7 +32,8 @@ def session_resolver(auth: AuthSurface) -> Resolver:
     """Per-request Principal resolution over the injected AuthSurface."""
 
     def resolve(request: Request) -> Principal | JSONResponse:
-        token = bearer_token(request)
+        # C-05 (D-2): Bearer first, HttpOnly session cookie second.
+        token = session_token(request)
         if token is None:
             return unauthenticated()
         try:
@@ -72,6 +73,17 @@ def create_agent_router(
             return error_response(ErrorCode.UNAUTHORIZED, "Admin access required.")
         return resolved
 
+    def _admit_tenant(request: Request) -> Principal | JSONResponse:
+        """C-11 (operator D-3 = yes): any authenticated caller.
+
+        The trace/diagnosis reads below stay TENANT-SCOPED inside the
+        service (``execution_store.get(caller.tenant_id, ...)``): a foreign
+        execution is indistinguishable from an absent one (20 §6), so an
+        owning tenant reads ITS OWN agent runs while cross-tenant access
+        remains impossible. ``/tools`` and ``/converse`` keep the admin gate.
+        """
+        return resolve(request)
+
     def _unknown_execution() -> JSONResponse:
         return error_response(
             ErrorCode.VALIDATION_ERROR,
@@ -105,7 +117,7 @@ def create_agent_router(
 
     @router.get("/executions/{execution_id}/trace")
     async def trace(request: Request, execution_id: str) -> JSONResponse:
-        admitted = _admit(request)
+        admitted = _admit_tenant(request)
         if isinstance(admitted, JSONResponse):
             return admitted
         try:
@@ -121,7 +133,7 @@ def create_agent_router(
 
     @router.get("/executions/{execution_id}/diagnosis")
     async def diagnosis(request: Request, execution_id: str) -> JSONResponse:
-        admitted = _admit(request)
+        admitted = _admit_tenant(request)
         if isinstance(admitted, JSONResponse):
             return admitted
         try:
