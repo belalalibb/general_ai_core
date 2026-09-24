@@ -18,4 +18,6 @@
 | 13 | 2026-09-24 | records: COMPLETION-V2-DEC-01, state pointer, register flips | this commit |
 | 14 | 2026-09-24 | register guard flip (dashboard consumed); worktree gate a400ec14 PASS 4016/0/0/58; ratchet 3993→4016 | a400ec14, 42538222, 0a25f476 |
 | 15 | 2026-09-24 | FRESH-CLONE GATE OF RECORD 0a25f476: RESULT: PASS passed=4016 failed=0 errors=0 skipped=58 (gate_fresh_clone_0a25f476.txt); PR #65 opened | this commit |
+| 16 | 2026-09-24 | PR #65 MERGED → main b8195e3c | b8195e3c |
+| 17 | 2026-09-24 | POST-MERGE gate on main b8195e3c: first run 4012/4 (Chromium absent after reset — fail-closed browser tests), after playwright install PASS 4016/0/0/58 (gate_post_merge_b8195e3c.txt); COMPLETION-V2-DEC-02 CLOSED | this commit |
 | — | — | resets absorbed this program: ≥12 (remote head = checkpoint; recorded patch scripts under patches/) | — |
