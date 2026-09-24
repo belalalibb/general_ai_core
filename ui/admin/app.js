@@ -21,7 +21,10 @@
  */
 "use strict";
 
-const state = { token: null, surface: "overview", tenantId: null };
+const state = { token: null, surface: "overview", tenantId: null,
+  /* C-15: evidence refs HARVESTED from served responses (ids only): evaluation_id per sample
+     from Evaluate; the last PASSED scenario replay execution id from Replay. */
+  learningEvidence: {}, lastRegressionExecutionId: null };
 
 /* Status → badge class. KEYS MUST BE CONTRACT VALUES ONLY (tested). */
 const STATUS_CLASSES = {
@@ -964,6 +967,9 @@ async function replayScenario(scenarioId) {
   const result = await api(`/v1/admin/scenarios/${encodeURIComponent(scenarioId)}/replay`, { method: "POST" });
   out.textContent = "";
   if (!result.ok) { renderError(out, result.body); return; }
+  if (result.body.replayed === true && result.body.passed === true) {
+    state.lastRegressionExecutionId = result.body.execution_id;  /* C-15: regression_execution_id */
+  }
   renderScenarioVerdict(out, result.body);
 }
 
@@ -1480,6 +1486,9 @@ function parseJsonObject(text, what) {
 
 async function learningStep(sampleId, step, body) {
   const result = await api(`/v1/admin/learning/samples/${encodeURIComponent(sampleId)}/${step}`, { method: "POST", body });
+  if (step === "evaluate" && result.ok && result.body && result.body.evaluation_id) {
+    state.learningEvidence[sampleId] = result.body.evaluation_id;  /* C-15: the record the resolver reads */
+  }
   // Honest 200 outcomes: the gate's own verdict IS the answer (admitted/sanitized/evaluated=false).
   const refusedInBody = result.ok && result.body && typeof result.body === "object"
     && ["admitted", "sanitized", "evaluated", "promoted"].some((k) => result.body[k] === false);
@@ -1519,13 +1528,32 @@ function sampleActions(sample) {
       });
     }),
     actionButton("Promote", () => {
-      const offline = window.confirm("Attest: offline evaluation PASSED?");
-      const regression = window.confirm("Attest: regression PASSED?");
-      const security = window.confirm("Attest: security evaluation PASSED?");
+      /* C-15 (operator D-5): the artefact-backed conditions (offline eval, security eval,
+         regression) are NOT asserted here — they are RESOLVED server-side from recorded
+         evidence: the sample's Evaluate record (deterministic + security grader rows) and a
+         PASSED scenario replay execution. Served profiles refuse self-asserted passes. */
+      const evaluationId = window.prompt(
+        "evidence: evaluation_id (from this sample's Evaluate; used for offline AND security eval)",
+        state.learningEvidence[id] || "");
+      if (evaluationId === null) return;
+      const regressionId = window.prompt(
+        "evidence: regression_execution_id (a PASSED scenario Replay on the Intelligence surface)",
+        state.lastRegressionExecutionId || "");
+      if (regressionId === null) return;
+      const rollback = window.confirm("Attest: a rollback plan exists (custody revoke/sweep)?");
+      const approved = window.confirm("Attest: admin approval granted for this promotion?");
+      const shadow = window.confirm("Attest: shadow performance acceptable?");
+      const canary = window.confirm("Attest: canary performance acceptable?");
+      const evidenceRefs = {};
+      if (evaluationId.trim()) { evidenceRefs.evaluation_id = evaluationId.trim(); evidenceRefs.security_evaluation_id = evaluationId.trim(); }
+      if (regressionId.trim()) evidenceRefs.regression_execution_id = regressionId.trim();
       learningStep(id, "promote", {
-        offline_eval_pass: offline,
-        regression_pass: regression,
-        security_eval_pass: security,
+        rollback_plan_exists: rollback,
+        approval_required: true,
+        admin_approved: approved,
+        shadow_performance_acceptable: shadow,
+        canary_performance_acceptable: canary,
+        evidence_refs: evidenceRefs,
       });
     }),
   );
@@ -1558,9 +1586,9 @@ async function showSampleReport(sampleId) {
 
 async function loadLearning() {
   const unavailable = document.getElementById("learning-unavailable");
-  const [samples, learned, since] = await Promise.all([
+  const [samples, dashboard, since] = await Promise.all([
     api("/v1/admin/learning/samples"),
-    api("/v1/admin/learning/learned"),
+    api("/v1/admin/learning/dashboard"),  /* C-17: MEASURED (placeholder=false) or honest placeholder */
     api("/v1/admin/learning/changes-since-review"),
   ]);
   const tbody = document.querySelector("#samples-table tbody");
@@ -1582,9 +1610,35 @@ async function loadLearning() {
     tbody.appendChild(tr);
   }
   const keys = document.getElementById("learned-keys");
-  keys.textContent = learned.ok ? ((learned.body.keys || []).join(", ") || "(nothing learned yet)") : `unavailable (${learned.status})`;
+  const d = dashboard.ok ? dashboard.body : null;
+  keys.textContent = d && d.placeholder === false
+    ? ((d.learned_keys || []).join(", ") || "(nothing learned yet)")
+    : (dashboard.ok ? "(dashboard is a placeholder in this profile — no lifecycle composed)" : `unavailable (${dashboard.status})`);
+  renderLearningDashboard(document.getElementById("learning-dashboard"), dashboard);
   const sinceEl = document.getElementById("learning-since-review");
   sinceEl.textContent = since.ok ? JSON.stringify(since.body, null, 2) : `unavailable (${since.status})`;
+}
+
+/* C-17: the measured learning dashboard — every number is a COUNT over stored records
+   (samples, evaluation records, TRAINING_DATASET_PROMOTED audit events); `deferred` names
+   what is NOT measured. placeholder=true renders as the placeholder it is. */
+function renderLearningDashboard(el, result) {
+  el.textContent = "";
+  if (!result.ok) { el.textContent = `unavailable (${result.status})`; return; }
+  const d = result.body;
+  if (d.placeholder !== false) { el.textContent = "placeholder — the lifecycle is not composed in this profile; nothing is measured."; return; }
+  const lines = [
+    `measured_at ${d.measured_at}`,
+    `samples ${d.samples_total} · by level ${JSON.stringify(d.samples_by_level)}`,
+    `verified ${d.verified_samples} · gold ${d.gold_samples} · eligible ${d.eligible_samples}`,
+    `evaluations recorded ${d.evaluations_recorded} · promotions ${(d.promotion_history || []).length}`,
+  ];
+  for (const p of d.promotion_history || []) {
+    lines.push(`  · ${p.at} promoted ${p.details && p.details.knowledge_key} → memory ${p.details && p.details.memory_item_id}`);
+  }
+  const deferred = Object.keys(d.deferred || {});
+  if (deferred.length) lines.push(`NOT measured (deferred): ${deferred.join(", ")}`);
+  el.textContent = lines.join("\n");
 }
 
 document.getElementById("learning-capture-form").addEventListener("submit", async (event) => {
