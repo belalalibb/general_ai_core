@@ -2007,6 +2007,43 @@
               "required": false,
               "default": null,
               "alias": null
+            },
+            "context": {
+              "annotation": "core.contracts.execute.ExecutionContextInfo | None",
+              "required": false,
+              "default": null,
+              "alias": null
+            }
+          },
+          "extra": "forbid",
+          "frozen": true
+        },
+        "ExecutionContextInfo": {
+          "kind": "pydantic_model",
+          "fields": {
+            "strategy": {
+              "annotation": "Optional[Annotated[str, FieldInfo(annotation=NoneType, required=True, metadata=[MinLen(min_length=1), MaxLen(max_length=512)])]]",
+              "required": false,
+              "default": null,
+              "alias": null
+            },
+            "mode": {
+              "annotation": "Optional[Annotated[str, FieldInfo(annotation=NoneType, required=True, metadata=[MinLen(min_length=1), MaxLen(max_length=512)])]]",
+              "required": false,
+              "default": null,
+              "alias": null
+            },
+            "project_id": {
+              "annotation": "Optional[Annotated[str, FieldInfo(annotation=NoneType, required=True, metadata=[MinLen(min_length=1), MaxLen(max_length=512)])]]",
+              "required": false,
+              "default": null,
+              "alias": null
+            },
+            "template_ref": {
+              "annotation": "Optional[Annotated[str, FieldInfo(annotation=NoneType, required=True, metadata=[MinLen(min_length=1), MaxLen(max_length=512)])]]",
+              "required": false,
+              "default": null,
+              "alias": null
             }
           },
           "extra": "forbid",
@@ -2170,6 +2207,12 @@
             },
             "error": {
               "annotation": "core.contracts.errors.ErrorDetail | None",
+              "required": false,
+              "default": null,
+              "alias": null
+            },
+            "context": {
+              "annotation": "core.contracts.execute.ExecutionContextInfo | None",
               "required": false,
               "default": null,
               "alias": null
@@ -2731,6 +2774,12 @@
             },
             "providers": {
               "annotation": "list[Annotated[str, FieldInfo(annotation=NoneType, required=True, metadata=[MinLen(min_length=1), MaxLen(max_length=512)])]] | None",
+              "required": false,
+              "default": null,
+              "alias": null
+            },
+            "runtime": {
+              "annotation": "list[dict[str, Any]] | None",
               "required": false,
               "default": null,
               "alias": null
@@ -3676,7 +3725,7 @@
     }
   ],
   "frozen_at": {
-    "round": "r189",
-    "note": "baseline derived at the R189 gate of record"
+    "round": "completion_v2",
+    "note": "re-derived by declared round"
   }
 }

@@ -73,7 +73,11 @@ class RecoveredCapture:
 def validate_custody_state(state: object) -> JsonObject:
     """One closed metadata codec for writes and recovery; no raw snapshots."""
     allowed = {
-        "version", "eligibility_verdicts", "promotion_verdicts", "evaluation_id", "memory_id",
+        "version",
+        "eligibility_verdicts",
+        "promotion_verdicts",
+        "evaluation_id",
+        "memory_id",
     }
     if (
         not isinstance(state, dict)
@@ -105,21 +109,39 @@ def validate_custody_state(state: object) -> JsonObject:
 
 
 def custody_descriptor_digest(
-    *, tenant_id: UUID, policy_id: UUID, rights_ref: UUID, retention_seconds: int,
-    source_kind: str, source_execution_id: UUID, content_digest: str,
+    *,
+    tenant_id: UUID,
+    policy_id: UUID,
+    rights_ref: UUID,
+    retention_seconds: int,
+    source_kind: str,
+    source_execution_id: UUID,
+    content_digest: str,
 ) -> str:
     """Exact retry descriptor, NOT a signature against database compromise."""
-    return hashlib.sha256(json.dumps({
-        "tenant": str(tenant_id), "policy": str(policy_id), "rights": str(rights_ref),
-        "retention": retention_seconds, "source_kind": source_kind,
-        "source": str(source_execution_id) if source_kind == "execution" else None,
-        "content": content_digest,
-    }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return hashlib.sha256(
+        json.dumps(
+            {
+                "tenant": str(tenant_id),
+                "policy": str(policy_id),
+                "rights": str(rights_ref),
+                "retention": retention_seconds,
+                "source_kind": source_kind,
+                "source": str(source_execution_id) if source_kind == "execution" else None,
+                "content": content_digest,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
 
 
 def recover_capture(
     row: Mapping[str, object] | None,
-    *, tenant_id: UUID, policy: RetentionPolicy | None, now: datetime,
+    *,
+    tenant_id: UUID,
+    policy: RetentionPolicy | None,
+    now: datetime,
 ) -> RecoveredCapture:
     """Validate a scoped repository row before exposing any content.
 
@@ -138,7 +160,10 @@ def recover_capture(
 
 def _recover_capture(
     row: Mapping[str, object],
-    *, tenant_id: UUID, policy: RetentionPolicy | None, now: datetime,
+    *,
+    tenant_id: UUID,
+    policy: RetentionPolicy | None,
+    now: datetime,
 ) -> RecoveredCapture:
     def identity(key: str) -> UUID:
         value = row[key]
@@ -164,10 +189,14 @@ def _recover_capture(
         raise ValueError
     created, expires = row["created_at"], row["expires_at"]
     if (
-        not isinstance(created, datetime) or created.utcoffset() is None
-        or not isinstance(expires, datetime) or expires.utcoffset() is None
-        or not isinstance(now, datetime) or now.utcoffset() is None
-        or expires <= created or now < created
+        not isinstance(created, datetime)
+        or created.utcoffset() is None
+        or not isinstance(expires, datetime)
+        or expires.utcoffset() is None
+        or not isinstance(now, datetime)
+        or now.utcoffset() is None
+        or expires <= created
+        or now < created
     ):
         raise ValueError
     # Repository creation can occur after preparation (especially execution-born
@@ -176,24 +205,35 @@ def _recover_capture(
         raise ValueError
     content_digest = row["content_digest"]
     if (
-        not isinstance(content_digest, str) or len(content_digest) != 64
+        not isinstance(content_digest, str)
+        or len(content_digest) != 64
         or any(c not in "0123456789abcdef" for c in content_digest)
     ):
         raise ValueError
     if row["descriptor_digest"] != custody_descriptor_digest(
-        tenant_id=tenant_id, policy_id=policy_id, rights_ref=rights,
-        retention_seconds=stored_policy.retention_seconds, source_kind=source_kind,
-        source_execution_id=source_id, content_digest=content_digest,
+        tenant_id=tenant_id,
+        policy_id=policy_id,
+        rights_ref=rights,
+        retention_seconds=stored_policy.retention_seconds,
+        source_kind=source_kind,
+        source_execution_id=source_id,
+        content_digest=content_digest,
     ):
         raise ValueError
     state = validate_custody_state(row["state"])
     if row["dataset_id"] is not None:
         identity("dataset_id")
-    sample = LearningSample.model_validate({
-        "id": sample_id, "tenant_id": tenant_id, "source_execution_id": source_id,
-        "eligibility": row["eligibility"], "sanitization_state": row["sanitization_state"],
-        "verification_level": row["verification_level"], "dataset_id": row["dataset_id"],
-    })
+    sample = LearningSample.model_validate(
+        {
+            "id": sample_id,
+            "tenant_id": tenant_id,
+            "source_execution_id": source_id,
+            "eligibility": row["eligibility"],
+            "sanitization_state": row["sanitization_state"],
+            "verification_level": row["verification_level"],
+            "dataset_id": row["dataset_id"],
+        }
+    )
     payload = row["payload"]
     if quarantined or revoked:
         if payload is not None:
@@ -204,8 +244,12 @@ def _recover_capture(
         if not isinstance(payload, dict) or set(payload) != {"knowledge_key", "knowledge_value"}:
             raise ValueError
         checked = prepare_capture(
-            policy=stored_policy, tenant_id=tenant_id, policy_id=policy_id, rights_ref=rights,
-            knowledge_key=payload["knowledge_key"], knowledge_value=payload["knowledge_value"],
+            policy=stored_policy,
+            tenant_id=tenant_id,
+            policy_id=policy_id,
+            rights_ref=rights,
+            knowledge_key=payload["knowledge_key"],
+            knowledge_value=payload["knowledge_value"],
             now=created,
         )
         if checked.quarantined or checked.content_digest != content_digest:
@@ -214,8 +258,13 @@ def _recover_capture(
     if policy != stored_policy or now >= expires:
         payload = None
     return RecoveredCapture(
-        sample=sample, source_kind=source_kind, payload=payload, state=state,
-        revision=revision, expires_at=expires, content_digest=content_digest,
+        sample=sample,
+        source_kind=source_kind,
+        payload=payload,
+        state=state,
+        revision=revision,
+        expires_at=expires,
+        content_digest=content_digest,
     )
 
 

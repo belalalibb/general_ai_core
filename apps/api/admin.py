@@ -1250,12 +1250,12 @@ def create_admin_router(
             return _json(result)
 
         @router.post("/learning/custody/revoke")
-        async def revoke_learning_policy(
-            request: Request, body: LearningRevokeRequest
-        ) -> Response:
+        async def revoke_learning_policy(request: Request, body: LearningRevokeRequest) -> Response:
             """POST .../custody/revoke: durable policy revocation + redaction (audited)."""
             return _govern(
-                request, "learning_policy_revoked", {"policy_id": str(body.policy_id)},
+                request,
+                "learning_policy_revoked",
+                {"policy_id": str(body.policy_id)},
                 lambda p: governance_lifecycle.revoke_policy(p.tenant_id, body.policy_id),
             )
 
@@ -1263,7 +1263,9 @@ def create_admin_router(
         async def sweep_learning_retention(request: Request) -> Response:
             """POST .../custody/sweep: server-clock expiry + derived-copy reconciliation."""
             return _govern(
-                request, "learning_retention_swept", {},
+                request,
+                "learning_retention_swept",
+                {},
                 lambda p: governance_lifecycle.sweep_retention(p.tenant_id),
             )
 
@@ -1321,7 +1323,8 @@ def create_admin_router(
             (never held); an invariant break refuses with 409.
             """
             return _govern(
-                request, "learning_legacy_hold_released",
+                request,
+                "learning_legacy_hold_released",
                 {"reconciliation_ref": str(body.reconciliation_ref)},
                 lambda p: _release_with_outcome(p, body.reconciliation_ref),
             )

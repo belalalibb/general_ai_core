@@ -150,16 +150,16 @@ from apps.api.auth import (
 from apps.api.capabilities import Capability, CapabilityState
 from apps.api.context_lab import ContextLabService
 from apps.api.engineering_admin import EngineeringAdminSurface
+from apps.api.errors import (
+    HTTP_STATUS_BY_CODE,
+    error_response,
+    execution_failure_detail,
+)
 from apps.api.execution_context import (
     REQUEST_CONTEXT_KEY,
     context_info,
     request_context,
     with_request_context,
-)
-from apps.api.errors import (
-    HTTP_STATUS_BY_CODE,
-    error_response,
-    execution_failure_detail,
 )
 from apps.api.exercise import EXERCISE_LABEL_KEY, ExerciseHandler, ExerciseSurface
 from apps.api.ingestion import ExternalIngestionRecorder
@@ -200,6 +200,7 @@ from core.contracts.conversation import (
     Message,
     MessageRole,
 )
+from core.contracts.domain import BindingAvailability
 from core.contracts.errors import ErrorCode
 from core.contracts.evaluation import VerificationLevel
 from core.contracts.execute import (
@@ -216,7 +217,6 @@ from core.contracts.execute import (
 )
 from core.contracts.execution import Execution, ExecutionNodeStatus, ExecutionStrategy
 from core.contracts.execution_strategy import ExecutionStrategySpec
-from core.contracts.domain import BindingAvailability
 from core.contracts.model_listing import ModelListEntry, ModelsListResponse
 from core.contracts.model_policy import (
     AgentNodeMappingPolicy,
@@ -1777,9 +1777,7 @@ def create_app(
             signal_board = router.signals
             for model in model_registry.active_models():
                 bindings_for = binding_registry.bindings_for_model(model.id)
-                entry = ModelListEntry.from_model(
-                    model, bindings_for, provider_keys=_provider_key
-                )
+                entry = ModelListEntry.from_model(model, bindings_for, provider_keys=_provider_key)
                 if signal_board is not None and bindings_for:
                     # C-12 (audit F-6): the SAME eligibility answer the Router
                     # gives per binding, so a plan-refused / rate-limited model
