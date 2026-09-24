@@ -55,6 +55,7 @@ from uuid import UUID
 
 from pydantic import ValidationError
 
+from apps.api.execution_context import REQUEST_CONTEXT_KEY, with_request_context
 from apps.api.store import ExecutionStorePort
 from core.contracts.base import JsonObject, utc_now
 from core.contracts.errors import ErrorCode
@@ -155,6 +156,16 @@ class ExecutionMessageHandler:
             return
         # Provider failures are already a FAILED report (service taxonomy);
         # infrastructure faults propagate → core Worker leaves pending.
+        # C-04: the SAME request context the API staged rides the terminal
+        # record (absent on pre-C-04 messages → record unchanged).
+        raw_context = message.payload.get(REQUEST_CONTEXT_KEY)
+        if isinstance(raw_context, str):
+            try:
+                parsed_context = json.loads(raw_context)
+            except ValueError:
+                parsed_context = None
+            if isinstance(parsed_context, dict):
+                report = with_request_context(report, parsed_context)
         self._store.put(report)
         # V6 chunk 3: terminal event AFTER the stored truth exists (P6 —
         # the webhook narrates the record, never precedes it).

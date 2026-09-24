@@ -173,6 +173,22 @@ class EvaluationReport(ContractModel):
     summary: str | None = None
 
 
+class ExecutionContextInfo(ContractModel):
+    """C-04 (completion v2, operator D-4): ADDITIVE run-record context.
+
+    ``strategy`` is the stored 03 §5 Execution.strategy value; ``mode`` is
+    the admitted request mode (``single`` / ``agent`` / ``template`` /
+    ``custom`` / ``auto``); ``project_id`` and ``template_ref`` are the
+    ownership-checked request references. Every field is optional so a
+    pre-C-04 record projects honestly (absent, never invented).
+    """
+
+    strategy: BoundedStr | None = None
+    mode: BoundedStr | None = None
+    project_id: BoundedStr | None = None
+    template_ref: BoundedStr | None = None
+
+
 class ExecuteSyncResponse(ContractModel):
     """Sync success response (10 §3)."""
 
@@ -181,6 +197,8 @@ class ExecuteSyncResponse(ContractModel):
     result: ExecutionResult
     usage: UsageReport | None = None
     evaluation: EvaluationReport | None = None
+    # C-04 (additive): the run's request context; None keeps the 10 §3 shape.
+    context: ExecutionContextInfo | None = None
 
 
 class ExecuteAsyncAccepted(ContractModel):
@@ -206,6 +224,8 @@ class ExecutionStatusResponse(ContractModel):
     progress: ExecutionProgress | None = None
     result: ExecutionResult | None = None
     error: ErrorDetail | None = None
+    # C-04 (additive): the run's request context; None keeps the 10 §5 shape.
+    context: ExecutionContextInfo | None = None
 
 
 # --- Streaming events (10 §11) ------------------------------------------------
