@@ -397,6 +397,21 @@ def _last_provider_error(report: ExecutionReport) -> ProviderError | None:
     return None
 
 
+def _failed_stage(report: ExecutionReport) -> str | None:
+    """C-06: the FAILED stage key of a multi-stage run, from the projected node.
+
+    The StrategyExecutor stamps ``error.stage`` on a failed stage node (one
+    derivation); single-node runs carry no stage ⇒ ``None`` (shape unchanged).
+    """
+    for node_report in report.nodes:
+        node = node_report.node
+        if node.status is ExecutionNodeStatus.FAILED and node.error:
+            stage = node.error.get("stage")
+            if isinstance(stage, str):
+                return stage
+    return None
+
+
 def _agent_failure(report: ExecutionReport) -> JsonObject | None:
     """R165: WHY a ``strategy=agent`` run failed, from what the loop recorded.
 
@@ -1658,6 +1673,7 @@ def create_app(
             str(report.execution.id),
             _last_provider_error(report),
             agent_failure=_agent_failure(report),
+            stage=_failed_stage(report),
         )
         return JSONResponse(
             status_code=HTTP_STATUS_BY_CODE[detail.code],
@@ -2084,6 +2100,7 @@ def create_app(
                 execution_id,
                 _last_provider_error(report),
                 agent_failure=_agent_failure(report),
+                stage=_failed_stage(report),
             )
         status_response = ExecutionStatusResponse(
             execution_id=execution_id,
