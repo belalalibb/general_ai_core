@@ -9,9 +9,14 @@
  *   its "no real model was called" label — never stripped (41 §49).
  * - STATUS_CLASSES contains ONLY backend contract enum values; anything
  *   else renders the loud UNKNOWN badge.
- * - Verification tokens NEVER appear in HTTP responses; the register
- *   panel says to read the SERVER CONSOLE — the UI never pretends an
- *   email was sent.
+ * - Verification tokens appear in the register response ONLY on the
+ *   in-memory/dev profile, where the server labels them
+ *   (verification: "dev_token" + dev_note); the UI repeats that label and
+ *   never pretends an email was sent. Durable profile: server console.
+ * - Session custody (C-05, operator D-2): the server sets an HttpOnly
+ *   cookie on login; this file NEVER stores the bearer token (no
+ *   sessionStorage/localStorage token). State changes send the
+ *   X-Requested-With: QEVION header (CSRF rule for cookie sessions).
  * - Async activity is the REAL /events SSE stream (10 §11 shapes) —
  *   frames render as received; no invented progress, no percentages.
  * - Runs are EXECUTIONS: no fake chat-thread persistence (§13).
@@ -21,7 +26,7 @@
 "use strict";
 
 const state = {
-  token: null,
+  token: null,             /* kept null on purpose: the HttpOnly cookie IS the session (C-05) */
   profile: null,
   email: null,
   view: "home",
@@ -29,6 +34,10 @@ const state = {
   projects: [],             // flat list (all projects for the tenant)
   selectedWorkspace: null,  // workspace_id or null
   templateDetail: null,     // R202: the served StrategyTemplate for the chosen ref, or null
+  isAdmin: false,           // served fact from /v1/auth/session (C-07 orientation, C-11 links)
+  agentTools: null,         // C-11: served /v1/agent-tools rows or null when the seam is absent
+  runsFilterProject: "",    // C-04: client-side filter over the served context.project_id
+  lastRun: null,            // C-03: the last served execution body (for the raw toggle)
 };
 
 /* Status → badge class. KEYS MUST BE CONTRACT VALUES ONLY. */
@@ -66,25 +75,71 @@ function statusBadge(value) {
 /* --- transport --------------------------------------------------------------- */
 
 async function api(path, options = {}) {
-  const headers = Object.assign({}, options.headers || {});
+  const headers = Object.assign({}, csrfHeaders(), options.headers || {});
   if (state.token) headers["Authorization"] = `Bearer ${state.token}`;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   const response = await fetch(path, {
     method: options.method || "GET",
     headers,
+    credentials: "same-origin",
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   });
   const body = await response.json().catch(() => null);
   return { ok: response.ok, status: response.status, body };
 }
 
+/* C-05: the CSRF header every request carries (a cross-site form cannot set it). */
+function csrfHeaders() {
+  return { "X-Requested-With": "QEVION" };
+}
+
+/* C-09: one-line NEXT STEP per unified error code — the code is the server's; the hint
+   is the product's. Unknown codes get no hint (never invented). */
+const ERROR_HINTS = {
+  unauthenticated: "Sign in again — your session is missing or expired.",
+  unauthorized: "This action needs a permission your account does not have (admin surfaces need an admin session).",
+  validation_error: "Check the highlighted input; the server refused the request shape or a reference it could not find in your tenant.",
+  entitlement_exceeded: "Your task-unit budget or plan refused this run. Check Usage, or ask your operator for a larger plan.",
+  capability_denied: "The Capability Firewall refused a tool call — the run cannot use that capability on this deployment.",
+  provider_unavailable: "The model provider is unavailable right now. Retry later or pick another model in the composer.",
+  model_unavailable: "No eligible model could serve this request. Check Models for runtime availability.",
+  tool_approval_required: "A tool step is waiting for approval — an admin must approve it before the run continues.",
+  rate_limited: "Too many requests — wait for the window to pass and retry.",
+  execution_failed: "The run stopped. Open it in Runs to read the failing stage and provider category.",
+  internal_error: "Something failed inside the platform. Retry; if it persists report the execution id shown.",
+};
+
 function renderError(el, payload) {
-  /* Denials are content — render the unified error verbatim. */
+  /* Denials are content — render the unified error verbatim, then (C-09) ONE actionable
+     next step derived from the served code. Nothing about the error itself is rewritten. */
   el.hidden = false;
+  el.replaceChildren();
   const detail = payload && payload.error
     ? `${payload.error.code}: ${payload.error.message}`
     : "request failed";
-  el.textContent = detail;
+  const line = document.createElement("div");
+  line.textContent = detail;
+  el.appendChild(line);
+  const err = payload && payload.error ? payload.error : null;
+  if (err && err.details && err.details.execution_id) {
+    const ref = document.createElement("div");
+    ref.className = "mono small";
+    ref.textContent = `execution ${err.details.execution_id}`;
+    el.appendChild(ref);
+  }
+  if (err && err.details && err.details.stage) {
+    const st = document.createElement("div");
+    st.className = "small";
+    st.textContent = `failing stage: ${err.details.stage}`;
+    el.appendChild(st);
+  }
+  const hint = err ? ERROR_HINTS[err.code] : undefined;
+  if (hint) {
+    const next = document.createElement("div");
+    next.className = "error-hint";
+    next.textContent = `Next: ${hint}`;
+    el.appendChild(next);
+  }
 }
 
 function clearError(el) {
@@ -103,12 +158,19 @@ async function probeProfile() {
     state.profile = "demo";
   } else {
     state.profile = "durable";
-    if (session.ok) state.email = session.body.email;
+    if (session.ok) {
+      state.email = session.body.email;
+      state.isAdmin = session.body.is_admin === true;
+    }
   }
   $("demo-banner").hidden = state.profile !== "demo";
   $("durable-banner").hidden = state.profile !== "durable";
   if (state.profile === "demo") {
     enterMain("demo principal");
+  } else if (session.ok && state.email) {
+    /* C-05: the HttpOnly session cookie is still valid — reload / navigation keeps the
+       session; no re-login is forced. */
+    enterMain(state.email);
   } else {
     $("auth-view").hidden = false;
   }
@@ -128,13 +190,16 @@ async function enterMain(who) {
   $("auth-view").hidden = true;
   $("main-view").hidden = false;
   $("who").textContent = who;
-  $("logout-button").hidden = state.profile !== "durable" || !state.token;
+  $("logout-button").hidden = state.profile !== "durable";
+  renderOrientation();
   /* R201-C: the served lists must exist BEFORE a stored selection may be re-applied — a
      selection is restored only when the server still offers it. */
   await refreshWorkspaces();
   await populateTemplateSelect();
+  await probeAgentTools();
   restoreContext();
   applyDeepLink();
+  renderFirstRun();
 }
 
 /* R200-B (operator D3 = i): boot-once deep link. Command links here as /app/#view=<name>.
@@ -237,9 +302,11 @@ function wireAuth() {
       body: { email: $("login-email").value, password: $("login-password").value },
     });
     if (!result.ok) return renderError($("login-error"), result.body);
-    state.token = result.body.token;
+    /* C-05 (D-2): the server set the HttpOnly session cookie; the bearer token in the
+       body is NOT kept anywhere in script-reachable state. */
     const session = await api("/v1/auth/session");
     state.email = session.ok ? session.body.email : $("login-email").value;
+    state.isAdmin = session.ok && session.body.is_admin === true;
     enterMain(state.email);
   });
 
@@ -256,11 +323,21 @@ function wireAuth() {
       },
     });
     if (!result.ok) return renderError($("register-error"), result.body);
-    /* HONEST message: the token is on the SERVER CONSOLE, not in email. */
     info.hidden = false;
-    info.textContent =
-      `Account created (status: ${result.body.status}). Copy the ` +
-      "verification token from the server console and paste it below.";
+    if (result.body.verification === "dev_token" && result.body.dev_verification_token) {
+      /* C-02 (operator D-1 = b): the in-memory/dev profile returns the token, LABELLED by
+         the server. The UI pre-fills it and repeats the label — no email was sent. */
+      $("verify-token").value = result.body.dev_verification_token;
+      info.textContent =
+        `Account created (status: ${result.body.status}). Development profile: ` +
+        `${result.body.dev_note || "the verification token was returned by the server"} ` +
+        "— it has been filled in below; press \u201cVerify email\u201d to continue.";
+    } else {
+      /* HONEST message: the token is on the SERVER CONSOLE, not in email. */
+      info.textContent =
+        `Account created (status: ${result.body.status}). Copy the ` +
+        "verification token from the server console and paste it below.";
+    }
   });
 
   $("verify-button").addEventListener("click", async () => {
@@ -280,6 +357,7 @@ function wireAuth() {
     await api("/v1/auth/logout", { method: "POST" });
     state.token = null;
     state.email = null;
+    state.isAdmin = false;
     clearContext();
     $("main-view").hidden = true;
     $("auth-view").hidden = false;
@@ -288,7 +366,7 @@ function wireAuth() {
 
 /* --- view router ------------------------------------------------------------------ */
 
-const VIEWS = ["home", "runs", "models", "usage"];
+const VIEWS = ["home", "runs", "models", "usage", "capabilities"];
 
 function showView(view) {
   state.view = view;
@@ -301,6 +379,7 @@ function showView(view) {
   if (view === "runs") refreshRuns();
   if (view === "models") refreshModels();
   if (view === "usage") refreshUsage();
+  if (view === "capabilities") refreshCapabilities();
 }
 
 function wireNav() {
@@ -313,6 +392,11 @@ function wireNav() {
   $("runs-refresh").addEventListener("click", refreshRuns);
   $("models-refresh").addEventListener("click", refreshModels);
   $("usage-refresh").addEventListener("click", refreshUsage);
+  $("caps-refresh").addEventListener("click", refreshCapabilities);
+  $("runs-filter-project").addEventListener("change", () => {
+    state.runsFilterProject = $("runs-filter-project").value;
+    refreshRuns();
+  });
 }
 
 /* --- modal (promise-based, single instance) ---------------------------------------- */
@@ -584,11 +668,19 @@ function renderWorkspaceTree() {
 }
 
 function selectWorkspace(workspaceId) {
-  state.selectedWorkspace =
-    state.selectedWorkspace === workspaceId ? null : workspaceId;
+  /* C-08: clicking a workspace SELECTS it (idempotent) — it never toggles the detail away.
+     Deselection is the explicit "Close" affordance in the detail panel. */
+  state.selectedWorkspace = workspaceId;
   renderWorkspaceTree();
   renderWorkspaceDetail();
   showView("home");
+  saveContext();
+}
+
+function deselectWorkspace() {
+  state.selectedWorkspace = null;
+  renderWorkspaceTree();
+  renderWorkspaceDetail();
   saveContext();
 }
 
@@ -697,7 +789,8 @@ async function deleteWorkspace() {
   if (!confirmed) return;
   const response = await fetch(`/v1/workspaces/${ws.workspace_id}`, {
     method: "DELETE",
-    headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
+    headers: csrfHeaders(),
+    credentials: "same-origin",
   });
   if (response.status !== 204) {
     /* 409 workspace_not_empty renders verbatim — the RESTRICT contract
@@ -737,7 +830,8 @@ async function deleteProject(prj) {
   if (!confirmed) return;
   const response = await fetch(`/v1/projects/${prj.project_id}`, {
     method: "DELETE",
-    headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
+    headers: csrfHeaders(),
+    credentials: "same-origin",
   });
   if (response.status !== 204) {
     const body = await response.json().catch(() => null);
@@ -749,7 +843,9 @@ async function deleteProject(prj) {
 function wireWorkspaces() {
   $("ws-new-btn").addEventListener("click", createWorkspace);
   $("ws-delete-btn").addEventListener("click", deleteWorkspace);
+  $("ws-close-btn").addEventListener("click", deselectWorkspace);
   $("prj-new-btn").addEventListener("click", createProject);
+  $("first-run-ws-btn").addEventListener("click", createWorkspace);
 }
 
 /* --- composer: idea → context → run ------------------------------------------------- */
@@ -771,10 +867,10 @@ function timelineEntry(text, kind) {
 
 async function followEvents(executionId) {
   /* REAL SSE frames (10 §11 shapes) rendered as received — no theater. */
-  const headers = state.token
-    ? { Authorization: `Bearer ${state.token}` }
-    : {};
-  const response = await fetch(`/v1/executions/${executionId}/events`, { headers });
+  const response = await fetch(`/v1/executions/${executionId}/events`, {
+    headers: csrfHeaders(),
+    credentials: "same-origin",
+  });
   if (!response.ok || response.body === null) {
     timelineEntry("event stream unavailable — falling back to final poll");
     return finishFromStatus(executionId);
