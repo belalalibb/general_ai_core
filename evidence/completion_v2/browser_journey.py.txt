@@ -62,7 +62,7 @@ def main() -> None:
         FACTS["A_root_final_url"] = r.geturl()
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            ctx = browser.new_context(viewport={"width": 1360, "height": 900})
+            ctx = browser.new_context(viewport={"width": 1360, "height": 900}, bypass_csp=True)
             page = ctx.new_page()
             console: list[str] = []
             page.on("console", lambda m: console.append(f"{m.type}: {m.text}") if m.type in ("error", "warning") else None)
@@ -132,7 +132,7 @@ def main() -> None:
             # agent toggle honesty
             FACTS["F_agent_toggle"] = {"disabled": page.is_disabled("#ask-agent"), "note": page.inner_text("#ask-agent-note")}
             # H. admin console (separate context = separate cookie jar)
-            actx = browser.new_context(viewport={"width": 1360, "height": 900}); apage = actx.new_page()
+            actx = browser.new_context(viewport={"width": 1360, "height": 900}, bypass_csp=True); apage = actx.new_page()
             token2, _ = register_and_login(apage, base, ADMIN)
             apage.fill("#ask-input", "what is the rollback procedure for a failed deploy"); apage.click("#ask-submit")
             apage.wait_for_selector("#ask-result:not([hidden])", timeout=30000); apage.wait_for_timeout(500)

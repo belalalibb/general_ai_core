@@ -124,3 +124,8 @@ sub(HTML, '''        <h3>Changes since last review</h3>
         <h3>Changes since last review</h3>
         <div id="learning-since-review" class="panel mono small"></div>''')
 print("admin phase3 patched")
+
+# --- follow-up (browser journey finding): admin console + Command api() send the CSRF header ---
+for p in ("ui/admin/app.js", "ui/app/command/command.js"):
+    sub(p, '  const headers = Object.assign({}, options.headers || {});\n',
+        '  /* C-05 (completion v2): the Workbench session is an HttpOnly cookie the browser also\n     attaches here; cookie-accompanied state changes need the CSRF header (server rule). */\n  const headers = Object.assign({ "X-Requested-With": "QEVION" }, options.headers || {});\n')
