@@ -1,0 +1,30 @@
+"""AUDIT V2 probe 2 — real provider key present in the process env (genspark_llm proxy). Nothing fabricated: whatever the provider answers is recorded."""
+import sys, json, time; sys.path.insert(0, "/tmp"); from audit_boot import *
+proc, base, log = boot("live", strip_keys=False); api = Api(base, log); out = {}
+try:
+    t1 = api.user("live1@audit.test"); adm = api.user("admin@audit.test")
+    out["admin_system"] = api("GET", "/v1/admin/system", tok=adm)[1]
+    out["models_names"] = [m["name"] for m in api("GET", "/v1/models", tok=t1)[1]["models"]]
+    t0 = time.time(); st, b, _ = api("POST", "/v1/execute", {"ask": "Reply with exactly the word PONG."}, tok=t1); out["exec_sync_live"] = (st, b, round(time.time() - t0, 1))
+    st, b, _ = api("POST", "/v1/execute", {"ask": "One sentence: what is a river delta?", "execution_policy": {"async": True}}, tok=t1); out["exec_async_live_accept"] = st
+    if st == 202:
+        for _ in range(60):
+            time.sleep(1); g = api("GET", f"/v1/executions/{b['execution_id']}", tok=t1)[1]
+            if g["status"] in ("succeeded", "failed"): break
+        out["exec_async_live_final"] = g
+        out["events_replay"] = api("GET", f"/v1/executions/{b['execution_id']}/events", tok=t1, raw=True)[1][:1200]
+    st, b, _ = api("POST", "/v1/execute", {"ask": "What is 2+2? Answer with just the number.", "execution_policy": {"strategy": "agent"}}, tok=t1); out["exec_agent_live"] = (st, b)
+    eid = (b.get("execution_id") if st == 200 else (b.get("error", {}).get("details", {}) or {}).get("execution_id"))
+    if eid:
+        out["agent_trace_as_tenant"] = api("GET", f"/v1/agent/executions/{eid}/trace", tok=t1)[0]
+        out["agent_trace_as_admin"] = api("GET", f"/v1/agent/executions/{eid}/trace", tok=adm)[0]
+        out["agent_diagnosis_as_tenant"] = api("GET", f"/v1/agent/executions/{eid}/diagnosis", tok=t1)[0]
+    st, b, _ = api("POST", "/v1/execute", {"ask": "Plan a two-page notes app.", "execution_strategy": {"mode": "template", "template_id": "app_factory.plan@1"}}, tok=t1); out["exec_template_live"] = (st, b)
+    eid = (b.get("execution_id") if st == 200 else (b.get("error", {}).get("details", {}) or {}).get("execution_id"))
+    if eid: out["exec_template_live_record"] = api("GET", f"/v1/executions/{eid}", tok=t1)[1]
+    out["explicit_model_policy_unknown"] = api("POST", "/v1/execute", {"ask": "hi", "model_policy": {"type": "explicit_model", "model_id": "00000000-0000-0000-0000-000000000000"}}, tok=t1)[:2]
+    st, b, _ = api("POST", "/v1/agent/converse", {"message": "What tools do you have? Answer briefly."}, tok=adm); out["agent_converse_admin_live"] = (st, {k: b.get(k) for k in ("rounds", "stop_reason", "note", "claims")})
+    out["usage_after"] = api("GET", "/v1/usage", tok=t1)[1]
+finally:
+    proc.terminate()
+print(json.dumps(out, indent=1, default=str, ensure_ascii=False))

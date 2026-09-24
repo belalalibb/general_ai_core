@@ -1,0 +1,33 @@
+{
+ "B_ws_autoselected": true,
+ "B_click_selected_toggles_off": true,
+ "B_ws_detail_visible": true,
+ "B_ws_detail_text": "Audit workspace Delete workspace be6bcba3-b464-4b26-8622-d5cfe5d4b021 Projects + New project no projects in this workspace",
+ "B_ws_detail_after_project": "Audit workspace Delete workspace be6bcba3-b464-4b26-8622-d5cfe5d4b021 Projects + New project Project Alpha 365367fa… Use in composer Delete",
+ "B_project_options": [
+  "— none —",
+  "Audit workspace / Project Alpha"
+ ],
+ "B_project_selected": true,
+ "B_execute_body": {
+  "ask": "Second task inside project",
+  "project_id": "365367fa-333d-4fa8-a2b2-31d24e15e5e4"
+ },
+ "B_result": "succeeded 4e24a97d-e70a-4b66-8b89-6187853ed260 Open in Runs {\"context_blocks\": [{\"content\": \"Second task inside project\", \"source\": \"request\", \"type\": \"ask\"}], \"echo\": \"Second task inside project\", \"note\": \"hermetic local adapter \\u2014 no real model was called\", \"provider\": \"local-echo\"}",
+ "B_runs_text": "4e24a97d… succeeded 2026-09-23T23:54:32.130257+00:00",
+ "B_runs_show_project": false,
+ "B_command_needs_login": true,
+ "B_context_after_roundtrip": {
+  "project_value_nonempty": true,
+  "ws_selected_text": "Workspace workspace: Audit workspace Project — none — Audit workspace / Project Alpha Template — none (auto) — App Facto"
+ },
+ "D_stale_project_error": "validation_error: Unknown project id.",
+ "D_async_timeline": [
+  "accepted: baa7f8ee-a55d-4b84-a4e5-266761935969 (queued)",
+  "execution_started",
+  "node_started: single",
+  "node_completed: single",
+  "final"
+ ],
+ "D_empty_ask": "validation_error: Request body failed contract validation."
+}

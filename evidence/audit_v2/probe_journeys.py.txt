@@ -1,0 +1,110 @@
+"""AUDIT V2 probe 3 — real Chromium journeys A–E on the hermetic profile. Each journey is isolated; failures are recorded, not hidden."""
+import sys, json, time, re; sys.path.insert(0, "/tmp"); from audit_boot import *
+from playwright.sync_api import sync_playwright
+proc, base, log = boot("journeys"); api = Api(base, log); out = {}; PW = "correct horse battery staple"; EV = "/home/user/webapp/evidence/audit_v2"
+def login(pg, url, email):
+    pg.goto(url); pg.wait_for_timeout(700)
+    f = pg.query_selector("form:has(input[type=password])")
+    if f and f.is_visible():
+        f.query_selector("input[type=email]").fill(email); f.query_selector("input[type=password]").fill(PW); f.query_selector("button[type=submit]").click()
+    pg.wait_for_timeout(1200)
+def step(name, fn):
+    try: fn()
+    except Exception as e:
+        out["ERR_" + name] = repr(e)[:300]
+        try: pg.screenshot(path=f"{EV}/j_err_{name}.png", full_page=True)
+        except Exception: pass
+t1 = api.user("user1@audit.test"); adm = api.user("admin@audit.test")
+p = sync_playwright().start(); b = p.chromium.launch(); ctx = b.new_context(viewport={"width": 1280, "height": 900}); pg = ctx.new_page()
+reqs, fails, console = [], [], []
+pg.on("request", lambda r: reqs.append((r.method, r.url.split(base, 1)[-1])) if "/v1/" in r.url else None)
+pg.on("response", lambda r: fails.append((r.status, r.url.split(base, 1)[-1])) if r.status >= 400 and "/v1/" in r.url else None)
+pg.on("console", lambda m: console.append(m.text[:160]) if m.type == "error" else None)
+def jA():
+    pg.goto(base + "/"); out["A_root"] = pg.inner_text("body")[:100]
+    pg.goto(base + "/app/"); pg.wait_for_timeout(800)
+    out["A_landing_text"] = pg.inner_text("body")[:400]
+    pg.click("#tab-register"); pg.wait_for_timeout(200)
+    pg.fill("#register-email", "newbie@audit.test"); pg.fill("#register-password", PW)
+    pg.click("#register-form button[type=submit]"); pg.wait_for_timeout(800)
+    out["A_after_register"] = pg.inner_text("#register-info")[:300] if pg.is_visible("#register-info") else pg.inner_text("#register-error")
+    toks = re.findall(r'"token": "([^"]+)"', open(log).read())
+    pg.fill("#verify-token", toks[-1]); pg.click("#verify-button"); pg.wait_for_timeout(700)
+    out["A_after_verify"] = pg.inner_text("#auth-view")[-250:]
+    pg.click("#tab-login"); pg.wait_for_timeout(200)
+    pg.fill("#login-email", "newbie@audit.test"); pg.fill("#login-password", PW); pg.click("#login-form button[type=submit]"); pg.wait_for_timeout(1500)
+    out["A_login_error"] = pg.inner_text("#login-error") if pg.is_visible("#login-error") else None
+    out["A_main_visible"] = pg.is_visible("#main-view"); out["A_home_text"] = re.sub(r"\s+", " ", pg.inner_text("#view-home"))[:400]
+    out["A_shell_links"] = pg.eval_on_selector_all(".shell-links a", "els => els.map(e => e.textContent.trim()+' -> '+e.getAttribute('href'))")
+    low = pg.inner_text("#main-view").lower(); out["A_orientation"] = {w: (w in low) for w in ["what is", "get started", "start here", "welcome", "describe what you want"]}
+    out["A_placeholder"] = pg.get_attribute("#ask-input", "placeholder")
+    pg.fill("#ask-input", "Write a haiku about rivers"); reqs.clear(); pg.click("#ask-submit")
+    pg.wait_for_selector("#ask-result:not([hidden]), #ask-error:not([hidden])", timeout=30000)
+    out["A_result"] = (pg.inner_text("#ask-result") if pg.is_visible("#ask-result") else "ERR " + pg.inner_text("#ask-error"))[:500]; out["A_result_reqs"] = list(reqs)
+    pg.screenshot(path=f"{EV}/jA_result.png", full_page=True)
+    link = pg.query_selector("#ask-result a, #ask-result button"); out["A_open_in_runs"] = link.text_content() if link else None
+    if link:
+        link.click(); pg.wait_for_timeout(900); out["A_runs_visible"] = pg.is_visible("#view-runs"); out["A_run_detail"] = re.sub(r"\s+", " ", pg.inner_text("#view-runs"))[:600]
+    pg.screenshot(path=f"{EV}/jA_runs.png", full_page=True)
+def jB():
+    pg.click(".nav-item[data-view=home]"); pg.wait_for_timeout(300); pg.click("#ws-new-btn"); pg.wait_for_timeout(500)
+    mi = pg.query_selector("dialog input, #modal input, .modal input"); out["B_ws_modal"] = bool(mi)
+    if mi:
+        mi.fill("Audit workspace"); pg.query_selector("dialog button.btn-primary, #modal button.btn-primary, .modal button.btn-primary").click(); pg.wait_for_timeout(900)
+    out["B_ws_tree"] = pg.inner_text("#ws-tree")[:200]
+    first = pg.query_selector("#ws-tree button, #ws-tree [role=button], #ws-tree a")
+    if first: first.click(); pg.wait_for_timeout(600)
+    out["B_home_after_ws"] = re.sub(r"\s+", " ", pg.inner_text("#view-home"))[:500]
+    btns = [e for e in pg.query_selector_all("#view-home button") if e.is_visible() and "project" in (e.text_content() or "").lower()]; out["B_project_buttons"] = [e.text_content().strip() for e in btns]
+    if btns:
+        btns[0].click(); pg.wait_for_timeout(500); mi = pg.query_selector("dialog input, #modal input, .modal input")
+        if mi: mi.fill("Project Alpha"); pg.query_selector("dialog button.btn-primary, #modal button.btn-primary, .modal button.btn-primary").click(); pg.wait_for_timeout(900)
+    out["B_project_options"] = pg.eval_on_selector_all("#ask-project option", "els => els.map(e => e.textContent)")
+    if len(out["B_project_options"]) > 1: pg.select_option("#ask-project", index=1)
+    pg.fill("#ask-input", "Second task inside project"); reqs.clear(); pg.click("#ask-submit")
+    pg.wait_for_selector("#ask-result:not([hidden]), #ask-error:not([hidden])", timeout=30000); out["B_exec_posts"] = [r for r in reqs if r[0] == "POST"]
+    pg.click(".nav-item[data-view=runs]"); pg.wait_for_timeout(500)
+    rb = [e for e in pg.query_selector_all("#view-runs button") if e.is_visible() and "refresh" in (e.text_content() or "").lower()]
+    if rb: rb[0].click(); pg.wait_for_timeout(700)
+    out["B_runs_text"] = re.sub(r"\s+", " ", pg.inner_text("#view-runs"))[:500]; out["B_runs_show_project"] = "Project Alpha" in out["B_runs_text"]
+    pg.screenshot(path=f"{EV}/jB_runs.png", full_page=True)
+    pg.reload(); pg.wait_for_timeout(1000); out["B_reload_requires_login"] = pg.is_visible("#auth-view")
+    login(pg, base + "/app/", "newbie@audit.test")
+    out["B_context_restored"] = {"project": pg.input_value("#ask-project"), "template": pg.input_value("#ask-template"), "ws_tree": pg.inner_text("#ws-tree")[:100]}
+def jC():
+    pg.click(".nav-item[data-view=home]"); pg.wait_for_timeout(300)
+    out["C_template_options"] = pg.eval_on_selector_all("#ask-template option", "els => els.map(e => e.textContent)")
+    pg.select_option("#ask-template", index=1); pg.wait_for_selector("#template-detail:not([hidden])", timeout=10000)
+    pg.fill("#ask-input", "Plan a two-page notes app"); pg.click("#ask-submit")
+    pg.wait_for_selector("#ask-result:not([hidden]), #ask-error:not([hidden])", timeout=60000)
+    out["C_template_result"] = (pg.inner_text("#ask-result") if pg.is_visible("#ask-result") else "ERR " + pg.inner_text("#ask-error"))[:500]
+    pg.screenshot(path=f"{EV}/jC_template.png", full_page=True)
+    out["C_home_controls"] = pg.eval_on_selector_all("#view-home select, #view-home input, #view-home button", "els => els.filter(e=>e.offsetParent!==null).map(e => (e.id||e.textContent.trim().slice(0,30)))")
+    out["C_agent_word_in_ui"] = "agent" in pg.inner_text("#main-view").lower()
+    pg.click(".nav-item[data-view=models]"); pg.wait_for_timeout(500)
+    rb = [e for e in pg.query_selector_all("#view-models button") if e.is_visible()]
+    if rb: rb[0].click(); pg.wait_for_timeout(700)
+    out["C_models_view"] = re.sub(r"\s+", " ", pg.inner_text("#view-models"))[:500]
+    pg.goto(base + "/app/command/"); pg.wait_for_timeout(900); out["C_command_as_tenant_landing"] = re.sub(r"\s+", " ", pg.inner_text("body"))[:300]
+    login(pg, base + "/app/command/", "newbie@audit.test"); out["C_command_as_tenant_after_login"] = re.sub(r"\s+", " ", pg.inner_text("body"))[:600]
+    pg.screenshot(path=f"{EV}/jC_command_tenant.png", full_page=True)
+def jD():
+    login(pg, base + "/app/", "newbie@audit.test"); pg.select_option("#ask-template", ""); pg.fill("#ask-input", "x")
+    pg.evaluate("() => { const s=document.getElementById('ask-project'); const o=document.createElement('option'); o.value='00000000-0000-0000-0000-000000000000'; o.textContent='stale'; s.appendChild(o); s.value=o.value; }")
+    pg.click("#ask-submit"); pg.wait_for_selector("#ask-result:not([hidden]), #ask-error:not([hidden])", timeout=30000)
+    out["D_error"] = pg.inner_text("#ask-error") if pg.is_visible("#ask-error") else "no error shown"; pg.screenshot(path=f"{EV}/jD_error.png", full_page=True)
+    pg.select_option("#ask-project", ""); pg.check("#ask-async"); pg.fill("#ask-input", "async run"); pg.click("#ask-submit")
+    pg.wait_for_selector("#run-timeline li.evt-final, #run-timeline li.evt-error, #ask-error:not([hidden])", timeout=30000)
+    out["D_async_timeline"] = pg.eval_on_selector_all("#run-timeline li", "els => els.map(e => e.textContent)"); pg.uncheck("#ask-async")
+def jE():
+    login(pg, base + "/admin/", "admin@audit.test")
+    out["E_admin_nav"] = pg.eval_on_selector_all("nav button, nav a, [data-surface], .nav-item, .rail button", "els => els.filter(e=>e.offsetParent!==null).map(e => e.textContent.trim()).filter(Boolean)")[:45]
+    out["E_admin_body"] = re.sub(r"\s+", " ", pg.inner_text("body"))[:500]; pg.screenshot(path=f"{EV}/jE_admin.png", full_page=True)
+    login(pg, base + "/app/command/", "admin@audit.test"); out["E_command_admin"] = re.sub(r"\s+", " ", pg.inner_text("body"))[:900]; pg.screenshot(path=f"{EV}/jE_command.png", full_page=True)
+    st, bd, _ = api("GET", "/v1/admin/usage", tok=adm); out["E_admin_usage_tenants_seen"] = len({u["ledger"]["tenant_id"] for u in (bd or {}).get("usage", [])}) if st == 200 else st
+try:
+    step("A", jA); step("B", jB); step("C", jC); step("D", jD); step("E", jE)
+    out["console_errors"] = console[:15]; out["http_errors"] = fails[:30]
+finally:
+    b.close(); p.stop(); proc.terminate()
+print(json.dumps(out, indent=1, ensure_ascii=False, default=str))
