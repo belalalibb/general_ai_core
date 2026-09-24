@@ -328,6 +328,10 @@ function wireAuth() {
       /* C-02 (operator D-1 = b): the in-memory/dev profile returns the token, LABELLED by
          the server. The UI pre-fills it and repeats the label — no email was sent. */
       $("verify-token").value = result.body.dev_verification_token;
+      /* the server just SAID which profile this is — the banner repeats that fact only */
+      $("durable-banner-text").textContent =
+        "Development (in-memory) profile — the server returned the verification token " +
+        "(labelled); nothing here survives a process restart. No real email is sent.";
       info.textContent =
         `Account created (status: ${result.body.status}). Development profile: ` +
         `${result.body.dev_note || "the verification token was returned by the server"} ` +

@@ -60,3 +60,6 @@ sub("ui/app/app.js", '   Three EXISTING tenant routes, rendered as served.', '  
 m = json.loads(mp.read_text(encoding="utf-8")); sl=[s for s in m["pytest"]["slices"] if s["name"]=="rest"][0]
 sl["selection"]=sl["selection"].replace("tests/audit ","tests/audit tests/completion_v2 "); mp.write_text(json.dumps(m, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 print("ui pins patched")
+# --- browser-journey finding (screenshot I_gold_chip): the banner claimed "Durable profile — ... survive restarts"
+# on the in-memory profile. Banner now states only what the server said (dev-token register ⇒ in-memory);
+# orientation head no longer flex-splits its prose. See commit for exact diff.

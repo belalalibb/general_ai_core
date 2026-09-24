@@ -25,9 +25,10 @@
 </div>
 <div id="durable-banner" class="banner banner-durable" hidden>
   <span class="banner-dot"></span>
-  Durable profile — accounts and executions survive restarts.
-  Verification tokens print on the <strong>server console</strong>
-  (no real email is sent).
+  <span id="durable-banner-text">Authenticated profile — sign in with your account. No real email is
+  sent: the in-memory (development) profile returns the verification token in the register response,
+  labelled; the durable profile prints it on the <strong>server console</strong>. Whether records
+  survive a restart is a deployment fact this page does not claim.</span>
 </div>
 
 <!-- ===================== AUTH (durable only) ===================== -->
