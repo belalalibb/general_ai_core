@@ -16,4 +16,6 @@
 | 11 | 2026-09-24 | FINDING: banner claimed durable/survive-restarts on in-memory profile → honest; orientation layout | b7a6ba79 |
 | 12 | 2026-09-24 | R160 learning-verdict pin updated for C-15 | ea0410d8 |
 | 13 | 2026-09-24 | records: COMPLETION-V2-DEC-01, state pointer, register flips | this commit |
+| 14 | 2026-09-24 | register guard flip (dashboard consumed); worktree gate a400ec14 PASS 4016/0/0/58; ratchet 3993→4016 | a400ec14, 42538222, 0a25f476 |
+| 15 | 2026-09-24 | FRESH-CLONE GATE OF RECORD 0a25f476: RESULT: PASS passed=4016 failed=0 errors=0 skipped=58 (gate_fresh_clone_0a25f476.txt); PR #65 opened | this commit |
 | — | — | resets absorbed this program: ≥12 (remote head = checkpoint; recorded patch scripts under patches/) | — |
