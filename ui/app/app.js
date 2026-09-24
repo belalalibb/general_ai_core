@@ -364,6 +364,27 @@ function wireAuth() {
   });
 }
 
+/* --- C-07: orientation + first-run (served facts only) -------------------------------- */
+
+function renderOrientation() {
+  const facts = $("orientation-facts");
+  facts.replaceChildren();
+  const rows = [
+    ["you", state.email || (state.profile === "demo" ? "demo principal" : "\u2014")],
+    ["role", state.isAdmin ? "admin (Command + Admin surfaces open to you)" : "tenant user (Command/Admin are admin-only)"],
+    ["profile", state.profile === "demo" ? "demo (no sign-in)" : "authenticated session (HttpOnly cookie)"],
+  ];
+  for (const [k, v] of rows) {
+    const span = document.createElement("span");
+    span.textContent = `${k}: ${v}`;
+    facts.appendChild(span);
+  }
+}
+
+function renderFirstRun() {
+  $("first-run").hidden = state.workspaces.length !== 0;
+}
+
 /* --- view router ------------------------------------------------------------------ */
 
 const VIEWS = ["home", "runs", "models", "usage", "capabilities"];
@@ -386,6 +407,11 @@ function wireNav() {
   for (const item of document.querySelectorAll(".nav-item")) {
     item.addEventListener("click", () => showView(item.dataset.view));
   }
+  $("orientation-toggle").addEventListener("click", () => {
+    const box = $("orientation");
+    box.classList.toggle("collapsed");
+    $("orientation-toggle").textContent = box.classList.contains("collapsed") ? "show" : "hide";
+  });
   $("nav-toggle").addEventListener("click", () => {
     $("side-nav").classList.toggle("open");
   });
@@ -1345,6 +1371,104 @@ async function refreshUsage() {
   bodyEl.appendChild(pre);
 }
 
+/* --- C-13 (operator D-6): read-only tenant capability panels ----------------------------
+   Three EXISTING tenant routes, rendered as served. 404 ⇒ "not composed on this deployment";
+   other refusals ⇒ the unified error verbatim; empty ⇒ an honest empty line. No mock rows. */
+
+function capsRow(parts) {
+  const row = document.createElement("div");
+  row.className = "caps-row";
+  for (const part of parts) row.appendChild(part);
+  return row;
+}
+
+function capsText(text, cls) {
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = text;
+  return span;
+}
+
+function capsState(container, countEl, result, emptyText) {
+  container.replaceChildren();
+  if (result.status === 404) {
+    countEl.textContent = "";
+    container.appendChild(capsText("not composed on this deployment", "muted small"));
+    return null;
+  }
+  if (!result.ok) {
+    countEl.textContent = "";
+    const box = document.createElement("div");
+    box.className = "error-box small";
+    renderError(box, result.body);
+    container.appendChild(box);
+    return null;
+  }
+  return emptyText;
+}
+
+async function refreshCapabilities() {
+  clearError($("caps-error"));
+  const [skills, memory, webhooks] = await Promise.all([
+    api("/v1/skills"),
+    api("/v1/memory/preferences"),
+    api("/v1/webhooks"),
+  ]);
+  /* skills */
+  const skillsEl = $("caps-skills");
+  if (capsState(skillsEl, $("caps-skills-count"), skills, "") !== null) {
+    const rows = skills.body.skills || [];
+    $("caps-skills-count").textContent = `${rows.length} selectable`;
+    if (rows.length === 0) skillsEl.appendChild(capsText("no selectable skills on this deployment", "muted small"));
+    for (const s of rows) {
+      skillsEl.appendChild(capsRow([
+        capsText(s.name || s.id, "grow"),
+        capsText(`${s.id}${s.version ? ` @${s.version}` : ""}`, "mono muted small"),
+        ...(Array.isArray(s.tags) && s.tags.length ? [capsText(s.tags.join(", "), "muted small")] : []),
+      ]));
+    }
+  }
+  /* memory preferences */
+  const memEl = $("caps-memory");
+  if (capsState(memEl, $("caps-memory-count"), memory, "") !== null) {
+    const rows = memory.body.preferences || memory.body.items || [];
+    $("caps-memory-count").textContent = `${rows.length} item${rows.length === 1 ? "" : "s"}`;
+    if (rows.length === 0) memEl.appendChild(capsText("nothing learned yet — preferences appear after your runs repeat a language or output format", "muted small"));
+    for (const m of rows) {
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "btn-danger small";
+      del.textContent = "Delete";
+      del.addEventListener("click", async () => {
+        const response = await fetch(`/v1/memory/preferences/${encodeURIComponent(m.memory_id || m.id)}`, {
+          method: "DELETE", headers: csrfHeaders(), credentials: "same-origin",
+        });
+        if (response.status !== 204) renderError($("caps-error"), await response.json().catch(() => null));
+        refreshCapabilities();
+      });
+      memEl.appendChild(capsRow([
+        capsText(`${m.key}: ${typeof m.value === "string" ? m.value : JSON.stringify(m.value)}`, "grow"),
+        capsText(`${m.source || ""}${m.confidence !== undefined ? ` · confidence ${m.confidence}` : ""}`, "muted small"),
+        del,
+      ]));
+    }
+  }
+  /* webhooks */
+  const whEl = $("caps-webhooks");
+  if (capsState(whEl, $("caps-webhooks-count"), webhooks, "") !== null) {
+    const rows = webhooks.body.subscriptions || [];
+    $("caps-webhooks-count").textContent = `${rows.length} subscription${rows.length === 1 ? "" : "s"}`;
+    if (rows.length === 0) whEl.appendChild(capsText("no webhook subscriptions (register one through the API: POST /v1/webhooks)", "muted small"));
+    for (const w of rows) {
+      whEl.appendChild(capsRow([
+        capsText(w.url, "mono grow"),
+        capsText((w.events || []).join(", "), "muted small"),
+        capsText(w.subscription_id || w.id || "", "mono muted small"),
+      ]));
+    }
+  }
+}
+
 /* --- command palette (search / command discovery — §14) --------------------------------- */
 
 function cmdkCommands() {
@@ -1353,6 +1477,7 @@ function cmdkCommands() {
     { label: "Go to Runs", hint: "view", run: () => showView("runs") },
     { label: "Go to Models", hint: "view", run: () => showView("models") },
     { label: "Go to Usage", hint: "view", run: () => showView("usage") },
+    { label: "Go to Capabilities", hint: "view", run: () => showView("capabilities") },
     { label: "New workspace", hint: "action", run: createWorkspace },
     { label: "Refresh workspaces", hint: "action", run: refreshWorkspaces },
     { label: "Refresh health", hint: "action", run: refreshHealth },

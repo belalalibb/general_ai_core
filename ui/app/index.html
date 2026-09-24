@@ -61,8 +61,9 @@
       <label>Email <input type="email" id="register-email" required autocomplete="username"></label>
       <label>Password <input type="password" id="register-password" required autocomplete="new-password"></label>
       <button type="submit" class="btn-primary">Create account</button>
-      <p class="muted small">After registering, copy the verification token from
-      the <strong>server console</strong> and paste it below.</p>
+      <p class="muted small">After registering: on the <strong>development (in-memory) profile</strong>
+      the server returns the verification token (labelled) and it is filled in below; on the durable
+      profile copy it from the <strong>server console</strong>. No email is sent by QEVION.</p>
       <label>Verification token <input type="text" id="verify-token" autocomplete="off"></label>
       <button type="button" id="verify-button" class="btn-ghost">Verify email</button>
       <div id="register-error" class="error-box" hidden></div>
@@ -119,6 +120,9 @@
         <button class="nav-item" data-view="usage">
           <span class="nav-glyph">◔</span> Usage
         </button>
+        <button class="nav-item" data-view="capabilities">
+          <span class="nav-glyph">⚙</span> Capabilities
+        </button>
       </div>
 
       <div class="nav-section grow">
@@ -146,6 +150,32 @@
           <span id="home-context" class="context-chip muted">no workspace selected</span>
         </div>
 
+        <!-- C-07: product orientation — what QEVION is and how the surfaces relate. Static
+             product prose + SERVED facts (who you are, admin or not, profile). -->
+        <section id="orientation" class="orientation">
+          <div class="orientation-head">
+            <strong>QEVION</strong> is a governed AI execution platform: you describe a task,
+            the <em>Router</em> picks a model, an <em>execution</em> runs it (single shot, a
+            multi-stage <em>template</em>, or the tool-using <em>agent</em>), and every run is a
+            stored record you can inspect.
+            <button id="orientation-toggle" class="btn-ghost small" type="button">hide</button>
+          </div>
+          <ol id="orientation-steps" class="orientation-steps">
+            <li><strong>Organise</strong> — create a workspace and a project (left rail) so runs carry context.</li>
+            <li><strong>Run</strong> — write the task in the composer; pick a project / template; press Run.</li>
+            <li><strong>Read</strong> — the answer appears with its facts (provider, mode, learned context); raw JSON is one click away.</li>
+            <li><strong>Inspect</strong> — <em>Runs</em> lists every execution with project and mode; <em>Models</em> shows runtime availability; <em>Usage</em> your budget; <em>Capabilities</em> skills, memory, webhooks.</li>
+          </ol>
+          <div id="orientation-facts" class="orientation-facts muted small"></div>
+        </section>
+
+        <!-- C-07: first-run empty state (shown only when the tenant has no workspace yet) -->
+        <div id="first-run" class="first-run" hidden>
+          <p>You have no workspace yet. A workspace groups projects; a project gives runs their context.</p>
+          <button id="first-run-ws-btn" class="btn-primary" type="button">Create your first workspace</button>
+          <p class="muted small">You can also run a task right away without one — the run will simply carry no project.</p>
+        </div>
+
         <!-- Composer: idea → context → run -->
         <div class="composer">
           <textarea id="ask-input" rows="3"
@@ -164,6 +194,10 @@
               <label class="inline small">
                 <input type="checkbox" id="ask-async"> live activity
                 <span class="muted">(async + real event stream)</span>
+              </label>
+              <label class="inline small" title="C-11: the platform's agent strategy — offered only when the deployment serves tools">
+                <input type="checkbox" id="ask-agent" disabled> agent
+                <span id="ask-agent-note" class="muted">agent: probing…</span>
               </label>
             </div>
             <button type="button" id="ask-submit" class="btn-primary">Run ▸</button>
@@ -200,9 +234,13 @@
           <div class="result-head">
             <span id="ask-result-status"></span>
             <span id="ask-result-id" class="mono muted"></span>
+            <label class="inline small"><input type="checkbox" id="ask-result-raw-toggle"> raw</label>
             <button id="result-to-runs" class="btn-ghost small" type="button">Open in Runs</button>
           </div>
-          <pre id="ask-result-content" class="result-body"></pre>
+          <!-- C-03: the answer a person reads; C-04/C-16 facts as served chips; raw JSON on demand -->
+          <div id="ask-result-answer" class="result-answer" hidden></div>
+          <div id="ask-result-facts" class="result-facts"></div>
+          <pre id="ask-result-content" class="result-body" hidden></pre>
         </div>
 
         <!-- Workspace detail: what am I working on? -->
@@ -210,7 +248,10 @@
           <div class="panel">
             <div class="panel-head">
               <h3 id="ws-detail-name"></h3>
-              <button id="ws-delete-btn" class="btn-danger small" type="button">Delete workspace</button>
+              <span class="panel-actions">
+                <button id="ws-close-btn" class="btn-ghost small" type="button" title="Deselect this workspace">Close</button>
+                <button id="ws-delete-btn" class="btn-danger small" type="button">Delete workspace</button>
+              </span>
             </div>
             <div class="panel-sub muted small">
               <span class="mono" id="ws-detail-id"></span>
@@ -229,18 +270,26 @@
       <section id="view-runs" class="view" hidden>
         <div class="view-head">
           <h2>Runs</h2>
+          <label class="select-wrap inline small"><span class="muted">project</span>
+            <select id="runs-filter-project"><option value="">all projects</option></select>
+          </label>
           <button id="runs-refresh" class="btn-ghost small" type="button">Refresh</button>
         </div>
         <p class="muted small">Every run is a platform execution record —
-        listed as the API reports it, nothing synthesized.</p>
+        listed as the API reports it (status · mode · template · project), nothing synthesized.</p>
         <div id="runs-error" class="error-box" hidden></div>
         <div id="runs-list" class="runs-list"></div>
         <div id="run-detail" class="panel" hidden>
           <div class="panel-head">
             <h3>Run detail</h3>
             <span id="run-detail-status"></span>
+            <button id="run-detail-trace-btn" class="btn-ghost small" type="button" hidden>Agent trace</button>
           </div>
           <div class="mono muted small" id="run-detail-id"></div>
+          <div id="run-detail-answer" class="result-answer" hidden></div>
+          <div id="run-detail-facts" class="result-facts"></div>
+          <div id="run-detail-error" class="error-box small" hidden></div>
+          <pre id="run-detail-trace" class="result-body" hidden></pre>
           <pre id="run-detail-body" class="result-body"></pre>
         </div>
       </section>
@@ -256,6 +305,34 @@
              response (provider keys, availability, counts). Nothing is inferred. -->
         <div id="models-truth" class="truth-strip" hidden></div>
         <div id="models-grid" class="models-grid"></div>
+      </section>
+
+      <!-- ---------- VIEW: CAPABILITIES (C-13, operator D-6) — read-only tenant panels over the
+           EXISTING tenant routes: skills, memory preferences, webhooks. Empty ⇒ honest empty
+           state; absent seam (404) ⇒ honest unavailable state. Never mock records. ---------- -->
+      <section id="view-capabilities" class="view" hidden>
+        <div class="view-head">
+          <h2>Capabilities</h2>
+          <button id="caps-refresh" class="btn-ghost small" type="button">Refresh</button>
+        </div>
+        <div class="caps-grid">
+          <div class="panel">
+            <div class="panel-head"><h3>Skills</h3><span id="caps-skills-count" class="muted small"></span></div>
+            <p class="muted small">Selectable skills this deployment offers to your runs (data only — tools stay gated).</p>
+            <div id="caps-skills" class="caps-list"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Memory · preferences</h3><span id="caps-memory-count" class="muted small"></span></div>
+            <p class="muted small">Preferences the platform learned from your own requests (13 §8). You may delete any item.</p>
+            <div id="caps-memory" class="caps-list"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Webhooks</h3><span id="caps-webhooks-count" class="muted small"></span></div>
+            <p class="muted small">Your tenant's execution-event subscriptions.</p>
+            <div id="caps-webhooks" class="caps-list"></div>
+          </div>
+        </div>
+        <div id="caps-error" class="error-box" hidden></div>
       </section>
 
       <!-- ---------- VIEW: USAGE ---------- -->
