@@ -14,8 +14,8 @@
  *   (verification: "dev_token" + dev_note); the UI repeats that label and
  *   never pretends an email was sent. Durable profile: server console.
  * - Session custody (C-05, operator D-2): the server sets an HttpOnly
- *   cookie on login; this file NEVER stores the bearer token (no
- *   sessionStorage/localStorage token). State changes send the
+ *   cookie on login; this file NEVER stores the bearer token in any
+ *   browser storage. State changes send the
  *   X-Requested-With: QEVION header (CSRF rule for cookie sessions).
  * - Async activity is the REAL /events SSE stream (10 §11 shapes) —
  *   frames render as received; no invented progress, no percentages.

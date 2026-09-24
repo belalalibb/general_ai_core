@@ -1,0 +1,55 @@
+"""completion_v2 — declared UI ceiling move for ui/app/app.js (recorded patch).
+
+Measured at c809d16b: /v1/ 23 -> 32 (+9 served literals), fetch( 4 -> 6.
+Every added literal consumes an EXISTING tenant route through the ONE api()
+helper except two raw fetch( sites (a 204 DELETE with no body, and the SSE log
+reader for C-10 stage replay — same posture as the R197-measured DELETE/SSE
+sites). Down-only from 32 / 6 thereafter.
+"""
+import json, re, pathlib
+ROOT = pathlib.Path(".")
+
+def sub(path, old, new, count=1):
+    p = ROOT / path; s = p.read_text(encoding="utf-8")
+    assert s.count(old) == count, (path, old[:60], s.count(old))
+    p.write_text(s.replace(old, new), encoding="utf-8")
+
+# 1. app.js header prose: never even the WORD (R201 pin) — the contract is kept, restated.
+sub("ui/app/app.js",
+    " *   cookie on login; this file NEVER stores the bearer token (no\n *   sessionStorage/localStorage token). State changes send the\n",
+    " *   cookie on login; this file NEVER stores the bearer token in any\n *   browser storage. State changes send the\n")
+
+# 2. manifest: ceilings + rule lineage
+mp = ROOT / "engineering/verification/green_manifest.json"
+m = json.loads(mp.read_text(encoding="utf-8"))
+w = m["ui_workbench_static_check"]
+assert w["v1_count_ceiling_app_js"] == 23 and w["fetch_count_ceiling_app_js"] == 4
+w["v1_count_ceiling_app_js"] = 32
+w["v1_count_ceiling_rule"] = (
+    "32 = 23 (R202 ceiling) + exactly NINE served literals declared in COMPLETION-V2-DEC "
+    "(operator APPROVE, D-3/D-6/C-10/C-13), each consuming an EXISTING tenant route: "
+    "/v1/agent-tools (C-11 offer probe), /v1/agent/executions/${id}/trace + /diagnosis "
+    "(C-11 own-trace), /v1/skills, /v1/memory/preferences, /v1/memory/preferences/${id} DELETE, "
+    "/v1/webhooks (C-13 capability panels), a second /v1/executions/${id}/events reader "
+    "(C-10 stored-SSE stage replay), plus ONE prose mention of POST /v1/webhooks in the empty-state "
+    "text. Down-only from 32 thereafter. Previous rule: " + w["v1_count_ceiling_rule"])
+w["fetch_count_ceiling_app_js"] = 6
+w["fetch_count_rule"] = (
+    "6 = 4 (R197 measure) + TWO raw fetch( sites declared in COMPLETION-V2-DEC: the C-10 "
+    "stored-SSE log reader (text body, not JSON — same posture as the R197 SSE reader) and the "
+    "C-13 memory DELETE (204 no-body — same posture as the two R197 DELETE sites). Every JSON "
+    "read/write still goes through the ONE api() helper. Moves DOWN only. Previous rule: "
+    + w["fetch_count_rule"])
+mp.write_text(json.dumps(m, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+# 3. pins
+sub("tests/ui/test_unified_shell_r199.py",
+    '    # R199 added no literal (22); R202-DEC-01 declared 23 (one detail-route literal) — flipped 1:1\n    assert js.count("/v1/") == 23, "ui/app/app.js /v1/ count moved beyond the declared ceiling"\n    assert js.count("fetch(") == 4, "ui/app/app.js fetch( count moved — R199 adds NO transport"\n',
+    '    # R199 added no literal (22); R202-DEC-01 declared 23; COMPLETION-V2-DEC declared 32 / 6\n    # (nine served literals + two raw sites — lineage in the manifest rules) — flipped 1:1\n    assert js.count("/v1/") == 32, "ui/app/app.js /v1/ count moved beyond the declared ceiling"\n    assert js.count("fetch(") == 6, "ui/app/app.js fetch( count moved beyond the declared ceiling"\n')
+sub("tests/ui/test_template_detail_r202.py",
+    '    assert ceiling == 23, "operator-declared ceiling for R202"\n    assert raw.count("/v1/") == 23, f"measured {raw.count(\'/v1/\')}"\n    assert raw.count("fetch(") == 4\n',
+    '    assert ceiling == 32, "operator-declared ceiling (R202: 23; COMPLETION-V2-DEC: 32)"\n    assert raw.count("/v1/") == 32, f"measured {raw.count(\'/v1/\')}"\n    assert raw.count("fetch(") == 6\n')
+sub("tests/ui/test_context_carry_r201.py",
+    '    # 23 = the R202 declared ceiling (operator ruling, R202-DEC-01)\n    assert app_raw.count("/v1/") <= 23 and app_raw.count("fetch(") == 4\n',
+    '    # 32 / 6 = the COMPLETION-V2-DEC declared ceilings (R202 was 23 / 4)\n    assert app_raw.count("/v1/") <= 32 and app_raw.count("fetch(") == 6\n')
+print("ui pins patched")
