@@ -34,8 +34,8 @@ const state = {
   projects: [],             // flat list (all projects for the tenant)
   selectedWorkspace: null,  // workspace_id or null
   templateDetail: null,     // R202: the served StrategyTemplate for the chosen ref, or null
-  isAdmin: false,           // served fact from /v1/auth/session (C-07 orientation, C-11 links)
-  agentTools: null,         // C-11: served /v1/agent-tools rows or null when the seam is absent
+  isAdmin: false,           // served fact from the session probe (C-07 orientation, C-11 links)
+  agentTools: null,         // C-11: served agent tool rows or null when the seam is absent
   runsFilterProject: "",    // C-04: client-side filter over the served context.project_id
   lastRun: null,            // C-03: the last served execution body (for the raw toggle)
 };
@@ -850,10 +850,85 @@ function wireWorkspaces() {
 
 /* --- composer: idea → context → run ------------------------------------------------- */
 
-function renderResult(status, id, content) {
+/* --- C-03: readable result ------------------------------------------------------------
+   The primary UX is the ANSWER TEXT plus served facts (provider label, hermetic note, mode,
+   project, template, context provenance incl. gold_blocks — C-16). The raw JSON stays one
+   click away ("raw"). Nothing here invents a field: every label is copied from the response. */
+function parseEchoContent(content) {
+  if (typeof content !== "string") return null;
+  try {
+    const parsed = JSON.parse(content);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function factChip(label, value, cls) {
+  const chip = document.createElement("span");
+  chip.className = `fact-chip${cls ? ` ${cls}` : ""}`;
+  chip.textContent = `${label}: ${value}`;
+  return chip;
+}
+
+function renderFacts(container, body) {
+  container.replaceChildren();
+  const ctx = body.context || {};
+  if (ctx.mode) container.appendChild(factChip("mode", ctx.mode));
+  if (ctx.strategy && ctx.strategy !== ctx.mode) container.appendChild(factChip("strategy", ctx.strategy));
+  if (ctx.template_ref) container.appendChild(factChip("template", ctx.template_ref));
+  if (ctx.project_id) {
+    const prj = state.projects.find((p) => p.project_id === ctx.project_id);
+    container.appendChild(factChip("project", prj ? prj.name : `${ctx.project_id.slice(0, 8)}\u2026`));
+  }
+  const result = body.result || null;
+  const echo = result ? parseEchoContent(result.content) : null;
+  if (echo && echo.provider) {
+    container.appendChild(factChip("provider", echo.provider, echo.provider === "local-echo" ? "warn" : ""));
+  }
+  if (echo && echo.note) container.appendChild(factChip("note", echo.note, "warn"));
+  for (const artifact of (result && result.artifacts) || []) {
+    if (artifact.type === "context_provenance") {
+      /* C-16: learned (GOLD) knowledge reaching THIS run is a served, measured number. */
+      const gold = Number(artifact.gold_blocks || 0);
+      container.appendChild(factChip("context blocks", String(artifact.blocks_total ?? "\u2014")));
+      container.appendChild(factChip("gold blocks", String(gold), gold > 0 ? "ok" : ""));
+      if (Array.isArray(artifact.memory_blocks) && artifact.memory_blocks.length) {
+        container.appendChild(factChip("memory sources",
+          [...new Set(artifact.memory_blocks.map((b) => b.source))].join(", ")));
+      }
+    }
+  }
+}
+
+function answerText(body) {
+  const result = body.result;
+  if (!result) return null;
+  const echo = parseEchoContent(result.content);
+  if (echo) {
+    if (typeof echo.echo === "string") return echo.echo;
+    if (echo.echo && typeof echo.echo === "object" && typeof echo.echo.ask === "string") return echo.echo.ask;
+    return JSON.stringify(echo, null, 2);
+  }
+  return result.content;
+}
+
+function renderResult(status, id, body) {
   $("ask-result-status").replaceChildren(statusBadge(status));
   $("ask-result-id").textContent = id || "";
-  $("ask-result-content").textContent = content;
+  state.lastRun = body;
+  const text = body && body.result ? answerText(body) : null;
+  const answer = $("ask-result-answer");
+  if (text !== null) {
+    answer.textContent = text;
+    answer.hidden = false;
+  } else {
+    answer.hidden = true;
+  }
+  renderFacts($("ask-result-facts"), body || {});
+  const raw = $("ask-result-content");
+  raw.textContent = JSON.stringify(body, null, 2);
+  raw.hidden = !$("ask-result-raw-toggle").checked;
   $("ask-result").hidden = false;
 }
 
@@ -890,15 +965,37 @@ async function followEvents(executionId) {
       const event = JSON.parse(frame.slice(6));
       if (event.type === "final") {
         timelineEntry("final", "evt-final");
-        renderResult("succeeded", executionId,
-          JSON.stringify(event.result, null, 2));
+        await finishFromStatus(executionId);
       } else if (event.type === "error") {
         timelineEntry("error", "evt-error");
-        renderResult("failed", executionId,
-          JSON.stringify(event.error, null, 2));
+        renderError($("ask-error"), { error: event.error });
+        await finishFromStatus(executionId);
       } else {
         timelineEntry(`${event.type}${event.node ? `: ${stageLabel(event.node)}` : ""}`);
       }
+    }
+  }
+}
+
+async function replayStages(executionId) {
+  /* C-10: read the stored SSE log once; render node frames with the R202 stageLabel. */
+  const response = await fetch(`/v1/executions/${executionId}/events`, {
+    headers: csrfHeaders(),
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    timelineEntry("stage replay unavailable (events route refused)");
+    return;
+  }
+  const text = await response.text();
+  for (const frame of text.split("\n\n")) {
+    if (!frame.startsWith("data: ")) continue;
+    let event;
+    try { event = JSON.parse(frame.slice(6)); } catch (_error) { continue; }
+    if (event.type === "final" || event.type === "error") {
+      timelineEntry(event.type, event.type === "final" ? "evt-final" : "evt-error");
+    } else {
+      timelineEntry(`${event.type}${event.node ? `: ${stageLabel(event.node)}` : ""}`);
     }
   }
 }
@@ -907,8 +1004,8 @@ async function finishFromStatus(executionId) {
   const result = await api(`/v1/executions/${executionId}`);
   if (!result.ok) return renderError($("ask-error"), result.body);
   const body = result.body;
-  renderResult(body.status, executionId,
-    JSON.stringify(body.result ?? body.error ?? body.progress, null, 2));
+  renderResult(body.status, executionId, body);
+  if (body.error) renderError($("ask-error"), { error: body.error });
 }
 
 async function submitAsk() {
@@ -926,7 +1023,11 @@ async function submitAsk() {
        (ExecutionStrategySpec mode="template"); no choice ⇒ body unchanged. */
     const templateRef = $("ask-template").value;
     if (templateRef) body.execution_strategy = { mode: "template", template_id: templateRef };
-    if (isAsync) body.execution_policy = { async: true };
+    /* C-11 (operator D-3): the EXISTING agent strategy — offered only when the served tool
+       catalog is non-empty (probeAgentTools); the server still decides admission. */
+    const useAgent = !$("ask-agent").disabled && $("ask-agent").checked;
+    if (useAgent) body.execution_policy = { strategy: "agent" };
+    if (isAsync && !useAgent && !templateRef) body.execution_policy = { async: true };
     const result = await api("/v1/execute", { method: "POST", body });
     if (!result.ok) return renderError($("ask-error"), result.body);
     if (result.status === 202) {
@@ -935,12 +1036,16 @@ async function submitAsk() {
       timelineEntry(`accepted: ${result.body.execution_id} (queued)`);
       await followEvents(result.body.execution_id);
     } else {
-      /* Sync 200: render the labeled content VERBATIM (a local-echo
-         label must stay visible — 41 §49). */
-      renderResult(result.body.status, result.body.execution_id,
-        result.body.result
-          ? result.body.result.content
-          : JSON.stringify(result.body, null, 2));
+      /* Sync 200: the answer text + served facts (C-03); the raw body stays one click away. */
+      renderResult(result.body.status, result.body.execution_id, result.body);
+      if (templateRef) {
+        /* C-10: after a SYNC template run, replay the stored event log ONCE through the
+           EXISTING events route and render the stage rows (R188 C3 untouched: no async). */
+        $("run-live").hidden = false;
+        $("run-live-id").textContent = result.body.execution_id;
+        timelineEntry("stages (replayed from the stored record)");
+        await replayStages(result.body.execution_id);
+      }
     }
   } finally {
     $("ask-submit").disabled = false;
@@ -965,6 +1070,40 @@ function wireAsk() {
     showView("runs");
     if (id) openRun(id);
   });
+  $("ask-result-raw-toggle").addEventListener("change", () => {
+    $("ask-result-content").hidden = !$("ask-result-raw-toggle").checked;
+  });
+  $("ask-agent").addEventListener("change", () => {
+    if ($("ask-agent").checked) { $("ask-async").checked = false; $("ask-template").value = ""; loadTemplateDetail(""); saveContext(); }
+  });
+}
+
+/* --- C-11 (operator D-3 = yes): agent availability is a SERVED fact ----------------------
+   The offered tool catalog (agent-tools route, tenant-readable) decides whether the toggle is
+   enabled. Absent seam (404) or empty catalog => honest unavailable state, toggle disabled. */
+async function probeAgentTools() {
+  const result = await api("/v1/agent-tools");
+  const toggle = $("ask-agent");
+  const note = $("ask-agent-note");
+  if (!result.ok) {
+    state.agentTools = null;
+    toggle.disabled = true;
+    toggle.checked = false;
+    note.textContent = result.status === 404
+      ? "agent: not composed on this deployment"
+      : `agent: unavailable (${result.body && result.body.error ? result.body.error.code : result.status})`;
+    return;
+  }
+  const tools = result.body.tools || [];
+  state.agentTools = tools;
+  if (tools.length === 0) {
+    toggle.disabled = true;
+    toggle.checked = false;
+    note.textContent = "agent: no tools offered on this deployment \u2014 unavailable";
+  } else {
+    toggle.disabled = false;
+    note.textContent = `agent: ${tools.length} tool${tools.length === 1 ? "" : "s"} offered (${tools.map((t) => t.name || t.id).slice(0, 4).join(", ")}${tools.length > 4 ? ", \u2026" : ""})`;
+  }
 }
 
 /* --- runs (executions — listed as the API reports them) ------------------------------ */
@@ -981,7 +1120,27 @@ async function refreshRuns() {
     empty.textContent = "no executions recorded";
     list.appendChild(empty);
   }
+  /* C-04: the project filter is populated from the SERVED rows (context.project_id). */
+  const filter = $("runs-filter-project");
+  const seenProjects = new Set(result.body.executions.map((r) => (r.context || {}).project_id).filter(Boolean));
+  const current = state.runsFilterProject;
+  filter.replaceChildren();
+  const all = document.createElement("option");
+  all.value = ""; all.textContent = "all projects";
+  filter.appendChild(all);
+  for (const pid of seenProjects) {
+    const opt = document.createElement("option");
+    const prj = state.projects.find((p) => p.project_id === pid);
+    opt.value = pid; opt.textContent = prj ? prj.name : `${pid.slice(0, 8)}\u2026`;
+    filter.appendChild(opt);
+  }
+  filter.value = seenProjects.has(current) ? current : "";
+  state.runsFilterProject = filter.value;
+  let shown = 0;
   for (const row of result.body.executions) {
+    const ctx = row.context || {};
+    if (state.runsFilterProject && ctx.project_id !== state.runsFilterProject) continue;
+    shown += 1;
     const item = document.createElement("button");
     item.type = "button";
     item.className = "run-row";
@@ -991,19 +1150,72 @@ async function refreshRuns() {
     const created = document.createElement("span");
     created.className = "muted small";
     created.textContent = row.created_at;
-    item.append(id, statusBadge(row.status), created);
+    const mode = document.createElement("span");
+    mode.className = "badge neutral";
+    mode.textContent = ctx.mode || ctx.strategy || "\u2014";
+    item.append(id, statusBadge(row.status), mode);
+    if (ctx.template_ref) {
+      const tpl = document.createElement("span");
+      tpl.className = "muted small mono";
+      tpl.textContent = ctx.template_ref;
+      item.appendChild(tpl);
+    }
+    if (ctx.project_id) {
+      const prj = state.projects.find((p) => p.project_id === ctx.project_id);
+      const p = document.createElement("span");
+      p.className = "muted small";
+      p.textContent = prj ? `project: ${prj.name}` : `project: ${ctx.project_id.slice(0, 8)}\u2026`;
+      item.appendChild(p);
+    }
+    item.appendChild(created);
     item.addEventListener("click", () => openRun(row.execution_id));
     list.appendChild(item);
+  }
+  if (shown === 0 && result.body.executions.length > 0) {
+    const empty = document.createElement("div");
+    empty.className = "muted small";
+    empty.textContent = "no executions match this project filter";
+    list.appendChild(empty);
   }
 }
 
 async function openRun(executionId) {
   const result = await api(`/v1/executions/${executionId}`);
   if (!result.ok) return renderError($("runs-error"), result.body);
-  $("run-detail-status").replaceChildren(statusBadge(result.body.status));
+  const body = result.body;
+  $("run-detail-status").replaceChildren(statusBadge(body.status));
   $("run-detail-id").textContent = executionId;
-  $("run-detail-body").textContent = JSON.stringify(result.body, null, 2);
+  /* C-03/C-04/C-16 on the run view: answer + served facts; raw body below. */
+  const answer = $("run-detail-answer");
+  const text = body.result ? answerText(body) : null;
+  answer.hidden = text === null;
+  if (text !== null) answer.textContent = text;
+  renderFacts($("run-detail-facts"), body);
+  const errBox = $("run-detail-error");
+  if (body.error) renderError(errBox, { error: body.error }); else clearError(errBox);
+  $("run-detail-body").textContent = JSON.stringify(body, null, 2);
+  /* C-11: the owning tenant may read its OWN agent trace; offered only for agent runs. */
+  const traceBtn = $("run-detail-trace-btn");
+  const isAgent = body.context && body.context.mode === "agent";
+  traceBtn.hidden = !isAgent;
+  traceBtn.onclick = () => openTrace(executionId);
+  $("run-detail-trace").hidden = true;
   $("run-detail").hidden = false;
+}
+
+async function openTrace(executionId) {
+  /* C-11 (D-3): the EXISTING agent trace + diagnosis routes, tenant-scoped server-side —
+     a foreign id is the server's own 404, rendered verbatim. */
+  const out = $("run-detail-trace");
+  out.hidden = false;
+  const [trace, diagnosis] = await Promise.all([
+    api(`/v1/agent/executions/${executionId}/trace`),
+    api(`/v1/agent/executions/${executionId}/diagnosis`),
+  ]);
+  const lines = [];
+  lines.push(trace.ok ? `trace:\n${JSON.stringify(trace.body, null, 2)}` : `trace: ${trace.status} ${JSON.stringify(trace.body)}`);
+  lines.push(diagnosis.ok ? `diagnosis:\n${JSON.stringify(diagnosis.body, null, 2)}` : `diagnosis: ${diagnosis.status} ${JSON.stringify(diagnosis.body)}`);
+  out.textContent = lines.join("\n\n");
 }
 
 /* --- models (real catalog rows only) -------------------------------------------------- */
@@ -1101,6 +1313,18 @@ async function refreshModels() {
       }
     }
     card.append(head, tier, providers, caps);
+    /* C-12: runtime[] as served — per binding the Router's own eligibility answer. */
+    if (Array.isArray(model.runtime)) {
+      const rt = document.createElement("div");
+      rt.className = "model-runtime";
+      for (const row of model.runtime) {
+        const line = document.createElement("div");
+        line.className = `small ${row.eligible ? "muted" : "warn-text"}`;
+        line.textContent = `${row.provider || "provider"}: ${row.eligible ? "eligible" : `blocked \u2014 ${row.reason || "no reason served"}`}${row.retry_after_ms ? ` (retry in ${Math.ceil(row.retry_after_ms / 1000)}s)` : ""}`;
+        rt.appendChild(line);
+      }
+      card.appendChild(rt);
+    }
     grid.appendChild(card);
   }
 }
