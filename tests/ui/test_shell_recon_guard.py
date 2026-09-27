@@ -62,11 +62,15 @@ FRAMEWORK_MARKERS = (
 
 
 def _manifest() -> dict[str, Any]:
-    return cast("dict[str, Any]", json.loads(MANIFEST.read_text(encoding="utf-8")))
+    loaded: object = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return cast("dict[str, Any]", loaded)
 
 
 def _block() -> dict[str, Any]:
-    return _manifest()["ui_shell_static_check"]
+    block = _manifest()["ui_shell_static_check"]
+    assert isinstance(block, dict)
+    return cast("dict[str, Any]", block)
 
 
 def _files() -> list[Path]:
@@ -205,9 +209,9 @@ def test_no_capability_state_roster_or_segment_surface_map() -> None:
         for name in banned:
             assert name not in code, f"{path.name}: client roster {name}"
         # no roster of the closed CapabilityState values
-        assert not re.search(
-            r"\[\s*[\"']available[\"']\s*,\s*[\"']inert[\"']", code
-        ), f"{path.name}: CapabilityState roster"
+        assert not re.search(r"\[\s*[\"']available[\"']\s*,\s*[\"']inert[\"']", code), (
+            f"{path.name}: CapabilityState roster"
+        )
 
 
 def test_no_evidence_prose_parsing_for_routing() -> None:

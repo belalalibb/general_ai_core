@@ -84,13 +84,35 @@ def _http(
 def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any]]:
     port = _free_port()
     env = dict(os.environ)
-    env.update({"HOST": "127.0.0.1", "PORT": str(port), "ADMIN_EMAILS": ADMIN_EMAIL, "LOG_LEVEL": "warning", "PYTHONUNBUFFERED": "1"})
+    env.update(
+        {
+            "HOST": "127.0.0.1",
+            "PORT": str(port),
+            "ADMIN_EMAILS": ADMIN_EMAIL,
+            "LOG_LEVEL": "warning",
+            "PYTHONUNBUFFERED": "1",
+        }
+    )
     for name in list(env):
-        if name in ("DATABASE_URL", "REDIS_URL") or name.startswith(("GROQ_API_KEY", "GSK_API_KEY", "GW_GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")):
+        if name in ("DATABASE_URL", "REDIS_URL") or name.startswith(
+            (
+                "GROQ_API_KEY",
+                "GSK_API_KEY",
+                "GW_GROQ_API_KEY",
+                "OPENAI_API_KEY",
+                "ANTHROPIC_API_KEY",
+            )
+        ):
             env.pop(name, None)
     log_path = tmp_path_factory.mktemp("shell-recon") / "server_stdout.txt"
     with open(log_path, "w", encoding="utf-8") as log:
-        proc = subprocess.Popen([sys.executable, "-m", "apps.main"], cwd=str(ROOT), env=env, stdout=log, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "apps.main"],
+            cwd=str(ROOT),
+            env=env,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+        )
         base = f"http://127.0.0.1:{port}"
         deadline = time.time() + 30
         while time.time() < deadline:
@@ -106,11 +128,17 @@ def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any]]
             pytest.fail("server did not become healthy")
         tokens = {}
         for email in (USER_EMAIL, ADMIN_EMAIL):
-            st, reg = _http("POST", f"{base}/v1/auth/register", {"email": email, "password": PASSWORD})
+            st, reg = _http(
+                "POST", f"{base}/v1/auth/register", {"email": email, "password": PASSWORD}
+            )
             assert st == 201, (st, reg)
-            st, _ = _http("POST", f"{base}/v1/auth/verify", {"token": reg["dev_verification_token"]})
+            st, _ = _http(
+                "POST", f"{base}/v1/auth/verify", {"token": reg["dev_verification_token"]}
+            )
             assert st in (200, 204)
-            st, login = _http("POST", f"{base}/v1/auth/login", {"email": email, "password": PASSWORD})
+            st, login = _http(
+                "POST", f"{base}/v1/auth/login", {"email": email, "password": PASSWORD}
+            )
             assert st == 200
             tokens[email] = login["token"]
         try:
@@ -140,7 +168,9 @@ def _sign_in(page: Page, base: str, email: str, next_hash: str | None = None) ->
     page.wait_for_function("() => !location.hash.startsWith('#/auth')", timeout=15000)
 
 
-def test_user_journey_model_first_routing_authority_and_storage(server: dict[str, Any], browser: Browser) -> None:
+def test_user_journey_model_first_routing_authority_and_storage(
+    server: dict[str, Any], browser: Browser
+) -> None:
     base = server["base"]
     ctx = browser.new_context(viewport={"width": 1280, "height": 900})
     page = ctx.new_page()
@@ -165,7 +195,9 @@ def test_user_journey_model_first_routing_authority_and_storage(server: dict[str
     # model-first: one radio per served model id
     page.goto(f"{base}/app/shell/#/work/new")
     page.wait_for_selector(".model-picker")
-    ids = page.eval_on_selector_all(".model-picker input[type=radio]", "els => els.map(e => e.value).filter(Boolean)")
+    ids = page.eval_on_selector_all(
+        ".model-picker input[type=radio]", "els => els.map(e => e.value).filter(Boolean)"
+    )
     st, served = _http("GET", f"{base}/v1/models", token=server["tokens"][USER_EMAIL])
     assert st == 200
     assert sorted(ids) == sorted(m["id"] for m in served["models"])
@@ -231,7 +263,9 @@ def test_admin_control_plane_is_served_metadata(server: dict[str, Any], browser:
     assert "NOT AVAILABLE" in page.inner_text(".state-unavailable strong")
     page.goto(f"{base}/app/shell/#/control/changes")
     page.wait_for_selector("select[aria-label=action]")
-    st, meta = _http("GET", f"{base}/v1/admin/capabilities/actions", token=server["tokens"][ADMIN_EMAIL])
+    st, meta = _http(
+        "GET", f"{base}/v1/admin/capabilities/actions", token=server["tokens"][ADMIN_EMAIL]
+    )
     assert page.locator("select[aria-label=action] option").count() - 1 == len(meta["actions"])
     ctx.close()
 
