@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" data-mode="normal">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="same-origin" />
+    <title>QEVION</title>
+    <link rel="stylesheet" href="./shell.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="shell">
+      <header class="global-head" role="banner">
+        <a class="brand" href="#/" aria-label="QEVION Command"><span class="brand-mark" aria-hidden="true">◆</span> QEVION</a>
+        <div id="context-selector" class="context-selector" aria-label="context"></div>
+        <div class="head-tools">
+          <button id="goto-open" class="btn btn-ghost" type="button" aria-haspopup="dialog" aria-controls="goto" title="Go to… (Ctrl/⌘ K)">⌕ Go to…</button>
+          <button id="mode-toggle" class="btn btn-ghost mode-toggle" type="button" aria-pressed="false" aria-label="toggle Normal / Advanced mode">Normal</button>
+          <a id="notif-link" class="btn btn-ghost" href="#/control/notifications" hidden>Notifications</a>
+          <div id="session-menu" class="session-menu"></div>
+        </div>
+      </header>
+
+      <nav class="rail" aria-label="primary">
+        <ul id="rail-list" class="nav-list"></ul>
+      </nav>
+
+      <main id="main" class="main" tabindex="-1"></main>
+
+      <nav class="tabs" aria-label="primary (mobile)">
+        <ul id="tabs-list" class="nav-list"></ul>
+      </nav>
+
+      <footer class="status-bar" role="contentinfo">
+        <span id="status-health" class="chip">health: —</span>
+        <span id="status-route" class="chip mono">#/</span>
+      </footer>
+    </div>
+
+    <div id="live" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+
+    <dialog id="goto" class="goto" aria-labelledby="goto-title">
+      <h2 id="goto-title" class="visually-hidden">Go to</h2>
+      <input id="goto-input" class="input" type="search" placeholder="Type a page, run id, model, workspace…" aria-label="Go to" autocomplete="off" />
+      <ul id="goto-list" class="goto-list" role="listbox" aria-label="destinations"></ul>
+      <p class="muted small">Navigation only — nothing is executed from here. Esc closes.</p>
+    </dialog>
+
+    <script type="module" src="./shell.js"></script>
+  </body>
+</html>
