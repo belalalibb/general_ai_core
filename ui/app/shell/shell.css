@@ -101,6 +101,8 @@ textarea.input { resize: vertical; }
 .hint { margin-top: 4px; font-size: 0.8rem; }
 .mode-toggle[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .session-menu .menu { position: relative; }
+.session-menu .menu:not([open]) .menu-body { display: none; }
+.shell { overflow-x: hidden; }
 .session-menu summary { list-style: none; cursor: pointer; }
 .session-menu summary::-webkit-details-marker { display: none; }
 .avatar { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-2); color: #04121a; font-weight: 700; margin-right: 6px; }
@@ -226,7 +228,14 @@ dialog::backdrop { background: rgba(0,0,0,0.6); }
   .tabs .nav-list { flex-direction: row; justify-content: space-around; padding: 4px; }
   .tabs .nav-item { padding: 8px 6px; font-size: 0.72rem; min-width: 44px; text-align: center; }
   .main { padding: 12px 12px 120px; }
-  .global-head { gap: 8px; padding: 0 10px; }
+  .global-head { gap: 6px; padding: 0 8px; min-width: 0; overflow: hidden; }
+  .head-tools { gap: 4px; min-width: 0; }
+  .head-tools .btn { padding: 6px 8px; min-height: 36px; font-size: 0.8rem; }
+  #notif-link { font-size: 0; padding: 6px 8px; }
+  #notif-link::before { content: "\2709"; font-size: 0.9rem; }
+  .mode-toggle { min-width: 0; }
+  .brand { font-size: 0.9rem; letter-spacing: 0.04em; }
+  .menu-body { max-width: calc(100vw - 16px); overflow-wrap: anywhere; }
   .context-selector { display: none; }
   .head-tools .who { display: none; }
   #goto-open { font-size: 0; padding: 8px; }
