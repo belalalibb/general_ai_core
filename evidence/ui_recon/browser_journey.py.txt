@@ -1,0 +1,218 @@
+"""UI-RECON-SHELL — REAL Chromium journey against `python3 -m apps.main` (in-memory profile).
+
+Drives the NEW unified shell at /app/shell/ end to end and records FACTS only
+(what the served pages actually show). Steps (design freeze red-team + L):
+
+  A  unauthenticated deep link -> redirected to #/auth?next=...
+  B  register -> verify (dev token, labelled) -> sign in -> lands on `next`
+  C  Command home: usage + recent runs; NO capability topology for a user
+  D  New Work: one row per model id (no duplicates); Auto + explicit; Execute -> Run Detail
+  E  Run Detail: status/result/context rendered; deep-link refresh survives
+  F  Models: one card per model; Advanced reveals runtime rows
+  G  Forbidden: user opens #/control/capabilities -> served 403 rendered
+  H  Anti-enumeration: #/runs/<random uuid> -> 404 rendered
+  I  Build: plan-only notice; NO generate/build/deploy/publish controls
+  J  Admin: sign in as ADMIN_EMAILS -> Control rail; capabilities 1:1 with served catalog;
+     engineering -> NOT AVAILABLE; changes form generated from served actions
+  K  Mobile 390px: bottom tabs visible, rail hidden, no horizontal overflow
+  L  storage: localStorage empty; sessionStorage has only qevion.app.context (no token)
+
+Run from the repo root inside the dev venv:  python3 evidence/ui_recon/browser_journey.py.txt
+"""
+from __future__ import annotations
+import json, os, socket, subprocess, sys, time, urllib.request, uuid
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / "evidence" / "ui_recon" / "browser"
+OUT.mkdir(parents=True, exist_ok=True)
+ADMIN = "admin@shell.test"
+USER = "user@shell.test"
+PW = "Shell-journey-pass-2026"
+facts: dict[str, object] = {}
+
+
+def free_port() -> int:
+    s = socket.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close(); return p
+
+
+def wait(base: str) -> None:
+    for _ in range(120):
+        try:
+            urllib.request.urlopen(base + "/healthz", timeout=1); return
+        except Exception:
+            time.sleep(0.25)
+    raise SystemExit("server did not start")
+
+
+def api(base: str, method: str, path: str, body=None, token=None):
+    req = urllib.request.Request(base + path, method=method, data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Content-Type": "application/json", "X-Requested-With": "QEVION", **({"Authorization": f"Bearer {token}"} if token else {})})
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return r.status, json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read() or b"{}")
+
+
+def snap(page, name: str) -> None:
+    page.screenshot(path=str(OUT / f"{name}.png"), full_page=True)
+
+
+def register_verify(base: str, email: str) -> None:
+    st, body = api(base, "POST", "/v1/auth/register", {"email": email, "password": PW})
+    assert st == 201, (st, body)
+    st, _ = api(base, "POST", "/v1/auth/verify", {"token": body["dev_verification_token"]})
+    assert st in (200, 204)
+
+
+def sign_in(page, base: str, email: str, next_hash: str | None = None) -> None:
+    page.goto(f"{base}/app/shell/#/auth" + (f"?next={next_hash}" if next_hash else ""))
+    page.wait_for_selector("h1#page-title")
+    page.fill("input[type=email]", email); page.fill("input[type=password]", PW)
+    page.click("button[type=submit]")
+    page.wait_for_function("() => !location.hash.startsWith('#/auth')", timeout=15000)
+
+
+def main() -> None:
+    port = free_port(); base = f"http://127.0.0.1:{port}"
+    env = dict(os.environ, ADMIN_EMAILS=ADMIN, HOST="127.0.0.1", PORT=str(port))
+    env.pop("DATABASE_URL", None)
+    # hermetic like tests/ui (local echo adapter): a live key in the sandbox env binds a real
+    # provider whose plan refusal renders as the verbatim entitlement_exceeded panel (proven
+    # separately: evidence/ui_recon/browser/D0_live_provider_refusal.png)
+    for k in list(env):
+        if k.startswith(("GROQ_API_KEY", "GSK_API_KEY", "GW_GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")):
+            env.pop(k)
+    srv = subprocess.Popen([sys.executable, "-m", "apps.main"], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        wait(base)
+        register_verify(base, USER); register_verify(base, ADMIN)
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            ctx = browser.new_context(viewport={"width": 1280, "height": 900})
+            page = ctx.new_page()
+            errors: list[str] = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+
+            # A — unauthenticated deep link
+            page.goto(f"{base}/app/shell/#/work/models")
+            page.wait_for_function("() => location.hash.startsWith('#/auth')")
+            facts["A_redirect_hash"] = page.evaluate("location.hash")
+            snap(page, "A_auth_redirect")
+
+            # B — sign in (already verified via API), lands on next
+            sign_in(page, base, USER, "/work/models")
+            facts["B_landed_hash"] = page.evaluate("location.hash")
+            page.wait_for_selector(".model-card")
+            snap(page, "B_models_after_login")
+
+            # C — Command home for a user: no topology
+            page.goto(f"{base}/app/shell/#/"); page.wait_for_selector("h1#page-title")
+            page.wait_for_selector("text=Usage"); time.sleep(0.5)
+            facts["C_command_h1"] = page.inner_text("h1#page-title")
+            facts["C_topology_nodes_for_user"] = page.locator(".cap-node").count()
+            facts["C_control_rail_for_user"] = page.locator("#rail-list a", has_text="Control").count()
+            snap(page, "C_command_user")
+
+            # D — New Work: model rows dedupe; execute
+            page.goto(f"{base}/app/shell/#/work/new"); page.wait_for_selector(".model-picker")
+            ids = page.eval_on_selector_all(".model-picker input[type=radio]", "els => els.map(e => e.value).filter(Boolean)")
+            facts["D_model_rows"] = len(ids); facts["D_model_rows_unique"] = len(set(ids)) == len(ids)
+            st, served = api(base, "GET", "/v1/models", token=api(base, "POST", "/v1/auth/login", {"email": USER, "password": PW})[1]["token"])
+            facts["D_served_models"] = len(served["models"]); facts["D_rows_equal_served"] = len(ids) == len(served["models"])
+            page.wait_for_selector("select[aria-label=template]"); page.wait_for_selector("#mode-std")
+            page.fill("textarea", "Summarize the QEVION shell journey in one sentence.")
+            page.click("button[type=submit]")
+            page.wait_for_function("() => location.hash.startsWith('#/runs/')", timeout=60000)
+            facts["D_run_hash"] = page.evaluate("location.hash")
+            page.wait_for_selector(".run-status .badge"); time.sleep(1.0)
+            facts["D_run_status"] = page.inner_text(".run-status .badge")
+            facts["D_result_present"] = page.locator(".result").count() > 0 or page.locator(".state-error").count() > 0
+            snap(page, "D_run_detail")
+
+            # E — refresh on deep link
+            page.reload(); page.wait_for_selector("h1#page-title"); time.sleep(0.8)
+            facts["E_after_reload_hash"] = page.evaluate("location.hash")
+            facts["E_after_reload_h1"] = page.inner_text("h1#page-title")
+            # browser back/forward
+            page.go_back(); page.wait_for_selector("h1#page-title"); facts["E_back_hash"] = page.evaluate("location.hash")
+            page.go_forward(); page.wait_for_selector("h1#page-title"); facts["E_forward_hash"] = page.evaluate("location.hash")
+
+            # F — Models advanced
+            page.goto(f"{base}/app/shell/#/work/models"); page.wait_for_selector(".model-card")
+            facts["F_model_cards"] = page.locator(".model-card").count()
+            page.locator(".model-card details.advanced summary").first.click(); time.sleep(0.3)
+            facts["F_runtime_table_rows"] = page.locator(".model-card details[open] table.data tbody tr").count()
+            facts["F_runtime_headers"] = page.eval_on_selector_all(".model-card details[open] th", "els => els.map(e => e.textContent)")
+            snap(page, "F_models_advanced")
+
+            # G — forbidden admin URL as user
+            page.goto(f"{base}/app/shell/#/control/capabilities"); page.wait_for_selector(".state-error, .state-forbidden", timeout=10000)
+            facts["G_forbidden_text"] = page.inner_text(".state-error .error-head")
+            snap(page, "G_user_forbidden")
+
+            # H — anti-enumeration 404
+            page.goto(f"{base}/app/shell/#/runs/{uuid.uuid4()}"); page.wait_for_selector(".state-error")
+            facts["H_404_text"] = page.inner_text(".state-error .error-head")
+
+            # I — Build plan-only
+            page.goto(f"{base}/app/shell/#/build"); page.wait_for_selector("h1#page-title"); time.sleep(0.8)
+            txt = page.inner_text("#main").lower()
+            facts["I_planning_only_notice"] = "planning only" in txt
+            facts["I_forbidden_controls"] = page.evaluate("() => Array.from(document.querySelectorAll('#main button, #main a.btn')).map(b => b.textContent.trim().toLowerCase()).filter(t => /generate|build app|deploy|publish/.test(t))")
+            snap(page, "I_build_plan_only")
+
+            # L — storage
+            facts["L_localStorage_keys"] = page.evaluate("Object.keys(window.localStorage)")
+            facts["L_sessionStorage_keys"] = page.evaluate("Object.keys(window.sessionStorage)")
+            facts["L_sessionStorage_ctx_has_token"] = page.evaluate("() => /token|bearer/i.test(window.sessionStorage.getItem('qevion.app.context') || '')")
+            facts["L_cookie_visible_to_js"] = page.evaluate("document.cookie.includes('qevion_session')")
+
+            # K — mobile
+            mob = browser.new_context(viewport={"width": 390, "height": 844}); mp = mob.new_page()
+            sign_in(mp, base, USER, "/")
+            mp.wait_for_selector("h1#page-title"); time.sleep(0.6)
+            facts["K_bottom_tabs_visible"] = mp.is_visible(".tabs")
+            facts["K_rail_visible"] = mp.is_visible(".rail")
+            facts["K_no_horizontal_overflow"] = mp.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1")
+            snap(mp, "K_mobile_390_command")
+            mp.goto(f"{base}/app/shell/#/work/models"); mp.wait_for_selector(".model-card"); snap(mp, "K_mobile_390_models")
+            mob.close()
+
+            # J — admin
+            actx = browser.new_context(viewport={"width": 1280, "height": 900}); ap = actx.new_page()
+            sign_in(ap, base, ADMIN, "/control/capabilities")
+            ap.wait_for_selector(".cap-node", timeout=15000)
+            tok = api(base, "POST", "/v1/auth/login", {"email": ADMIN, "password": PW})[1]["token"]
+            st, cat = api(base, "GET", "/v1/admin/capabilities", token=tok)
+            shown = ap.eval_on_selector_all(".cap-node", "els => els.map(e => e.dataset.id)")
+            facts["J_catalog_served"] = len(cat["capabilities"]); facts["J_catalog_shown"] = len(shown)
+            facts["J_catalog_ids_equal"] = sorted(shown) == sorted(c["id"] for c in cat["capabilities"])
+            facts["J_control_rail_for_admin"] = ap.locator("#rail-list a", has_text="Control").count()
+            snap(ap, "J_admin_capabilities")
+            ap.goto(f"{base}/app/shell/#/control/engineering"); ap.wait_for_selector(".state-unavailable")
+            facts["J_engineering_text"] = ap.inner_text(".state-unavailable strong")
+            ap.goto(f"{base}/app/shell/#/control/changes"); ap.wait_for_selector("select[aria-label=action]")
+            facts["J_change_actions_in_form"] = ap.locator("select[aria-label=action] option").count() - 1
+            st, meta = api(base, "GET", "/v1/admin/capabilities/actions", token=tok)
+            facts["J_change_actions_served"] = len(meta["actions"])
+            ap.select_option("select[aria-label=action]", "set_routing_weights"); time.sleep(0.2)
+            facts["J_generated_fields"] = ap.locator("form.card [data-name]").count()
+            snap(ap, "J_admin_changes_form")
+            ap.goto(f"{base}/app/shell/#/control/notifications"); ap.wait_for_selector("h1#page-title"); time.sleep(0.6)
+            facts["J_notifications_text"] = ap.inner_text("#main")[:200]
+            actx.close()
+
+            facts["console_errors"] = errors[:20]
+            browser.close()
+    finally:
+        srv.terminate()
+    (OUT / "facts.json").write_text(json.dumps(facts, indent=2), encoding="utf-8")
+    print(json.dumps(facts, indent=2))
+
+
+if __name__ == "__main__":
+    main()
