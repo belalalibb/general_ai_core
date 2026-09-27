@@ -1663,6 +1663,21 @@
         "worktree gate a400ec14 (2026-09-24): RESULT: PASS passed=4016 failed=0 errors=0 skipped=58; mypy/ruff/import-linter/secret scan PASS; change budget 13/13; min_passed ratcheted 3993 -> 4016."
       ],
       "note": "COMPLETION PROGRAM v2 (operator verbatim: 'Execute ALL THREE phases as ONE PRODUCT COMPLETION PROGRAM'; 'Do NOT reinterpret these as separate future engineering rounds'). USE→COMPOSE→WIRE→REPAIR→SIMPLIFY→ADD: no second Router/StrategyExecutor/agent runtime/TemplateRegistry/SkillRegistry/ToolExecutor/capability registry/provider manager/credential/tenancy. Contract freeze re-derived for round completion_v2 (additive only). UI ceilings ui/app/app.js 23/4 → 32/6 declared (rules carry lineage); ui/admin/app.js 73 held; command.js 12 held."
+    },
+    "round_ui_recon_shell": {
+      "ceiling": 0,
+      "budget_unit": "production files touched under the counted roots (core/, apps/, infrastructure/)",
+      "counts_production_code_under": [
+        "core/",
+        "apps/",
+        "infrastructure/"
+      ],
+      "changes_used": 0,
+      "items": [
+        "UI-RECON-SHELL new unified shell under ui/app/shell/ (OD-2 APPROVED): served by the EXISTING /app StaticFiles(html=True) mount at /app/shell/; zero backend change; legacy ui/app, ui/app/command, ui/admin untouched (deletion is a separate decision)."
+      ],
+      "log": [],
+      "note": "UI RECONSTRUCTION PROGRAM (design freeze approved 2026-09-27; OD-1 = B, OD-2 = APPROVED, OD-3 = CONFIRMED). ui/ is OUTSIDE change_budget.counts_production_code_under by design (R168 §2 / R180 note) and is governed by its guard frame ui_shell_static_check (declared BEFORE the first shell file per R182 convention; ceilings frozen at the first GREEN gate from the measured surface per OD-3). core/, apps/, infrastructure/ stay frozen: ceiling 0."
     }
   },
   "baseline": {
@@ -1689,5 +1704,42 @@
       "apps.admin_agent": "0 errors / 7 files (measured R168; re-measured clean R180 and R181; ADMITTED to the gate in R181 — deferred_out_of_gate item closed, see evidence/r181_state_ledger.md)"
     },
     "evidence": "evidence/r168/V-02/"
+  },
+  "ui_shell_static_check": {
+    "declared": "UI-RECON-SHELL opening (operator approval of the UI DESIGN FREEZE, 2026-09-27: OD-1 = B, OD-2 = APPROVED, OD-3 = CONFIRMED), BEFORE the first ui/app/shell/ file (R182 convention)",
+    "serving": "sub-directory of the existing /app StaticFiles(html=True) mount -> served at /app/shell/ with zero production change; round_ui_recon_shell ceiling 0",
+    "files": [
+      "ui/app/shell/index.html",
+      "ui/app/shell/shell.css",
+      "ui/app/shell/shell.js",
+      "ui/app/shell/api.js",
+      "ui/app/shell/router.js",
+      "ui/app/shell/context.js",
+      "ui/app/shell/components.js",
+      "ui/app/shell/pages/command.js",
+      "ui/app/shell/pages/auth.js",
+      "ui/app/shell/pages/work.js",
+      "ui/app/shell/pages/runs.js",
+      "ui/app/shell/pages/build.js",
+      "ui/app/shell/pages/intelligence.js",
+      "ui/app/shell/pages/control.js"
+    ],
+    "v1_count_ceiling_api_js": null,
+    "v1_count_ceiling_rule": "OD-3: the ONLY module allowed to hold /v1/ route literals is ui/app/shell/api.js (single transport, one fetch( inside api()); every other shell file has 0 /v1/ literals. The api.js ceiling is null until the FIRST GREEN gate, when it is set ONCE to the measured count and moves DOWN only thereafter (R182 D-2 / R197 convention).",
+    "exception_count_ceiling": 0,
+    "prohibited": {
+      "framework_markers": "no CDN/framework/bundler markers (ADR-0013 Alternative C)",
+      "storage": "the word localStorage must not appear; tokens never persisted (HttpOnly cookie session, CSRF header X-Requested-With: QEVION)",
+      "fabricated_states": [
+        "thinking",
+        "speaking",
+        "listening",
+        "energized",
+        "processing",
+        "reasoning"
+      ],
+      "capability_rosters": "no literal capability ids, no state rosters, no segment->surface maps, no evidence-prose parsing (OD-1 = B: non-admin Command renders NO capability topology; admin topology is rendered 1:1 from the served /v1/admin/capabilities records)"
+    },
+    "routing": "one hash router (#/...) in router.js; pushState/hashchange; deep links survive refresh under StaticFiles without SPA fallback"
   }
 }
