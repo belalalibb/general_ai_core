@@ -23,6 +23,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -32,9 +33,10 @@ import urllib.request
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import Browser, Page, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -61,7 +63,9 @@ def _free_port() -> int:
         return int(s.getsockname()[1])
 
 
-def _http(method: str, url: str, body: dict | None = None, token: str | None = None) -> tuple[int, dict]:
+def _http(
+    method: str, url: str, body: dict[str, object] | None = None, token: str | None = None
+) -> tuple[int, dict[str, Any]]:
     data = json.dumps(body).encode() if body is not None else None
     headers = {"Content-Type": "application/json", "X-Requested-With": "QEVION"}
     if token:
@@ -77,7 +81,7 @@ def _http(method: str, url: str, body: dict | None = None, token: str | None = N
 
 
 @pytest.fixture(scope="module")
-def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict]:
+def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any]]:
     port = _free_port()
     env = dict(os.environ)
     env.update({"HOST": "127.0.0.1", "PORT": str(port), "ADMIN_EMAILS": ADMIN_EMAIL, "LOG_LEVEL": "warning", "PYTHONUNBUFFERED": "1"})
@@ -118,7 +122,7 @@ def server(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict]:
 
 
 @pytest.fixture(scope="module")
-def browser() -> Iterator:
+def browser() -> Iterator[Browser]:
     with sync_playwright() as p:
         b = p.chromium.launch()  # fail-closed: no browser => error, never skip
         try:
@@ -127,7 +131,7 @@ def browser() -> Iterator:
             b.close()
 
 
-def _sign_in(page, base: str, email: str, next_hash: str | None = None) -> None:
+def _sign_in(page: Page, base: str, email: str, next_hash: str | None = None) -> None:
     page.goto(f"{base}/app/shell/#/auth" + (f"?next={next_hash}" if next_hash else ""))
     page.wait_for_selector("h1#page-title")
     page.fill("input[type=email]", email)
@@ -136,7 +140,7 @@ def _sign_in(page, base: str, email: str, next_hash: str | None = None) -> None:
     page.wait_for_function("() => !location.hash.startsWith('#/auth')", timeout=15000)
 
 
-def test_user_journey_model_first_routing_authority_and_storage(server: dict, browser) -> None:
+def test_user_journey_model_first_routing_authority_and_storage(server: dict[str, Any], browser: Browser) -> None:
     base = server["base"]
     ctx = browser.new_context(viewport={"width": 1280, "height": 900})
     page = ctx.new_page()
@@ -195,19 +199,24 @@ def test_user_journey_model_first_routing_authority_and_storage(server: dict, br
     page.wait_for_selector("h1#page-title")
     page.wait_for_selector("select[aria-label=model]")
     assert "planning only" in page.inner_text("#main").lower()
-    forbidden = page.evaluate("() => Array.from(document.querySelectorAll('#main button, #main a.btn')).map(b => b.textContent.trim().toLowerCase()).filter(t => /generate|deploy|publish/.test(t))")
+    forbidden = page.evaluate(
+        "() => Array.from(document.querySelectorAll('#main button, #main a.btn'))"
+        ".map(b => b.textContent.trim().toLowerCase())"
+        ".filter(t => /generate|deploy|publish/.test(t))"
+    )
     assert forbidden == []
 
     # storage posture
     assert page.evaluate("Object.keys(window.localStorage)") == []
     assert page.evaluate("Object.keys(window.sessionStorage)") == ["qevion.app.context"]
-    assert page.evaluate("() => /token|bearer/i.test(window.sessionStorage.getItem('qevion.app.context') || '')") is False
+    ctx_blob = page.evaluate("window.sessionStorage.getItem('qevion.app.context') || ''")
+    assert not re.search(r"token|bearer", ctx_blob, re.I)
     assert page.evaluate("document.cookie.includes('qevion_session')") is False
     assert page_errors == []
     ctx.close()
 
 
-def test_admin_control_plane_is_served_metadata(server: dict, browser) -> None:
+def test_admin_control_plane_is_served_metadata(server: dict[str, Any], browser: Browser) -> None:
     base = server["base"]
     ctx = browser.new_context(viewport={"width": 1280, "height": 900})
     page = ctx.new_page()
@@ -227,7 +236,7 @@ def test_admin_control_plane_is_served_metadata(server: dict, browser) -> None:
     ctx.close()
 
 
-def test_mobile_390_bottom_tabs_no_overflow(server: dict, browser) -> None:
+def test_mobile_390_bottom_tabs_no_overflow(server: dict[str, Any], browser: Browser) -> None:
     base = server["base"]
     ctx = browser.new_context(viewport={"width": 390, "height": 844})
     page = ctx.new_page()

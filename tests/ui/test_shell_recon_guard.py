@@ -27,6 +27,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -60,11 +61,11 @@ FRAMEWORK_MARKERS = (
 )
 
 
-def _manifest() -> dict:
-    return json.loads(MANIFEST.read_text(encoding="utf-8"))
+def _manifest() -> dict[str, Any]:
+    return cast("dict[str, Any]", json.loads(MANIFEST.read_text(encoding="utf-8")))
 
 
-def _block() -> dict:
+def _block() -> dict[str, Any]:
     return _manifest()["ui_shell_static_check"]
 
 

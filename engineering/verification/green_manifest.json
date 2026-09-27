@@ -1724,8 +1724,8 @@
       "ui/app/shell/pages/intelligence.js",
       "ui/app/shell/pages/control.js"
     ],
-    "v1_count_ceiling_api_js": null,
-    "v1_count_ceiling_rule": "OD-3: the ONLY module allowed to hold /v1/ route literals is ui/app/shell/api.js (single transport, one fetch( inside api()); every other shell file has 0 /v1/ literals. The api.js ceiling is null until the FIRST GREEN gate, when it is set ONCE to the measured count and moves DOWN only thereafter (R182 D-2 / R197 convention).",
+    "v1_count_ceiling_api_js": 32,
+    "v1_count_ceiling_rule": "OD-3: 32 = raw /v1/ occurrence count of ui/app/shell/api.js MEASURED at the first GREEN of the shell guard suite (2026-09-27, tests/ui/test_shell_recon_guard.py 34/34 + tests/ui/test_shell_recon_browser.py 3/3), set ONCE and moving DOWN only thereafter (R182 D-2 / R197 convention). OD-3: the ONLY module allowed to hold /v1/ route literals is ui/app/shell/api.js (single transport, one fetch( inside api()); every other shell file has 0 /v1/ literals. The api.js ceiling is null until the FIRST GREEN gate, when it is set ONCE to the measured count and moves DOWN only thereafter (R182 D-2 / R197 convention).",
     "exception_count_ceiling": 0,
     "prohibited": {
       "framework_markers": "no CDN/framework/bundler markers (ADR-0013 Alternative C)",
