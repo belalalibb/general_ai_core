@@ -224,5 +224,9 @@ def test_admin_topology_rendered_from_served_records_only() -> None:
     ``id``/``state``/``evidence`` from each record — nothing else feeds it."""
     command = _strip_js_comments(_read(REPO / "ui" / "app" / "shell" / "pages" / "command.js"))
     assert "capabilities" in command and ".state" in command and ".evidence" in command
-    # non-admin Command renders NO topology (OD-1 = B): the renderer is gated on is_admin
-    assert "is_admin" in command
+    # non-admin Command renders NO topology (OD-1 = B): the renderer is gated on the
+    # session's admin fact — either directly or through the ONE context helper
+    # `isAdmin()` (context.js), which itself reads `session.is_admin`.
+    assert "isAdmin()" in command or "is_admin" in command
+    context = _strip_js_comments(_read(REPO / "ui" / "app" / "shell" / "context.js"))
+    assert "is_admin === true" in context
