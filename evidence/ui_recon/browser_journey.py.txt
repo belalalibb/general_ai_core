@@ -79,6 +79,12 @@ def main() -> None:
     port = free_port(); base = f"http://127.0.0.1:{port}"
     env = dict(os.environ, ADMIN_EMAILS=ADMIN, HOST="127.0.0.1", PORT=str(port))
     env.pop("DATABASE_URL", None)
+    # hermetic like tests/ui (local echo adapter): a live key in the sandbox env binds a real
+    # provider whose plan refusal renders as the verbatim entitlement_exceeded panel (proven
+    # separately: evidence/ui_recon/browser/D0_live_provider_refusal.png)
+    for k in list(env):
+        if k.startswith(("GROQ_API_KEY", "GSK_API_KEY", "GW_GROQ_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY")):
+            env.pop(k)
     srv = subprocess.Popen([sys.executable, "-m", "apps.main"], cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         wait(base)
