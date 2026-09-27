@@ -742,6 +742,25 @@ NEXT: none pre-approved.
 ```
 
 ```
+UI_RECON_POINTER (2026-09-27) — UI RECONSTRUCTION PROGRAM CLOSED (discovery-only → design freeze → operator rulings OD-1=B / OD-2 APPROVED / OD-3 CONFIRMED → implementation; UI-only round from main ffb97453; production ceiling 0 used 0)
+MAIN: 0a135563 (PR #67 merge commit, operator ruling "merge") + this records-only closure. GATES: gate of record d62edb21 PASS 4047/0/0/64 (min_passed 4016 -> 4047); post-merge fresh gate on main 0a135563 PASS 4047/0/0/64 (evidence/ui_recon/gate_post_merge_0a135563.txt).
+STATUS: CLOSED — UI-RECON-DEC-01 (rulings), DEC-02 (delivery), DEC-03 (closure).
+DELIVERED: ONE unified shell at /app/shell/ (ui/app/shell/: index.html, shell.css, shell.js, api.js, router.js, context.js, components.js, pages/{auth,command,work,runs,build,intelligence,control}.js)
+       under the EXISTING /app StaticFiles mount (backend mounting unchanged); hash routing; ONE transport (api.js: Accept, X-Requested-With: QEVION, same-origin cookie, 401 → /auth?next=);
+       six sections Command · Work · Build · Intelligence · Runs · Control (Control only when session.is_admin === true; server 401/403/404 authoritative and rendered verbatim);
+       MODEL-FIRST UX (one row per logical Model.id from GET /v1/models; providers[]/runtime[] behind Advanced); Normal/Advanced disclosure; App Factory PLANNING ONLY (app_factory.plan@1 — no generate/build/deploy/publish controls);
+       admin control plane rendered 1:1 from served records (capabilities 24 ids, actions 17 with generated forms, changes/source lifecycle strips, notifications derived read-model, engineering routes 404 → NOT AVAILABLE).
+GUARDS: green_manifest ui_shell_static_check (14 files; /v1/ ONLY in api.js, ceiling frozen at measured 32 per OD-3, down-only; one fetch(; no framework/CDN/localStorage/fabricated-state/capability-roster markers);
+       tests/ui/test_shell_recon_guard.py 34 (RED fail-closed → GREEN); tests/ui/test_shell_recon_browser.py 3 (REAL Chromium, fail-closed: user journey, admin control plane, mobile 390).
+EVIDENCE: evidence/ui_recon/ (ledger.md rows 0–18, red_guard.txt, green_guard_static.txt, gate_worktree_d62edb21.txt, gate_post_merge_0a135563.txt, browser_journey.py.txt, browser/facts.json + 13 PNGs).
+FINDINGS (fixed in-round, recorded): 390px horizontal overflow (closed session menu width) → CSS; journey made hermetic after a live-provider 403 entitlement_exceeded plan refusal (rendered verbatim, D0 PNG).
+ENV NOTE: SQLAlchemy 2.1.x makes mypy --strict flag infrastructure/db/learning.py:392 on unchanged main (pre-existing); gates run with sqlalchemy 2.0.54 (declared >=2.0). Not worked around (production frozen) — operator-visible.
+LEGACY: ui/app, ui/app/command, ui/admin UNTOUCHED — deletion is a SEPARATE operator decision (OD-2). core/ apps/ infrastructure/ diff 0 across the whole program.
+NOT VERIFIED (unchanged): live-provider 200; live agent run with tools. NOT CLAIMED: Production Ready (D-03 / N-9 operator-owned-open unchanged).
+NEXT: none pre-approved. Next session starts from main, reads this pointer + evidence/ui_recon/ledger.md row 18, and does NOT start any round without an operator APPROVE recorded in 60_DECISION_LOG.md.
+```
+
+```
 R202_POINTER (2026-09-23) — R202 CLOSED (Templates + App Factory UX; UI-only layer A/B; ceiling 0 used 0; app.js /v1/ 22 -> 23 by declaration)
 MAIN: 5ac352be (PR #62 merge commit) + records-only closure PR.
 DELIVERED (R202-A, ACCEPTED-AS-MEASURED): Workbench detail panel reads GET /v1/templates/{ref} exactly once per choice (change + restored context; never at boot; none for 'none')
