@@ -18,3 +18,4 @@
 | 13 | 2026-09-27 | canonical gate (first run): pytest 4047/0/0/64 PASS (+31 = 34 guard + 3 browser − 6 parametrize collapse… see gate txt); mypy/ruff FAIL on the two new test files only → fixed in 7e137bb5; re-gate recorded in row 14 | /tmp → gate_first_run.txt |
 | 14 | 2026-09-27 | ENV FINDING: fresh venv resolved SQLAlchemy 2.1.1 → mypy --strict flags infrastructure/db/learning.py:392 (var-annotated) — reproduced on main ffb97453 unchanged ⇒ pre-existing/environmental, not this round; with sqlalchemy 2.0.54 (declared >=2.0) mypy clean | gate_worktree_d62edb21.txt |
 | 15 | 2026-09-27 | GATE OF RECORD (worktree d62edb21): RESULT: PASS passed=4047 failed=0 errors=0 skipped=64; mypy/ruff/import-linter/secret scan PASS; round_ui_recon_shell 0/0; ratchet min_passed 4016 → 4047 | this commit |
+| 16 | 2026-09-27 | UI-RECON-DEC-02 recorded; origin/main still ffb97453 (branch is a fast-forward, no rebase); PR opened | this commit |
